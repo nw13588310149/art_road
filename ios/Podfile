@@ -1,0 +1,272 @@
+# Uncomment this line to define a global platform for your project
+platform :ios, '13.0'
+
+# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+require 'fileutils'
+require 'pathname'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+def patch_file_picker_ios_phpicker_group
+  plugin_path = File.join(
+    __dir__,
+    'Pods',
+    '.symlinks',
+    'plugins',
+    'file_picker',
+    'ios',
+    'file_picker',
+    'Sources',
+    'file_picker',
+    'FilePickerPlugin.m'
+  )
+  return unless File.exist?(plugin_path)
+
+  source = File.read(plugin_path)
+  return if source.include?('leavePickerGroup')
+
+  patched = source.dup
+  patched.sub!(
+    '    self.group = dispatch_group_create();',
+    "    self.group = dispatch_group_create();\n    dispatch_group_t pickerGroup = self.group;"
+  )
+  patched.sub!(
+    '        dispatch_group_enter(_group);',
+    '        dispatch_group_enter(pickerGroup);'
+  )
+  patched.sub!(
+    "        PHPickerResult * result = [results objectAtIndex:index];\n        \n        dispatch_async(processQueue, ^{",
+    "        PHPickerResult * result = [results objectAtIndex:index];\n        __block BOOL didLeavePickerGroup = NO;\n        void (^leavePickerGroup)(void) = ^{\n            @synchronized (result) {\n                if (didLeavePickerGroup) {\n                    return;\n                }\n                didLeavePickerGroup = YES;\n            }\n            dispatch_group_leave(pickerGroup);\n        };\n        \n        dispatch_async(processQueue, ^{"
+  )
+  patched.gsub!('dispatch_group_leave(self->_group);', 'leavePickerGroup();')
+  patched.sub!(
+    '    dispatch_group_notify(_group, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),^{',
+    '    dispatch_group_notify(pickerGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),^{'
+  )
+
+  # 兜底：选择大视频时系统仍在后台处理，若期间来了第二个请求，handleMethodCall
+  # 会把 _result 置空；此时首次选择的异步回调再调用 _result（nil block）就会
+  # EXC_BAD_ACCESS 闪退。这里在真正回调前补上 nil 校验。
+  patched.sub!(
+    "- (void) handleResult:(id) files {\n",
+    "- (void) handleResult:(id) files {\n    if (_result == nil) { return; }\n"
+  )
+  patched.sub!(
+    'self->_result([FlutterError errorWithCode:@"file_picker_error"',
+    'if (self->_result != nil) self->_result([FlutterError errorWithCode:@"file_picker_error"'
+  )
+
+  if patched == source
+    Pod::UI.warn 'file_picker iOS PHPicker group patch was not applied; plugin source layout may have changed.'
+    return
+  end
+
+  File.write(plugin_path, patched)
+  Pod::UI.puts 'Applied file_picker iOS PHPicker dispatch_group crash patch.'
+end
+
+def media_kit_video_ios_dir
+  [
+    File.join(__dir__, '.symlinks', 'plugins', 'media_kit_video', 'ios'),
+    File.join(__dir__, 'Pods', '.symlinks', 'plugins', 'media_kit_video', 'ios'),
+  ].find { |path| File.directory?(path) }
+end
+
+def patch_media_kit_video_mpv_swift_module
+  ios_dir = media_kit_video_ios_dir
+  return unless ios_dir
+
+  headers_dir = File.join(ios_dir, 'Headers', 'mpv')
+  unless File.directory?(headers_dir)
+    Pod::UI.warn 'media_kit_video mpv headers not found; skipping CMpv module patch.'
+    return
+  end
+
+  File.write(
+    File.join(headers_dir, 'module.modulemap'),
+    <<~MODULE
+      module CMpv [system] {
+        header "client.h"
+        header "render.h"
+        header "render_gl.h"
+        export *
+      }
+    MODULE
+  )
+
+  patched_count = 0
+  Dir.glob(File.join(ios_dir, 'Classes', 'plugin', '**', '*.swift')).each do |path|
+    source = File.read(path)
+    next unless source.match?(/\bmpv(_|\b)|\bMPV_/)
+    next if source.include?('import CMpv')
+
+    patched = source.sub(/((?:import .+\n)+)/, "\\1import CMpv\n")
+    patched = "import CMpv\n#{source}" if patched == source
+    File.write(path, patched)
+    patched_count += 1
+  end
+
+  if patched_count.positive?
+    Pod::UI.puts "Applied media_kit_video CMpv import patch to #{patched_count} files."
+  end
+end
+
+def append_unique_build_setting(config, key, value)
+  current = config.build_settings[key]
+  values = current.is_a?(Array) ? current : current.to_s.split(/\s+/)
+  values = ['$(inherited)'] if values.empty?
+  values << value unless values.include?(value)
+  config.build_settings[key] = values
+end
+
+def media_kit_libs_ios_video_dir
+  [
+    File.join(__dir__, '.symlinks', 'plugins', 'media_kit_libs_ios_video', 'ios'),
+    File.join(__dir__, 'Pods', '.symlinks', 'plugins', 'media_kit_libs_ios_video', 'ios'),
+  ].find { |path| File.directory?(path) }
+end
+
+def create_media_kit_mpv_symlinks_manual(xcframework, symlinks_dir)
+  FileUtils.mkdir_p(symlinks_dir)
+  device = Dir.glob(File.join(xcframework, 'ios-arm64')).first
+  device ||= Dir.glob(File.join(xcframework, 'ios-*')).find do |path|
+    !File.basename(path).include?('simulator')
+  end
+  sim = Dir.glob(File.join(xcframework, '*simulator*')).first
+
+  {
+    'ios' => device,
+    'ios-simulator' => sim,
+  }.each do |name, target|
+    next if target.nil? || target.empty?
+
+    link = File.join(symlinks_dir, name)
+    FileUtils.rm_f(link)
+    rel = Pathname.new(target).relative_path_from(Pathname.new(symlinks_dir)).to_s
+    FileUtils.ln_sf(rel, link)
+  end
+end
+
+# media_kit 1.1.x：create_framework_symlinks.sh 在 macOS/BSD cut(1) 下
+# `-f 1 -f 3` 不会生成 ios / ios-simulator 链接，导致 media_kit_video 链接 Mpv 失败。
+def ensure_media_kit_mpv_framework_symlinks
+  ios_dir = media_kit_libs_ios_video_dir
+  unless ios_dir
+    Pod::UI.warn 'media_kit_libs_ios_video not found; skipping Mpv symlink fix.'
+    return
+  end
+
+  script_path = File.join(ios_dir, 'create_framework_symlinks.sh')
+  if File.exist?(script_path)
+    contents = File.read(script_path).gsub("\r\n", "\n")
+    if contents.include?("cut -d '-' -f 1 -f 3")
+      contents = contents.gsub("cut -d '-' -f 1 -f 3", "cut -d '-' -f 1,3")
+      Pod::UI.puts 'Patched media_kit create_framework_symlinks.sh for macOS cut(1).'
+    end
+    File.write(script_path, contents)
+  end
+
+  xcframework = File.join(ios_dir, 'Frameworks', 'Mpv.xcframework')
+  unless File.exist?(xcframework)
+    Pod::UI.puts 'Mpv.xcframework missing; running make in media_kit_libs_ios_video.'
+    unless system('make', '-C', ios_dir)
+      Pod::UI.warn 'media_kit_libs_ios_video make failed; Mpv framework may be unavailable.'
+      return
+    end
+  end
+
+  symlinks_dir = File.join(ios_dir, 'Frameworks', '.symlinks', 'mpv')
+  FileUtils.rm_rf(symlinks_dir)
+  FileUtils.mkdir_p(symlinks_dir)
+
+  if File.exist?(script_path) &&
+      system('sh', script_path, xcframework, symlinks_dir)
+    ios_link = File.join(symlinks_dir, 'ios')
+    sim_link = File.join(symlinks_dir, 'ios-simulator')
+    if File.exist?(ios_link) && File.exist?(sim_link)
+      Pod::UI.puts 'Verified media_kit Mpv symlinks (ios, ios-simulator).'
+      return
+    end
+  end
+
+  Pod::UI.warn 'create_framework_symlinks.sh incomplete; applying manual Mpv symlinks.'
+  create_media_kit_mpv_symlinks_manual(xcframework, symlinks_dir)
+end
+
+pre_install do |_installer|
+  ensure_media_kit_mpv_framework_symlinks
+  patch_media_kit_video_mpv_swift_module
+end
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  # 与 screen_protector 同源；仅原生调用，避免 Flutter 插件注册阶段 initial(nil) 黑屏。
+  pod 'ScreenProtectorKit', '1.5.1'
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  patch_file_picker_ios_phpicker_group
+  ensure_media_kit_mpv_framework_symlinks
+  patch_media_kit_video_mpv_swift_module
+
+  # 注意：不要在这里主动调用 flutter_soloud 的 build_cmake.sh。
+  # 该脚本必须由 Xcode 构建时调用（依赖 PLATFORM_NAME 等环境变量），
+  # 在 post_install 阶段裸跑会立刻报 "PLATFORM_NAME is not set" 并把
+  # pod install 整个搞挂。
+  #
+  # flutter_soloud 4.0.5 已支持 Swift Package Manager + Xcode 构建时
+  # 自动触发 CMake，无需 Podfile 层兜底。
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      if target.name == 'media_kit_video'
+        append_unique_build_setting(
+          config,
+          'SWIFT_INCLUDE_PATHS',
+          '$(PODS_TARGET_SRCROOT)/Headers/mpv'
+        )
+        append_unique_build_setting(
+          config,
+          'HEADER_SEARCH_PATHS',
+          '$(PODS_TARGET_SRCROOT)/Headers'
+        )
+      end
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_MICROPHONE=1',
+        'PERMISSION_CAMERA=1',
+        'PERMISSION_PHOTOS=1',
+        'PERMISSION_NOTIFICATIONS=1',
+      ]
+    end
+  end
+end

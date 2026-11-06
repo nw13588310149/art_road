@@ -1,0 +1,310 @@
+name: the_road_of_music_flutter
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 2.0.11+8
+
+environment:
+  sdk: ^3.11.4
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+  # 本地化：提供 Material / Cupertino / Widgets 三套 LocalizationsDelegates。
+  # 不引入它，iOS/iPadOS 上 TextField 长按 / Live Text 弹出的系统编辑菜单
+  # （Cut / Copy / Paste / Scan Text…）会一直走英文。配合 MaterialApp 上的
+  # supportedLocales + locale=zh-CN 强制中文。
+  flutter_localizations:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.6.1
+  flutter_svg: ^2.2.4
+  dio: ^5.9.0
+  web_socket_channel: ^3.0.3
+  shared_preferences: ^2.5.3
+  media_kit: ^1.2.1
+  media_kit_video: ^1.3.0
+  media_kit_libs_android_video: ^1.3.8
+  media_kit_libs_ios_video: ^1.1.4
+  # 锁定 4.0.2：与 7d9da87 稳定版一致；音乐伴侣 / 智能听写各自独立引擎加载。
+  flutter_soloud: 4.0.2
+  audio_session: ^0.2.3
+  # 录音系统统一选用以下两个最成熟的纯音频插件，全平台单一代码路径：
+  #
+  # - `record`        ：录音端。AudioRecorder 实例提供
+  #                       onStateChanged() / onAmplitudeChanged() 两条
+  #                       低频流，原生端写 .m4a 临时文件，Web 端走
+  #                       MediaRecorder 输出 blob URL。stop() 返回的
+  #                       路径 / URL 由我们自己读 bytes 上传。
+  # - `just_audio`    ：播放端。AudioPlayer 跨平台一致：iOS/macOS 走
+  #                       AVPlayer、Android 走 ExoPlayer、Web 走
+  #                       HTMLAudioElement。setUrl() 同时接受 https
+  #                       URL、file:// 路径和 blob: URL，省掉了
+  #                       原本「native + media_kit fallback」的双引擎
+  #                       负担。
+  #
+  # 抛弃的依赖：`audio_waveforms` —— 该插件 iPad 上 setFinishMode 生命
+  # 周期、AudioFileWaveforms 在 Web 上没有后端、preparePlayer 频繁报
+  # MissingPluginException 等问题反复触发用户痛点，已在重构中替换为
+  # 自绘 CustomPainter（live amplitudes + preview 静态条 + 进度光标）。
+  record: ^6.1.2
+  just_audio: ^0.10.5
+  pitch_detector_dart: ^0.0.7
+  web: ^1.1.1
+  photo_view: ^0.15.0
+  pdfrx: 2.4.7
+  flutter_widget_from_html_core: ^0.17.2
+  carousel_slider: ^5.0.0
+  cached_network_image: ^3.4.1
+  file_picker: ^8.3.7
+  chinese_font_library: ^1.2.0
+  # 个推 GeTui 推送（iOS / Android / HarmonyOS）。与 1.0 uniPush 同源，
+  # 后端 reportCid + 推送配置可直接沿用。Web / 桌面通过条件 import 自动
+  # 回退到 no-op，不会触发原生绑定缺失错误。
+  getuiflut: ^0.2.41
+  permission_handler: ^12.0.1
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
+  camera: ^0.11.1
+  image: ^4.5.4
+  music_xml: ^2.7.0
+  webview_flutter: ^4.13.1
+  webview_flutter_wkwebview: ^3.25.1
+  xml: ^6.6.1
+  connectivity_plus: ^7.1.1
+  video_thumbnail: ^0.5.6
+  pencil_kit: ^2.1.1
+  # 截屏防护改由原生层实现（iOS SceneDelegate / Android MainActivity）。
+  # screen_protector 与显式 FlutterEngine + SceneDelegate 不兼容，会导致 iOS 启动黑屏。
+  # ───────────────────────────────────────────────────────────────────────
+  # 智能视唱依赖（已暂时停用）：
+  # 原计划：`audio_decoder: ^0.8.0` 把 MP3 → PCM，配合 `pitch_detector_dart`
+  # 做帧级 YIN，得到 KTV 参考音高曲线。
+  # 实测：在 iOS iPad 上引入后会在应用启动阶段 `GeneratedPluginRegistrant`
+  # 注册原生插件时立即闪退（audio_decoder 0.8.0 为 2026-05 新发版插件，
+  # iOS 原生层与当前 deployment target=13.0 / Xcode 链路存在兼容问题）。
+  # 处置：左侧入口与路由 case 已隐藏；feature 代码保留但走 stub。等
+  # audio_decoder 升级或换用更成熟的 MP3 解码方案（如 flutter_soloud
+  # readSamplesFromFile）时再启用。
+  # audio_decoder: ^0.8.0
+  # ───────────────────────────────────────────────────────────────────────
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  web:
+    generate: true
+    image_path: assets/icon/app_icon.png
+    background_color: "#8741FF"
+    theme_color: "#8741FF"
+  windows:
+    generate: true
+  macos:
+    generate: true
+  linux:
+    generate: true
+  image_path: assets/icon/app_icon.png
+  adaptive_icon_background: "#8741FF"
+  adaptive_icon_foreground: assets/icon/app_icon.png
+  remove_alpha_ios: true
+  background_color_ios: "#8741FF"
+  min_sdk_android: 21
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+  # media_kit / mpv 仍走 CocoaPods；CI 若开启 SPM 会导致 Framework 'Mpv' not found。
+  config:
+    enable-swift-package-manager: false
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  assets:
+    - assets/images/auth/
+    - assets/images/shell/
+    - assets/images/shell/leftNav/
+    - assets/images/shell/nav_v2/
+    - assets/images/shell/topbar_v2/
+    - assets/images/home/
+    - assets/images/home/v2/
+    - assets/images/home/dictation/
+    - assets/images/sightsing/
+    - assets/images/404/
+    - assets/images/school/
+    - assets/images/aichat/
+    - assets/images/aichat/v2/
+    - assets/images/video/
+    - assets/images/video/v2/
+    - assets/images/yunpan/
+    - assets/images/courseware/
+    - assets/images/smart_dictation/
+    - assets/images/smart_dictation/v2/
+    - assets/images/smart_dictation/figma/
+    - assets/images/info/
+    - assets/images/schoolA/
+    - assets/images/adminHome/
+    - assets/images/face/
+    - assets/images/sound/
+    - assets/images/music/
+    - assets/images/note/
+    - assets/images/avtor/
+    - assets/images/piano/
+    - assets/images/groupChat/
+    - assets/images/xiaoquan/
+    - assets/images/smartCampus/
+    - assets/images/smartCampus/head_teacher/
+    - assets/images/smartCampus/schedule_edit/
+    - assets/images/smartCampus/dorm_check/
+    - assets/images/smartCampus/admin/class_management/
+    - assets/images/smartCampus/admin/sign_management/
+    - assets/images/smartCampus/admin/teacher_management/
+    - assets/images/smartCampus/admin/face_library/
+    - assets/images/smartCampus/admin/notification/
+    - assets/images/smartCampus/admin/staff_leave/
+    - assets/images/smartCampus/admin/student_management/
+    - assets/images/smartCampus/student/homework/
+    - assets/images/smartCampus/student/leave/
+    - assets/images/smartCampus/student/my_class/
+    - assets/images/smartCampus/teacher/student_roster/
+    - assets/images/smartCampus/teacher/homework/
+    - assets/images/smartCampus/teacher/exam/
+    - assets/images/smartCampus/home_actions/
+    - assets/images/smartCampus/home_actions/student/
+    - assets/images/smartCampus/home_actions/teacher/
+    - assets/images/smartCampus/home_actions/head_teacher/
+    - assets/images/smartCampus/home_actions/dorm_manager/
+    - assets/images/smartCampus/home_actions/admin/
+    - assets/images/smartCampus/home_actions/shared/
+    - assets/images/new/a11e2b3687735e14c212067024e694f9.png
+    - assets/images/new/emoji-sprite.png
+    - assets/images/new/我的作业.png
+    - assets/images/new/0图标/
+    - assets/images/new/01/xk.png
+    - assets/images/new/01/001/
+    - assets/images/new/智慧校园/学生端/
+    - assets/images/new/智慧校园/任课老师/
+    - assets/images/new/智慧校园/班主任/
+    - assets/images/new/智慧校园/宿管/
+    - assets/images/new/智慧校园/管理员/
+    - assets/images/new/校圈/
+    - assets/images/new/群聊/
+    - assets/web/baidu_map.html
+    - assets/images/circle/
+    - assets/audio/demo.mid
+    - assets/audio/demo.mp3
+    - assets/audio/demo_analysis.wav
+    - assets/audio/music_companion/metronome/beat0/
+    - assets/audio/music_companion/metronome/beat2/
+    - assets/audio/music_companion/metronome/beat3/
+    - assets/audio/smart_dictation/piano/
+    - assets/smart_sight_singing/opensheetmusicdisplay.min.js
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  fonts:
+    - family: Harmony
+      fonts:
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
+          weight: 500
+    # PingFang SC 使用 OTF（CFF 轮廓，最接近 Apple 原版字面率与粗细）。
+    # 字重映射严格按 Figma 设计稿：Regular = w400，Medium = w500，Semibold = w600。
+    # PingFang 原版无 Bold/Heavy 字重，最重即 Semibold；上层代码不要写 w700+，
+    # 否则会缺少匹配文件，渲染回退到系统中文字体，视觉不可控。
+    - family: PingFang SC
+      fonts:
+        - asset: assets/fonts/ttf/PingFangSC-Ultralight.otf
+          weight: 100
+        - asset: assets/fonts/ttf/PingFangSC-Thin.otf
+          weight: 200
+        - asset: assets/fonts/ttf/PingFangSC-Light.otf
+          weight: 300
+        - asset: assets/fonts/ttf/PingFangSC-Regular.otf
+          weight: 400
+        - asset: assets/fonts/ttf/PingFangSC-Medium.otf
+          weight: 500
+        - asset: assets/fonts/ttf/PingFangSC-Semibold.otf
+          weight: 600
+    # Manrope：
+    # • w500（Medium）—— 首页右侧周课表的日期数字（9 / 10 / 11…）
+    # • w800（变体字静态映射）—— 智慧校园等地方的角标 10+ 数字
+    # 注意：Manrope Medium.ttf 文件名带空格，YAML 字符串里照实写即可。
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Manrope-Variable.ttf
+          weight: 800
+    # Barlow：
+    # • 通知卡时间 09:00-09:45 = w600（SemiBold）
+    # • 周卡日期数字 9/10/11... = w500（设计稿 Medium，但 Medium 字重缺失，
+    #   暂以 SemiBold 兼任 w500 槽位，避免落到系统默认字体；待补 Barlow-Medium.ttf）
+    # • 刷题首页环形百分比 = w700（设计稿 Bold，Bold 字重缺失，暂以 SemiBold
+    #   兼任 w700 槽位，待补 Barlow-Bold.ttf）
+    - family: Barlow
+      fonts:
+        - asset: assets/fonts/Barlow-SemiBold.ttf
+          weight: 500
+        - asset: assets/fonts/Barlow-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Barlow-SemiBold.ttf
+          weight: 700
+    # 智慧校园统计卡数字等：直接绑定 Barlow-SemiBold.ttf
+    - family: Barlow SemiBold
+      fonts:
+        - asset: assets/fonts/Barlow-SemiBold.ttf
+          weight: 600
+    # 空白列表等提示文案（设计稿 Inter 16 / 400）
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 400
+    # 个人中心 VIP 卡标题等（20 / 700）
+    - family: Alimama ShuHeiTi
+      fonts:
+        - asset: assets/fonts/ttf/AlimamaShuHeiTi-Bold.otf
+          weight: 700

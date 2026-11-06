@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>百度地图打卡定位</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'PingFang SC', sans-serif;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #EFF3FC;
+    }
+    .placeholder, .error {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #6D6B75;
+      font-size: 13px;
+      padding: 16px;
+      text-align: center;
+    }
+    .error {
+      color: #B6B5BB;
+      background: #F5F6FA;
+    }
+    .error strong {
+      color: #0B081A;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .anchor-label {
+      max-width: 280px;
+      padding: 4px 10px;
+      background: #ffffff;
+      color: #0B081A;
+      font-size: 12px;
+      line-height: 1.4;
+      border-radius: 8px;
+      border: 1px solid #E5E7EB;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+  <div id="map">
+    <div id="placeholder" class="placeholder">
+      <strong>正在加载地图…</strong>
+      <span>首次使用请允许访问位置</span>
+    </div>
+  </div>
+
+  <script>
+    function getQuery(name) {
+      const m = new RegExp('[?&]' + name + '=([^&]+)').exec(window.location.search || '');
+      return m ? decodeURIComponent(m[1]) : '';
+    }
+
+    function showError(title, detail) {
+      const el = document.getElementById('map');
+      el.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'error';
+      const t = document.createElement('strong');
+      t.textContent = title;
+      const d = document.createElement('span');
+      d.textContent = detail || '';
+      wrap.appendChild(t);
+      if (detail) wrap.appendChild(d);
+      el.appendChild(wrap);
+    }
+
+    function notifyHost(payload) {
+      const body = Object.assign({ source: 'baidu_map' }, payload);
+      try {
+        window.parent.postMessage(body, '*');
+      } catch (e) { /* ignore */ }
+      try {
+        if (window.BaiduMapHost && window.BaiduMapHost.postMessage) {
+          window.BaiduMapHost.postMessage(JSON.stringify(body));
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    function renderMap(centerBd09, label, zoom) {
+      document.getElementById('map').innerHTML = '';
+
+      const map = new BMap.Map('map', { enableMapClick: false });
+      map.centerAndZoom(centerBd09, zoom);
+      map.enableDragging(true);
+      map.enableScrollWheelZoom(true);
+      map.enableDoubleClickZoom(true);
+      if (typeof map.enablePinchToZoom === 'function') {
+        map.enablePinchToZoom();
+      }
+      map.addControl(new BMap.NavigationControl({ type: BMAP_NAVIGATION_CONTROL_ZOOM }));
+      map.addControl(new BMap.ScaleControl());
+
+      const accuracyCircle = new BMap.Circle(centerBd09, 30, {
+        strokeColor: '#8741FF',
+        strokeWeight: 1,
+        strokeOpacity: 0.45,
+        fillColor: '#8741FF',
+        fillOpacity: 0.10,
+      });
+      map.addOverlay(accuracyCircle);
+
+      const marker = new BMap.Marker(centerBd09);
+      map.addOverlay(marker);
+
+      new BMap.Geocoder().getLocation(centerBd09, function (rs) {
+        const address = rs && rs.address ? rs.address : label;
+        const labelOverlay = new BMap.Label(
+          '<div class="anchor-label">' + address + '</div>',
+          { offset: new BMap.Size(16, -8) }
+        );
+        labelOverlay.setStyle({ border: 'none', background: 'transparent', padding: '0' });
+        marker.setLabel(labelOverlay);
+        notifyHost({
+          type: 'address',
+          address: address,
+          lng: centerBd09.lng,
+          lat: centerBd09.lat,
+        });
+      });
+    }
+
+    function bootFromParams(params) {
+      if (typeof BMap === 'undefined') {
+        showError(
+          '百度地图未就绪',
+          '请确认已配置浏览器端 AK，并将当前域名加入白名单。'
+        );
+        return;
+      }
+
+      const lat = parseFloat(params.lat);
+      const lng = parseFloat(params.lng);
+      const label = params.label || '当前位置';
+      const zoom = parseInt(params.zoom || '17', 10);
+
+      if (!isFinite(lat) || !isFinite(lng)) {
+        showError('暂无定位', '允许访问位置后会自动定位。');
+        return;
+      }
+
+      const wgs = new BMap.Point(lng, lat);
+      const convertor = new BMap.Convertor();
+      convertor.translate([wgs], 1, 5, function (data) {
+        if (!data || data.status !== 0 || !data.points || !data.points.length) {
+          renderMap(wgs, label, zoom);
+          return;
+        }
+        renderMap(data.points[0], label, zoom);
+      });
+    }
+
+    function loadBaiduAndBoot(params) {
+      const ak = params.ak || getQuery('ak');
+      if (!ak) {
+        showError('百度地图未配置', '缺少浏览器端 AK。');
+        return;
+      }
+
+      if (typeof BMap !== 'undefined') {
+        bootFromParams(params);
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.src = 'https://api.map.baidu.com/api?v=3.0&ak=' + encodeURIComponent(ak);
+      script.onload = function () { bootFromParams(params); };
+      script.onerror = function () {
+        showError('百度地图加载失败', '请检查 AK 与白名单配置。');
+      };
+      document.head.appendChild(script);
+    }
+
+    window.addEventListener('hostParams', function (ev) {
+      if (!ev || !ev.detail) return;
+      loadBaiduAndBoot(ev.detail);
+    });
+
+    window.addEventListener('load', function () {
+      loadBaiduAndBoot({
+        ak: getQuery('ak'),
+        lat: getQuery('lat'),
+        lng: getQuery('lng'),
+        label: getQuery('label') || '当前位置',
+        zoom: getQuery('zoom') || '17',
+      });
+    });
+  </script>
+</body>
+</html>
