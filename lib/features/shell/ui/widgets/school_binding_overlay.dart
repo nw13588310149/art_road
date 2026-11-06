@@ -1,8 +1,8 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -370,7 +370,7 @@ class _DialogTitle extends StatelessWidget {
         children: [
           const TextSpan(
             text: '绑定',
-            style: TextStyle(color: Color(0xFF8741FF)),
+            style: TextStyle(color: Color(0xFF715EFE)),
           ),
           TextSpan(text: tail, style: const TextStyle(color: Color(0xFF0B081A))),
         ],
@@ -467,7 +467,7 @@ class _SchoolIdInput extends StatelessWidget {
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(6),
               ],
-              cursorColor: const Color(0xFF8741FF),
+              cursorColor: const Color(0xFF715EFE),
               cursorWidth: 1.4,
               cursorHeight: 16,
               style: TextStyle(
@@ -512,7 +512,7 @@ class _StatusRow extends StatelessWidget {
         : (state.rejectReason.isEmpty ? '学校编码填写错误' : state.rejectReason);
     final accentColor = isPending
         ? const Color(0xFF325BFF)
-        : const Color(0xFF8741FF);
+        : const Color(0xFF715EFE);
 
     return RichText(
       text: TextSpan(
@@ -559,12 +559,12 @@ class _PrimaryButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+            colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
           ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x59AD80FF),
+              color: Color(0x599585FF),
               offset: Offset(0, 16),
               blurRadius: 20,
             ),

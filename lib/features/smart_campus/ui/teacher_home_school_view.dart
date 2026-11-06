@@ -21,7 +21,7 @@
 //   5. 家长对话卡 3 列网格（315 宽 × 161 高，圆角 12）：
 //      头像 40 + 学生姓名 14/500 + 学号 G3030201 12 #B6B5BB +
 //      家长称谓 王丽（母亲）12 + 标签（心理关注 / 成绩 灰底 / 待回复
-//      #DAD2FF/#8741FF）+ 灰底家长发言预览 + 时间戳 +「短信未送达」红字。
+//      #D7D5FF/#715EFE）+ 灰底家长发言预览 + 时间戳 +「短信未送达」红字。
 //      头像左上未读红徽章「10+」。
 //   6. 点击卡片打开 _ChatDetailDialog：428×500 紫白渐变头 + 学生/家长
 //      信息 + 老师/家长气泡 + 输入栏 + 退出链接。
@@ -32,7 +32,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
@@ -51,7 +51,7 @@ import '../data/home_school_chat_data.dart';
 import '../data/smart_campus_count_badge.dart';
 import '../data/teacher_repository.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -62,8 +62,8 @@ const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextHintLight = Color(0xFFCECED1);
 const Color _kTextPlaceholder = Color(0xFFD1D1D1);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleSoftBg = Color(0xFFDAD2FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleSoftBg = Color(0xFFD7D5FF);
 const Color _kBadgeRed = Color(0xFFF04545);
 
 // —— 顶部 tab 枚举 ——————————————————————————————————————————————

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../shell/ui/shell_layout.dart';
 import '../state/school_website_controller.dart';

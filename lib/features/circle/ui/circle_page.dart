@@ -9,7 +9,7 @@ import '../state/circle_state.dart';
 import 'widgets/circle_immersive_view.dart';
 import 'widgets/circle_list_view.dart';
 import 'widgets/circle_publish_dialog.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 校圈页仅允许纵向滚动，禁止横向拖拽与 overscroll。
 class _CirclePageScrollBehavior extends MaterialScrollBehavior {
@@ -245,7 +245,7 @@ class _CircleModeSwitch extends StatelessWidget {
                     width: segmentWidth,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF8741FF),
+                        color: const Color(0xFF715EFE),
                         borderRadius: BorderRadius.circular(ui(6)),
                       ),
                     ),

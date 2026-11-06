@@ -5,12 +5,10 @@ import 'app_font.dart';
 import '../widgets/app_loading_indicator.dart';
 
 class AppTheme {
-  static const _primaryColor = Color(0xFF00C9A4);
+  static const _primaryColor = brandColor;
 
-  /// 业务视觉主题色（紫）。与设计稿一致，用于所有需要"主题色"的非 Material
-  /// 控件（计时器、播放器、按钮等已分别硬编码同值）。这里作为公共常量统一
-  /// 来源，方便后续整体调色。
-  static const Color brandColor = Color(0xFF8741FF);
+  /// 业务视觉主题色（艺考网紫 #715EFE），与阅卷系统各端色板一致。
+  static const Color brandColor = Color(0xFF715EFE);
 
   // 全局默认字族回退链：iOS 上 Skia/Impeller 直接绘制 Apple 系统 "PingFang SC"
   // 时字面率偏细（CoreText 内置了视觉补偿，Flutter 没有），所以这里强制把
@@ -51,7 +49,7 @@ class AppTheme {
         primary: _primaryColor,
       ),
       // iOS 文本选区把手、放大镜描边、未覆盖的 EditableText 光标等走 Cupertino
-      // primaryColor；须与品牌紫一致，否则会回退到 colorScheme.primary（绿色）。
+      // primaryColor；须与品牌紫一致。
       cupertinoOverrideTheme: const CupertinoThemeData(
         primaryColor: brandColor,
         selectionHandleColor: brandColor,
@@ -75,8 +73,8 @@ class AppTheme {
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: brandColor,
         strokeWidth: kAppLoadingIndicatorStrokeWidth,
-        circularTrackColor: Color(0x1A8741FF),
-        linearTrackColor: Color(0x1A8741FF),
+        circularTrackColor: Color(0x1A715EFE),
+        linearTrackColor: Color(0x1A715EFE),
       ),
       // 下拉刷新请使用 AppRefreshIndicator（GIF），勿直接用 Material RefreshIndicator。
       // 全局输入框光标 / 文本选区配色：所有未显式指定 cursorColor 的

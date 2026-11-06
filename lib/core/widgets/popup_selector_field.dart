@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/shell/ui/shell_layout.dart';
 import '../constants/app_assets.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 下拉弹层行右侧选中/未选中标记（班级选择等场景）。
 class AppDropdownSelectedMark extends StatelessWidget {
@@ -31,7 +31,7 @@ class AppDropdownSelectedMark extends StatelessWidget {
 const Color _kFieldBorder = Color(0xFFF5F6FA);
 const Color _kPanelBorder = Color(0xFFF3F2F3);
 const Color _kTextDark = Color(0xFF0B081A);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 
 /// 在 [anchorContext] 所代表的触发器**下方 4px** 锚定打开一个全局通用样式
 /// 的下拉弹层（[PopupSelectorPanel]），返回用户选中的值或 `null`（点击蒙层
@@ -105,7 +105,7 @@ Future<T?> showAppPopupSelector<T>({
 ///
 /// 字段：48 高白底 + 1px `#F5F6FA` 边的按钮，14/400 黑字 + 18px chevron；
 /// 弹层：锚定在字段下方 4px 处，同字段宽度，白底 12 圆角 + 1px `#F3F2F3` 边
-/// + 多层柔和阴影；每行 40 高，命中项使用 `#8741FF` 紫色文字 + 紫色 check。
+/// + 多层柔和阴影；每行 40 高，命中项使用 `#715EFE` 紫色文字 + 紫色 check。
 ///
 /// 与请假申请、授课课表「申请小课」等表单使用同一份实现，保证视觉与交互
 /// 一致。提取自 `student_leave_management_view._PopupSelectorField`。
@@ -209,7 +209,7 @@ class _PopupSelectorFieldState<T> extends State<PopupSelectorField<T>> {
 /// 全局通用「下拉弹层」面板。
 ///
 /// 视觉：白底 12 圆角 + 1px `#F3F2F3` 边 + 多层柔和阴影；上下各 6px 边距；
-/// 每行 40 高、14/400 黑字；命中项使用 `#8741FF` 紫色 14/500 + 右侧紫色
+/// 每行 40 高、14/400 黑字；命中项使用 `#715EFE` 紫色 14/500 + 右侧紫色
 /// check。所有调起此面板的下拉控件（请假申请、班级筛选、查寝状态等）共用
 /// 同一份实现。
 ///

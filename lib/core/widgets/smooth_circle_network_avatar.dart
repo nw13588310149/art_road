@@ -54,11 +54,11 @@ class SmoothCircleNetworkAvatar extends StatelessWidget {
   }
 
   static Widget _defaultPlaceholder(double size) => Container(
-    color: const Color(0xFFEAE5FF),
+    color: const Color(0xFFE3DFFF),
     alignment: Alignment.center,
     child: Icon(
       Icons.person,
-      color: const Color(0xFF8741FF),
+      color: const Color(0xFF715EFE),
       size: size * 0.55,
     ),
   );

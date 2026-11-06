@@ -31,7 +31,7 @@
 //            视觉（614×280 白底，灰底内面板，单学生信息 + 教师上课/下课
 //            签时间轴 + 两枚 "教师上课签 / 教师下课签" 时间 pill）。
 //
-// 颜色：白卡 / #F5F6FA 灰底 / #F3F2F3 边 / #8741FF 主紫 / #A773FF 大课紫 /
+// 颜色：白卡 / #F5F6FA 灰底 / #F3F2F3 边 / #715EFE 主紫 / #8E7FFF 大课紫 /
 //      #0CAC40 出勤绿 / #FF323C 缺勤红 / #325BFF 请假蓝 / #B6B5BB 提示
 // 字体：PingFang SC（标题 16/18 / 正文 12/14）+ Barlow（时间 18 / 数值 32）
 // =============================================================================
@@ -40,7 +40,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
@@ -57,7 +57,7 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'widgets/teacher_today_course_card.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -69,7 +69,7 @@ const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSection = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kPurpleSoftHint = Color(0xFFF0E8FC); // 大班签到提示带 bg
 const Color _kEndedTagBg = Color(0xFFE6E9F1);
 const Color _kStatusGreen = Color(0xFF0CAC40);
@@ -77,7 +77,7 @@ const Color _kStatusPresent = Color(0xFF0CAC40); // 实到
 const Color _kTextDivider = Color(0xFFCECED1);
 const Color _kStatusLate = Color(0xFFFF323C); // 迟到 / 缺课 / 未到
 const Color _kStatusLeave = Color(0xFF325BFF); // 请假
-const Color _kBigClassDot = Color(0xFFA773FF); // 大课 tag dot
+const Color _kBigClassDot = Color(0xFF8E7FFF); // 大课 tag dot
 const Color _kSmallClassDot = Color(0xFF0CAC40); // 小课 tag dot
 
 // 各区块最低高度（Figma 设计值），避免数据加载前后页面高度跳动。
@@ -2503,7 +2503,7 @@ class _TeacherSignActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           color: isActionable

@@ -1,8 +1,8 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_assets.dart';
@@ -14,9 +14,9 @@ import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_controller.dart';
 import '../../state/circle_state.dart';
 import '../../util/video_cover_frame_extractor.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kBg = Color(0xFFF5F6FA);
 const Color _kBorder = Color(0xFFCECED1);
 const Color _kHint = Color(0xFFB6B5BB);
@@ -621,7 +621,7 @@ class _TextArea extends StatelessWidget {
         maxLines: null,
         expands: true,
         textAlignVertical: TextAlignVertical.top,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorWidth: 1.5,
         cursorHeight: ui(15),
         style: TextStyle(

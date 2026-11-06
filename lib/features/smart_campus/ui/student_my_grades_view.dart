@@ -46,9 +46,9 @@
 //        tag + 蓝色右上角分数 + "查看详情"按钮
 //      - 折叠态：仅头 + 统计行
 //
-// 颜色：白卡 / #F5F6FA 浅灰 / #8741FF 主紫 / #325BFF 蓝（科目分数）
-//      / #0CAC40 绿 / #DFFCF0 绿底（视唱/乐理 tag） / #EAE5FF 紫底（声乐/器乐）
-//      / #12CE51 上升绿 / #F4F4FF 进度条底 / #E2D0FF→#8741FF 进度条渐变
+// 颜色：白卡 / #F5F6FA 浅灰 / #715EFE 主紫 / #325BFF 蓝（科目分数）
+//      / #0CAC40 绿 / #DFFCF0 绿底（视唱/乐理 tag） / #E3DFFF 紫底（声乐/器乐）
+//      / #12CE51 上升绿 / #F4F4FF 进度条底 / #E2D0FF→#715EFE 进度条渐变
 // 字体：PingFang SC（中文） + Barlow（数字 32 / 20）
 // =============================================================================
 
@@ -62,7 +62,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_toast.dart';
@@ -88,9 +88,9 @@ const Color _kTextSection = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleLight = Color(0xFFA773FF);
-const Color _kPurpleSoftBg = Color(0xFFEAE5FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleLight = Color(0xFF8E7FFF);
+const Color _kPurpleSoftBg = Color(0xFFE3DFFF);
 const Color _kPurpleBestBg = Color(0xFFF7F2FF);
 const Color _kProgressBg = Color(0xFFF4F4FF);
 const Color _kBlueScore = Color(0xFF325BFF);
@@ -1254,7 +1254,7 @@ class _LinePainter extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFE7D9FF), Color(0x00E7D9FF)],
+          colors: [Color(0xFFE3DFFF), Color(0x00E3DFFF)],
         ).createShader(Rect.fromLTWH(0, 0, size.width, chartHeight));
       canvas.drawPath(fillPath, fillPaint);
 
@@ -2760,7 +2760,7 @@ class _SeatSubjectCard extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFB68EFF), Color(0xFF8741FF)],
+                colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
               ),
               borderRadius: BorderRadius.circular(ui(10)),
             ),
@@ -4078,7 +4078,7 @@ class _ExamSubjectArrangeCard extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFB68EFF), Color(0xFF8741FF)],
+                colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
               ),
               borderRadius: BorderRadius.circular(ui(10)),
             ),
@@ -4799,7 +4799,7 @@ class _UploadButton extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
-              colors: [Color(0xFFB68EFF), Color(0xFF8741FF)],
+              colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
             ),
             borderRadius: BorderRadius.circular(ui(10)),
           ),

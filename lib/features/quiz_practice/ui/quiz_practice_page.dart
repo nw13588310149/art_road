@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/widgets/app_toast.dart';
@@ -10,7 +10,7 @@ import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../state/quiz_practice_controller.dart';
 import '../state/quiz_practice_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ─────────────────────────────────────────────────────────────────────
 // 视觉常量
@@ -45,7 +45,7 @@ const LinearGradient _kRedCardGradient = LinearGradient(
 const LinearGradient _kPurpleRingGradient = LinearGradient(
   begin: Alignment.bottomCenter,
   end: Alignment.topCenter,
-  colors: [Color(0xFF8640FF), Color(0xFFB68EFF)],
+  colors: [Color(0xFF715EFE), Color(0xFF9585FF)],
 );
 const LinearGradient _kGreenRingGradient = LinearGradient(
   begin: Alignment.bottomCenter,

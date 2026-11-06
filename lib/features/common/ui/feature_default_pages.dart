@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 通用默认功能页脚手架
 /// 各功能模块在正式开发前使用此占位页，保持路由畅通。
@@ -74,7 +74,7 @@ class SightSingingDefaultPage extends StatelessWidget {
   Widget build(BuildContext context) => const _FeatureDefaultPage(
     title: '视唱练习',
     icon: Icons.music_note_outlined,
-    accentColor: Color(0xFF8741FF),
+    accentColor: Color(0xFF715EFE),
   );
 }
 

@@ -4,7 +4,7 @@ import '../../../../core/network/media_url.dart';
 import '../../../../core/widgets/scaled_dialog.dart';
 import '../../data/course_sign_data.dart';
 import '../../../shell/ui/shell_layout.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);

@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/scaled_dialog.dart';
 import '../../../shell/ui/shell_layout.dart';
 import '../../data/student_dormitory_data.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kBoardBg = Color(0xFFF5F6FA);
 const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 
 const _profileHiddenFieldLabels = {'学生姓名', '学生', '姓名', '学生学号', '学号'};
 
@@ -171,7 +171,7 @@ class _StudentAvatar extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: const Color(0xFFE7D9FF),
+          color: const Color(0xFFE3DFFF),
           borderRadius: BorderRadius.circular(radius),
         ),
         alignment: Alignment.center,

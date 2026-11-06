@@ -204,7 +204,7 @@ List<FocusStudentItem> parseFocusStudentList(dynamic raw) {
 (Color background, Color text) focusStudentTagColors(String tag) {
   final normalized = tag.trim();
   if (normalized.contains('心理')) {
-    return (const Color(0xFF8741FF), Colors.white);
+    return (const Color(0xFF715EFE), Colors.white);
   }
   if (normalized.contains('考勤') || normalized.contains('查寝')) {
     return (const Color(0xFF325BFF), Colors.white);

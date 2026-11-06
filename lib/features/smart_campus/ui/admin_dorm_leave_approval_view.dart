@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // 管理员端「教师请假审批」独立页面
 //
 // 入口：admin 首页快捷区「教师请假审批」按钮 → controller.openDormLeaveApproval()
@@ -19,7 +19,7 @@
 //      家长充分沟通的可选择班主任直接审批。补课协调以教务安排为准。」
 //   4. 控制条：左侧白色 4 padding 圆角 8 容器套 4 枚 pill：
 //      全部 / 待审批 / 已通过 / 已拒绝（激活态 #0B081A 黑底白字）；
-//      右侧 "审批中 N 条" 标签（数字 #8741FF）+ 紫色渐变 "发起申请" 按钮。
+//      右侧 "审批中 N 条" 标签（数字 #715EFE）+ 紫色渐变 "发起申请" 按钮。
 //   5. 双列卡片网格（每张 477，padding 12 白底圆角 12，gap 16）：
 //      · header：头像 40 + 姓名 14/500 + 工号 12/#B6B5BB + "病假" 12 +
 //        "时长1天" 12/#6D6B75 + 状态徽章。
@@ -33,8 +33,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/api_response.dart';
@@ -45,7 +45,7 @@ import '../data/admin_repository.dart';
 import '../data/teacher_leave_data.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -55,7 +55,7 @@ const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextHintLight = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kGreen = Color(0xFF0CAC40);
 const Color _kGreenSoftBg = Color(0xFFE4FFED);
 const Color _kRed = Color(0xFFFF323C);
@@ -700,7 +700,7 @@ class _LeaveAvatar extends StatelessWidget {
       height: ui(40),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFDAD2FF),
+        color: const Color(0xFFD7D5FF),
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Text(
@@ -866,7 +866,7 @@ class _CardActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           color: isPrimary ? null : Colors.white,

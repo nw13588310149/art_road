@@ -1,5 +1,5 @@
-﻿import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:flutter/material.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -14,7 +14,7 @@ import '../data/admin_repository.dart';
 import '../data/smart_campus_role_theme.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ============================================================================
 // 颜色常量
@@ -25,10 +25,10 @@ const Color _kCardBg = Colors.white;
 const Color _kTextPrimary = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextSub = Color(0xFF6D6B75);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kGreen = Color(0xFF0CAC40);
 const Color _kBorder = Color(0xFFF3F2F3);
-const Color _kPurpleSoft = Color(0xFFDAD2FF);
+const Color _kPurpleSoft = Color(0xFFD7D5FF);
 
 /// 与人脸库录入截取同比例（11:14），档案弹窗内略放大。
 const double _kFaceImgPreviewWidth = 104;
@@ -420,7 +420,7 @@ const _kFallbackClassOptions = <_ClassFilterOption>[_ClassFilterOption.all];
 /// 4. **结果条**：「当前结果 X 人」12 #0B081A。
 /// 5. **教师卡 3 列网格**（315×98 白卡，12 gap）：左 40 头像 + 右上工号 +
 ///    名字 + 一句话部门·学科 + 灰色「任课·班主任·班级」/「任课」。
-///    左下身份标签（统一紫色 #EAE5FF / #8741FF，高 17）；右上 cut-corner 状态徽章
+///    左下身份标签（统一紫色 #E3DFFF / #715EFE，高 17）；右上 cut-corner 状态徽章
 ///    （在岗 #DFFCF0 + #0CAC40，请假/产假 #F3F2F3 + #B6B5BB），
 ///    徽章内有一个圆点 + 状态文字。
 ///
@@ -1199,7 +1199,7 @@ class _Avatar extends StatelessWidget {
       height: ui(size),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFDAD2FF),
+        color: const Color(0xFFD7D5FF),
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Text(

@@ -20,7 +20,7 @@
 //   4. 多张宿舍卡（白底 16 圆角 + 12 padding）：
 //      Header：紫色方块 icon + 「宿舍 A-901」14/500 + 「女生公寓A座·6层」
 //             12/400 + 「N人·晚查寝·22:30前」12/#B6B5BB +
-//             右侧 220×40「一键打卡」按钮（紫渐变 #B68EFF→#8640FF 或置灰
+//             右侧 220×40「一键打卡」按钮（紫渐变 #9585FF→#715EFE 或置灰
 //             #CECED1）。
 //      Body：3 列学生格子（#F5F6FA 12 圆角，padding 12）：40×40 头像 +
 //            姓名 14/500 + 学号 12/#B6B5BB + 右侧状态 dropdown
@@ -28,7 +28,7 @@
 //   5. 底部 3 列查寝历史卡（width 312，padding 12，207° #FAF0FF→white
 //      渐变，圆角 16）：
 //      · Barlow 18/600「晨查寝 / 晚查寝」+ 状态徽章
-//        （正常 #A773FF / 未打卡 #FF323C / 迟到 #325BFF）
+//        （正常 #8E7FFF / 未打卡 #FF323C / 迟到 #325BFF）
 //      · 「女生宿舍3号楼 612」13/#6D6B75 + 日期 12/#B6B5BB
 //      · 灰底块 50 高：规定时间 / 打卡时间 两列居中
 //      · 底部 "备注：…" 12/#B6B5BB。
@@ -47,7 +47,7 @@ import '../state/dormitory_manager_controller.dart';
 import '../../school/data/school_config_data.dart';
 import '../../school/state/school_config_controller.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -56,8 +56,8 @@ const Color _kBorderSoft = Color(0xFFF3F2F3);
 const Color _kBorderLine = Color(0xFFCECED1);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleSoftBg = Color(0xFFE7D9FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleSoftBg = Color(0xFFE3DFFF);
 
 // =============================================================================
 // 顶级视图
@@ -782,7 +782,7 @@ class _CheckInAllButton extends StatelessWidget {
               : const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 ),
           color: disabled ? _kBorderLine : null,
           borderRadius: BorderRadius.circular(ui(8)),

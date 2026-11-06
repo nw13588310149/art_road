@@ -5,7 +5,7 @@ import 'app_text_field.dart';
 import 'popup_selector_field.dart';
 import '../../features/shell/ui/shell_layout.dart';
 import '../constants/app_assets.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 与管理员「教师档案」等 [showScaledDialog] 弹窗一致的入场时长（对齐
 /// Material [DialogRoute] 默认 150ms）。
@@ -377,7 +377,7 @@ class _AppDialogButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           color: isPrimary ? null : Colors.white,
@@ -388,7 +388,7 @@ class _AppDialogButton extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: isPrimary
-                  ? const Color(0x59AD80FF)
+                  ? const Color(0x599585FF)
                   : const Color(0x59B5B5B5),
               blurRadius: ui(20),
               offset: Offset(0, ui(16)),
@@ -461,7 +461,7 @@ class AppDialogTextField extends StatelessWidget {
         onSubmitted: onSubmitted,
         textAlignVertical:
             multiline ? TextAlignVertical.top : TextAlignVertical.center,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorWidth: 1.5,
         cursorHeight: ui(16),
         style: TextStyle(
@@ -675,7 +675,7 @@ Future<String?> showOptionsDialog({
                                 style: TextStyle(
                                   fontSize: ui(14),
                                   color: isActive
-                                      ? const Color(0xFF8741FF)
+                                      ? const Color(0xFF715EFE)
                                       : const Color(0xFF0B081A),
                                   fontFamily: 'PingFang SC',
                                   fontWeight: isActive

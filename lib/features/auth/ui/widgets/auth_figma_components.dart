@@ -1,13 +1,13 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../core/constants/app_assets.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class AuthFigmaCardFrame extends StatelessWidget {
   const AuthFigmaCardFrame({
@@ -172,7 +172,7 @@ class AuthFigmaInputField extends StatelessWidget {
         enableSuggestions: !obscureText,
         inputFormatters: inputFormatters,
         textAlignVertical: TextAlignVertical.center,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorHeight: _s(16),
         style: TextStyle(
           color: const Color(0xFF0B081A),
@@ -300,7 +300,7 @@ class AuthFigmaPrimaryButton extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [Color(0xFF8640FF), Color(0xFFB68EFF)],
+          colors: [Color(0xFF715EFE), Color(0xFF9585FF)],
         ),
       ),
       child: FilledButton(
@@ -431,7 +431,7 @@ class AuthFigmaAgreementRow extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(_s(2)),
                         border: Border.all(
-                          color: const Color(0xFF8741FF),
+                          color: const Color(0xFF715EFE),
                           width: _s(1),
                         ),
                       ),
@@ -462,7 +462,7 @@ class AuthFigmaAgreementRow extends StatelessWidget {
             onAgreementTap();
           },
           child: Text(
-            '《音乐之路服务协议》',
+            '《美术之路服务协议》',
             style: TextStyle(
               color: const Color(0xFF856FE2),
               fontSize: _s(14),

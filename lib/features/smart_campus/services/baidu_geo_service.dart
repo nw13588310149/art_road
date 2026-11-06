@@ -45,7 +45,7 @@ abstract final class BaiduGeoService {
         'scaler': '${scaler.clamp(1, 2)}',
         'markers': '$lng,$lat',
         'coordtype': 'wgs84ll',
-        'markerStyles': 'l,,0x8741FF',
+        'markerStyles': 'l,,0x715EFE',
       },
     ).toString();
   }

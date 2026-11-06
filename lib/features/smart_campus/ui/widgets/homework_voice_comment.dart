@@ -24,7 +24,7 @@ class HomeworkVoiceCommentBubble extends StatefulWidget {
     required this.relativePath,
     required this.durationSec,
     this.scale = 1.0,
-    this.accent = const Color(0xFF8741FF),
+    this.accent = const Color(0xFF715EFE),
     this.background = const Color(0xFFF4F4FF),
   });
 

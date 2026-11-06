@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shell/ui/shell_layout.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import 'smart_campus_home_card.dart';
 import 'smart_campus_quick_action_icon.dart';
 

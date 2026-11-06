@@ -3,8 +3,8 @@
 // ignore_for_file: unused_element_parameter
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -21,7 +21,7 @@ import '../data/admin_repository.dart';
 import '../data/admin_class_summary.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ============================================================================
 // 颜色常量
@@ -35,9 +35,9 @@ const Color _kTextPrimary = Color(0xFF0B081A);
 const Color _kTextSection = Color(0xFF1A1A1A);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextSub = Color(0xFF6D6B75);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleLightTag = Color(0xFFDAD2FF);
-const Color _kPurpleAvatarBg = Color(0xFFE7D9FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleLightTag = Color(0xFFD7D5FF);
+const Color _kPurpleAvatarBg = Color(0xFFE3DFFF);
 const Color _kBorder = Color(0xFFF3F2F3);
 const Color _kFieldBorder = Color(0xFFF5F6FA);
 const Color _kCheckboxBorder = Color(0xFFCECED1);
@@ -686,7 +686,7 @@ List<Map<String, dynamic>> _extractList(ApiResponse resp) {
 ///      白色 大课(紫点)/小课(绿点) pill + 「编码·年级·班主任·教学楼·
 ///      教室」灰色 meta + 右侧「共 N 人」+ chevron 折叠按钮；
 ///    - **expanded**：3 列学生迷你卡（40 头像 + 名 + 学号 + 专业），
-///      右上紫色 #DAD2FF cut-corner「在籍」徽章。
+///      右上紫色 #D7D5FF cut-corner「在籍」徽章。
 ///
 /// 顶部按钮：
 ///   - 「创建班级」→ 右抽屉 [_CreateClassDrawer]：大班/小班 toggle +
@@ -3062,7 +3062,7 @@ class _DrawerFooter extends StatelessWidget {
                   gradient: const LinearGradient(
                     begin: Alignment.centerRight,
                     end: Alignment.centerLeft,
-                    colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                    colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                   ),
                   borderRadius: BorderRadius.circular(ui(12)),
                 ),

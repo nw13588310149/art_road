@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/core/network/media_url.dart';
-import 'package:the_road_of_music_flutter/features/smart_campus/data/course_sign_data.dart';
-import 'package:the_road_of_music_flutter/features/smart_campus/data/schedule_course_card_builder.dart';
+import 'package:the_road_of_art_flutter/core/network/media_url.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/data/course_sign_data.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/data/schedule_course_card_builder.dart';
 
 void main() {
   setUp(() {

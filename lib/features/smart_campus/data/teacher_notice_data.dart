@@ -90,7 +90,7 @@ TeacherNoticeListItem? parseTeacherNoticeDetail(dynamic raw) {
       ),
     _ => (
         foreground: const Color(0xFF0B081A),
-        background: const Color(0xFFEAE5FF),
+        background: const Color(0xFFE3DFFF),
       ),
   };
 }

@@ -34,7 +34,7 @@ class SegmentToggle extends StatelessWidget {
     this.height = 32,
     this.fontSize = 13,
     this.trackColor = const Color(0xFFEFEFEF),
-    this.thumbColor = const Color(0xFF8741FF),
+    this.thumbColor = const Color(0xFF715EFE),
   });
 
   final int selectedIndex;

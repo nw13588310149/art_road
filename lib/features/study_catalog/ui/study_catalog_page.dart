@@ -10,7 +10,7 @@ import '../../shell/ui/shell_layout.dart';
 import '../../voice/ui/voice_page.dart';
 import '../state/study_catalog_controller.dart';
 import '../state/study_catalog_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class StudyCatalogPage extends ConsumerWidget {
   const StudyCatalogPage({super.key, required this.defaultArgs});

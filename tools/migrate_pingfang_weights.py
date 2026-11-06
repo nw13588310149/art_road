@@ -6,7 +6,7 @@ Rules:
 - Only weights 300/400/500/600 are touched (PingFang OTF in pubspec tops at 600).
 - If the modified block was prefixed with `const`, drop the `const` keyword
   (because `AppFont.wXXX` resolves at runtime via `defaultTargetPlatform`).
-- Insert `import 'package:the_road_of_music_flutter/core/theme/app_font.dart';`
+- Insert `import 'package:the_road_of_art_flutter/core/theme/app_font.dart';`
   into any file that ended up touched.
 - Skip the helper file itself.
 
@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(r"c:\Users\nw663\Desktop\music2\the-road-of-music-flutter\lib")
 SKIP_FILES = {ROOT / "core" / "theme" / "app_font.dart"}
 PINGFANG_TOKEN = "fontFamily: 'PingFang SC'"
-PACKAGE = "the_road_of_music_flutter"
+PACKAGE = "the_road_of_art_flutter"
 IMPORT_LINE = f"import 'package:{PACKAGE}/core/theme/app_font.dart';"
 
 WEIGHT_RE = re.compile(r"\bFontWeight\.w(300|400|500|600)\b")

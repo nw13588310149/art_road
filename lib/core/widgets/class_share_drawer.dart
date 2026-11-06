@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 import '../../features/shell/ui/shell_layout.dart';
 import '../network/media_url.dart';
@@ -203,12 +203,12 @@ class ShareTargetCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(ui(6.82)),
             ),
             child: resolvedCover.isEmpty
-                ? Icon(placeholderIcon, color: const Color(0xFFA773FF))
+                ? Icon(placeholderIcon, color: const Color(0xFF8E7FFF))
                 : Image.network(
                     resolvedCover,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) =>
-                        Icon(placeholderIcon, color: const Color(0xFFA773FF)),
+                        Icon(placeholderIcon, color: const Color(0xFF8E7FFF)),
                   ),
           ),
         ],
@@ -231,7 +231,7 @@ class _ShareDrawerTitle extends StatelessWidget {
           width: ui(3.25),
           height: ui(14.85),
           decoration: BoxDecoration(
-            color: const Color(0xFF8741FF),
+            color: const Color(0xFF715EFE),
             borderRadius: BorderRadius.circular(ui(6)),
           ),
         ),
@@ -299,12 +299,12 @@ class _ClassShareRow extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: item.checked
-                      ? const Color(0xFF8741FF)
+                      ? const Color(0xFF715EFE)
                       : Colors.transparent,
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: item.checked
-                        ? const Color(0xFF8741FF)
+                        ? const Color(0xFF715EFE)
                         : const Color(0xFFCECED1),
                     width: 1,
                   ),
@@ -359,7 +359,7 @@ class _ClassAvatarFallback extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          color: const Color(0xFF8741FF),
+          color: const Color(0xFF715EFE),
           fontSize: ui(16),
           fontFamily: 'PingFang SC',
           fontWeight: AppFont.w600,
@@ -406,7 +406,7 @@ class _ShareSendButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+            colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
           ),
           borderRadius: BorderRadius.circular(ui(12)),
         ),

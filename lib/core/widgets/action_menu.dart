@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_assets.dart';
 import '../../features/shell/ui/shell_layout.dart';
 import 'anchored_popup_menu.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// Available actions for the shared item action menu (the popup used by
 /// the cloud disk's left sidebar and other lists).

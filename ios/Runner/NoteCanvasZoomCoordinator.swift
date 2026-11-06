@@ -14,7 +14,7 @@ final class NoteCanvasZoomCoordinator {
   init(messenger: FlutterBinaryMessenger, rootView: UIView) {
     self.rootView = rootView
     channel = FlutterMethodChannel(
-      name: "the_road_of_music_flutter/note_canvas_zoom",
+      name: "the_road_of_art_flutter/note_canvas_zoom",
       binaryMessenger: messenger
     )
     channel.setMethodCallHandler { [weak self] call, result in

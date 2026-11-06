@@ -8,10 +8,10 @@
 // 视觉（Figma 970 设计宽）：
 //   1. 顶部 banner（68 高）：白→#F9EDFF 渐变；左 32 返回；居中 16/600
 //      "授课课表" + 12/B6B5BB 副标题；右上角 "查看 / 编辑" 分段控制
-//      （32 高白底 + #F3F2F3 边；激活段紫底 #8741FF / 白字）。
+//      （32 高白底 + #F3F2F3 边；激活段紫底 #715EFE / 白字）。
 //   2. 控制条（64 高 #F5F6FA 灰底 12 圆角）：
-//      - 左上：教学周第 N 周（16/600，N 用 #8741FF 紫）。
-//      - 左下：legend 两枚 pill：⚫ #A773FF "大课"·灰副标"不可编辑"；
+//      - 左上：教学周第 N 周（16/600，N 用 #715EFE 紫）。
+//      - 左下：legend 两枚 pill：⚫ #8E7FFF "大课"·灰副标"不可编辑"；
 //             ⚫ #0CAC40 "小课"·灰副标"编辑模式下可点击"。
 //      - 右侧：[◀ 本周 ▶] 周切换器 + "YYYY/MM/DD" 日历 pill。
 //   3. 网格（930×N，1px #F3F2F3 描边，12 圆角）：与学生 / 管理员端共用同
@@ -31,7 +31,7 @@
 //        提交触发 `/app/school/v2/teacher/schoolSmallCourseApplySave`。
 //   5. 查看模式空格画 "空闲" 灰边占位；编辑模式下空格走"申请小课"。
 //
-// 颜色：白 / #F5F6FA 灰 / #F3F2F3 边 / #8741FF 主紫 / #6D6B75 副字 /
+// 颜色：白 / #F5F6FA 灰 / #F3F2F3 边 / #715EFE 主紫 / #6D6B75 副字 /
 //      #B6B5BB 提示 / #774B09 橙文 / #0D3A6D 蓝文 / #7535BE 紫文
 // =============================================================================
 
@@ -63,7 +63,7 @@ import 'widgets/schedule_course_card.dart';
 import 'widgets/schedule_grid_shell.dart';
 import 'widgets/schedule_idle_slot.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 通用配色（与学生 / 管理员端 schedule 保持一致）----------------------
 
@@ -73,11 +73,11 @@ const Color _kBorderSoft = Color(0xFFF3F2F3);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kCheckboxBorder = Color(0xFFCECED1);
 
 const Color _kStatusGreen = Color(0xFF0CAC40);
-const Color _kStatusPurple = Color(0xFFA773FF);
+const Color _kStatusPurple = Color(0xFF8E7FFF);
 
 // 「我的小课申请」状态色（与 admin schedule 端 _kPendingBg/Fg 等保持一致），
 // 用于课卡右上角的状态徽章替代默认「小课」pill。
@@ -2400,7 +2400,7 @@ class _ApplyRecordCard extends StatelessWidget {
 //   5. 科目：调 user.subjectList(classId)，int id 下拉
 //   6. 颜色：13 色色板 + 当前 hex chip
 //   7. 是否复用：不复用 / 本学期所有 / 后续 4 周 / 后续 8 周
-// 底部：560×48 紫色横向渐变 (#B68EFF→#8640FF) "提交教务审核" 按钮。
+// 底部：560×48 紫色横向渐变 (#9585FF→#715EFE) "提交教务审核" 按钮。
 //
 // 提交：调 `/app/school/v2/teacher/schoolSmallCourseApplySave`，
 // 字段格式：
@@ -3125,7 +3125,7 @@ class _SubmitGradientButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+            colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
           ),
           borderRadius: BorderRadius.circular(ui(12)),
         ),

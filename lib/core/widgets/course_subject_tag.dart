@@ -4,7 +4,7 @@ import '../../features/shell/ui/shell_layout.dart';
 import 'course_inline_tag_style.dart';
 
 /// 课程科目标签 12px PingFang SC w400，按学科分类切换配色：
-/// • 视唱/听音/乐理/钢琴等理论与基础类 → 紫（#EAE5FF / #8741FF）
+/// • 视唱/听音/乐理/钢琴等理论与基础类 → 紫（#E3DFFF / #715EFE）
 /// • 笛/箫/笙/胡/筝/吉他等器乐类       → 绿（#DFFCF0 / #0CAC40）
 ///
 /// 盒模型与 [CourseClassKindTag] 一致；在 [DashboardScaleScope] 下按 ui 缩放。
@@ -51,10 +51,10 @@ class CourseSubjectTag extends StatelessWidget {
     final isInstrument = isInstrumentSubject(name);
     final bg = muted
         ? const Color(0xFFE6E9F1)
-        : (isInstrument ? const Color(0xFFDFFCF0) : const Color(0xFFEAE5FF));
+        : (isInstrument ? const Color(0xFFDFFCF0) : const Color(0xFFE3DFFF));
     final fg = muted
         ? const Color(0xFFB6B5BB)
-        : (isInstrument ? const Color(0xFF0CAC40) : const Color(0xFF8741FF));
+        : (isInstrument ? const Color(0xFF0CAC40) : const Color(0xFF715EFE));
 
     return CourseInlineTagStyle.build(
       ui: ui,

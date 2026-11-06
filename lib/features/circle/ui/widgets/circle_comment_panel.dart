@@ -1,12 +1,12 @@
-﻿import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:flutter/material.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 沉浸模式下从右侧滑入的评论面板（抖音风）。
 /// 顶部标题、可滚动评论列表、底部输入框三段式布局。
@@ -313,11 +313,11 @@ class _CommentAvatar extends StatelessWidget {
         height: size,
         child: url.isEmpty
             ? Container(
-                color: const Color(0xFFEAE5FF),
+                color: const Color(0xFFE3DFFF),
                 alignment: Alignment.center,
                 child: Icon(
                   Icons.person,
-                  color: const Color(0xFF8741FF),
+                  color: const Color(0xFF715EFE),
                   size: size * 0.55,
                 ),
               )
@@ -325,11 +325,11 @@ class _CommentAvatar extends StatelessWidget {
                 url,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stack) => Container(
-                  color: const Color(0xFFEAE5FF),
+                  color: const Color(0xFFE3DFFF),
                   alignment: Alignment.center,
                   child: Icon(
                     Icons.person,
-                    color: const Color(0xFF8741FF),
+                    color: const Color(0xFF715EFE),
                     size: size * 0.55,
                   ),
                 ),
@@ -457,7 +457,7 @@ class _InputBar extends StatelessWidget {
                 focusNode: focusNode,
                 onSubmitted: (_) => onSend(),
                 textInputAction: TextInputAction.send,
-                cursorColor: const Color(0xFF8741FF),
+                cursorColor: const Color(0xFF715EFE),
                 cursorWidth: 1.5,
                 cursorHeight: ui(16),
                 style: TextStyle(
@@ -485,7 +485,7 @@ class _InputBar extends StatelessWidget {
               height: ui(40),
               padding: EdgeInsets.symmetric(horizontal: ui(20)),
               decoration: BoxDecoration(
-                color: const Color(0xFF8741FF),
+                color: const Color(0xFF715EFE),
                 borderRadius: BorderRadius.circular(ui(20)),
               ),
               alignment: Alignment.center,

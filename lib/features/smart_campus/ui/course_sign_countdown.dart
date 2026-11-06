@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../shell/ui/shell_layout.dart';
 import '../data/course_sign_data.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 签到操作区当前课程右上角倒计时。
 class CourseSignCountdownBadge extends StatefulWidget {
@@ -87,7 +87,7 @@ class _CourseSignCountdownBadgeState extends State<CourseSignCountdownBadge> {
           _snapshot.timeText,
           style: TextStyle(
             fontSize: ended ? ui(12) : ui(14),
-            color: ended ? const Color(0xFFB6B5BB) : const Color(0xFF8741FF),
+            color: ended ? const Color(0xFFB6B5BB) : const Color(0xFF715EFE),
             fontFamily: ended ? 'PingFang SC' : 'Barlow',
             fontWeight: ended ? AppFont.w400 : FontWeight.w600,
             height: 1,

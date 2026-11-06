@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:the_road_of_music_flutter/core/storage/app_storage.dart';
+import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
 
 void main() {
   test('preserves App schoolId header as an exact string', () async {

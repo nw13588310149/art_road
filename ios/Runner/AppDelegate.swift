@@ -5,7 +5,7 @@ import UIKit
 @objc class AppDelegate: FlutterAppDelegate {
   /// 显式 FlutterEngine：避免 implicit engine + Storyboard 在 ProMotion iPad
   /// （iOS 18+）冷启动时 viewDidLoad 早于 engine 就绪，触发 VSyncClient 空指针闪退。
-  lazy var flutterEngine = FlutterEngine(name: "music_road_engine")
+  lazy var flutterEngine = FlutterEngine(name: "art_road_engine")
 
   override func application(
     _ application: UIApplication,

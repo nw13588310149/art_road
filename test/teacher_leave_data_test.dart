@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/features/smart_campus/data/teacher_leave_data.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/data/teacher_leave_data.dart';
 
 void main() {
   test('counts pending teacher leave from paginated total string', () {

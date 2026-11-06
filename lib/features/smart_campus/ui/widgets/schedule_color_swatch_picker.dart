@@ -19,7 +19,7 @@ class ScheduleColorSwatchPicker extends StatelessWidget {
   final int columnsPerRow;
 
   static const Color _borderColor = Color(0xFFF5F6FA);
-  static const Color _selectionRing = Color(0xFF8741FF);
+  static const Color _selectionRing = Color(0xFF715EFE);
 
   @override
   Widget build(BuildContext context) {

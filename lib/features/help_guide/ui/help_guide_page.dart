@@ -107,7 +107,7 @@ class _GuideHeader extends StatelessWidget {
               ),
               SizedBox(height: ui(3)),
               Text(
-                '音乐之路APP操作指南',
+                '美术之路APP操作指南',
                 style: TextStyle(
                   color: const Color(0xFFC2C1C5),
                   fontFamily: 'PingFang SC',
@@ -344,7 +344,7 @@ class _GuideCover extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '音乐之路 功能指南',
+                  '美术之路 功能指南',
                   style: TextStyle(
                     color: const Color(0xFF7540FF),
                     fontFamily: 'PingFang SC',
@@ -388,7 +388,7 @@ class _GuideCover extends StatelessWidget {
             right: 0,
             bottom: ui(8),
             child: Text(
-              '学音乐就用音乐之路 APP',
+              '学美术就用美术之路 APP',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.82),

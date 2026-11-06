@@ -1,7 +1,7 @@
 import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../../core/widgets/app_refresh_indicator.dart';
 import '../../../../core/widgets/app_toast.dart';

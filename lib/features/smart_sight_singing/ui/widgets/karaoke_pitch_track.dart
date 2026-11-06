@@ -81,14 +81,14 @@ class _KaraokePainter extends CustomPainter {
   static const _bg = Color(0xFFF5F6F8);
   static const _grid = Color(0xFFD8DCE3);
   static const _label = Color(0xFF788698);
-  static const _accent = Color(0xFF8741FF);
-  static const _refFill = Color(0x268741FF);
+  static const _accent = Color(0xFF715EFE);
+  static const _refFill = Color(0x26715EFE);
   static const _refStroke = _accent;
   static const _nowLine = _accent;
   static const _userNear = Color(0xFF9CA3AF);
   /// 拖尾：命中 / 接近 / 偏离（紫色系 + 灰，对齐当前视觉规范）。
   static const _trailGood = _accent;
-  static const _trailOk = Color(0xFFA773FF);
+  static const _trailOk = Color(0xFF8E7FFF);
   static const _trailMiss = Color(0xFFC4C9D1);
 
   /// 参考音符条高度（设计稿 20px）。

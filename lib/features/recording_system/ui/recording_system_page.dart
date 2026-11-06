@@ -3,8 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show ValueListenable, debugPrint;
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -18,7 +18,7 @@ import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../state/recording_system_controller.dart';
 import '../state/recording_system_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 录音系统的根页面。
 ///
@@ -970,7 +970,7 @@ class _RecordingSearchField extends StatelessWidget {
       height: ui(40),
       child: AppTextField(
         controller: controller,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorWidth: 1.5,
         cursorHeight: ui(15),
         decoration: InputDecoration(
@@ -1738,7 +1738,7 @@ class _RecordingPreviewView extends ConsumerWidget {
               height: ui(32),
               padding: EdgeInsets.symmetric(horizontal: ui(12)),
               decoration: BoxDecoration(
-                color: const Color(0xFF8741FF),
+                color: const Color(0xFF715EFE),
                 borderRadius: BorderRadius.circular(ui(8)),
               ),
               child: Row(
@@ -3334,7 +3334,7 @@ class _DarkScrubberPanelState extends State<_DarkScrubberPanel> {
                       gradient: const LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: <Color>[Color(0xFFA773FF), Color(0xFF7422FF)],
+                        colors: <Color>[Color(0xFF8E7FFF), Color(0xFF7422FF)],
                       ),
                       borderRadius: BorderRadius.circular(ui(6)),
                     ),
@@ -3836,7 +3836,7 @@ class _EffectThumb extends StatelessWidget {
             color: const Color(0xFF0B081A),
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(
-              color: active ? const Color(0xFF8741FF) : const Color(0xFFF5F6FA),
+              color: active ? const Color(0xFF715EFE) : const Color(0xFFF5F6FA),
               width: ui(active ? 3 : 1),
             ),
           ),
@@ -3898,7 +3898,7 @@ class _SaveTitleFieldState extends State<_SaveTitleField> {
         // 让虚拟键盘上出现"完成"键，回车直接收键盘。
         autofocus: true,
         textInputAction: TextInputAction.done,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorWidth: 1.5,
         cursorHeight: ui(16),
         style: TextStyle(
@@ -3968,7 +3968,7 @@ class _DialogActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           color: primary ? null : Colors.white,
@@ -3979,7 +3979,7 @@ class _DialogActionButton extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: primary
-                  ? const Color(0x59AD80FF)
+                  ? const Color(0x599585FF)
                   : const Color(0x59B5B5B5),
               blurRadius: ui(20),
               offset: Offset(0, ui(16)),

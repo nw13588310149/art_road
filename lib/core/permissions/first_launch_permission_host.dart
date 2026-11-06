@@ -9,7 +9,7 @@ import '../providers/app_providers.dart';
 import '../storage/app_storage.dart';
 import '../widgets/scaled_dialog.dart';
 import 'app_permission_service.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 首次启动时弹出说明并批量申请麦克风 / 相机 / 相册 / 通知等权限。
 ///
@@ -172,7 +172,7 @@ class _PermissionBullet extends StatelessWidget {
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           alignment: Alignment.center,
-          child: Icon(icon, size: ui(16), color: const Color(0xFF8741FF)),
+          child: Icon(icon, size: ui(16), color: const Color(0xFF715EFE)),
         ),
         SizedBox(width: ui(10)),
         Expanded(

@@ -12,7 +12,7 @@ import '../../../core/widgets/seamless_banner_carousel.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../state/school_page_controller.dart';
 import '../state/school_page_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// iPad Pro 12.9 横屏常见逻辑分辨率 1366×1024；此宽度下左列 Banner/声乐卡
 /// 会挤占快捷按钮区高度，需单独收紧图标与内边距。
@@ -1149,7 +1149,7 @@ class _SchoolNewsBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFA773FF),
+        color: const Color(0xFF8E7FFF),
         borderRadius: BorderRadius.circular(4),
       ),
       child: const Text(

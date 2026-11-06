@@ -1,11 +1,11 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -23,8 +23,8 @@ import '../state/cloud_drive_controller.dart';
 import '../state/cloud_drive_state.dart';
 import 'courseware_file_picker.dart';
 import 'courseware_inline_preview.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_theme.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_theme.dart';
 
 class MyCloudDrivePage extends ConsumerStatefulWidget {
   const MyCloudDrivePage({super.key});
@@ -603,7 +603,7 @@ class _FileRenameInlineOverlay extends StatelessWidget {
                         }
                       },
                       textAlignVertical: TextAlignVertical.center,
-                      cursorColor: const Color(0xFF8741FF),
+                      cursorColor: const Color(0xFF715EFE),
                       cursorWidth: 1.5,
                       cursorHeight: ui(16),
                       style: TextStyle(
@@ -1277,7 +1277,7 @@ class _CloudSearchField extends StatelessWidget {
       height: ui(40),
       child: AppTextField(
         controller: controller,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorWidth: 1.5,
         cursorHeight: ui(15),
         decoration: InputDecoration(
@@ -1423,7 +1423,7 @@ class _SelectionInfoBar extends StatelessWidget {
           '$totalCount',
           style: TextStyle(
             fontSize: ui(12),
-            color: const Color(0xFF8741FF),
+            color: const Color(0xFF715EFE),
             fontFamily: 'Barlow',
             fontWeight: FontWeight.w600,
           ),
@@ -1947,7 +1947,7 @@ class _UploadKindOption extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(
                 color: selected
-                    ? const Color(0xFFA773FF)
+                    ? const Color(0xFF8E7FFF)
                     : const Color(0xFFCECED1),
                 width: ui(1),
               ),
@@ -1958,7 +1958,7 @@ class _UploadKindOption extends StatelessWidget {
                       width: ui(9),
                       height: ui(9),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFA773FF),
+                        color: Color(0xFF8E7FFF),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -2418,8 +2418,8 @@ class _PreviewImagePager extends StatelessWidget {
 /// - 页码标签做成「右下角徽章」嵌在缩略图内（只有顶左 + 底左圆角 8，
 ///   底右那一头让缩略图本身的 9px 圆角带圆，避免双圆视觉不一致）；
 /// - 激活态：图上叠一层 11% 透明的暗紫蒙版（约 `#0B081A` @ 0x1C），
-///   徽章底色由 `#F5F6FA` 切成 `#EAE5FF`，徽章文字由 `#0B081A` 切成
-///   `#8741FF`。**不要**改成"整图换底色"的旧写法 —— 旧写法在 BoxFit.cover
+///   徽章底色由 `#F5F6FA` 切成 `#E3DFFF`，徽章文字由 `#0B081A` 切成
+///   `#715EFE`。**不要**改成"整图换底色"的旧写法 —— 旧写法在 BoxFit.cover
 ///   下被图片完全遮住，肉眼根本看不到激活效果。
 class _PreviewThumbnailRail extends StatelessWidget {
   const _PreviewThumbnailRail({
@@ -2505,7 +2505,7 @@ class _PreviewThumbnailRail extends StatelessWidget {
                       ),
                     // 右下角徽章：50×18，左上角 + 右下角圆角 8（设计是
                     // 顶左/底左 + 自然贴在右下被父级 9px clip 带圆），
-                    // active=#EAE5FF + #8741FF / inactive=#F5F6FA + #0B081A。
+                    // active=#E3DFFF + #715EFE / inactive=#F5F6FA + #0B081A。
                     Positioned(
                       right: 0,
                       bottom: 0,
@@ -2516,7 +2516,7 @@ class _PreviewThumbnailRail extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: isCurrent
-                              ? const Color(0xFFEAE5FF)
+                              ? const Color(0xFFE3DFFF)
                               : const Color(0xFFF5F6FA),
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(ui(8)),
@@ -2527,7 +2527,7 @@ class _PreviewThumbnailRail extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: isCurrent
-                                ? const Color(0xFF8741FF)
+                                ? const Color(0xFF715EFE)
                                 : const Color(0xFF0B081A),
                             fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
@@ -2973,7 +2973,7 @@ class _PreviewWaveformVisualizerState extends State<_PreviewWaveformVisualizer>
         gradient: const LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: <Color>[Color(0xFF8741FF), Color(0xFFD2C6FF)],
+          colors: <Color>[Color(0xFF715EFE), Color(0xFFD2C6FF)],
         ),
         borderRadius: BorderRadius.circular(2),
       ),
@@ -3277,7 +3277,7 @@ class _PreviewPlaybackBar extends StatelessWidget {
                   width: ui(36.67),
                   height: ui(36.67),
                   decoration: const BoxDecoration(
-                    color: Color(0xFF8741FF),
+                    color: Color(0xFF715EFE),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
@@ -3322,7 +3322,7 @@ class _PreviewPlaybackBar extends StatelessWidget {
                   favorite ? Icons.star_rounded : Icons.star_border_rounded,
                   size: ui(24),
                   color: favorite
-                      ? const Color(0xFF8741FF)
+                      ? const Color(0xFF715EFE)
                       : const Color(0xFFB6B5BB),
                 ),
                 SizedBox(width: ui(4)),
@@ -3436,7 +3436,7 @@ class _PreviewProgressTrack extends StatelessWidget {
                           gradient: const LinearGradient(
                             colors: <Color>[
                               Color(0xFFE2D0FF),
-                              Color(0xFF8741FF),
+                              Color(0xFF715EFE),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(ui(23)),
@@ -3448,7 +3448,7 @@ class _PreviewProgressTrack extends StatelessWidget {
                           width: thumbSize,
                           height: thumbSize,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF8741FF),
+                            color: const Color(0xFF715EFE),
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 1),
                             boxShadow: [
@@ -3564,7 +3564,7 @@ class _PreviewSpeedChipState extends State<_PreviewSpeedChip> {
                       boxShadow: [
                         BoxShadow(
                           color: const Color(
-                            0xFF8741FF,
+                            0xFF715EFE,
                           ).withValues(alpha: 0.10),
                           blurRadius: ui(20),
                           offset: Offset(0, ui(8)),
@@ -3585,7 +3585,7 @@ class _PreviewSpeedChipState extends State<_PreviewSpeedChip> {
                                 _PreviewSpeedChip.formatSpeed(v),
                                 style: TextStyle(
                                   color: v == widget.speed
-                                      ? const Color(0xFF8741FF)
+                                      ? const Color(0xFF715EFE)
                                       : const Color(0xFF7F7F7F),
                                   fontSize: ui(13),
                                   fontFamily: 'PingFang SC',
@@ -3635,7 +3635,7 @@ class _PreviewSpeedChipState extends State<_PreviewSpeedChip> {
               _PreviewSpeedChip.formatSpeed(widget.speed),
               style: TextStyle(
                 color: _open
-                    ? const Color(0xFF8741FF)
+                    ? const Color(0xFF715EFE)
                     : const Color(0xFF7F7F7F),
                 fontSize: ui(12),
                 fontFamily: 'PingFang SC',
@@ -4134,7 +4134,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                           height: ui(45),
                           child: AppTextField(
                             controller: _titleCtrl,
-                            cursorColor: const Color(0xFF8741FF),
+                            cursorColor: const Color(0xFF715EFE),
                             cursorWidth: 1.5,
                             cursorHeight: ui(16),
                             style: TextStyle(
@@ -4290,14 +4290,14 @@ class _UploadDialogState extends State<_UploadDialog> {
         AppLoadingIndicator(
           size: ui(28),
           strokeWidth: ui(2.5),
-          color: const Color(0xFF8741FF),
+          color: const Color(0xFF715EFE),
         ),
         SizedBox(height: ui(8)),
         Text(
           '正在处理所选文件…',
           style: TextStyle(
             fontSize: ui(13),
-            color: const Color(0xFF8741FF),
+            color: const Color(0xFF715EFE),
             fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
           ),
@@ -4402,7 +4402,7 @@ class _UploadDialogState extends State<_UploadDialog> {
             children: [
               Icon(
                 Icons.add_rounded,
-                color: const Color(0xFF8741FF),
+                color: const Color(0xFF715EFE),
                 size: ui(22),
               ),
               SizedBox(height: ui(2)),
@@ -4410,7 +4410,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                 '添加',
                 style: TextStyle(
                   fontSize: ui(13),
-                  color: const Color(0xFF8741FF),
+                  color: const Color(0xFF715EFE),
                   fontFamily: 'PingFang SC',
                 ),
               ),
@@ -4746,7 +4746,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                       value: slot.progress > 0 ? slot.progress : null,
                       backgroundColor: const Color(0xFFE1E2E5),
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFF8741FF),
+                        Color(0xFF715EFE),
                       ),
                       minHeight: ui(4),
                     ),
@@ -4758,7 +4758,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                         : '准备上传...',
                     style: TextStyle(
                       fontSize: ui(10),
-                      color: const Color(0xFF8741FF),
+                      color: const Color(0xFF715EFE),
                       fontFamily: 'PingFang SC',
                     ),
                   ),
@@ -4768,7 +4768,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                       Icon(
                         Icons.check_circle_rounded,
                         size: ui(14),
-                        color: const Color(0xFF8741FF),
+                        color: const Color(0xFF715EFE),
                       ),
                       SizedBox(width: ui(4)),
                       Text(
@@ -4812,7 +4812,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                 child: Icon(
                   Icons.refresh_rounded,
                   size: ui(16),
-                  color: const Color(0xFF8741FF),
+                  color: const Color(0xFF715EFE),
                 ),
               ),
             ),
@@ -5002,8 +5002,8 @@ class _FileVisual {
 
 // 文件徽标只保留三种业务分类：图片 / 谱例 / 课件。
 // 文件主体图标仍然按后缀自动选择（PDF / DOC / 图片 / 课件占位图）。
-const Color _kBadgeBgImage = Color(0x1A8741FF);
-const Color _kBadgeFgImage = Color(0xFF8741FF);
+const Color _kBadgeBgImage = Color(0x1A715EFE);
+const Color _kBadgeFgImage = Color(0xFF715EFE);
 const Color _kBadgeBgScore = Color(0xFFE6F2FF);
 const Color _kBadgeFgScore = Color(0xFF1E73FF);
 const Color _kBadgeBgCourseware = Color(0xFFDFFCF0);

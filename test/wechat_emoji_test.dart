@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/core/widgets/wechat_emoji.dart';
+import 'package:the_road_of_art_flutter/core/widgets/wechat_emoji.dart';
 
 void main() {
   test('uses the mini-program panel order and atlas coordinates', () {

@@ -275,9 +275,9 @@ class _VisualizerPainter extends CustomPainter {
   final bool ambientWave;
   final double peakHeightScale;
 
-  static const _topColor = Color(0xFF8741FF);
+  static const _topColor = Color(0xFF715EFE);
   static const _bottomColor = Color(0xFFC8AEFF);
-  static const _topMirrorColor = Color(0x668741FF); // 40% alpha
+  static const _topMirrorColor = Color(0x66715EFE); // 40% alpha
   static const _bottomMirrorColor = Color(0x00C8AEFF); // 0% alpha
 
   @override
@@ -405,7 +405,7 @@ class _FloatingNoteWidget extends StatelessWidget {
             spec.symbol,
             style: TextStyle(
               fontSize: spec.size,
-              color: const Color(0xFFB68EFF),
+              color: const Color(0xFF9585FF),
               fontWeight: FontWeight.w600,
             ),
           ),

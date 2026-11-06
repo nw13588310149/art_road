@@ -2,7 +2,7 @@
 // 智慧校园「空状态」统一组件
 //
 // 设计语言（对齐考评 / 作业 / 成绩页现有视觉）：
-//   - 主色 #8741FF 紫；标题 #0B081A / 副标题 #B6B5BB；PingFang SC。
+//   - 主色 #715EFE 紫；标题 #0B081A / 副标题 #B6B5BB；PingFang SC。
 //   - 两种主视觉：①插图（404 系列 PNG，如评卷 st.png / 书本 jp.png）；
 //     ②柔和渐变圆底 + 紫色图标（无合适插图时的自包含降级）。
 //   - 可选副标题与操作按钮（如「重新加载」），按钮为紫色描边胶囊。
@@ -15,11 +15,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../shell/ui/shell_layout.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kEmptyTitle = Color(0xFF0B081A);
 const Color _kEmptyHint = Color(0xFFB6B5BB);
-const Color _kEmptyPurple = Color(0xFF8741FF);
+const Color _kEmptyPurple = Color(0xFF715EFE);
 
 class SmartCampusEmptyState extends StatelessWidget {
   const SmartCampusEmptyState({

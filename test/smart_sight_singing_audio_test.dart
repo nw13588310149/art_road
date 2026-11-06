@@ -3,14 +3,14 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/features/smart_sight_singing/audio/ktv_pitch_guide.dart';
-import 'package:the_road_of_music_flutter/features/smart_sight_singing/audio/ktv_scoring.dart';
-import 'package:the_road_of_music_flutter/features/smart_sight_singing/audio/live_pitch_detector.dart';
-import 'package:the_road_of_music_flutter/features/smart_sight_singing/audio/midi_file_parser.dart';
-import 'package:the_road_of_music_flutter/features/smart_sight_singing/audio/midi_sight_singing_service.dart';
-import 'package:the_road_of_music_flutter/features/smart_sight_singing/audio/pitch_track.dart';
-import 'package:the_road_of_music_flutter/features/smart_sight_singing/audio/realtime_pitch_capture.dart';
-import 'package:the_road_of_music_flutter/features/smart_sight_singing/ui/widgets/score_sight_reading_track.dart';
+import 'package:the_road_of_art_flutter/features/smart_sight_singing/audio/ktv_pitch_guide.dart';
+import 'package:the_road_of_art_flutter/features/smart_sight_singing/audio/ktv_scoring.dart';
+import 'package:the_road_of_art_flutter/features/smart_sight_singing/audio/live_pitch_detector.dart';
+import 'package:the_road_of_art_flutter/features/smart_sight_singing/audio/midi_file_parser.dart';
+import 'package:the_road_of_art_flutter/features/smart_sight_singing/audio/midi_sight_singing_service.dart';
+import 'package:the_road_of_art_flutter/features/smart_sight_singing/audio/pitch_track.dart';
+import 'package:the_road_of_art_flutter/features/smart_sight_singing/audio/realtime_pitch_capture.dart';
+import 'package:the_road_of_art_flutter/features/smart_sight_singing/ui/widgets/score_sight_reading_track.dart';
 
 void main() {
   test('MIDI tempo events apply across tracks', () {

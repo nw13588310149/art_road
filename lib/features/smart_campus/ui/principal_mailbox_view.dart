@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // 智慧校园「校长信箱」页（学生 / 教师 / 班主任共用）
 //
 // 入口：`controller.openPrincipalMailbox()` → mainView == principalMailbox。
@@ -17,7 +17,7 @@
 //    · 卡底 731；提交按钮距底 61
 //
 // chips 强制 Row（mainAxisSize.min）保持单行；开关使用本文件自定义
-// _AnonymousSwitch（44×24，紫底 #8741FF）以匹配 Figma 视觉。
+// _AnonymousSwitch（44×24，紫底 #715EFE）以匹配 Figma 视觉。
 //
 // 文件上传：复用 courseware 的 `pickCoursewareFiles` + `cloudDriveControllerProvider`
 // 提供的 `uploadFilePathRaw`（native 路径）/`uploadFileRaw`（web 字节）双通道
@@ -31,8 +31,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/app_providers.dart';
@@ -43,7 +43,7 @@ import '../../shell/ui/shell_layout.dart';
 import '../../../core/constants/app_assets.dart';
 import '../data/principal_mailbox_repository.dart';
 import 'mailbox_attachment_widgets.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kPageBg = Color(0xFFEFF3FC);
 const Color _kCardBg = Colors.white;
@@ -53,7 +53,7 @@ const Color _kBorderDash = Color(0xFFCECED1);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kPlaceholder = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 
 enum _MailboxMode { compose, submitted }
 
@@ -92,7 +92,7 @@ extension _MailboxStatusX on _MailboxStatus {
   Color get color {
     switch (this) {
       case _MailboxStatus.sent:
-        return const Color(0xFF8741FF);
+        return const Color(0xFF715EFE);
       case _MailboxStatus.replied:
         return const Color(0xFF35BD7C);
       case _MailboxStatus.closed:
@@ -1126,12 +1126,12 @@ class _SubmitButton extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
-              colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+              colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
             ),
             borderRadius: BorderRadius.circular(ui(12)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0x59AD80FF),
+                color: const Color(0x599585FF),
                 blurRadius: ui(20),
                 offset: Offset(0, ui(16)),
               ),
@@ -1335,7 +1335,7 @@ class _EmptyHint extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 ),
                 borderRadius: BorderRadius.circular(ui(8)),
               ),

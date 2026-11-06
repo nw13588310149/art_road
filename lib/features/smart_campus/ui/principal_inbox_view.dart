@@ -4,8 +4,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
@@ -20,7 +20,7 @@ const Color _kBorderSoft = Color(0xFFF3F2F3);
 const Color _kInnerGray = Color(0xFFF5F6FA);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kGreen = Color(0xFF35BD7C);
 
 class PrincipalInboxView extends ConsumerStatefulWidget {
@@ -634,7 +634,7 @@ class _ReplyButton extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
-              colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+              colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
             ),
             borderRadius: BorderRadius.circular(ui(6)),
           ),
@@ -672,7 +672,7 @@ class _SubmitterAvatar extends StatelessWidget {
       height: ui(36),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFDAD2FF),
+        color: const Color(0xFFD7D5FF),
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Text(

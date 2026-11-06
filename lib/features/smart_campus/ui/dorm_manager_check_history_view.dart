@@ -12,7 +12,7 @@
 //   - banner 白→#F9EDFF 渐变 + 居中标题 + 副标题
 //   - 14 天日历条（白底 16 圆角 + 灰底 8 圆角 cells，今日紫底白字）
 //   - 4 张 100 高彩色渐变统计卡（橙 / 绿 / 红 / 紫 + 右上 32×32 白底图标）
-//   - 状态徽章配色：正常 #A773FF / 请假免检 #1CD097 / 迟到 #325BFF /
+//   - 状态徽章配色：正常 #8E7FFF / 请假免检 #1CD097 / 迟到 #325BFF /
 //     未打卡 #FF323C
 //
 // 表格区列：学生 | 宿舍/床位 | 状态 | 查寝日期 | 打卡时间 | 操作
@@ -46,7 +46,7 @@ import '../../school/data/school_config_data.dart';
 import '../../school/state/school_config_controller.dart';
 import 'widgets/dormitory_detail_dialog.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -58,8 +58,8 @@ const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextMuted = Color(0xFF71717A);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kCalendarHint = Color(0xFFE6E9F1);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleSolid = Color(0xFFA773FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleSolid = Color(0xFF8E7FFF);
 const Color _kRed = Color(0xFFFF323C);
 const Color _kBlue = Color(0xFF325BFF);
 const Color _kGreen = Color(0xFF1CD097);
@@ -1079,7 +1079,7 @@ class _StudentAvatar extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: const Color(0xFFE7D9FF),
+          color: const Color(0xFFE3DFFF),
           borderRadius: BorderRadius.circular(radius),
         ),
         alignment: Alignment.center,

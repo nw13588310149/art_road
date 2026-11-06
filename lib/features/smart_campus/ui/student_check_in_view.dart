@@ -10,7 +10,7 @@
 //      远右 32 高 "历史记录" 按钮
 //   2. 5 项统计卡（一行平铺，padding 24/8，白底 12 圆角）：
 //      6 小课应签课次 / 6 大课一键入册 / 86.5 小课打卡（合计） / 4 迟到 /
-//      96.5% 小课准时率（96.5% 用 #8741FF 紫色）
+//      96.5% 小课准时率（96.5% 用 #715EFE 紫色）
 //   3. 双列：左 340 "今日课程"（复用首页课程卡，仅保留签课选中态），
 //      右 614×274 "签到操作"（紫色渐变内嵌 #F5F6FA 灰底面板：当前学生 +
 //      教师上下课签时间轴 + 上课/下课 2 个签到按钮）
@@ -18,8 +18,8 @@
 //      课程 tag 走绿调（#DFFCF0）+ 行内排布；后 3 张走黄调（#DBEE49）+
 //      独立一行
 //
-// 颜色：白卡 / #F5F6FA 浅灰 / #8741FF 主紫 / #FF323C 缺勤红 / #0CAC40 出勤绿
-//      / #DBEE49 黄 tag / #A773FF 状态紫 / #B6B5BB 提示灰 / #6D6B75 副字
+// 颜色：白卡 / #F5F6FA 浅灰 / #715EFE 主紫 / #FF323C 缺勤红 / #0CAC40 出勤绿
+//      / #DBEE49 黄 tag / #8E7FFF 状态紫 / #B6B5BB 提示灰 / #6D6B75 副字
 // 字体：PingFang SC（标题 16~18 / 正文 12~14）+ Barlow（日期 18 / 时间 18）
 // =============================================================================
 
@@ -27,7 +27,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
@@ -45,7 +45,7 @@ import '../state/student_check_in_controller.dart';
 import '../state/student_check_in_state.dart';
 import 'course_sign_countdown.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kPageBg = Color(0xFFEFF3FC);
 const Color _kCardBg = Colors.white;
@@ -57,9 +57,9 @@ const Color _kTextSection = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleLight = Color(0xFFA773FF);
-const Color _kPurpleSoftBg = Color(0xFFEAE5FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleLight = Color(0xFF8E7FFF);
+const Color _kPurpleSoftBg = Color(0xFFE3DFFF);
 const Color _kPurpleSoftRing = Color(0xFFF7F2FF);
 const Color _kStatusGreen = Color(0xFF0CAC40);
 const Color _kAttendRed = Color(0xFFFF323C);
@@ -1218,7 +1218,7 @@ class _ActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           color: isActionable

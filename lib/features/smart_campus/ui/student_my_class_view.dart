@@ -18,15 +18,15 @@
 //   5. 同班同学：标题行（"同班同学" + 搜索框）+ 白卡内 124×124 学生卡 7 列网格，
 //      第一格固定为"自己"
 //
-// 颜色：白卡 #FFFFFF / 灰底 #F5F6FA / 主紫 #8741FF / 软紫 #B98FFF / 紫底 #F0E8FC
+// 颜色：白卡 #FFFFFF / 灰底 #F5F6FA / 主紫 #715EFE / 软紫 #B98FFF / 紫底 #F0E8FC
 //      / 粉签 #FFC8D9 / 自己卡片背景 #F7F2FF / 描述 #B6B5BB / 副字 #6D6B75
 // 字体：PingFang SC（标题 18 / 正文 12~14 / 提示 11）+ Barlow（数字 24，紫色）
 // =============================================================================
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
@@ -38,7 +38,7 @@ import '../../shell/ui/shell_layout.dart';
 import '../data/student_repository.dart';
 import '../data/teacher_notice_data.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kPageBg = Color(0xFFEFF3FC);
 const Color _kCardBg = Colors.white;
@@ -48,7 +48,7 @@ const Color _kTextSection = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kPurpleAvatar = Color(0xFFB98FFF);
 const Color _kAnnounceBg = Color(0xFFF0E8FC);
 const Color _kCoursePink = Color(0xFFFFC8D9);

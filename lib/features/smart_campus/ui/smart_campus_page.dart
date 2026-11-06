@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../circle/ui/circle_page.dart';
@@ -44,7 +44,7 @@ import 'teacher_leave_approval_view.dart';
 import 'teacher_my_leave_view.dart';
 import 'teacher_lesson_schedule_view.dart';
 import 'teacher_student_roster_view.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 智慧校园入口页：根据当前 [SmartCampusRole] + [SmartCampusMainView] 路由到
 /// 对应的子视图。

@@ -9,7 +9,7 @@ import '../state/auth_controller.dart';
 import '../state/auth_state.dart';
 import 'widgets/auth_design_canvas.dart';
 import 'widgets/auth_figma_components.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -194,7 +194,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             child: Text(
                               '立即登录！',
                               style: TextStyle(
-                                color: const Color(0xFF8741FF),
+                                color: const Color(0xFF715EFE),
                                 fontSize: _s(scale, 14),
                                 fontFamily: 'PingFang SC',
                                 fontFamilyFallback: const ['Harmony'],

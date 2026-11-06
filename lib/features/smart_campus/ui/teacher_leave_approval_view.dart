@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // 班主任端「请假审批」独立页面
 //
 // 入口：班主任 dashboard 快捷区「请假审批」按钮 → controller.openLeaveApproval()
@@ -16,7 +16,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/api_response.dart';
@@ -27,7 +27,7 @@ import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import '../data/student_leave_data.dart';
 import '../data/teacher_repository.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -39,8 +39,8 @@ const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextHintLight = Color(0xFFCECED1);
 const Color _kTextPlaceholder = Color(0xFFD1D1D1);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleSoftBg = Color(0xFFDAD2FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleSoftBg = Color(0xFFD7D5FF);
 const Color _kGreen = Color(0xFF12CE51);
 const Color _kGreenSoftBg = Color(0xFFE4FFED);
 const Color _kRed = Color(0xFFFF323C);
@@ -879,7 +879,7 @@ class _StudentAvatar extends StatelessWidget {
       height: ui(40),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFDAD2FF),
+        color: const Color(0xFFD7D5FF),
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Text(
@@ -1143,7 +1143,7 @@ class _CardActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           color: isPrimary ? null : Colors.white,

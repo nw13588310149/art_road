@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 /// be zoomed through the native canvas rather than a Flutter-only transform.
 abstract final class NoteCanvasZoom {
   static const MethodChannel _channel = MethodChannel(
-    'the_road_of_music_flutter/note_canvas_zoom',
+    'the_road_of_art_flutter/note_canvas_zoom',
   );
 
   static Future<void> setZoom(double zoom) async {

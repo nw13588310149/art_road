@@ -34,7 +34,7 @@ import 'widgets/smart_campus_home_card.dart';
 import 'widgets/smart_campus_quick_action_icon.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 part 'student_dashboard.dart';
 
@@ -870,13 +870,13 @@ class _TeacherStatCard extends StatelessWidget {
     final isNextLesson = item.label == '下一节' || item.label == '待办';
     final isUnifiedExamCountdown = item.label == '距离省统考';
     final valueColor = isNextLesson
-        ? const Color(0xFF8741FF)
+        ? const Color(0xFF715EFE)
         : const Color(0xFF0B081A);
     final value = smartCampusHomeStatValue(
       value: item.value,
       ui: ui,
       color: valueColor,
-      numberColor: isUnifiedExamCountdown ? const Color(0xFF8741FF) : null,
+      numberColor: isUnifiedExamCountdown ? const Color(0xFF715EFE) : null,
       suffixFontSize: isUnifiedExamCountdown
           ? smartCampusHomeStatChineseFontSize - 4
           : null,
@@ -1240,7 +1240,7 @@ class _TeacherProfileHeader extends StatelessWidget {
               height: ui(72),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFEAE5FF),
+                color: const Color(0xFFE3DFFF),
                 image: avatarUrl.isNotEmpty
                     ? DecorationImage(
                         image: NetworkImage(avatarUrl),
@@ -1257,7 +1257,7 @@ class _TeacherProfileHeader extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(28),
                           height: 1.0,
-                          color: const Color(0xFF8741FF),
+                          color: const Color(0xFF715EFE),
                           fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w500,
                         ),
@@ -1598,7 +1598,7 @@ class _TeacherRoleTabButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           color: active ? null : Colors.white,
@@ -2598,10 +2598,10 @@ _LessonRowData _lessonRowFromCourse(
 
   var courseColor = isSmall
       ? const Color(0xFF0CAC40)
-      : const Color(0xFF8741FF);
+      : const Color(0xFF715EFE);
   var courseBg = isSmall
       ? const Color(0xFFDFFCF0)
-      : const Color(0xFFEAE5FF);
+      : const Color(0xFFE3DFFF);
   var tagDotColor = courseColor;
 
   final hex = _schedulePickString(row, ['color'], '');
@@ -3049,8 +3049,8 @@ class _BoardItemData {
   final Color tagBackground;
 }
 
-const Color _kBoardTagPurple = Color(0xFF8741FF);
-const Color _kBoardTagPurpleSoft = Color(0xFFDAD2FF);
+const Color _kBoardTagPurple = Color(0xFF715EFE);
+const Color _kBoardTagPurpleSoft = Color(0xFFD7D5FF);
 
 class _HeadTeacherBoardSection extends StatelessWidget {
   const _HeadTeacherBoardSection({

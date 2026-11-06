@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../music_companion/ui/widgets/piano_visualizer.dart';
@@ -13,7 +13,7 @@ import '../../shell/ui/shell_layout.dart';
 import '../audio/smart_dictation_audio_engine.dart';
 import '../state/smart_dictation_controller.dart';
 import '../state/smart_dictation_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// Notes available for the 最低音 picker (matches Figma design).
 const _kMinRangeNotes = <String>['f', '#f', 'g', '#g', 'a', 'bb'];
@@ -425,7 +425,7 @@ class _ModeBtn extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           color: selected ? null : Colors.white,
@@ -814,11 +814,11 @@ class _Content extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
                 ),
                 boxShadow: const <BoxShadow>[
                   BoxShadow(
-                    color: Color(0x59AD80FF),
+                    color: Color(0x599585FF),
                     offset: Offset(0, 16),
                     blurRadius: 20,
                   ),
@@ -1154,11 +1154,11 @@ class _PracticeViewState extends State<_PracticeView> {
 //   - top 从 -111 → -203 由 waterFrac 线性插值，水位从底部"涨上来"；
 //   - 反馈态（正确/错误/超时）box2 改为实色，不渲染 .box2_bg，复刻 1.0 行为。
 //
-// 颜色：将 1.0 的 #00C9A4 / #29B5A5 系替换为主题紫 #8741FF / #B68BFF；
+// 颜色：将 1.0 的 #00C9A4 / #29B5A5 系替换为主题紫 #715EFE / #B68BFF；
 // 错误 / 超时保留 1.0 的红色 #E61F62（不在"绿→紫"换色范围）。
 
-/// 主题色（将 1.0 的 #00C9A4 绿替换为 #8741FF 紫）。
-const Color _kTimerThemeColor = Color(0xFF8741FF);
+/// 主题色（将 1.0 的 #00C9A4 绿替换为 #715EFE 紫）。
+const Color _kTimerThemeColor = Color(0xFF715EFE);
 
 /// 答错 / 超时色（与 1.0 #E61F62 一致）。
 const Color _kTimerWrongColor = Color(0xFFE61F62);
@@ -1589,7 +1589,7 @@ class _PracticeProgressBarTrack extends StatelessWidget {
                                     Color(0xFFFFFFFF),
                                     Color(0xFFE2D0FF),
                                     Color(0xFFC9A8FF),
-                                    Color(0xFF8741FF),
+                                    Color(0xFF715EFE),
                                   ],
                                 ),
                               ),
@@ -1609,11 +1609,11 @@ class _PracticeProgressBarTrack extends StatelessWidget {
                   height: badgeH,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF8741FF),
+                    color: const Color(0xFF715EFE),
                     borderRadius: BorderRadius.circular(badgeH / 2),
                     boxShadow: <BoxShadow>[
                       BoxShadow(
-                        color: const Color(0x408741FF),
+                        color: const Color(0x40715EFE),
                         offset: Offset(0, ui(4)),
                         blurRadius: ui(10),
                       ),
@@ -1788,12 +1788,12 @@ class _PracticeBottomBar extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
-              colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+              colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
             ),
             borderRadius: BorderRadius.circular(ui(12)),
             boxShadow: <BoxShadow>[
               BoxShadow(
-                color: const Color(0x59AD80FF),
+                color: const Color(0x599585FF),
                 offset: Offset(0, ui(16)),
                 blurRadius: ui(20),
               ),
@@ -2219,12 +2219,12 @@ class _ResultActionButton extends StatelessWidget {
             colors: <Color>[
               Color(0xFFD2BAFF),
               Color(0xFF9F6AFF),
-              Color(0xFF8640FF),
+              Color(0xFF715EFE),
             ],
           ),
           boxShadow: const <BoxShadow>[
             BoxShadow(
-              color: Color(0x59AD80FF),
+              color: Color(0x599585FF),
               offset: Offset(0, 16),
               blurRadius: 20,
             ),
@@ -2992,7 +2992,7 @@ class _SmartOptionChipState extends State<_SmartOptionChip>
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : widget.selected
               ? const LinearGradient(

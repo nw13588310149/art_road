@@ -6,7 +6,7 @@ final class AppAudioSessionCoordinator {
   static let shared = AppAudioSessionCoordinator()
 
   private let queue = DispatchQueue(
-    label: "com.yyzl.music.audioSession",
+    label: "com.yyzl.art.audioSession",
     qos: .userInitiated
   )
   private var channel: FlutterMethodChannel?
@@ -18,7 +18,7 @@ final class AppAudioSessionCoordinator {
   func register(messenger: FlutterBinaryMessenger) {
     guard channel == nil else { return }
     let channel = FlutterMethodChannel(
-      name: "com.yyzl.music/audio_session",
+      name: "com.yyzl.art/audio_session",
       binaryMessenger: messenger
     )
     channel.setMethodCallHandler { [weak self] call, result in

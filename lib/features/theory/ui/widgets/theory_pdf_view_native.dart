@@ -1,7 +1,7 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 /// 乐理 PDF 预览区背景（与 Web iframe、pdfrx backgroundColor 一致）。
@@ -99,7 +99,7 @@ class TheoryPdfView extends StatelessWidget {
                   SelectableText(
                     url,
                     style: const TextStyle(
-                      color: Color(0xFF8741FF),
+                      color: Color(0xFF715EFE),
                       fontSize: 11,
                       fontFamily: 'Manrope',
                     ),

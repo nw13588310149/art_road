@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 与 AI 聊天正文（`_MessageText` baseStyle）一致的排版。
 const Color kMusicPlayAiBodyTextColor = Color(0xFF0B081A);

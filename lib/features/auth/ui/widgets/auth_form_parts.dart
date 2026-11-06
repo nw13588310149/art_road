@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../../app/router/route_paths.dart';
 
@@ -26,7 +26,7 @@ class AuthPrimaryButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
-            colors: [Color(0xFF6B38F2), Color(0xFF8741FF)],
+            colors: [Color(0xFF6B38F2), Color(0xFF715EFE)],
           ),
           boxShadow: const [
             BoxShadow(
@@ -85,13 +85,13 @@ class AuthAgreementRow extends StatelessWidget {
             value: checked,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-            side: const BorderSide(color: Color(0xFF8741FF), width: 1),
+            side: const BorderSide(color: Color(0xFF715EFE), width: 1),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(2),
             ),
             fillColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.selected)) {
-                return const Color(0xFF8741FF);
+                return const Color(0xFF715EFE);
               }
               return Colors.white;
             }),
@@ -114,7 +114,7 @@ class AuthAgreementRow extends StatelessWidget {
               InkWell(
                 onTap: () => Navigator.pushNamed(context, RoutePaths.xieyi2),
                 child: const Text(
-                  '《音乐之路服务协议》',
+                  '《美术之路服务协议》',
                   style: TextStyle(
                     fontSize: 14,
                     height: 12 / 14,
@@ -166,7 +166,7 @@ class AuthBottomActionLine extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               height: 12 / 14,
-              color: Color(0xFF8741FF),
+              color: Color(0xFF715EFE),
             ),
           ),
         ),
@@ -199,7 +199,7 @@ class AuthSmsButton extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [Color(0xFF6B38F2), Color(0xFF8741FF)],
+          colors: [Color(0xFF6B38F2), Color(0xFF715EFE)],
         ),
       ),
       child: FilledButton(

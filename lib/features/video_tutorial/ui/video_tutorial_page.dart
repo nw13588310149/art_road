@@ -14,7 +14,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/audio/mpv_player_smooth.dart';
 import '../../../core/constants/app_assets.dart';
@@ -31,7 +31,7 @@ import '../../my_collection/navigation/collection_return.dart';
 import '../data/video_publisher_data.dart';
 import '../state/video_tutorial_controller.dart';
 import '../state/video_tutorial_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import 'video_player_smooth_session.dart';
 
 const int _kVideoPreloadLimit = 8;
@@ -1984,7 +1984,7 @@ class _PlayerBottomBar extends StatelessWidget {
                         height: 3,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFFE2D0FF), Color(0xFF8741FF)],
+                            colors: [Color(0xFFE2D0FF), Color(0xFF715EFE)],
                           ),
                           borderRadius: BorderRadius.circular(11),
                         ),
@@ -1996,7 +1996,7 @@ class _PlayerBottomBar extends StatelessWidget {
                         width: 12,
                         height: 12,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8741FF),
+                          color: const Color(0xFF715EFE),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 1),
                           boxShadow: const [
@@ -2204,7 +2204,7 @@ class _SpeedPanel extends StatelessWidget {
                           padding: EdgeInsets.only(right: 6),
                           child: Icon(
                             Icons.check_rounded,
-                            color: Color(0xFF8741FF),
+                            color: Color(0xFF715EFE),
                             size: 14,
                           ),
                         )
@@ -2216,7 +2216,7 @@ class _SpeedPanel extends StatelessWidget {
                             : '${rate.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '')}x',
                         style: TextStyle(
                           color: selected
-                              ? const Color(0xFF8741FF)
+                              ? const Color(0xFF715EFE)
                               : Colors.white,
                           fontSize: 13,
                           fontWeight: selected
@@ -2327,7 +2327,7 @@ class _CompletedOverlay extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF8741FF),
+                      color: const Color(0xFF715EFE),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -2744,7 +2744,7 @@ class _FullscreenPageState extends State<_FullscreenPage> {
                                         vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF8741FF),
+                                        color: const Color(0xFF715EFE),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
@@ -2818,7 +2818,7 @@ class _FullscreenPageState extends State<_FullscreenPage> {
                                           const RoundSliderOverlayShape(
                                             overlayRadius: 12,
                                           ),
-                                      activeTrackColor: const Color(0xFF8741FF),
+                                      activeTrackColor: const Color(0xFF715EFE),
                                       inactiveTrackColor: Colors.white
                                           .withValues(alpha: 0.3),
                                       thumbColor: Colors.white,
@@ -3416,7 +3416,7 @@ class _ActionBtn extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 color: highlighted
-                    ? const Color(0xFF8741FF)
+                    ? const Color(0xFF715EFE)
                     : const Color(0xFF0B081A),
                 fontWeight: FontWeight.w500,
               ),
@@ -3708,7 +3708,7 @@ class _SeriesCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // 紫色渐变播放按钮：270° linear-gradient(#B68EFF → #8640FF)
+            // 紫色渐变播放按钮：270° linear-gradient(#9585FF → #715EFE)
             Container(
               height: 40,
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -3716,7 +3716,7 @@ class _SeriesCard extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -3883,7 +3883,7 @@ class _VideoCategoryHeader extends StatelessWidget {
                     controller: searchController,
                     textInputAction: TextInputAction.search,
                     onSubmitted: (_) => onSearchSubmitted(),
-                    cursorColor: const Color(0xFF8741FF),
+                    cursorColor: const Color(0xFF715EFE),
                     cursorWidth: 1.5,
                     cursorHeight: ui(14),
                     style: TextStyle(

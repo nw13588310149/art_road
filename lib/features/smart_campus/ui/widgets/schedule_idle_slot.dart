@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shell/ui/shell_layout.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 课表空格占位：白底 + 灰边圆角框 +「空闲」文案，固定显示在顶部标准高度，
 /// 不因同节次有小课叠高整行而纵向拉伸。

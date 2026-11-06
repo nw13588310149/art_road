@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/features/smart_sight_singing/audio/music_xml_sight_singing_service.dart';
+import 'package:the_road_of_art_flutter/features/smart_sight_singing/audio/music_xml_sight_singing_service.dart';
 
 void main() {
   const tiedXml = '''

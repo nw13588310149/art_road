@@ -28,7 +28,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/app_toast.dart';
@@ -37,7 +37,7 @@ import '../services/baidu_geo_service.dart';
 import '../services/geo_locator.dart';
 import 'widgets/baidu_map_view.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -49,7 +49,7 @@ const Color _kTextDarker = Color(0xFF1A1A1A);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kGreen = Color(0xFF12CE51);
 const Color _kGreenSoftBg = Color(0xFFE4FFED);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kPurpleLight = Color(0xFFB68BFF);
 const Color _kPurpleGlow = Color(0xFFD7D2FF);
 
@@ -663,7 +663,7 @@ class _RefreshLocationButton extends StatelessWidget {
 ///
 /// ```css
 /// width: 160; height: 160;
-/// background: linear-gradient(180deg, #8741FF 14%, #B68BFF 100%);
+/// background: linear-gradient(180deg, #715EFE 14%, #B68BFF 100%);
 /// box-shadow: 0px 0px 20px #D7D2FF inset;
 /// border-radius: 9999px;
 /// ```
@@ -705,7 +705,7 @@ class _BigPunchButton extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // 1) 底圆：180° 线性渐变 #8741FF (14%) → #B68BFF。
+              // 1) 底圆：180° 线性渐变 #715EFE (14%) → #B68BFF。
               Container(
                 width: ui(160),
                 height: ui(160),

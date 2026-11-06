@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../constants/app_assets.dart';
 import '../../features/shell/ui/shell_layout.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 课程列表为空时的统一占位：163×163 插图 + 居中文案。
 ///

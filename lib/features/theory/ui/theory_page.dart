@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -14,7 +14,7 @@ import '../../smart_campus/navigation/group_chat_return.dart';
 import '../state/theory_controller.dart';
 import '../state/theory_state.dart';
 import 'widgets/theory_pdf_view.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class TheoryPage extends ConsumerStatefulWidget {
   const TheoryPage({super.key});
@@ -334,7 +334,7 @@ class _FavoriteChipButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final labelColor = favorite
-        ? const Color(0xFF8741FF)
+        ? const Color(0xFF715EFE)
         : const Color(0xFF0B081A);
     final iconAsset = favorite
         ? 'assets/images/home/fav4.png'

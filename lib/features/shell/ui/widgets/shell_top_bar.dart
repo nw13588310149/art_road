@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/router/app_navigator.dart';
@@ -17,7 +17,7 @@ import '../../data/shell_repository.dart';
 import '../../state/shell_controller.dart';
 import '../../state/shell_state.dart';
 import '../shell_layout.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class ShellTopBar extends StatelessWidget {
   ShellTopBar({
@@ -559,7 +559,7 @@ class _UserMenuRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: ui(12),
-                        color: const Color(0xFF8741FF),
+                        color: const Color(0xFF715EFE),
                         fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.2,
@@ -663,7 +663,7 @@ class _NoticeDrawerHeader extends StatelessWidget {
           width: ui(3.25),
           height: ui(14.85),
           decoration: BoxDecoration(
-            color: const Color(0xFF8741FF),
+            color: const Color(0xFF715EFE),
             borderRadius: BorderRadius.circular(ui(6)),
           ),
         ),
@@ -688,7 +688,7 @@ class _NoticeDrawerHeader extends StatelessWidget {
               child: Text(
                 '批量已读',
                 style: TextStyle(
-                  color: const Color(0xFF8741FF),
+                  color: const Color(0xFF715EFE),
                   fontSize: ui(13),
                   fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
@@ -1138,7 +1138,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         controller: _controller,
         focusNode: _focusNode,
         textInputAction: TextInputAction.search,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorWidth: 1.5,
         cursorHeight: ui(16),
         onSubmitted: (value) {
@@ -1409,7 +1409,7 @@ class _SearchTabBar extends StatelessWidget {
                           fontFamily: 'PingFang SC',
                           fontWeight: selected ? AppFont.w500 : AppFont.w400,
                           color: selected
-                              ? const Color(0xFF8741FF)
+                              ? const Color(0xFF715EFE)
                               : const Color(0xFF6D6B75),
                           height: 1.2,
                         ),
@@ -1427,7 +1427,7 @@ class _SearchTabBar extends StatelessWidget {
                         width: ui(28),
                         height: ui(3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8741FF),
+                          color: const Color(0xFF715EFE),
                           borderRadius: BorderRadius.circular(ui(3)),
                         ),
                       ),
@@ -1467,7 +1467,7 @@ class _SearchResultRow extends StatelessWidget {
               height: ui(20),
               alignment: Alignment.center,
               decoration: const BoxDecoration(
-                color: Color(0xFF8741FF),
+                color: Color(0xFF715EFE),
                 shape: BoxShape.circle,
               ),
               child: Text(

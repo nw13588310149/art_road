@@ -9,7 +9,7 @@ import '../../shell/ui/shell_layout.dart';
 import '../state/music_companion_controller.dart';
 import '../state/music_companion_state.dart';
 import 'widgets/piano_visualizer.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class MusicCompanionV2Page extends ConsumerStatefulWidget {
   const MusicCompanionV2Page({super.key});
@@ -480,7 +480,7 @@ class _MetronomeHeaderCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: i == activeDot
-                        ? const Color(0xFF8741FF)
+                        ? const Color(0xFF715EFE)
                         : const Color(0xFFE6E9F1),
                   ),
                 ),
@@ -497,7 +497,7 @@ class _MetronomeHeaderCard extends StatelessWidget {
               height: ui(72),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFF8741FF),
+                color: const Color(0xFF715EFE),
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: ui(1)),
                 boxShadow: <BoxShadow>[
@@ -700,7 +700,7 @@ class _MetronomeTempoSlider extends StatelessWidget {
                       gradient: const LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
-                        colors: <Color>[Color(0xFF8741FF), Color(0xFFE2D0FF)],
+                        colors: <Color>[Color(0xFF715EFE), Color(0xFFE2D0FF)],
                       ),
                       borderRadius: BorderRadius.circular(ui(999)),
                     ),

@@ -25,7 +25,7 @@
 //   │ 补签申请审核：右上角红角标 badge + 右侧抽屉（与大课共用 UI 组件）。     │
 //   └───────────────────────────────────────────────────────────────────────┘
 //
-// 颜色：白卡 / #F5F6FA 浅灰 / #8741FF 主紫 / #FF323C 红 / #0CAC40 绿
+// 颜色：白卡 / #F5F6FA 浅灰 / #715EFE 主紫 / #FF323C 红 / #0CAC40 绿
 //      / #F59E0B 橙黄 / #B6B5BB 灰 / #6D6B75 副字
 // 字体：PingFang SC（中文）+ Barlow（时间数字）
 // =============================================================================
@@ -33,8 +33,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -52,7 +52,7 @@ import '../data/smart_campus_count_badge.dart';
 import 'widgets/course_sign_status_picker.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ─── 调色板 ────────────────────────────────────────────────────────────────
 
@@ -63,9 +63,9 @@ const Color _kBorderHair = Color(0xFFE6E9F1);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleLight = Color(0xFFA773FF);
-const Color _kPurpleSoftBg = Color(0xFFEAE5FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleLight = Color(0xFF8E7FFF);
+const Color _kPurpleSoftBg = Color(0xFFE3DFFF);
 const Color _kGreen = Color(0xFF0CAC40);
 const Color _kGreenBg = Color(0xFFDFFCF0);
 const Color _kOrange = Color(0xFFF59E0B);

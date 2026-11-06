@@ -15,7 +15,7 @@ import '../state/auth_controller.dart';
 import '../state/auth_state.dart';
 import 'widgets/auth_design_canvas.dart';
 import 'widgets/auth_figma_components.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -185,7 +185,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             child: Text(
                               '立即注册！',
                               style: TextStyle(
-                                color: const Color(0xFF8741FF),
+                                color: const Color(0xFF715EFE),
                                 fontSize: _s(scale, 14),
                                 fontFamily: 'PingFang SC',
                                 fontFamilyFallback: const ['Harmony'],

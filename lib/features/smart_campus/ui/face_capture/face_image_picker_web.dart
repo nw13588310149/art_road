@@ -20,7 +20,7 @@ import '../../../../core/widgets/scaled_dialog.dart';
 import '../../../shell/ui/shell_layout.dart';
 import 'face_id_photo_flow.dart';
 import 'face_image_picker.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 bool get isCameraCaptureSupportedImpl => true;
 

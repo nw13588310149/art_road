@@ -4,12 +4,12 @@ import '../constants/app_assets.dart';
 import '../theme/app_font.dart';
 
 /// 与资料页「生日」日期选择器（`info_page` → `_editBirthday`）一致的主题色。
-const Color appPickerPrimary = Color(0xFF8741FF);
+const Color appPickerPrimary = Color(0xFF715EFE);
 const Color appPickerOnSurface = Color(0xFF0B081A);
 
 const Color _appPickerCancelBorder = Color(0xFFF3F2F3);
 const Color _appPickerCancelShadow = Color(0x59B5B5B5);
-const Color _appPickerConfirmShadow = Color(0x59AD80FF);
+const Color _appPickerConfirmShadow = Color(0x599585FF);
 
 TextStyle _appPickerActionButtonTextStyle() {
   return const TextStyle(
@@ -63,7 +63,7 @@ ButtonStyle _appPickerConfirmButtonStyle() {
           gradient: const LinearGradient(
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+            colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
           ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [

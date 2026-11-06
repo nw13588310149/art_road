@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/features/smart_campus/data/principal_inbox_data.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/data/principal_inbox_data.dart';
 
 void main() {
   test('counts pending from headmaster list array data', () {

@@ -15,8 +15,8 @@ class CircleBadgeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final pinned = badge == CircleBadge.pinned;
-    final bg = pinned ? const Color(0xFFEAE5FF) : const Color(0xFFFFE5E7);
-    final fg = pinned ? const Color(0xFF8741FF) : const Color(0xFFFF323C);
+    final bg = pinned ? const Color(0xFFE3DFFF) : const Color(0xFFFFE5E7);
+    final fg = pinned ? const Color(0xFF715EFE) : const Color(0xFFFF323C);
     final iconAsset = pinned
         ? AppAssets.schoolIconPin
         : AppAssets.schoolIconHot;

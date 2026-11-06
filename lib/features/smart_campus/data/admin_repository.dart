@@ -362,7 +362,7 @@ class AdminRepository {
   ///   {
   ///     "classId": "1798658711795392514",
   ///     "classroomId": 1,
-  ///     "color": "#A773FF",
+  ///     "color": "#8E7FFF",
   ///     "date": "2026-05-30T00:00:00.000+00:00",
   ///     "lineNum": 1,
   ///     "subjectId": 1,

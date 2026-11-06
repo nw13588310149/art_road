@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../../core/constants/app_assets.dart';
 import '../../../shell/ui/shell_layout.dart';
@@ -7,7 +7,7 @@ import '../../state/circle_state.dart';
 import 'circle_action_buttons.dart';
 import 'circle_badges.dart';
 import 'circle_video_play_button.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 列表模式下的单个帖子卡片：作者 / 文字 / 配图 / 操作按钮。
 class CirclePostCard extends StatelessWidget {
@@ -171,11 +171,11 @@ class _Avatar extends StatelessWidget {
           url,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stack) => Container(
-            color: const Color(0xFFEAE5FF),
+            color: const Color(0xFFE3DFFF),
             alignment: Alignment.center,
             child: Icon(
               Icons.person,
-              color: const Color(0xFF8741FF),
+              color: const Color(0xFF715EFE),
               size: size * 0.55,
             ),
           ),
@@ -420,7 +420,7 @@ class _AudioCover extends StatelessWidget {
             width: ui(48),
             height: ui(48),
             decoration: const BoxDecoration(
-              color: Color(0xFF8741FF),
+              color: Color(0xFF715EFE),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -454,7 +454,7 @@ class _AudioGradient extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFE2D0FF), Color(0xFF8741FF)],
+          colors: [Color(0xFFE2D0FF), Color(0xFF715EFE)],
         ),
       ),
       child: Center(

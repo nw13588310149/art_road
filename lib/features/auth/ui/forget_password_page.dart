@@ -9,7 +9,7 @@ import '../state/auth_controller.dart';
 import '../state/auth_state.dart';
 import 'widgets/auth_design_canvas.dart';
 import 'widgets/auth_figma_components.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 enum _ForgetStep { mobile, sms, password }
 

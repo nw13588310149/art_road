@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/core/network/snowflake_id.dart';
+import 'package:the_road_of_art_flutter/core/network/snowflake_id.dart';
 
 void main() {
   test('encodes selected int64 ids as numeric JSON literals', () {

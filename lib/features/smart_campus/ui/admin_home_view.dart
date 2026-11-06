@@ -19,15 +19,15 @@ import 'widgets/smart_campus_avatar_role_badge.dart';
 import 'widgets/smart_campus_home_card.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 管理员智慧校园首页：970×~1100 双栏布局。
 ///
 /// 左主栏（约 696 宽）自上而下：
 /// 1. **8 项数据统计**：分两行各 4 卡，白底 + 24/500 数值（今日待办 4
-///    用 `#8741FF` 紫高亮） + 12/PingFang 灰色标签。
+///    用 `#715EFE` 紫高亮） + 12/PingFang 灰色标签。
 /// 2. **管理端 10 项快捷入口卡**（697×255）：5×2 网格，每个 cell
-///    `43.73 #EAE5FF` 圆角底 + `assets/images/new/智慧校园/管理员/*.png`
+///    `43.73 #E3DFFF` 圆角底 + `assets/images/new/智慧校园/管理员/*.png`
 ///    + 14/PingFang/500 文案；学生管理(1) → 教师管理(2) → 班级编辑(3) →
 ///    排课与课表(4) → 教师请假审批(5) → 人脸库(6) → 通知管理(7) →
 ///    群聊(8) → 校长信箱(9) → 校圈治理(10)。
@@ -635,7 +635,7 @@ class _StatCard extends StatelessWidget {
                 style: smartCampusStatValueTextStyle(
                   ui,
                   color: item.highlight
-                      ? const Color(0xFF8741FF)
+                      ? const Color(0xFF715EFE)
                       : const Color(0xFF0B081A),
                 ),
               ),
@@ -703,7 +703,7 @@ class _DataDashboardCard extends StatelessWidget {
                     valueLabelStyle: TextStyle(
                       fontSize: ui(11),
                       height: 1.0,
-                      color: const Color(0xFF8741FF),
+                      color: const Color(0xFF715EFE),
                       fontWeight: FontWeight.w500,
                       fontFamily: 'PingFang SC',
                     ),
@@ -873,13 +873,13 @@ class _LineChartPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFFE7D9FF), Color(0x00E7D9FF)],
+        colors: [Color(0xFFE3DFFF), Color(0x00E3DFFF)],
       ).createShader(Rect.fromLTWH(plotLeft, 0, plotWidth, chartBottom));
     canvas.drawPath(fillPath, fillPaint);
 
     // 3. 描边
     final strokePaint = Paint()
-      ..color = const Color(0xFF8741FF)
+      ..color = const Color(0xFF715EFE)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
@@ -889,7 +889,7 @@ class _LineChartPainter extends CustomPainter {
     // 4. 圆点 + 数值标注
     final dotFill = Paint()..color = Colors.white;
     final dotStroke = Paint()
-      ..color = const Color(0xFF8741FF)
+      ..color = const Color(0xFF715EFE)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     for (var i = 0; i < pts.length; i++) {
@@ -1443,7 +1443,7 @@ class _ProfileHeader extends StatelessWidget {
               height: ui(72),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFEAE5FF),
+                color: const Color(0xFFE3DFFF),
                 image: avatarUrl.isNotEmpty
                     ? DecorationImage(
                         image: NetworkImage(avatarUrl),
@@ -1460,7 +1460,7 @@ class _ProfileHeader extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(28),
                           height: 1.0,
-                          color: const Color(0xFF8741FF),
+                          color: const Color(0xFF715EFE),
                           fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w500,
                         ),

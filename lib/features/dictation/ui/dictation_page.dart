@@ -9,7 +9,7 @@ import '../../../core/widgets/course_empty_placeholder.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../state/dictation_controller.dart';
 import '../state/dictation_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class DictationPage extends ConsumerWidget {
   const DictationPage({super.key});

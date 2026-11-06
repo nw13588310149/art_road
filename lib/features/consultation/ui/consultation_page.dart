@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
@@ -10,7 +10,7 @@ import '../../shell/ui/shell_layout.dart';
 import '../state/consultation_controller.dart';
 import '../state/consultation_detail_state.dart';
 import '../state/consultation_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class ConsultationPage extends ConsumerWidget {
   const ConsultationPage({super.key});
@@ -284,7 +284,7 @@ class _ConsultationBanner extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 ),
               ),
               padding: EdgeInsets.symmetric(horizontal: ui(28)),
@@ -510,7 +510,7 @@ class _LatestBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
       decoration: BoxDecoration(
-        color: const Color(0xFF8741FF),
+        color: const Color(0xFF715EFE),
         borderRadius: BorderRadius.circular(ui(4)),
       ),
       child: Text(

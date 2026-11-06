@@ -37,8 +37,8 @@
 //        "批改与点评" 分组：分数/100 输入 + 评语 textarea + 底部紫色渐变
 //        "发布批改" CTA。
 //
-// 颜色：白卡 / #F5F6FA 灰底 / #F4F4FF 选中态 / #F3F2F3 边 / #8741FF 主紫 /
-//      #B68EFF→#8640FF 紫渐变 CTA / #FF6A00 待评橙 / #12CE51 已通过绿 /
+// 颜色：白卡 / #F5F6FA 灰底 / #F4F4FF 选中态 / #F3F2F3 边 / #715EFE 主紫 /
+//      #9585FF→#715EFE 紫渐变 CTA / #FF6A00 待评橙 / #12CE51 已通过绿 /
 //      #71717A 表头灰 / #B6B5BB 提示灰
 // 字体：PingFang SC（10/11/12/13/14/16/600）+ Barlow（28 数值 + 16 分母）
 // =============================================================================
@@ -47,8 +47,8 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -72,7 +72,7 @@ import 'widgets/smart_campus_stat_card.dart';
 import '../data/teacher_repository.dart';
 import 'widgets/schedule_course_card.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 日期时间（与后端约定 `yyyy-MM-dd HH:mm:ss`）----------------------------
 
@@ -236,9 +236,9 @@ const Color _kTextBlack = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextMuted = Color(0xFF71717A);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleEnd = Color(0xFFB68EFF);
-const Color _kPurpleStart = Color(0xFF8640FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleEnd = Color(0xFF9585FF);
+const Color _kPurpleStart = Color(0xFF715EFE);
 const Color _kRecordRed = Color(0xFFFF323C);
 const Color _kRecordRedLight = Color(0xFFFF7A7A);
 const Color _kOrange = Color(0xFFFF6A00);
@@ -2218,7 +2218,7 @@ class _AvatarCircle extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final resolved = _resolveMediaUrl(imageUrl);
     final palettes = const [
-      [Color(0xFFB68EFF), Color(0xFF8741FF)],
+      [Color(0xFF9585FF), Color(0xFF715EFE)],
       [Color(0xFFFFB68E), Color(0xFFFF8741)],
       [Color(0xFF8EE0FF), Color(0xFF418EFF)],
     ];
@@ -2694,7 +2694,7 @@ class _ClassCheckRow extends StatelessWidget {
                         width: ui(6),
                         height: ui(6),
                         decoration: const BoxDecoration(
-                          color: Color(0xFFA773FF),
+                          color: Color(0xFF8E7FFF),
                           shape: BoxShape.circle,
                         ),
                       ),

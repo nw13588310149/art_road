@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -13,7 +13,7 @@ import '../../shell/ui/shell_layout.dart';
 import '../state/my_notes_controller.dart';
 import '../state/my_notes_state.dart';
 import '../state/note_drawing_codec.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import 'note_drawing_surface.dart';
 
 class MyNotesPage extends ConsumerStatefulWidget {
@@ -1034,12 +1034,12 @@ class _NoteTemplateViewState extends State<_NoteTemplateView> {
                       gradient: const LinearGradient(
                         begin: Alignment.centerRight,
                         end: Alignment.centerLeft,
-                        colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                        colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                       ),
                       borderRadius: BorderRadius.circular(ui(12)),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0x59AD80FF),
+                          color: const Color(0x599585FF),
                           blurRadius: ui(20),
                           offset: Offset(0, ui(16)),
                         ),

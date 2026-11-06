@@ -27,7 +27,7 @@ class FaceIdFramePainter extends CustomPainter {
     canvas.drawRect(frameRect, border);
 
     final corner = Paint()
-      ..color = const Color(0xFFB68EFF)
+      ..color = const Color(0xFF9585FF)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;

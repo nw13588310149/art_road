@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/features/school/data/school_config_data.dart';
+import 'package:the_road_of_art_flutter/features/school/data/school_config_data.dart';
 
 void main() {
   test('parses flat map evening and morning deadlines', () {

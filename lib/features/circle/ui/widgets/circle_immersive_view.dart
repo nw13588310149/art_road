@@ -12,7 +12,7 @@ import 'circle_action_buttons.dart';
 import 'circle_badges.dart';
 import 'circle_comment_panel.dart';
 import 'circle_media_player.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 沉浸模式：全屏单帖，纵向 PageView 翻页，右侧操作按钮，下方文字浮层；
 /// 评论面板从右侧滑入，覆盖在沉浸面板之上。

@@ -18,7 +18,7 @@ import 'widgets/smart_campus_avatar_role_badge.dart';
 import 'widgets/smart_campus_home_card.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 宿管端 · 智慧校园首页。
 ///
@@ -611,7 +611,7 @@ class _PendingCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: smartCampusStatValueTextStyle(
                   ui,
-                  color: const Color(0xFF8741FF),
+                  color: const Color(0xFF715EFE),
                 ),
               ),
             ),
@@ -849,7 +849,7 @@ class _DutyTaskTile extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
               decoration: BoxDecoration(
-                color: const Color(0xFFDAD2FF),
+                color: const Color(0xFFD7D5FF),
                 borderRadius: BorderRadius.circular(ui(4)),
               ),
               child: Text(
@@ -857,7 +857,7 @@ class _DutyTaskTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   height: 1.27,
-                          color: const Color(0xFF8741FF),
+                          color: const Color(0xFF715EFE),
                   fontFamily: 'PingFang SC',
                 ),
               ),
@@ -1018,7 +1018,7 @@ class _ProfileHeader extends StatelessWidget {
               height: ui(72),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFEAE5FF),
+                color: const Color(0xFFE3DFFF),
                 image: avatarUrl.isNotEmpty
                     ? DecorationImage(
                         image: NetworkImage(avatarUrl),
@@ -1035,7 +1035,7 @@ class _ProfileHeader extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(28),
                           height: 1.0,
-                          color: const Color(0xFF8741FF),
+                          color: const Color(0xFF715EFE),
                           fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w500,
                         ),

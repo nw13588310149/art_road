@@ -3,8 +3,8 @@
 // ignore_for_file: unused_element_parameter
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -19,7 +19,7 @@ import '../data/admin_repository.dart';
 import '../data/admin_student_exam_data.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ============================================================================
 // 颜色常量
@@ -30,8 +30,8 @@ const Color _kCardBg = Colors.white;
 const Color _kTextPrimary = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextSub = Color(0xFF6D6B75);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleSoft = Color(0xFFDAD2FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleSoft = Color(0xFFD7D5FF);
 const Color _kBorder = Color(0xFFF3F2F3);
 
 /// 与人脸库录入截取预览同比例（11:14），学籍档案内略放大展示。

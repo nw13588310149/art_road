@@ -16,7 +16,7 @@ import '../state/home_dashboard_state.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../smart_campus/state/smart_campus_controller.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const _homeWeekCardWidth = 64.0;
 const _homeWeekCardGap = 8.0;
@@ -749,7 +749,7 @@ class _WeekCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   color: active
-                      ? const Color(0xFF8741FF)
+                      ? const Color(0xFF715EFE)
                       : const Color(0xFFA9A9A9),
                   fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
@@ -897,7 +897,7 @@ class _NewsBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFA773FF),
+        color: const Color(0xFF8E7FFF),
         borderRadius: BorderRadius.circular(4),
       ),
       child: const Text(

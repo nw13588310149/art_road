@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
@@ -11,7 +11,7 @@ import '../../smart_campus/navigation/group_chat_return.dart';
 import '../state/consultation_detail_controller.dart';
 import '../state/consultation_detail_state.dart';
 import 'consultation_page.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class ConsultationDetailPage extends ConsumerStatefulWidget {
   const ConsultationDetailPage({super.key});

@@ -14,7 +14,7 @@ import 'package:flutter/services.dart';
 ///    `moviePlayback`，缓存会导致 Dart 跳过 configure、钢琴长期无声。
 abstract final class NativePlaybackAudioSession {
   static const MethodChannel _iosChannel = MethodChannel(
-    'com.yyzl.music/audio_session',
+    'com.yyzl.art/audio_session',
   );
   static const Duration _kChannelTimeout = Duration(seconds: 4);
 

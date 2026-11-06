@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,15 +18,15 @@ import '../data/ai_chat_attachment_picker.dart';
 import '../../shell/state/shell_controller.dart';
 import '../state/ai_chat_controller.dart';
 import '../state/ai_chat_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const _border = Color(0xFFF3F2F3);
 const _panelFill = Color(0xFFF4F4FF);
 const _textPrimary = Color(0xFF0B081A);
 const _textSecondary = Color(0xFF707790);
 const _textHint = Color(0xFFB6B5BB);
-const _purple = Color(0xFF8741FF);
-const _purpleSoft = Color(0x0D8741FF);
+const _purple = Color(0xFF715EFE);
+const _purpleSoft = Color(0x0D715EFE);
 
 const _historyPaneWidth = 200.0;
 const _historyItemHorizontalPadding = 12.0;
@@ -239,7 +239,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                         height: 16,
                       ),
                       SizedBox(width: 8),
-                      // Figma: 14/500 / line-height 20 / #8741FF
+                      // Figma: 14/500 / line-height 20 / #715EFE
                       Text(
                         '开启新对话',
                         style: TextStyle(
@@ -1108,7 +1108,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: message.reasoningStreaming
-                          ? const Color(0x338741FF)
+                          ? const Color(0x33715EFE)
                           : _border,
                     ),
                   ),
@@ -1133,12 +1133,12 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: answerStreaming ? const Color(0x338741FF) : _border,
+                    color: answerStreaming ? const Color(0x33715EFE) : _border,
                   ),
                   boxShadow: answerStreaming
                       ? const [
                           BoxShadow(
-                            color: Color(0x0F8741FF),
+                            color: Color(0x0F715EFE),
                             blurRadius: 18,
                             offset: Offset(0, 8),
                           ),
@@ -1332,7 +1332,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                       onTap: state.selectedModel.supportsWebSearch
                           ? controller.toggleWebSearching
                           : null,
-                      // 文字色 + 背景色与深度思考完全一致（紫色 #8741FF）。
+                      // 文字色 + 背景色与深度思考完全一致（紫色 #715EFE）。
                       activeTextColor: _purple,
                       activeBg: _purpleSoft,
                       iconSize: 15,
@@ -1872,7 +1872,7 @@ class _AttachmentChip extends StatelessWidget {
             width: 22,
             height: 22,
             decoration: const BoxDecoration(
-              color: Color(0x1A8741FF),
+              color: Color(0x1A715EFE),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -1992,7 +1992,7 @@ class _AttachmentPreviewDialog extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration: const BoxDecoration(
-                      color: Color(0x1A8741FF),
+                      color: Color(0x1A715EFE),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -2297,7 +2297,7 @@ class _MessageText extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
           decoration: const BoxDecoration(
             border: Border(
-              left: BorderSide(color: Color(0x338741FF), width: 3),
+              left: BorderSide(color: Color(0x33715EFE), width: 3),
             ),
           ),
           child: _InlineMessageText(

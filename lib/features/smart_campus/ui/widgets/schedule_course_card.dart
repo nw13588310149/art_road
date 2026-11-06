@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 import '../../../../core/constants/app_assets.dart';
 import '../../../shell/ui/shell_layout.dart';
@@ -11,7 +11,7 @@ const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextDivider = Color(0xFFCECED1);
 const Color _kStatusGreen = Color(0xFF0CAC40);
-const Color _kStatusPurple = Color(0xFFA773FF);
+const Color _kStatusPurple = Color(0xFF8E7FFF);
 const Color _kPastBg = Color(0xFFE6E9F1);
 const Color _kPastText = Color(0xFFB6B5BB);
 const Color _kPastInnerBg = Colors.white;

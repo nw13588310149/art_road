@@ -7,7 +7,7 @@
 //
 // 视觉（Figma 970 设计宽）：
 //   1. 顶部 banner（68 高）：白→#F9EDFF 渐变；左 32 返回；居中「教学周第 12 周
-//      03/12-03/17」（12 用 #8741FF 紫色）；右侧 [◀ 本周 ▶] 周切换器
+//      03/12-03/17」（12 用 #715EFE 紫色）；右侧 [◀ 本周 ▶] 周切换器
 //   2. 网格容器（930×632，1px #F3F2F3 描边，12 圆角）：
 //      - 时间列（120 宽，冻结）：60 高表头（"日期 / 节次" + 27° 斜分割线，
 //        #F5F6FA 底）；下方 5 个时段，每个时段中间显示 `08:00 ── 08:40`
@@ -20,7 +20,7 @@
 //      - 大课·紫标准：#E8D4FF 底（96h），#7535BE 标题，紫色点 + "大课"
 //      - 大课·紫加长：#F6EFFE 底（120h），#7535BE 标题，紫色点 + "大课"
 //
-// 颜色：白 / #F5F6FA 灰 / #F3F2F3 边 / #8741FF 主紫 / #6D6B75 副字 /
+// 颜色：白 / #F5F6FA 灰 / #F3F2F3 边 / #715EFE 主紫 / #6D6B75 副字 /
 //      #B6B5BB 提示
 // 字体：PingFang SC（标题 16/正文 12-14）
 // =============================================================================
@@ -29,7 +29,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/network/api_response.dart';
 import '../../../core/widgets/app_toast.dart';
@@ -43,7 +43,7 @@ import 'widgets/schedule_course_card.dart';
 import 'widgets/schedule_grid_shell.dart';
 import 'widgets/schedule_idle_slot.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 通用配色 ---------------------------------------------------------------
 
@@ -51,7 +51,7 @@ const Color _kCardBg = Colors.white;
 const Color _kBorderSoft = Color(0xFFF3F2F3);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 
 class _TimeConfig {
   const _TimeConfig({

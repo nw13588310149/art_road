@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // 学生端「查寝管理」独立页面
 //
 // 入口：学生 dashboard 快捷区「查寝管理」按钮 → controller.openDormCheck()
@@ -8,7 +8,7 @@
 // 视觉（Figma 970 设计宽）：
 //   1. 顶部 banner（62 高）：左→右白→#F9EEFF 渐变，左 32 返回 + 中
 //      "查寝管理" 16/600 + 副标题（仅展示本人「<姓名>」的查寝记录;补卡需
-//      宿管/班主任审核），其中名字段用紫色 #8741FF 高亮。
+//      宿管/班主任审核），其中名字段用紫色 #715EFE 高亮。
 //   2. 4 张统计卡（距标题栏 16；一行平铺，gap 12，100 高）：
 //      A. 「宿舍床位」内容与数字区底对齐
 //      …
@@ -16,7 +16,7 @@
 //      "我的查寝记录" 18/500 + 右侧白底 全部/异常 双 tab，距下方卡片 20。
 //   4. 卡片网格（3 列，每张 312 宽，padding 12，白底 + 浅灰描边）：
 //      - 头部：场次（晚查寝/晨查寝） 18/600 + 状态徽章
-//        正常 #A773FF / 未打卡 #FF323C / 迟到 #325BFF。
+//        正常 #8E7FFF / 未打卡 #FF323C / 迟到 #325BFF。
 //      - 副标题：宿舍 + 日期。
 //      - 内嵌灰底 50 高小方块：规定时间 / 打卡时间（迟到时打卡时间用
 //        #FF323C 高亮）。
@@ -25,7 +25,7 @@
 //      `GradientHeaderDialog` 表单（日期 / 补卡说明 + 取消/确认；场次默认晚打卡）。
 //
 // 颜色 / 字体：
-//   主紫 #8741FF / Banner 渐变 white → #F9EEFF / 卡片白底；
+//   主紫 #715EFE / Banner 渐变 white → #F9EEFF / 卡片白底；
 //   字体 PingFang SC，数字 32 用 Barlow（与 Figma 一致）。
 // =============================================================================
 
@@ -33,8 +33,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
@@ -50,7 +50,7 @@ import '../../school/data/school_config_data.dart';
 import '../../school/state/school_config_controller.dart';
 import 'widgets/dormitory_detail_dialog.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -60,8 +60,8 @@ const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSection = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleStatus = Color(0xFFA773FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleStatus = Color(0xFF8E7FFF);
 const Color _kRed = Color(0xFFFF323C);
 const Color _kBlue = Color(0xFF325BFF);
 

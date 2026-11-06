@@ -787,10 +787,10 @@ _LessonRowData _lessonRowFromStudentCourse(
 
   var courseColor = isSmall
       ? const Color(0xFF0CAC40)
-      : const Color(0xFF8741FF);
+      : const Color(0xFF715EFE);
   var courseBg = isSmall
       ? const Color(0xFFDFFCF0)
-      : const Color(0xFFEAE5FF);
+      : const Color(0xFFE3DFFF);
   var tagDotColor = courseColor;
 
   final hex = _schedulePickString(flat, ['color'], '');

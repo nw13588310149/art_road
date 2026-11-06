@@ -5,9 +5,6 @@ import UIKit
 /// 见 flutter/flutter#183900（ProMotion iPad VSyncClient SIGSEGV）。
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   var window: UIWindow?
-  private var lowLatencyNoteAudio: LowLatencyNoteAudio?
-  private var musicPlayPitchAudio: MusicPlayPitchAudio?
-  private var musicPlayAudioVisualizer: MusicPlayAudioVisualizer?
   private var noteCanvasZoomCoordinator: NoteCanvasZoomCoordinator?
 
   func scene(
@@ -39,15 +36,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     GeneratedPluginRegistrant.register(with: flutterViewController)
     AppAudioSessionCoordinator.shared.register(
-      messenger: flutterViewController.binaryMessenger
-    )
-    lowLatencyNoteAudio = LowLatencyNoteAudio(
-      messenger: flutterViewController.binaryMessenger
-    )
-    musicPlayPitchAudio = MusicPlayPitchAudio(
-      messenger: flutterViewController.binaryMessenger
-    )
-    musicPlayAudioVisualizer = MusicPlayAudioVisualizer(
       messenger: flutterViewController.binaryMessenger
     )
     noteCanvasZoomCoordinator = NoteCanvasZoomCoordinator(

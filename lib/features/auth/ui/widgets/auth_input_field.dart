@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 class AuthInputField extends StatelessWidget {
   const AuthInputField({
@@ -37,7 +37,7 @@ class AuthInputField extends StatelessWidget {
         obscureText: obscureText,
         inputFormatters: inputFormatters,
         textInputAction: textInputAction,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorWidth: 1.5,
         cursorHeight: 16,
         style: const TextStyle(

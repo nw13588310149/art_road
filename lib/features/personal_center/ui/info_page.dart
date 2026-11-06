@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,7 +13,7 @@ import '../../shell/ui/shell_layout.dart';
 import '../data/avatar_picker.dart';
 import '../state/personal_center_controller.dart';
 import '../state/personal_center_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 个人信息页（迭代自 1.0 `pages/PersonalCenter/info.vue`）。
 ///
@@ -818,7 +818,7 @@ class _GenderOptionCard extends StatelessWidget {
   final String selectedIconAsset;
   final VoidCallback onTap;
 
-  static const Color _selectedBorder = Color(0xFF8741FF);
+  static const Color _selectedBorder = Color(0xFF715EFE);
 
   @override
   Widget build(BuildContext context) {

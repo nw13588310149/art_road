@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/features/school_website/ui/widgets/school_website_html_utils.dart';
+import 'package:the_road_of_art_flutter/features/school_website/ui/widgets/school_website_html_utils.dart';
 
 void main() {
   group('schoolWebsiteHtmlForEmbeddedView', () {

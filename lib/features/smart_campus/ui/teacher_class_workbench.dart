@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // 班主任端「班级工作台」独立页面
 //
 // 入口：班主任 dashboard 顶部「班级工作台」按钮 / 「班务 → 班级工作台 >」。
@@ -10,17 +10,17 @@
 //   3. 成绩   _GradesTab     班级成绩变化折线图 + 考试记录（分数+点评）
 //
 // 视觉：970 设计宽度自适应到容器宽度，左列约 0.5918，右列约 0.3959，gap 12。
-// 颜色：白卡 #FFFFFF / 浅灰底 #F5F6FA / 紫色主色 #8741FF / 蓝色 #325BFF / 红色 #FF323C
+// 颜色：白卡 #FFFFFF / 浅灰底 #F5F6FA / 紫色主色 #715EFE / 蓝色 #325BFF / 红色 #FF323C
 // 字体：PingFang SC（标题 18 / 正文 12~14）+ Barlow（数字 20~24）
 // =============================================================================
 
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/constants/app_assets.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_asset_graphic.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/constants/app_assets.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_asset_graphic.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/media_url.dart';
@@ -40,7 +40,7 @@ import '../data/teacher_repository.dart';
 import 'student_homework_submission_preview.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stripe_bar_chart.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kPanelBg = Colors.white;
 const Color _kInnerGray = Color(0xFFF5F6FA);
@@ -49,8 +49,8 @@ const Color _kTextSection = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextHintLight = Color(0xFFD1D1D1);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleSoft = Color(0xFFA773FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleSoft = Color(0xFF8E7FFF);
 const Color _kBlue = Color(0xFF325BFF);
 const Color _kRed = Color(0xFFFF323C);
 const Color _kYellow = Color(0xFFDBEE49);
@@ -2324,7 +2324,7 @@ class _QuickActionTile extends StatelessWidget {
               width: ui(44),
               height: ui(44),
               decoration: BoxDecoration(
-                color: const Color(0xFFEAE5FF),
+                color: const Color(0xFFE3DFFF),
                 borderRadius: BorderRadius.circular(ui(8)),
               ),
               alignment: Alignment.center,
@@ -5698,14 +5698,14 @@ class _StudentDetailPanelState extends ConsumerState<_StudentDetailPanel> {
                                     end: Alignment.centerLeft,
                                     colors: _saving
                                         ? [
-                                            const Color(0xFFB68EFF)
+                                            const Color(0xFF9585FF)
                                                 .withValues(alpha: 0.5),
-                                            const Color(0xFF8640FF)
+                                            const Color(0xFF715EFE)
                                                 .withValues(alpha: 0.5),
                                           ]
                                         : const [
-                                            Color(0xFFB68EFF),
-                                            Color(0xFF8640FF),
+                                            Color(0xFF9585FF),
+                                            Color(0xFF715EFE),
                                           ],
                                   ),
                                 ),

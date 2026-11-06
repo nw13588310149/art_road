@@ -45,7 +45,7 @@ class CloudFolderCardArtwork extends StatelessWidget {
   static const Color metaDateColor = Color(0xFF7F7F7F);
 
   /// 左下角第二行（大小），应用主色。
-  static const Color metaSizeColor = Color(0xFF8741FF);
+  static const Color metaSizeColor = Color(0xFF715EFE);
 
   /// 左下角第二行（大小）距底图底缘的内边距（原 8，上移 4 → 12）。
   static const double metaSizeBottomInset = 12;

@@ -18,10 +18,10 @@
 //   3. 2 张统计卡（白底圆角 12）：晚查寝已归寝 / 晚查寝待关注。
 //   4. 卡片网格 3 列（每张 312 宽，padding 12，白底，圆角 16，gap 16）：
 //      - 宿舍口径卡：晨查寝 / 晚查寝 18 Barlow/600 标题 + 大色块状态徽章
-//        正常 #A773FF / 未打卡 #FF323C / 迟到 #325BFF 全为白字；下行
+//        正常 #8E7FFF / 未打卡 #FF323C / 迟到 #325BFF 全为白字；下行
 //        宿舍 13/#6D6B75 + 日期；灰底块同；底部 备注。
 //      - 学生口径卡：头像 40 + 姓名 14/500 + 学号 12/#B6B5BB +
-//        "查寝" 12/#6D6B75 + 状态徽章 16 高（正常 #DAD2FF/#8741FF /
+//        "查寝" 12/#6D6B75 + 状态徽章 16 高（正常 #D7D5FF/#715EFE /
 //        未打卡 #FEE4E8/#FF323C）；下行 宿舍 12 + 日期；灰底块 #F5F6FA
 //        H50 居中两列：规定时间 / 打卡时间；底部 备注。
 // =============================================================================
@@ -43,7 +43,7 @@ import '../../school/data/school_config_data.dart';
 import '../../school/state/school_config_controller.dart';
 import 'widgets/dormitory_detail_dialog.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -52,8 +52,8 @@ const Color _kBorderSoft = Color(0xFFF3F2F3);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleSoftBg = Color(0xFFDAD2FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleSoftBg = Color(0xFFD7D5FF);
 const Color _kRed = Color(0xFFFF323C);
 const Color _kRedSoftBg = Color(0xFFFEE4E8);
 const Color _kBlue = Color(0xFF325BFF);
@@ -72,7 +72,7 @@ enum _StudentStatus {
 
 // —— 宿舍口径状态（实色徽章）—————————————————————————————————————
 enum _DormStatus {
-  normal('正常', Color(0xFFA773FF)),
+  normal('正常', Color(0xFF8E7FFF)),
   absent('未打卡', _kRed),
   late_('迟到', _kBlue);
 
@@ -880,7 +880,7 @@ class _DormStudentAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFFA773FF),
+        color: const Color(0xFF8E7FFF),
         borderRadius: BorderRadius.circular(radius),
       ),
       alignment: Alignment.center,

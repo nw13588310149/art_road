@@ -1,5 +1,5 @@
-name: the_road_of_music_flutter
-description: "A new Flutter project."
+name: the_road_of_art_flutter
+description: "美术之路：面向美术艺考生与老师的学习与学情平台（围绕艺考网阅卷系统）。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.0.11+8
+version: 1.0.0+1
 
 environment:
   sdk: ^3.11.4
@@ -130,19 +130,15 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: assets/icon/app_icon.png
-    background_color: "#8741FF"
-    theme_color: "#8741FF"
-  windows:
-    generate: true
+    background_color: "#715EFE"
+    theme_color: "#715EFE"
   macos:
     generate: true
-  linux:
-    generate: true
   image_path: assets/icon/app_icon.png
-  adaptive_icon_background: "#8741FF"
+  adaptive_icon_background: "#715EFE"
   adaptive_icon_foreground: assets/icon/app_icon.png
   remove_alpha_ios: true
-  background_color_ios: "#8741FF"
+  background_color_ios: "#715EFE"
   min_sdk_android: 21
 
 # For information on the generic Dart part of this file, see the
@@ -168,6 +164,7 @@ flutter:
     - assets/images/home/
     - assets/images/home/v2/
     - assets/images/home/dictation/
+    - assets/images/home/art/
     - assets/images/sightsing/
     - assets/images/404/
     - assets/images/school/
@@ -229,6 +226,11 @@ flutter:
     - assets/images/new/校圈/
     - assets/images/new/群聊/
     - assets/web/baidu_map.html
+    - assets/demo/art/
+    - assets/demo/scene/
+    - assets/demo/papers/
+    - assets/demo/avatars/
+    - assets/demo/video/
     - assets/images/circle/
     - assets/audio/demo.mid
     - assets/audio/demo.mp3

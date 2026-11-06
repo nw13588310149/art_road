@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 /// 原生平台（iOS / Android / 桌面）通用文件内嵌预览。
@@ -120,7 +120,7 @@ class _CoursewarePdfPreview extends StatelessWidget {
                   SelectableText(
                     url,
                     style: const TextStyle(
-                      color: Color(0xFF8741FF),
+                      color: Color(0xFF715EFE),
                       fontSize: 11,
                       fontFamily: 'Manrope',
                     ),

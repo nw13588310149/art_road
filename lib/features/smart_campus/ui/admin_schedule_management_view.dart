@@ -12,7 +12,7 @@
 //      schoolSmallCourseApplyList status=0 的分页 total）。
 //   2. tab1「周课表与排课」：
 //      - 顶部一行：「全校统一课表」班级 dropdown（左）+ 查看 / 编辑 分段
-//        （右，激活 #8741FF 紫底白字）。
+//        （右，激活 #715EFE 紫底白字）。
 //      - 控制条（64 高 #F5F6FA 灰底 12 圆角）：教学周 + legend +
 //        ◀ 本周 ▶ + YYYY/MM/DD 日历 pill。
 //      - 网格（930×632，1px #F3F2F3 描边，12 圆角）：与学生 / 老师端共用
@@ -28,7 +28,7 @@
 //        （理由 TextField），确认后调 `schoolSmallCourseApplyAudit
 //        (status: 2, reason: ...)`；"通过" 直接调 `(status: 1)` 并刷新列表。
 //
-// 颜色：白 / #F5F6FA 灰 / #F3F2F3 边 / #8741FF 主紫 / #6D6B75 副字 /
+// 颜色：白 / #F5F6FA 灰 / #F3F2F3 边 / #715EFE 主紫 / #6D6B75 副字 /
 //      #B6B5BB 提示 / #774B09 橙文 / #0D3A6D 蓝文 / #7535BE 紫文 /
 //      #FF6A00 待审核 / #0CAC40·#12CE51 已通过
 // =============================================================================
@@ -37,7 +37,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -59,7 +59,7 @@ import 'widgets/schedule_course_card.dart';
 import 'widgets/schedule_grid_shell.dart';
 import 'widgets/schedule_idle_slot.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 通用配色 -----------------------------------------------------------
 
@@ -69,11 +69,11 @@ const Color _kBorderSoft = Color(0xFFF3F2F3);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kRedBadge = Color(0xFFF04545);
 
 const Color _kStatusGreen = Color(0xFF0CAC40);
-const Color _kStatusPurple = Color(0xFFA773FF);
+const Color _kStatusPurple = Color(0xFF8E7FFF);
 
 // 申请卡状态色
 const Color _kPendingBg = Color(0xFFFFEDD3);
@@ -1225,14 +1225,14 @@ class _AdminScheduleManagementViewState
                             begin: Alignment.centerRight,
                             end: Alignment.centerLeft,
                             colors: <Color>[
-                              Color(0xFFB68EFF),
-                              Color(0xFF8640FF),
+                              Color(0xFF9585FF),
+                              Color(0xFF715EFE),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(ui(12)),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0x59AD80FF),
+                              color: const Color(0x599585FF),
                               blurRadius: ui(20),
                               offset: Offset(0, ui(16)),
                             ),
@@ -3195,7 +3195,7 @@ class _SubmitGradientButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+            colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
           ),
           borderRadius: BorderRadius.circular(ui(12)),
         ),
@@ -3955,7 +3955,7 @@ class _CardActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           color: primary ? null : Colors.white,

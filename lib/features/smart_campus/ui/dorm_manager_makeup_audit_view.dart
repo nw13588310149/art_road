@@ -8,14 +8,14 @@ import '../data/dormitory_check_data.dart';
 import '../state/dormitory_manager_controller.dart';
 import 'widgets/dormitory_detail_dialog.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kPageBg = Color(0xFFEFF3FC);
 const Color _kBorderSoft = Color(0xFFF3F2F3);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kRed = Color(0xFFFF323C);
 
 class DormManagerMakeupAuditView extends ConsumerStatefulWidget {

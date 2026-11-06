@@ -15,8 +15,8 @@ const Color kSmartCampusTeacherTagBg = Color(0xFFFFD9F6);
 const Color kSmartCampusDormManagerTagBg = Color(0xFFD1EA65);
 
 /// 学生端未出现在五身份色板中，沿用科目标签紫系。
-const Color kSmartCampusStudentTagBg = Color(0xFFEAE5FF);
-const Color kSmartCampusStudentTagFg = Color(0xFF8741FF);
+const Color kSmartCampusStudentTagBg = Color(0xFFE3DFFF);
+const Color kSmartCampusStudentTagFg = Color(0xFF715EFE);
 
 /// 身份标签统一配色（设计稿：实色浅底 + 深色字）。
 ({Color bg, Color fg}) smartCampusRoleTagStyle(SmartCampusRole role) {

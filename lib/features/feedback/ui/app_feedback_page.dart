@@ -1,8 +1,8 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -10,14 +10,14 @@ import '../../../core/widgets/app_toast.dart';
 import '../../../app/router/route_paths.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../smart_campus/data/principal_mailbox_repository.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kInnerGray = Color(0xFFF5F6FA);
 const Color _kBorderSoft = Color(0xFFF3F2F3);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kPlaceholder = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 
 /// 意见反馈页返回：统一回到个人中心（个人中心入口为 pushReplacement，不能依赖 pop）。
 void _backFromFeedback(BuildContext context) {
@@ -181,7 +181,7 @@ class _AppFeedbackPageState extends ConsumerState<AppFeedbackPage> {
                     Align(
                       alignment: Alignment.center,
                       child: _SubmitButton(
-                        label: _submitting ? '提交中…' : '提交给音乐之路',
+                        label: _submitting ? '提交中…' : '提交给美术之路',
                         onTap: _submitting ? null : _onSubmit,
                         busy: _submitting,
                       ),
@@ -449,12 +449,12 @@ class _SubmitButton extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
-              colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+              colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
             ),
             borderRadius: BorderRadius.circular(ui(12)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0x59AD80FF),
+                color: const Color(0x599585FF),
                 blurRadius: ui(20),
                 offset: Offset(0, ui(16)),
               ),

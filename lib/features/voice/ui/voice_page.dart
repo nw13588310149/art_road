@@ -1,6 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
@@ -9,7 +9,7 @@ import '../../../core/widgets/course_empty_placeholder.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../study_catalog/state/study_catalog_controller.dart';
 import '../../study_catalog/state/study_catalog_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 声乐二级页：脱离 StudyCatalogPage 共享模板，独立按设计稿还原。
 /// 数据仍复用 [studyCatalogControllerProvider]（config = voice），保证接口零回归。
@@ -346,7 +346,7 @@ class _VoiceSearchPill extends StatelessWidget {
         controller: controller,
         onChanged: onChanged,
         maxLines: 1,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorWidth: 1.5,
         cursorHeight: ui(15),
         style: TextStyle(

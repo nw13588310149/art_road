@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,13 +15,13 @@ import '../../shell/state/shell_controller.dart';
 import '../data/qr_image_saver.dart';
 import '../state/personal_center_controller.dart';
 import '../state/personal_center_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-/// 与 1.0 `pages/PersonalCenter/index.vue` 中 `APP_PROMO_URL` 一致。
-const _kAppPromoUrl = 'https://apps.apple.com/cn/app/音乐之路/id6504698046';
+/// 美术之路尚未上架，推广二维码暂指向艺考网官网；上架后替换为 App Store 地址。
+const _kAppPromoUrl = 'https://yyzl0931.com/';
 
-/// 「联系客服」展示与 1.0 邮件入口一致的官方反馈邮箱。
-const _kSupportEmail = 'yinyuezhilu@gmail.com';
+/// 客服邮箱占位，上线前替换为美术之路官方客服邮箱。
+const _kSupportEmail = 'service@yyzl0931.com';
 
 class PersonalCenterPage extends ConsumerStatefulWidget {
   const PersonalCenterPage({super.key});
@@ -818,7 +818,7 @@ class _ActionListCard extends StatelessWidget {
               if (checkStatusEnabled)
                 _ActionTile(
                   iconAsset: AppAssets.infoIconRecommend,
-                  label: '推荐音乐之路给好友',
+                  label: '推荐美术之路给好友',
                   onTap: onRecommend,
                   showDivider: true,
                 ),
@@ -1109,7 +1109,7 @@ class _QrCodeCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            '快来与我一起在音乐之路学习吧～',
+            '快来与我一起在美术之路学习吧～',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF0B081A),
@@ -1120,7 +1120,7 @@ class _QrCodeCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            '好友可直接通过扫描二维码下载音乐之路并添加你为好友',
+            '好友可直接通过扫描二维码下载美术之路并添加你为好友',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFFCECED1),
@@ -1169,7 +1169,7 @@ class _QrImage extends StatelessWidget {
     return const ColoredBox(
       color: Colors.white,
       child: Center(
-        child: Icon(Icons.qr_code_2_rounded, color: Color(0xFF8741FF)),
+        child: Icon(Icons.qr_code_2_rounded, color: Color(0xFF715EFE)),
       ),
     );
   }
@@ -1394,7 +1394,7 @@ class _RecommendDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '把音乐之路推荐给你的同学和朋友，一起在这里学习音乐～',
+            '把美术之路推荐给你的同学和朋友，一起在这里学画画～',
             style: TextStyle(
               color: Color(0xFF6D6B75),
               fontSize: 14,
@@ -1455,7 +1455,7 @@ class _DialogTextField extends StatelessWidget {
       child: AppTextField(
         controller: controller,
         autofocus: true,
-        cursorColor: const Color(0xFF8741FF),
+        cursorColor: const Color(0xFF715EFE),
         cursorWidth: 1.5,
         cursorHeight: 16,
         style: TextStyle(
@@ -1534,7 +1534,7 @@ class _ReadonlyValueRow extends StatelessWidget {
               child: Icon(
                 Icons.copy_rounded,
                 size: 18,
-                color: Color(0xFF8741FF),
+                color: Color(0xFF715EFE),
               ),
             ),
           ),

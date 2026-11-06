@@ -11,7 +11,7 @@ const Color _kBorderDash = Color(0xFFCECED1);
 const Color _kInnerGray = Color(0xFFF5F6FA);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 
 /// 校长信箱附件 chip：图片 / 文件统一样式，点击可预览或打开。
 class MailboxAttachmentChip extends StatelessWidget {

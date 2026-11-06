@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
@@ -12,7 +12,7 @@ import '../data/quiz_html.dart';
 import '../state/quiz_practice_state.dart';
 import '../state/quiz_session_controller.dart';
 import '../state/quiz_session_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 class QuizSessionPage extends ConsumerStatefulWidget {
   const QuizSessionPage({super.key, this.openCompletion = false});
@@ -215,7 +215,7 @@ class _AutoNextSwitch extends StatelessWidget {
               height: trackHeight,
               decoration: BoxDecoration(
                 color: value
-                    ? const Color(0xFFA773FF)
+                    ? const Color(0xFF8E7FFF)
                     : const Color(0xFFE6E9F1),
                 borderRadius: BorderRadius.circular(ui(13.5)),
               ),
@@ -473,7 +473,7 @@ class _TypeChip extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(3)),
         decoration: BoxDecoration(
-          color: const Color(0xFFEAE5FF),
+          color: const Color(0xFFE3DFFF),
           borderRadius: BorderRadius.circular(ui(4)),
         ),
         child: Text.rich(
@@ -774,12 +774,12 @@ class _PrimaryButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+            colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
           ),
           borderRadius: BorderRadius.circular(ui(12)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0x59AD80FF),
+              color: const Color(0x599585FF),
               blurRadius: ui(20),
               offset: Offset(0, ui(16)),
             ),

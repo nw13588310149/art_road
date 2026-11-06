@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import '../../../shell/ui/shell_layout.dart';
 
 /// 智能视唱底部操作条整图按钮（试听 / 开始跟唱 / 停止 / 取消）。
@@ -150,7 +150,7 @@ class SightSingingGradientActionButton extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.centerRight,
                 end: Alignment.centerLeft,
-                colors: <Color>[Color(0xFFB68EFF), Color(0xFF8640FF)],
+                colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
               ),
               borderRadius: BorderRadius.circular(height / 2),
             ),

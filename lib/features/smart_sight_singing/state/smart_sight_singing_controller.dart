@@ -815,7 +815,7 @@ class SmartSightSingingController extends StateNotifier<SightSingingState> {
           state = state.copyWith(
             stage: SightSingingStage.ready,
             errorMessage: status.isPermanentlyDenied
-                ? '麦克风权限被拒绝，请在系统「设置 → 音乐之路 → 麦克风」中开启。'
+                ? '麦克风权限被拒绝，请在系统「设置 → 美术之路 → 麦克风」中开启。'
                 : '请允许麦克风权限后再开始跟唱。',
           );
           return;

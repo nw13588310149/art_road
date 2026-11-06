@@ -26,7 +26,7 @@
 //        - 已批阅含视频点评 + 88分
 //        - 红色"声乐"tag + 语音 / 视频点评 ×2
 //
-// 颜色：白卡 / #F5F6FA 浅灰 / #8741FF 主紫 / #325BFF 蓝（提交链接 / 分数）
+// 颜色：白卡 / #F5F6FA 浅灰 / #715EFE 主紫 / #325BFF 蓝（提交链接 / 分数）
 //      / #0CAC40 绿（已提交）/ #FF6A00 橙（待提交）/ #FF323C 红（已逾期）
 //      / #12CE51 绿（上升）/ #FF386B 玫红（特殊"声乐"tag）
 // 字体：PingFang SC + Barlow（数值 32 / 18）
@@ -44,9 +44,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_refresh_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_refresh_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -59,7 +59,7 @@ import '../../courseware/state/cloud_drive_controller.dart';
 import '../../courseware/ui/courseware_file_picker.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 import '../data/student_repository.dart';
 import '../data/student_academic_data.dart';
@@ -78,9 +78,9 @@ const Color _kTextSection = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleLight = Color(0xFFA773FF);
-const Color _kPurpleSoftBg = Color(0xFFEAE5FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleLight = Color(0xFF8E7FFF);
+const Color _kPurpleSoftBg = Color(0xFFE3DFFF);
 const Color _kBlueLink = Color(0xFF325BFF);
 const Color _kSubmittedGreen = Color(0xFF0CAC40);
 const Color _kSubmittedGreenBg = Color(0xFFDFFCF0);
@@ -2369,7 +2369,7 @@ class _SmallButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
           borderRadius: BorderRadius.circular(ui(8)),

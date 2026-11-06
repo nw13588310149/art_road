@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
@@ -19,7 +19,7 @@ import '../state/music_play_controller.dart';
 import '../state/music_play_state.dart';
 import '../audio/music_play_frequency_utils.dart';
 import 'music_play_html_utils.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 final Set<String> _musicPlayPrecachedImages = <String>{};
 
@@ -1149,7 +1149,7 @@ class _PlaybackBar extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: favorite
-                        ? const Color(0xFF8741FF)
+                        ? const Color(0xFF715EFE)
                         : const Color(0xFFB6B5BB),
                     fontSize: ui(13),
                     fontFamily: 'PingFang SC',
@@ -1300,7 +1300,7 @@ class _ProgressTrack extends StatelessWidget {
 }
 
 /// 自绘的紫色渐变进度条（带阴影 thumb），不依赖 Material Slider，
-/// 以严格匹配设计稿中 #E2D0FF → #8741FF 的渐变填充与 12×12 thumb。
+/// 以严格匹配设计稿中 #E2D0FF → #715EFE 的渐变填充与 12×12 thumb。
 ///
 /// 关键交互优化（针对 iPad / iOS 上拖动卡顿、延迟大）：
 ///   1. 拖动期间 thumb 位置使用本地 `_dragRatio` 直绘，不再等 native
@@ -1457,7 +1457,7 @@ class _GradientSliderState extends State<_GradientSlider> {
                     gradient: const LinearGradient(
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
-                      colors: [Color(0xFFE2D0FF), Color(0xFF8741FF)],
+                      colors: [Color(0xFFE2D0FF), Color(0xFF715EFE)],
                     ),
                     borderRadius: BorderRadius.circular(ui(23)),
                   ),
@@ -1468,7 +1468,7 @@ class _GradientSliderState extends State<_GradientSlider> {
                     width: thumbSize,
                     height: thumbSize,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF8741FF),
+                      color: const Color(0xFF715EFE),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 1),
                       boxShadow: [
@@ -1702,7 +1702,7 @@ class _SegmentSwitch extends StatelessWidget {
                     width: segmentWidth,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF8741FF),
+                        color: const Color(0xFF715EFE),
                         borderRadius: BorderRadius.circular(ui(6)),
                       ),
                     ),
@@ -1967,7 +1967,7 @@ class _SpeedChipState extends State<_SpeedChip> {
               _SpeedChip.formatSpeed(widget.speed),
               style: TextStyle(
                 color: _open
-                    ? const Color(0xFF8741FF)
+                    ? const Color(0xFF715EFE)
                     : const Color(0xFF7F7F7F),
                 fontSize: ui(12),
                 fontFamily: 'PingFang SC',
@@ -2043,7 +2043,7 @@ class _SpeedMenuCardState extends State<_SpeedMenuCard> {
           borderRadius: BorderRadius.circular(ui(12)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF8741FF).withValues(alpha: 0.10),
+              color: const Color(0xFF715EFE).withValues(alpha: 0.10),
               blurRadius: ui(20),
               spreadRadius: 0,
               offset: Offset(0, ui(8)),
@@ -2144,7 +2144,7 @@ class _SpeedMenuItemState extends State<_SpeedMenuItem> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: selected
-                        ? const Color(0xFF8741FF)
+                        ? const Color(0xFF715EFE)
                         : const Color(0xFF0B081A),
                     fontSize: ui(13),
                     fontFamily: 'PingFang SC',
@@ -2300,7 +2300,7 @@ class _TransposeChipButtonState extends State<_TransposeChipButton> {
     final ui = DashboardScaleScope.of(context).ui;
     final tinted = widget.pitchSemitones != 0;
     final labelColor = tinted
-        ? const Color(0xFF8741FF)
+        ? const Color(0xFF715EFE)
         : const Color(0xFF0B081A);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -2389,7 +2389,7 @@ class _PitchMenuCardState extends State<_PitchMenuCard> {
           borderRadius: BorderRadius.circular(ui(12)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF8741FF).withValues(alpha: 0.10),
+              color: const Color(0xFF715EFE).withValues(alpha: 0.10),
               blurRadius: ui(20),
               spreadRadius: 0,
               offset: Offset(0, ui(8)),
@@ -2818,7 +2818,7 @@ class _PlaylistDrawerItem extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: selected
-                      ? const Color(0xFF8741FF)
+                      ? const Color(0xFF715EFE)
                       : const Color(0xFFB6B5BB),
                   fontSize: ui(12),
                   fontFamily: 'Barlow',
@@ -2835,7 +2835,7 @@ class _PlaylistDrawerItem extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: selected
-                      ? const Color(0xFF8741FF)
+                      ? const Color(0xFF715EFE)
                       : const Color(0xFF0B081A),
                   fontSize: ui(13),
                   fontFamily: 'PingFang SC',

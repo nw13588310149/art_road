@@ -21,7 +21,7 @@
 //      左下显示 28/16 Barlow N/M 提交比（如 4/11），随后是截止时间 / 班级 /
 //      tag(2026年4月 月考 + 科目 + 待评(N) 11px) / 标题 16/500，顶部右侧
 //      68×22 圆角左下右上"已截止/进行中"角标。
-//   6. 右侧考试详情：标题 + 截止 + 12/12 紫色 #8741FF 同步说明行 +
+//   6. 右侧考试详情：标题 + 截止 + 12/12 紫色 #715EFE 同步说明行 +
 //      灰底【教务月考要求】+ 4 项 _ProgressMetricCell（参与人数 / 未交人数 /
 //      待评人数 / 已评人数）+ 学生提交表（同作业批改）。
 //   7. 右抽屉：
@@ -30,15 +30,15 @@
 //          媒体类型按学生提交（音频）+ 分数/100 + 点评对象 + 点评形态 +
 //          评语；底部紫色渐变"提交评分" CTA。
 //
-// 颜色：白卡 / #F5F6FA / #F4F4FF / #F3F2F3 / #8741FF / #FF6A00 / #12CE51 /
+// 颜色：白卡 / #F5F6FA / #F4F4FF / #F3F2F3 / #715EFE / #FF6A00 / #12CE51 /
 //      #71717A 表头灰 / #B6B5BB 提示灰 / #EFF3FC 页底
 // 字体：PingFang SC（10/11/12/13/14/16/600）+ Barlow（28 数值 + 16 分母）
 // =============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
@@ -54,7 +54,7 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'student_homework_submission_preview.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_empty_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -67,9 +67,9 @@ const Color _kTextBlack = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextMuted = Color(0xFF71717A);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleEnd = Color(0xFFB68EFF);
-const Color _kPurpleStart = Color(0xFF8640FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleEnd = Color(0xFF9585FF);
+const Color _kPurpleStart = Color(0xFF715EFE);
 const Color _kOrange = Color(0xFFFF6A00);
 const Color _kOrangeBg = Color(0xFFFFEDD3);
 const Color _kGreen = Color(0xFF12CE51);
@@ -1915,7 +1915,7 @@ class _AvatarCircle extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final resolved = _resolveMediaUrl(imageUrl);
     final palettes = const [
-      [Color(0xFFB68EFF), Color(0xFF8741FF)],
+      [Color(0xFF9585FF), Color(0xFF715EFE)],
       [Color(0xFFFFB68E), Color(0xFFFF8741)],
       [Color(0xFF8EE0FF), Color(0xFF418EFF)],
     ];

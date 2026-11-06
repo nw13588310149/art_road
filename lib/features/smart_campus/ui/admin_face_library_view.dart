@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -24,7 +24,7 @@ import 'face_capture/face_camera_registry.dart';
 import 'face_capture/face_image_picker.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -35,7 +35,7 @@ const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextBlack = Colors.black;
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kGreen = Color(0xFF12CE51);
 const Color _kRed = Color(0xFFFF323C);
 const Color _kBorderSoft = Color(0xFFF3F2F3);
@@ -2407,7 +2407,7 @@ class _SubmitButton extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
-              colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+              colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
             ),
             borderRadius: BorderRadius.circular(ui(8)),
           ),
@@ -2443,7 +2443,7 @@ class _SubmitButton extends StatelessWidget {
 //        · 班级 / 来源 / 说明：13/400 #0B081A
 //        · 状态：胶囊（已通过=#E4FFED/#12CE51；待审核=#FFEDD3/#FF6A00；
 //          已驳回=#FEE4E8/#FF323C），padding 4×2，圆角 4，12/400。
-//        · 操作：左 "通过" 紫色 #8741FF / 右 "驳回" 红色 #FF323C，13/400。
+//        · 操作：左 "通过" 紫色 #715EFE / 右 "驳回" 红色 #FF323C，13/400。
 //      - 空集时显示居中提示。
 //
 // 数据：底库列表、统计、详情和审核均使用管理员端 `schoolUserFace*` 接口。

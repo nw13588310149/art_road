@@ -27,7 +27,7 @@ class CourseClassKindTag extends StatelessWidget {
   static const Color _kTextDark = Color(0xFF0B081A);
   static const Color _kMuted = Color(0xFFB6B5BB);
   static const Color _kSmallDot = Color(0xFF0CAC40);
-  static const Color _kBigDot = Color(0xFFA773FF);
+  static const Color _kBigDot = Color(0xFF8E7FFF);
 
   @override
   Widget build(BuildContext context) {

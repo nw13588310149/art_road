@@ -2,15 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/scaled_dialog.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/scaled_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/app_navigator.dart';
 import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../shell/ui/shell_layout.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import '../audio/ktv_scoring.dart';
 import '../audio/pitch_track.dart';
 import '../config/smart_sight_singing_config.dart';
@@ -144,7 +144,7 @@ class _SmartSightSingingPageState extends ConsumerState<SmartSightSingingPage> {
                 _ResultStatCell(
                   label: '综合得分',
                   value: '${state.currentScore}',
-                  valueColor: const Color(0xFF8741FF),
+                  valueColor: const Color(0xFF715EFE),
                 ),
               ],
             ),
@@ -737,8 +737,8 @@ class _NoteScoresPanel extends StatelessWidget {
               _NoteBadge(
                 label: '及格',
                 count: okCount,
-                color: const Color(0xFF8741FF),
-                background: const Color(0xFFE7D9FF),
+                color: const Color(0xFF715EFE),
+                background: const Color(0xFFE3DFFF),
                 width: 44,
               ),
               SizedBox(width: ui(4)),
@@ -825,7 +825,7 @@ class _NoteChip extends StatelessWidget {
       case 'good':
         return (const Color(0xFF5EA9FF), const Color(0x335EA9FF));
       case 'ok':
-        return (const Color(0xFF8741FF), const Color(0xFFE7D9FF));
+        return (const Color(0xFF715EFE), const Color(0xFFE3DFFF));
       default:
         return (const Color(0xFFFF386B), const Color(0xFFFEE4E8));
     }
@@ -1043,7 +1043,7 @@ class _ScoreBoard extends StatelessWidget {
       _ScoreMetricEntry(
         label: '得分',
         value: '${state.currentScore}',
-        valueColor: const Color(0xFF8741FF),
+        valueColor: const Color(0xFF715EFE),
       ),
       _ScoreMetricEntry(label: '连击', value: '${state.combo}'),
       _ScoreMetricEntry(label: '命中率', value: hitRate),
@@ -1052,7 +1052,7 @@ class _ScoreBoard extends StatelessWidget {
         label: '你的音',
         value: userName,
         valueColor: isUserPickingUp
-            ? const Color(0xFF8741FF)
+            ? const Color(0xFF715EFE)
             : const Color(0xFF0B081A),
       ),
       _ScoreMetricEntry(label: '偏差值', value: centsLabel),
@@ -1308,7 +1308,7 @@ class _ScoreValueBox extends StatelessWidget {
   }
 }
 
-/// 设计稿「考试模式」开关：44×24 轨道，开启 #A773FF，关闭浅灰。
+/// 设计稿「考试模式」开关：44×24 轨道，开启 #8E7FFF，关闭浅灰。
 class _ExamModeSwitch extends StatelessWidget {
   const _ExamModeSwitch({required this.value, required this.onChanged});
 
@@ -1331,7 +1331,7 @@ class _ExamModeSwitch extends StatelessWidget {
           padding: EdgeInsets.all(ui(2)),
           alignment: value ? Alignment.centerRight : Alignment.centerLeft,
           decoration: BoxDecoration(
-            color: value ? const Color(0xFFA773FF) : const Color(0xFFD7D7DE),
+            color: value ? const Color(0xFF8E7FFF) : const Color(0xFFD7D7DE),
             borderRadius: BorderRadius.circular(ui(12)),
           ),
           child: Container(
@@ -1429,7 +1429,7 @@ class _CountdownOverlay extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(80),
                     fontWeight: AppFont.w600,
-                    color: const Color(0xFF8741FF),
+                    color: const Color(0xFF715EFE),
                     fontFamily: 'Barlow',
                     height: 50 / 80,
                   ),
@@ -1724,7 +1724,7 @@ class _SightProgressTrack extends StatelessWidget {
                           gradient: const LinearGradient(
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
-                            colors: [Color(0xFFE2D0FF), Color(0xFF8741FF)],
+                            colors: [Color(0xFFE2D0FF), Color(0xFF715EFE)],
                           ),
                           borderRadius: BorderRadius.circular(ui(23)),
                         ),
@@ -1735,7 +1735,7 @@ class _SightProgressTrack extends StatelessWidget {
                           width: thumbSize,
                           height: thumbSize,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF8741FF),
+                            color: const Color(0xFF715EFE),
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 1),
                             boxShadow: [
@@ -1839,7 +1839,7 @@ class _GlassImageButton extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(
-            color: active ? const Color(0xFF8741FF) : const Color(0xFFF3F2F3),
+            color: active ? const Color(0xFF715EFE) : const Color(0xFFF3F2F3),
           ),
         ),
         alignment: Alignment.center,
@@ -1904,7 +1904,7 @@ class _ScoreModeSegmentSwitch extends StatelessWidget {
                     width: segmentW,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF8741FF),
+                        color: const Color(0xFF715EFE),
                         borderRadius: BorderRadius.circular(ui(6)),
                       ),
                     ),

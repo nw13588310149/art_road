@@ -15,7 +15,7 @@ import '../../school/state/school_page_controller.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../quiz_practice/state/quiz_practice_controller.dart';
 import '../../quiz_practice/state/quiz_practice_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ── 页面入口 ────────────────────────────────────────────────────────────────
 
@@ -117,7 +117,7 @@ class _CampBannerFallback extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+          colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
         ),
       ),
       padding: EdgeInsets.symmetric(horizontal: ui(36)),

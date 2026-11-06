@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // 任课老师 / 班主任端「学生名册」独立页面
 //
 // 入口：教师 dashboard 快捷区「学生名册」按钮 → controller.openStudentRoster()
@@ -19,7 +19,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -34,7 +34,7 @@ import '../data/teacher_repository.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -44,11 +44,11 @@ const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextPrimary = Color(0xFF0B081A);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextPlaceholder = Color(0xFFD1D1D1);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleSoft = Color(0xFFDAD2FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleSoft = Color(0xFFD7D5FF);
 const Color _kPageBgChip = Color(0xFFF5F6FA);
 const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kPurpleTag = Color(0xFFA773FF);
+const Color _kPurpleTag = Color(0xFF8E7FFF);
 
 // ---- 学籍状态 ---------------------------------------------------------------
 
@@ -1367,7 +1367,7 @@ class _Avatar extends StatelessWidget {
 //   5. "我教科目 · 分数走势" 灰底卡（顶部副标 + 科目切换 [声乐/乐理] +
 //      6 期 X 轴（2-6月+期中）+ Y 轴 100/95/90/85/80/0 + 紫色 outline
 //      polyline + 渐变填充 + 6 个白底紫边圆点 + 数值标签）
-//   6. "联系家长" 紫色 #B68EFF→#8640FF 渐变 CTA（48 高，圆角 12，phone icon）
+//   6. "联系家长" 紫色 #9585FF→#715EFE 渐变 CTA（48 高，圆角 12，phone icon）
 //
 // 接口：barrierDismissible = true，从右侧滑入；底层用 showGeneralDialog +
 //      Align(centerRight) + SlideTransition，与"申请小课"右抽屉同一套模式。
@@ -2364,8 +2364,8 @@ class _ScoreLinePainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            const Color(0xFFE7D9FF),
-            const Color(0xFFE7D9FF).withValues(alpha: 0),
+            const Color(0xFFE3DFFF),
+            const Color(0xFFE3DFFF).withValues(alpha: 0),
           ],
         ).createShader(Rect.fromLTWH(0, plotTop, size.width, plotHeight));
       canvas.drawPath(fillPath, fillPaint);
@@ -2443,7 +2443,7 @@ class _ContactParentButton extends StatelessWidget {
             // Figma：270° 渐变（从右到左）；Flutter 用 centerRight→centerLeft。
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+            colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
           ),
         ),
         child: Row(

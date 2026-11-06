@@ -332,7 +332,7 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
         return value;
       }
     }
-    return '音乐之路';
+    return '美术之路';
   }
 
   String _resolveAvatar(Map<String, dynamic> target) {

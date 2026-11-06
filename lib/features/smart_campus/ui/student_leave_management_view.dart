@@ -32,7 +32,7 @@
 //      · footer：审批中卡多一行 40 高描边按钮"撤销申请"。
 //
 // 颜色 / 字体：
-//   主紫 #8741FF / 主紫渐变 270deg #B68EFF→#8640FF；卡片白底 + 右上角 #F9EEFF 光晕；
+//   主紫 #715EFE / 主紫渐变 270deg #9585FF→#715EFE；卡片白底 + 右上角 #F9EEFF 光晕；
 //   状态徽章配色见上；字体 PingFang SC，数字 32 用 Barlow（与 Figma 一致）。
 // =============================================================================
 
@@ -40,8 +40,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
@@ -54,7 +54,7 @@ import '../data/student_repository.dart';
 import 'widgets/smart_campus_equal_height_grid.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = Color(0xFFEFF3FC);
@@ -65,8 +65,8 @@ const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF8741FF);
-const Color _kPurpleSoftBg = Color(0xFFDAD2FF);
+const Color _kPurple = Color(0xFF715EFE);
+const Color _kPurpleSoftBg = Color(0xFFD7D5FF);
 const Color _kGreen = Color(0xFF12CE51);
 const Color _kGreenSoftBg = Color(0xFFE4FFED);
 const Color _kRed = Color(0xFFFF323C);
@@ -1400,7 +1400,7 @@ class _LeaveApplyDrawerState extends State<_LeaveApplyDrawer> {
     final initial = isStart
         ? (_start ?? DateTime.now())
         : (_end ?? _start ?? DateTime.now());
-    // 用项目主紫 #8741FF 覆盖 Material picker 的默认配色，与 dorm 端补卡
+    // 用项目主紫 #715EFE 覆盖 Material picker 的默认配色，与 dorm 端补卡
     // 表单保持视觉一致；同时把 day-period chip / hour-minute 按钮等用到的
     // primaryContainer 一并改成淡紫底，避免 Material 默认的 tonalSurface 色。
     final pickedDate = await showAppDatePicker(
@@ -1681,7 +1681,7 @@ class _DrawerFooter extends StatelessWidget {
                   gradient: const LinearGradient(
                     begin: Alignment.centerRight,
                     end: Alignment.centerLeft,
-                    colors: [Color(0xFFB68EFF), Color(0xFF8640FF)],
+                    colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                   ),
                   borderRadius: BorderRadius.circular(ui(12)),
                 ),

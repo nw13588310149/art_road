@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../shell/ui/shell_layout.dart';
@@ -330,7 +330,7 @@ class _Header extends StatelessWidget {
               width: ui(3.5),
               height: ui(15),
               decoration: BoxDecoration(
-                color: const Color(0xFF8741FF),
+                color: const Color(0xFF715EFE),
                 borderRadius: BorderRadius.circular(ui(6)),
               ),
             ),
@@ -689,7 +689,7 @@ class _SliderRow extends StatelessWidget {
             trackHeight: ui(4),
             thumbShape: _ShadowThumbShape(radius: ui(6)),
             overlayShape: RoundSliderOverlayShape(overlayRadius: ui(14)),
-            overlayColor: const Color(0x298741FF),
+            overlayColor: const Color(0x29715EFE),
             activeTrackColor: Colors.black,
             inactiveTrackColor: const Color(0xFFE1E2E5),
             thumbColor: Colors.black,
@@ -814,7 +814,7 @@ class _BoolRow extends StatelessWidget {
   }
 }
 
-/// 与记分板「考试模式」开关一致：44×24 轨道，开启 #A773FF，关闭 #D7D7DE。
+/// 与记分板「考试模式」开关一致：44×24 轨道，开启 #8E7FFF，关闭 #D7D7DE。
 class _SightSingingToggleSwitch extends StatelessWidget {
   const _SightSingingToggleSwitch({
     required this.value,
@@ -840,7 +840,7 @@ class _SightSingingToggleSwitch extends StatelessWidget {
           padding: EdgeInsets.all(ui(2)),
           alignment: value ? Alignment.centerRight : Alignment.centerLeft,
           decoration: BoxDecoration(
-            color: value ? const Color(0xFFA773FF) : const Color(0xFFD7D7DE),
+            color: value ? const Color(0xFF8E7FFF) : const Color(0xFFD7D7DE),
             borderRadius: BorderRadius.circular(ui(12)),
           ),
           child: Container(

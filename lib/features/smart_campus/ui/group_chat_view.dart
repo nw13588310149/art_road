@@ -32,7 +32,7 @@
 //            ③ 输入栏（白底 52 高）：左 attach + textfield + 表情 + 录音 +
 //               紫色「发送」按钮（输入为空时变浅）。
 //
-// 颜色：白卡 / #F5F6FA 灰底板 / #EFF3FC 页面底 / #8741FF 主紫
+// 颜色：白卡 / #F5F6FA 灰底板 / #EFF3FC 页面底 / #715EFE 主紫
 //      / #325BFF 蓝（@提及/链接）/ #FF323C 红（未读）/ #F04545 红（角标）
 // 字体：PingFang SC（中文） + Manrope（数字徽章）
 //
@@ -54,8 +54,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_text_field.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
@@ -79,7 +79,7 @@ import '../data/chat_repository.dart';
 import '../data/teacher_repository.dart';
 import '../services/group_chat_media_saver.dart';
 import 'widgets/group_chat_media_action_sheet.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kPageBg = Color(0xFFEFF3FC);
 const Color _kCardBg = Colors.white;
@@ -89,7 +89,7 @@ const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF8741FF);
+const Color _kPurple = Color(0xFF715EFE);
 const Color _kPurpleLight = Color(0xFFB48BFF);
 const Color _kRecordRed = Color(0xFFFF323C);
 const Color _kRecordRedLight = Color(0xFFFF7A7A);
@@ -882,7 +882,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       fromUserId: widget.currentUserId,
       fromName: widget.currentUserName,
       avatarUrl: widget.currentUserAvatarUrl,
-      avatarColor: const Color(0xFF8741FF),
+      avatarColor: const Color(0xFF715EFE),
       sentAt: DateTime.now(),
       bubble: _TextBubble(text: text),
     );
@@ -1065,7 +1065,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       fromUserId: widget.currentUserId,
       fromName: widget.currentUserName,
       avatarUrl: widget.currentUserAvatarUrl,
-      avatarColor: const Color(0xFF8741FF),
+      avatarColor: const Color(0xFF715EFE),
       sentAt: DateTime.now(),
       bubble: _ImageBubble(url: '', localBytes: bytes, uploading: true),
     );
@@ -1178,7 +1178,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
               maxLines: 8,
               minLines: 6,
               maxLength: 500,
-              cursorColor: const Color(0xFF8741FF),
+              cursorColor: const Color(0xFF715EFE),
               cursorWidth: 1.5,
               cursorHeight: 16,
               style: const TextStyle(
@@ -1664,7 +1664,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       fromUserId: widget.currentUserId,
       fromName: widget.currentUserName,
       avatarUrl: widget.currentUserAvatarUrl,
-      avatarColor: const Color(0xFF8741FF),
+      avatarColor: const Color(0xFF715EFE),
       sentAt: DateTime.now(),
       bubble: _VoiceBubble(durationSec: duration, waveform: downsampled),
     );
@@ -5540,7 +5540,7 @@ class _ChatComposerField extends StatelessWidget {
               controller: controller,
               focusNode: focusNode,
               maxLines: 1,
-              cursorColor: const Color(0xFF8741FF),
+              cursorColor: const Color(0xFF715EFE),
               cursorWidth: 1.5,
               cursorHeight: ui(14 * 1.7),
               style: baseStyle.copyWith(
@@ -5899,7 +5899,7 @@ class _Conversation {
     required this.muted,
     required this.pinned,
     required this.memberCount,
-    this.avatarColor = const Color(0xFF8741FF),
+    this.avatarColor = const Color(0xFF715EFE),
     this.avatarUrl,
   });
 
@@ -5988,7 +5988,7 @@ class _UserChatMessage extends _ChatMessage {
     required this.fromName,
     required this.bubble,
     this.avatarUrl,
-    this.avatarColor = const Color(0xFF8741FF),
+    this.avatarColor = const Color(0xFF715EFE),
   });
 
   final String fromUserId;
@@ -6230,7 +6230,7 @@ class GroupChatMessageParser {
           }
           bubble = _SharedCardBubble(
             icon: Icons.menu_book_rounded,
-            iconColor: const Color(0xFF8741FF),
+            iconColor: const Color(0xFF715EFE),
             title: (obj?['title'] ?? '课件分享').toString(),
             subtitle: '云盘课件',
             subtype: 'kj',
@@ -6350,7 +6350,7 @@ class GroupChatMessageParser {
       Color(0xFFF97316),
       Color(0xFFB98FFF),
       Color(0xFF12CE51),
-      Color(0xFF8741FF),
+      Color(0xFF715EFE),
     ];
     if (uid.isEmpty) return palette.first;
     final h = uid.hashCode.abs();
@@ -6853,7 +6853,7 @@ String _formatLastTime(DateTime? t, {bool withDateForOldDays = false}) {
 
 Color _avatarColorFor(String key) {
   const palette = <Color>[
-    Color(0xFF8741FF),
+    Color(0xFF715EFE),
     Color(0xFF325BFF),
     Color(0xFFF97316),
     Color(0xFFB98FFF),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 import '../../features/shell/ui/shell_layout.dart';
 import 'course_class_kind_tag.dart';
@@ -89,7 +89,7 @@ class DashboardCourseNoticeCard extends StatelessWidget {
 
   static const Color _kCardBg = Color(0xFFF5F6FA);
   static const Color _kStatusEndedBg = Color(0xFFE6E9F1);
-  static const Color _kStatusActiveBg = Color(0xFFEAE5FF);
+  static const Color _kStatusActiveBg = Color(0xFFE3DFFF);
   static const Color _kTextDark = Color(0xFF0B081A);
   static const Color _kTextSection = Color(0xFF1A1A1A);
   static const Color _kTextHint = Color(0xFFB6B5BB);

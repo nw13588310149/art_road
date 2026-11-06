@@ -1,6 +1,6 @@
 abstract final class AppAssets {
   static const authBackground = 'assets/images/auth/logo_bg.jpg';
-  static const authBg = 'assets/images/auth/bg.png';
+  static const authBg = 'assets/images/auth/bg_art.jpg';
   static const authLogo = 'assets/images/auth/logo_b.png';
   static const authPhone = 'assets/images/auth/phone.png';
   static const authPassword = 'assets/images/auth/pass.png';
@@ -269,7 +269,7 @@ abstract final class AppAssets {
   /// 在 [_NavTile] 展开/折叠两态都通过 `BoxFit.cover` 铺满命中区，外层
   /// `BorderRadius.circular(12)` 仍保留，把图本身边缘渐变的透明像素裁掉。
   static const leftNavActiveBg = 'assets/images/home/active.png';
-  /// 首页右侧周课表「今日」日期卡片的渐变背景图（≈ 64×88，#8640FF→#B68EFF
+  /// 首页右侧周课表「今日」日期卡片的渐变背景图（≈ 64×88，#715EFE→#9585FF
   /// 顶到底的紫渐变，自带 12 圆角）。替代 [_WeekCard] 中写死的 LinearGradient。
   static const homeWeekTodayBg = 'assets/images/home/bgc.png';
   /// 视唱播放页（MusicPlayPage）的「上一首」按钮图标。
@@ -311,7 +311,7 @@ abstract final class AppAssets {
   /// 浅灰圆角方块 + 浅灰上箭头。
   static const aiChatSendButtonDisabled = 'assets/images/aichat/Button1.png';
   /// AI 对话输入框「发送」按钮——可发送态（输入框非空且未发送中）。
-  /// 紫色 #8741FF 圆角方块 + 白色上箭头。
+  /// 紫色 #715EFE 圆角方块 + 白色上箭头。
   static const aiChatSendButtonEnabled = 'assets/images/aichat/Button.png';
 
   static const aiChatThink = 'assets/images/aichat/v2/ai_chip_think_idle.svg';
@@ -320,7 +320,7 @@ abstract final class AppAssets {
   /// 联网搜索 chip——未开启态：浅灰描边的地球 PNG。
   static const aiChatSearch = 'assets/images/aichat/aichat2.png';
   /// 联网搜索 chip——开启态：紫色描边的地球 PNG，与深度思考激活态色系
-  /// （#8741FF）保持一致。
+  /// （#715EFE）保持一致。
   static const aiChatSearchActive = 'assets/images/aichat/aichat2_active.png';
   static const aiChatAttach = 'assets/images/aichat/v2/ai_attach.svg';
   static const aiChatSend = 'assets/images/aichat/v2/ai_send.svg';

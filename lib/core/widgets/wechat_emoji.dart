@@ -750,7 +750,7 @@ class _WechatEmojiCategoryTab extends StatelessWidget {
                   icon,
                   size: ui(18),
                   color: active
-                      ? const Color(0xFF8741FF)
+                      ? const Color(0xFF715EFE)
                       : const Color(0xFF6D6B75),
                 )
               : Image.asset(

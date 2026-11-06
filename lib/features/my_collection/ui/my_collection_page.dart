@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_music_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
@@ -18,7 +18,7 @@ import '../../video_tutorial/data/video_publisher_data.dart';
 import '../navigation/collection_return.dart';
 import '../state/my_collection_controller.dart';
 import '../state/my_collection_state.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 我的收藏页：
 /// - 顶部 6 个 Tab（声乐 / 器乐 / 听写 / 视唱 / 乐理 / 视频），样式与设计稿

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_music_flutter/features/smart_campus/data/head_teacher_class_score_data.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/data/head_teacher_class_score_data.dart';
 
 void main() {
   test('parseHeadTeacherClassScoreOverview maps chart, tabs and student cards', () {

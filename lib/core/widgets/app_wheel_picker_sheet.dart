@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../../app/router/app_navigator.dart';
 import '../../features/shell/ui/shell_layout.dart';
-import 'package:the_road_of_music_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPickerPrimary = Color(0xFF8741FF);
+const Color _kPickerPrimary = Color(0xFF715EFE);
 const Color _kPickerTitle = Color(0xFF0B081A);
 const Color _kPickerMuted = Color(0xFF6D6B75);
 const Color _kToolbarBorder = Color(0xFFE6E8EB);

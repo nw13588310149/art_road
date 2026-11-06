@@ -1,12 +1,12 @@
 {
-    "name": "音乐之路",
-    "short_name": "音乐之路",
+    "name": "美术之路",
+    "short_name": "美术之路",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#8741FF",
-    "theme_color": "#8741FF",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#715EFE",
+    "theme_color": "#715EFE",
+    "description": "美术之路：面向美术艺考生与老师的学习与学情平台",
+    "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [
         {

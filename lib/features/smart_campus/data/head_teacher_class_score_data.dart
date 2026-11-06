@@ -255,7 +255,7 @@ class HeadTeacherStudentScoreRecord {
 }
 
 const List<Color> kHeadTeacherScoreTrendColors = [
-  Color(0xFF8741FF),
+  Color(0xFF715EFE),
   Color(0xFF325BFF),
   Color(0xFFFF323C),
   Color(0xFFDBEE49),
