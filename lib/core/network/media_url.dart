@@ -38,7 +38,10 @@ class MediaUrl {
   static String resolve(String raw) {
     final value = raw.trim();
     if (value.isEmpty) return '';
-    if (value.startsWith('http://') || value.startsWith('https://')) {
+    if (value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.startsWith('blob:') ||
+        value.startsWith('data:')) {
       return value;
     }
     if (value.startsWith('//')) {

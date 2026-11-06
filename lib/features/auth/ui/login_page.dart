@@ -7,6 +7,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/demo/demo_accounts.dart';
+import '../../../core/demo/demo_config.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../../features/shell/state/school_binding_controller.dart';
 import '../../../features/shell/state/shell_controller.dart';
@@ -201,10 +203,40 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
             ),
+            if (kDemoMode)
+              Positioned(
+                left: _s(scale, 691),
+                top: _s(scale, 614),
+                width: _s(scale, 399),
+                child: _DemoIdentityPanel(
+                  scale: scale,
+                  enabled: !state.isSubmitting,
+                  onPick: (account) =>
+                      _onDemoLogin(context, controller, account),
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _onDemoLogin(
+    BuildContext context,
+    AuthController controller,
+    DemoAccount account,
+  ) async {
+    final result = await controller.submitDemoLogin(account.mobile);
+    if (!context.mounted) {
+      return;
+    }
+    _showMessage(
+      context,
+      result.success ? '已以「${account.role.label}」身份进入演示' : result.message,
+    );
+    if (result.success) {
+      _enterApp(context);
+    }
   }
 
   Future<void> _onLogin(
@@ -224,17 +256,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     _showMessage(context, result.message);
     if (result.success) {
-      ref.invalidate(aiChatControllerProvider);
-      // 登录成功后立即预热 ShellController（触发 myInfo/mySchool 并行请求），
-      // 使菜单和头像在导航动画期间就已在飞，进入主框架时第一时间呈现。
-      final shell = ref.read(shellControllerProvider.notifier);
-      unawaited(shell.refreshUserAndSchool());
-      shell.resumePolling();
-      // 同步触发「绑定学校」轮询：构造控制器即开始 5s 一次的 schoolList
-      // 检查，未绑定时 ShellScaffold 进场即可弹出强制绑定遮罩。
-      ref.read(schoolBindingControllerProvider.notifier).refresh();
-      Navigator.pushReplacementNamed(context, RoutePaths.home);
+      _enterApp(context);
     }
+  }
+
+  void _enterApp(BuildContext context) {
+    ref.invalidate(aiChatControllerProvider);
+    // 登录成功后立即预热 ShellController（触发 myInfo/mySchool 并行请求），
+    // 使菜单和头像在导航动画期间就已在飞，进入主框架时第一时间呈现。
+    final shell = ref.read(shellControllerProvider.notifier);
+    unawaited(shell.refreshUserAndSchool());
+    shell.resumePolling();
+    // 同步触发「绑定学校」轮询：构造控制器即开始 5s 一次的 schoolList
+    // 检查，未绑定时 ShellScaffold 进场即可弹出强制绑定遮罩。
+    ref.read(schoolBindingControllerProvider.notifier).refresh();
+    Navigator.pushReplacementNamed(context, RoutePaths.home);
   }
 
   void _showMessage(BuildContext context, String message) {
@@ -242,4 +278,81 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   static double _s(double scale, double value) => value * scale;
+}
+
+/// 演示版「体验身份」：一键以学生 / 老师 / 班主任 / 宿管 / 管理员身份进入。
+class _DemoIdentityPanel extends StatelessWidget {
+  const _DemoIdentityPanel({
+    required this.scale,
+    required this.enabled,
+    required this.onPick,
+  });
+
+  final double scale;
+  final bool enabled;
+  final ValueChanged<DemoAccount> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    double s(double v) => v * scale;
+    return Container(
+      padding: EdgeInsets.fromLTRB(s(16), s(12), s(16), s(14)),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.86),
+        borderRadius: BorderRadius.circular(s(16)),
+        border: Border.all(color: const Color(0xFFE3DFFF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '演示版 · 选择体验身份（无需密码）',
+            style: TextStyle(
+              fontSize: s(12),
+              color: const Color(0xFF6D6B75),
+              fontFamily: 'PingFang SC',
+              fontWeight: AppFont.w500,
+            ),
+          ),
+          SizedBox(height: s(10)),
+          Wrap(
+            spacing: s(8),
+            runSpacing: s(8),
+            children: [
+              for (final account in DemoAccounts.all)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: enabled ? () => onPick(account) : null,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: s(12),
+                      vertical: s(7),
+                    ),
+                    decoration: BoxDecoration(
+                      color: account.role == DemoRole.student
+                          ? const Color(0xFF715EFE)
+                          : const Color(0xFFF5F3FF),
+                      borderRadius: BorderRadius.circular(s(999)),
+                    ),
+                    child: Text(
+                      '${account.role.label} · ${account.name}',
+                      style: TextStyle(
+                        fontSize: s(13),
+                        height: 1.2,
+                        color: account.role == DemoRole.student
+                            ? Colors.white
+                            : const Color(0xFF5D45ED),
+                        fontFamily: 'PingFang SC',
+                        fontWeight: AppFont.w500,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

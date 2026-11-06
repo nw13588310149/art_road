@@ -5,6 +5,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../constants/app_constants.dart';
+import '../demo/demo_api_interceptor.dart';
+import '../demo/demo_backend.dart';
+import '../demo/demo_config.dart';
 import '../storage/app_storage.dart';
 import 'api_response.dart';
 import 'api_unauthorized_handler.dart';
@@ -22,19 +25,40 @@ class ApiClient {
     '/app/user/logout',
   };
 
-  ApiClient({required AppStorage storage})
-    : _storage = storage,
-      _dio = Dio(
-        BaseOptions(
-          baseUrl: AppConstants.apiBaseUrl,
-          connectTimeout: const Duration(seconds: 20),
-          receiveTimeout: const Duration(seconds: 60),
-          contentType: Headers.jsonContentType,
+  ApiClient({
+    required AppStorage storage,
+    String baseUrl = AppConstants.apiBaseUrl,
+    DemoRouter? demoRouter,
+    Map<String, dynamic> Function(AppStorage storage)? authHeaders,
+  }) : _storage = storage,
+       _authHeaders = authHeaders ?? _platformAuthHeaders,
+       _dio = Dio(
+         BaseOptions(
+           baseUrl: baseUrl,
+           connectTimeout: const Duration(seconds: 20),
+           receiveTimeout: const Duration(seconds: 60),
+           contentType: Headers.jsonContentType,
+         ),
+       )..transformer = const BigIntSafeTransformer() {
+    if (kDemoMode && demoRouter != null) {
+      _dio.interceptors.add(
+        DemoApiInterceptor(
+          router: demoRouter,
+          apiHost: Uri.parse(baseUrl).host,
         ),
-      )..transformer = const BigIntSafeTransformer();
+      );
+    }
+  }
 
   final AppStorage _storage;
   final Dio _dio;
+  final Map<String, dynamic> Function(AppStorage storage) _authHeaders;
+
+  static Map<String, dynamic> _platformAuthHeaders(AppStorage storage) =>
+      <String, dynamic>{
+        'app-token': storage.token,
+        'schoolId': storage.schoolId,
+      };
 
   Future<ApiResponse> get(
     String path, {
@@ -98,11 +122,8 @@ class ApiClient {
       // 对齐 1.0（axios + FormData）：不手动设置 Content-Type，
       // 让 Dio/浏览器自动生成带 boundary 的 multipart/form-data。
       final mergedHeaders =
-          <String, dynamic>{
-            'app-token': _storage.token,
-            'schoolId': _storage.schoolId,
-            ...?headers,
-          }..removeWhere(
+          <String, dynamic>{..._authHeaders(_storage), ...?headers}
+            ..removeWhere(
             (key, _) => key.toLowerCase() == Headers.contentTypeHeader,
           );
       final response = await _dio.post<dynamic>(
@@ -155,8 +176,7 @@ class ApiClient {
     bool lightweightJson = false,
   }) {
     final mergedHeaders = <String, dynamic>{
-      'app-token': _storage.token,
-      'schoolId': _storage.schoolId,
+      ..._authHeaders(_storage),
       ...?headers,
     };
     final hasContentType = mergedHeaders.keys.any(

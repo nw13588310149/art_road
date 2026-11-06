@@ -125,6 +125,16 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  /// 演示版「体验身份」：以预置演示账号走与正式登录相同的流程。
+  Future<AuthActionResult> submitDemoLogin(String mobile) {
+    state = state.copyWith(
+      mobile: mobile,
+      password: '123456',
+      agreeTerms: true,
+    );
+    return submitLogin();
+  }
+
   Future<AuthActionResult> submitGuestLogin() async {
     await _repository.persistToken('youke');
     unawaited(_appConfigRepository.refreshFileBaseUrl());

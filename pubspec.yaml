@@ -36,6 +36,8 @@ dependencies:
   # supportedLocales + locale=zh-CN 强制中文。
   flutter_localizations:
     sdk: flutter
+  # 框架内 Cupertino 组件的图标字体（构建期会校验）。
+  cupertino_icons: ^1.0.8
 
   flutter_riverpod: ^2.6.1
   flutter_svg: ^2.2.4
@@ -204,6 +206,7 @@ flutter:
     - assets/demo/papers/
     - assets/demo/avatars/
     - assets/demo/video/
+    - assets/demo/brand/
     - assets/images/circle/
 
   # An image asset can refer to one or more resolution-specific "variants", see

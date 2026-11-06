@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../constants/app_constants.dart';
+import '../demo/demo_config.dart';
+import '../demo/demo_socket_bridge.dart';
 import '../providers/app_providers.dart';
 import '../storage/app_storage.dart';
 import 'big_int_safe_transformer.dart';
@@ -101,12 +103,21 @@ class ChatSocketService {
   bool _disposed = false;
   bool _intentionallyClosed = false;
   bool _connecting = false;
+  bool _demoOnline = false;
 
   /// 全部下行事件流。订阅方按 [ChatSocketEvent.type] 过滤即可。
   Stream<ChatSocketEvent> get events => _events.stream;
 
   /// 当前底层 socket 是否已就绪（不是 100% 等价于"在线"，仅做粗略可视化）。
-  bool get isConnected => _channel != null;
+  bool get isConnected => _channel != null || _demoOnline;
+
+  /// 演示模式：把模拟下行帧注入与线上相同的解析链路。
+  void injectDemoFrame(Map<String, dynamic> frame) {
+    if (!_demoOnline) {
+      return;
+    }
+    _handleRawMessage(jsonEncode(frame));
+  }
 
   /// 触发一次连接。若已有底层 socket 在跑，会先关掉再重连，确保用最新
   /// token 走 `{type:1000}` 握手。可在以下时机调用：
@@ -125,6 +136,13 @@ class ChatSocketService {
       return;
     }
     if (_channel != null) {
+      return;
+    }
+    if (kDemoMode) {
+      _intentionallyClosed = false;
+      _demoOnline = true;
+      DemoSocketBridge.instance.attach(this);
+      _emit(ChatSocketEventType.connected, const {});
       return;
     }
 
@@ -167,6 +185,7 @@ class ChatSocketService {
   /// 主动断开并不再自动重连。退出登录、切换账号时调用。
   void disconnect() {
     _intentionallyClosed = true;
+    _demoOnline = false;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _heartbeatTimer?.cancel();

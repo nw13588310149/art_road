@@ -6,6 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'app/app.dart';
+import 'core/demo/demo_config.dart';
+import 'core/demo/demo_store.dart';
+import 'core/demo/fixtures/demo_fixtures.dart';
+import 'core/demo/media/demo_media.dart';
 import 'core/network/media_url.dart';
 import 'core/providers/app_providers.dart';
 import 'core/push/push_notification_service.dart';
@@ -40,11 +44,20 @@ Future<void> main() async {
   if (cid != null && cid.isNotEmpty) {
     await storage.savePushId(cid);
   }
-  // 启动时立即把上次缓存的「文件服务器域名」注入 MediaUrl，让首屏就能正常
-  // 解析图片/音频路径，登录后再通过 configList 异步刷新。
-  final cachedFileBase = storage.fileBaseUrl;
-  if (cachedFileBase.isNotEmpty) {
-    MediaUrl.setFileBaseUrl(cachedFileBase);
+  if (kDemoMode) {
+    // 演示后端：本地接口应答 + 本地媒体服务，须在首个请求前就绪。
+    await DemoStore.init();
+    await DemoMedia.start();
+    registerDemoFixtures();
+    MediaUrl.setFileBaseUrl(DemoMedia.fileBaseUrl);
+    await storage.saveFileBaseUrl(DemoMedia.fileBaseUrl);
+  } else {
+    // 启动时立即把上次缓存的「文件服务器域名」注入 MediaUrl，让首屏就能正常
+    // 解析图片/音频路径，登录后再通过 configList 异步刷新。
+    final cachedFileBase = storage.fileBaseUrl;
+    if (cachedFileBase.isNotEmpty) {
+      MediaUrl.setFileBaseUrl(cachedFileBase);
+    }
   }
 
   // 根容器：把 storage 注入 [appStorageProvider]，并在 runApp 之前预读
