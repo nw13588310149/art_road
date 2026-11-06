@@ -61,13 +61,12 @@ class ShellRepository {
     data: <String, dynamic>{'province': province},
   );
 
-  // ── 顶部搜索（对齐 1.0 TopNav.vue `sear`）────────────────────────────────
-  // 1.0 的顶部搜索把同一个 keyword 同时丢给四个不同列表接口，分别命中：
-  //   - 课程（textbookList，data 中包含 type=1/2/3/4/5/9 等不同子类）
+  // ── 顶部搜索 ────────────────────────────────────────────────────────────
+  // 同一个 keyword 同时丢给多个列表接口，分别命中：
+  //   - 资讯（textbookList，type=9）
   //   - 视频（videoTutorialList，前端会强制把 type 视作 6）
-  //   - 录音（recordingList，前端把 type 视作 'ly'）
   //   - 笔记（noteList，前端把 type 视作 'note'）
-  // 后续点击结果时按 type 跳转不同详情页。这里把四个接口收敛在 shell 仓库
+  // 后续点击结果时按 type 跳转不同详情页。这里把这些接口收敛在 shell 仓库
   // 里，避免顶部搜索去耦合到各业务模块自己的 repository（它们的入参语义
   // 各不相同）。
   Map<String, dynamic> _searchBody(String keyword, String province) {
@@ -101,13 +100,6 @@ class ShellRepository {
     return client.post(
       '/app/user/videoTutorialList',
       data: _searchBody(keyword, province),
-    );
-  }
-
-  Future<ApiResponse> searchRecordingList({required String keyword}) {
-    return client.post(
-      '/app/recording/v2/recordingList',
-      data: <String, dynamic>{'current': 1, 'keyword': keyword, 'size': 100},
     );
   }
 

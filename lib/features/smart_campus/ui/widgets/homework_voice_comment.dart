@@ -16,7 +16,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/network/media_url.dart';
-import '../../../recording_system/audio/recording_playback.dart';
+import '../../../../core/audio/recording/recording_playback.dart';
 
 class HomeworkVoiceCommentBubble extends StatefulWidget {
   const HomeworkVoiceCommentBubble({

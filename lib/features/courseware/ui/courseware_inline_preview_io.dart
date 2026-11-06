@@ -8,7 +8,7 @@ import 'package:pdfrx/pdfrx.dart';
 /// Web 端有 iframe + Office Online 等"浏览器内置"渲染能力，
 /// 原生平台则需要逐类型自己实现：
 /// - PDF：用 [PdfViewer.uri] 跑 pdfrx，与 theory 页面同款渲染、加载/错误
-///   样式（参见 `lib/features/theory/ui/widgets/theory_pdf_view_native.dart`）。
+///   样式（参见 `lib/core/widgets/pdf/app_pdf_view_native.dart`）。
 /// - 图片：直接交给 [CachedNetworkImage]，居中、按比例缩放。
 /// - 其它（音频 / 视频 / Office / 文本 / 未知后缀）：返回 [placeholder]
 ///   或一个友好的占位提示，让上层走"在浏览器中查看 / 下载"路径。

@@ -114,11 +114,6 @@ class ShellController extends StateNotifier<ShellState> {
     _ensurePollingTimersStarted();
   }
 
-  /// 演示用「白名单管理员」手机号：使用此号登录后，无论后端 `/myInfo`
-  /// 返回的 `role` 是什么，都强制覆盖为 `admin`，以便测试管理员视角下
-  /// 的智慧校园（5 身份切换、班主任 / 任课老师等）。
-  static const _adminMobileWhitelist = <String>{'18888888888'};
-
   Future<void> markAllNoticeRead() async {
     final ids = state.noticeItems.map((e) => e.id).toList();
     if (ids.isEmpty) {
@@ -170,13 +165,7 @@ class ShellController extends StateNotifier<ShellState> {
 
     if (myInfoResponse.code == 0) {
       final userMap = _extractUser(myInfoResponse.data);
-      // 白名单管理员：强制把 role 覆盖为 'admin'，下游
-      // SmartCampusController.applyBackendRole → mapBackendRoleToCampus
-      // 会将其映射为 SmartCampusRole.admin 并解锁 5 身份切换。
-      var role = userMap['role']?.toString() ?? '';
-      if (_adminMobileWhitelist.contains(_storage.mobile)) {
-        role = 'admin';
-      }
+      final role = userMap['role']?.toString() ?? '';
       final avatarUrl = userMap['headUrl']?.toString() ?? '';
       final nickname = userMap['nickname']?.toString() ?? '';
       state = state.copyWith(
@@ -194,6 +183,10 @@ class ShellController extends StateNotifier<ShellState> {
           school: userMap['school']?.toString() ?? '',
           targetSchool: userMap['targetSchool']?.toString() ?? '',
           vipExpireDate: _parseVipExpireDate(userMap['vipExpireDate']),
+        ),
+        navItems: buildDefaultNavItems(
+          schoolCoursewareEnabled: state.schoolCoursewareEnabled,
+          isStaff: isStaffRole(role),
         ),
       );
       // 持久化头像与昵称，供下次启动/重新登录时在 API 回包前立刻渲染。
@@ -224,6 +217,7 @@ class ShellController extends StateNotifier<ShellState> {
           isSchoolReady: true,
           navItems: buildDefaultNavItems(
             schoolCoursewareEnabled: schoolCoursewareEnabled,
+            isStaff: isStaffRole(state.user.role),
           ),
         );
         _syncCampusBadge(state.unreadCount);

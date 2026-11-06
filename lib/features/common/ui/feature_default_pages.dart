@@ -54,42 +54,6 @@ class _FeatureDefaultPage extends StatelessWidget {
   }
 }
 
-// ── 听写 ─────────────────────────────────────────────────────────────────────
-class DictationDefaultPage extends StatelessWidget {
-  const DictationDefaultPage({super.key});
-
-  @override
-  Widget build(BuildContext context) => const _FeatureDefaultPage(
-    title: '听写练习',
-    icon: Icons.headphones_outlined,
-    accentColor: Color(0xFF00C9A4),
-  );
-}
-
-// ── 视唱 ─────────────────────────────────────────────────────────────────────
-class SightSingingDefaultPage extends StatelessWidget {
-  const SightSingingDefaultPage({super.key});
-
-  @override
-  Widget build(BuildContext context) => const _FeatureDefaultPage(
-    title: '视唱练习',
-    icon: Icons.music_note_outlined,
-    accentColor: Color(0xFF715EFE),
-  );
-}
-
-// ── 乐理 ─────────────────────────────────────────────────────────────────────
-class MusicTheoryDefaultPage extends StatelessWidget {
-  const MusicTheoryDefaultPage({super.key});
-
-  @override
-  Widget build(BuildContext context) => const _FeatureDefaultPage(
-    title: '乐理练习',
-    icon: Icons.library_music_outlined,
-    accentColor: Color(0xFFFF386B),
-  );
-}
-
 // ── 模考 ─────────────────────────────────────────────────────────────────────
 class MockExamDefaultPage extends StatelessWidget {
   const MockExamDefaultPage({super.key});
@@ -114,18 +78,6 @@ class CampDefaultPage extends StatelessWidget {
   );
 }
 
-// ── 试题 ─────────────────────────────────────────────────────────────────────
-class AnswerQuestionsDefaultPage extends StatelessWidget {
-  const AnswerQuestionsDefaultPage({super.key});
-
-  @override
-  Widget build(BuildContext context) => const _FeatureDefaultPage(
-    title: '答题中心',
-    icon: Icons.checklist_outlined,
-    accentColor: Color(0xFF0CAC40),
-  );
-}
-
 // ── 资讯 ─────────────────────────────────────────────────────────────────────
 class ConsultationDefaultPage extends StatelessWidget {
   const ConsultationDefaultPage({super.key});
@@ -135,17 +87,5 @@ class ConsultationDefaultPage extends StatelessWidget {
     title: '学习资讯',
     icon: Icons.article_outlined,
     accentColor: Color(0xFF039BE5),
-  );
-}
-
-// ── 商城 ─────────────────────────────────────────────────────────────────────
-class StoreDefaultPage extends StatelessWidget {
-  const StoreDefaultPage({super.key});
-
-  @override
-  Widget build(BuildContext context) => const _FeatureDefaultPage(
-    title: '商城',
-    icon: Icons.storefront_outlined,
-    accentColor: Color(0xFFE91E63),
   );
 }

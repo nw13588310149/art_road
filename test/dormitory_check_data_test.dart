@@ -130,8 +130,8 @@ void main() {
     final fieldMap = {for (final field in fields) field.label: field.value};
     expect(fieldMap['学生姓名'], '宁为学生');
     expect(fieldMap['手机号'], '173******91');
-    expect(fieldMap['所在宿舍'], '宿舍1号楼 · 1层 · 101');
-    expect(fieldMap['所在床位'], '2床');
+    expect(fieldMap['我的宿舍'], '宿舍1号楼 · 1层 · 101');
+    expect(fieldMap['我的床位'], '2床');
   });
 
   test('calculates selected history result statistics', () {

@@ -7,7 +7,6 @@ import '../../features/home/state/home_dashboard_controller.dart';
 import '../../features/my_collection/state/my_collection_controller.dart';
 import '../../features/my_notes/state/my_notes_controller.dart';
 import '../../features/personal_center/state/personal_center_controller.dart';
-import '../../features/recording_system/state/recording_system_controller.dart';
 import '../../features/school/state/school_page_controller.dart';
 import '../../features/shell/state/school_binding_controller.dart';
 import '../../features/shell/state/shell_controller.dart';
@@ -44,10 +43,6 @@ Future<void> refreshAfterNetworkRestore(WidgetRef ref, String route) async {
     case RoutePaths.personalCenter:
       if (ref.exists(personalCenterControllerProvider)) {
         await ref.read(personalCenterControllerProvider.notifier).refresh();
-      }
-    case RoutePaths.recording:
-      if (ref.exists(recordingSystemControllerProvider)) {
-        await ref.read(recordingSystemControllerProvider.notifier).refresh();
       }
     case RoutePaths.school:
       if (ref.exists(schoolPageControllerProvider)) {

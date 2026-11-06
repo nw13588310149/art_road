@@ -97,9 +97,7 @@ class AuthRepository {
     ApiUnauthorizedHandler.instance.reset();
   }
 
-  /// 登录 / 注册成功后保存当前账号手机号，供 ShellController 在
-  /// `refreshUserAndSchool` 时判定演示用「白名单管理员」是否需要覆盖
-  /// user.role 为 admin。
+  /// 登录 / 注册成功后保存当前账号手机号。
   Future<void> persistMobile(String mobile) async {
     await _storage.saveMobile(mobile);
   }

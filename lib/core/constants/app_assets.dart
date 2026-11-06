@@ -8,9 +8,6 @@ abstract final class AppAssets {
   static const loginPhone = 'assets/images/auth/login_phone.png';
   static const loginPassword = 'assets/images/auth/login_password.png';
   static const loginSms = 'assets/images/auth/login_sms.png';
-  static const authV2Castle = 'assets/images/auth/v2_castle.png';
-  static const authV2Piano = 'assets/images/auth/v2_piano.png';
-  static const authV2Mic = 'assets/images/auth/v2_mic.png';
   static const figmaLoginBgShape =
       'assets/images/auth/figma_login_bg_shape.svg';
   static const figmaLoginPhoneIcon =
@@ -85,16 +82,26 @@ abstract final class AppAssets {
   static const leftNavSchool = 'assets/images/shell/leftNav/school.png';
   static const leftNavYunpan = 'assets/images/shell/leftNav/yunpan.png';
   static const leftNavVideo = 'assets/images/shell/leftNav/video.png';
-  static const leftNavTingxie = 'assets/images/shell/leftNav/tingxie.png';
-  static const leftNavSing = 'assets/images/shell/leftNav/sing.png';
-  static const leftNavBanlv = 'assets/images/shell/leftNav/banlv.png';
   static const leftNavXiaoyuan = 'assets/images/shell/leftNav/xiaoyuan.png';
   static const leftNavBiji = 'assets/images/shell/leftNav/biji.png';
-  static const leftNavLuyin = 'assets/images/shell/leftNav/luyin.png';
   static const leftNavShoucang = 'assets/images/shell/leftNav/shoucang.png';
   static const leftNavInfo = 'assets/images/shell/leftNav/info.png';
   static const leftNavScale = 'assets/images/shell/leftNav/sf.png';
   static const leftNavBottom = 'assets/images/shell/leftNav/bottom.png';
+  static const leftNavXueqing = 'assets/images/shell/leftNav/xueqing.png';
+  static const leftNavZuopin = 'assets/images/shell/leftNav/zuopin.png';
+  static const leftNavFanhua = 'assets/images/shell/leftNav/fanhua.png';
+  static const leftNavGongju = 'assets/images/shell/leftNav/gongju.png';
+
+  /// 首页九宫格美术图标（与艺考网学情小程序 3D 功能图标同一套风格）。
+  static const homeArtXueqing = 'assets/images/home/art/xueqing.png';
+  static const homeArtZuopin = 'assets/images/home/art/zuopin.png';
+  static const homeArtFanhua = 'assets/images/home/art/fanhua.png';
+  static const homeArtGongju = 'assets/images/home/art/gongju.png';
+  static const homeArtSuxie = 'assets/images/home/art/suxie.png';
+  static const homeArtPaper = 'assets/images/home/art/paper.png';
+  static const homeArtJudge = 'assets/images/home/art/judge.png';
+  static const homeArtResult = 'assets/images/home/art/result.png';
 
   static const shellV2Search = 'assets/images/shell/topbar_v2/search.png';
   static const shellV2Help = 'assets/images/shell/topbar_v2/help.png';
@@ -248,20 +255,12 @@ abstract final class AppAssets {
   /// 声乐二级页（[VoicePage]）卡片封面：紫色霓虹「VOCAL MUSIC / 声乐」海报。
   static const homeFmCover = 'assets/images/home/fm.png';
   /// 智能视唱列表卡片封面（纯图，无文字叠加）。
-  static const smartSightSingingFmCover = 'assets/images/sightsing/fm.png';
-  static const smartSightSingingSetIcon = 'assets/images/sightsing/set.png';
   /// 智能视唱底部控制条「试听旋律」按钮（整图）。
-  static const smartSightSingingPreviewBtn = 'assets/images/sightsing/1.png';
   /// 「试听旋律」播放中（暂停态）按钮（整图）。
-  static const smartSightSingingPreviewPauseBtn = 'assets/images/sightsing/2.png';
   /// 「开始跟唱」按钮（整图，紫色渐变）。
-  static const smartSightSingingStartBtn = 'assets/images/sightsing/3.png';
   /// 跟唱中「停止」按钮（整图）。
-  static const smartSightSingingStopBtn = 'assets/images/sightsing/4.png';
   /// 倒计时「取消」按钮（整图）。
-  static const smartSightSingingCancelBtn = 'assets/images/sightsing/5.png';
   /// 调试面板右上角关闭按钮（紫色圆形 X）。
-  static const smartSightSingingClose = 'assets/images/sightsing/close.png';
   /// 器乐二级页（[InstrumentalPage] 内部复用 [VoicePage]）卡片封面：
   /// 紫色霓虹「INSTRUMENTAL MUSIC / 器乐」海报。与 [homeFmCover] 同尺寸/同设计语言。
   static const homeFm2Cover = 'assets/images/home/fm2.png';
@@ -417,57 +416,9 @@ abstract final class AppAssets {
   static const coursewareActionRename = 'assets/images/courseware/16.png';
   static const coursewareActionShare = 'assets/images/courseware/17.png';
 
-  static const smartDictationFigmaTrackIcon =
-      'assets/images/smart_dictation/figma/imgFrame.svg';
-  static const smartDictationFigmaLessonLock =
-      'assets/images/smart_dictation/figma/imgFrame1.svg';
-  static const smartDictationFigmaStarFilled =
-      'assets/images/smart_dictation/figma/imgStar1.svg';
-  static const smartDictationFigmaStarEmpty =
-      'assets/images/smart_dictation/figma/imgStar2.svg';
-  static const smartDictationFigmaLessonNote =
-      'assets/images/smart_dictation/figma/imgImage1063.png';
-  static const smartDictationFigmaIcon =
-      'assets/images/smart_dictation/figma/img1.png';
-  static const smartDictationFigmaArrowLeft =
-      'assets/images/smart_dictation/figma/arrow-left.png';
-  static const smartDictationBack = 'assets/images/smart_dictation/left.png';
-  static const smartDictationStart = 'assets/images/smart_dictation/1.png';
-  static const smartDictationFigmaSingleUnlocked =
-      'assets/images/smart_dictation/figma/img2.png';
-  static const smartDictationFigmaSingleLocked =
-      'assets/images/smart_dictation/figma/img3.png';
-  static const smartDictationFigmaStarOn =
-      'assets/images/smart_dictation/figma/img4.png';
-  static const smartDictationFigmaStarOff =
-      'assets/images/smart_dictation/figma/img5.png';
-  static const smartDictationFigmaLock =
-      'assets/images/smart_dictation/figma/img6.png';
-  static const smartDictationFigmaStartBtnIcon =
-      'assets/images/smart_dictation/figma/btn.png';
-  static const smartDictationFigmaIntervalUnlocked =
-      'assets/images/smart_dictation/figma/img7.png';
-  static const smartDictationFigmaIntervalLocked =
-      'assets/images/smart_dictation/figma/img8.png';
-  static const smartDictationFigmaChordUnlocked =
-      'assets/images/smart_dictation/figma/img9.png';
-  static const smartDictationFigmaChordLocked =
-      'assets/images/smart_dictation/figma/img10.png';
-  static const smartDictationFigmaExitTopImage =
-      'assets/images/smart_dictation/figma/img11.png';
-  static const smartDictationFigmaResultStar1 =
-      'assets/images/smart_dictation/figma/Star 1.png';
-  static const smartDictationFigmaResultStar2 =
-      'assets/images/smart_dictation/figma/Star 2.png';
-  static const smartDictationFigmaResultStar3 =
-      'assets/images/smart_dictation/figma/Star 3.png';
-  static const smartDictationFigmaResultRibbon =
-      'assets/images/smart_dictation/figma/caidai.png';
-  static const smartDictationFigmaResultGlow =
-      'assets/images/smart_dictation/figma/qiu.png';
 
   /// 刷题完成弹窗的"推荐"气泡（紫色 badge + 下指三角，整体 38×30）。
-  static const quizRecommendBubble = 'assets/images/smart_dictation/tj.png';
+  static const quizRecommendBubble = 'assets/images/home/tj.png';
 
   /// 校圈（社区动态）
   static const xiaoquanHeaderBg = 'assets/images/xiaoquan/bg.png';

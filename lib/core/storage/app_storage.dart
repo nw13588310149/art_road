@@ -7,9 +7,7 @@ class AppStorage {
   static const _pushIdKey = 'pushId';
   static const _checkStatusKey = 'checkStatus';
   static const _schoolIdKey = 'schoolId';
-  // 登录成功后保存的当前账号（手机号）。供 ShellController 在 refreshUserAndSchool
-  // 时判定演示用「白名单管理员」(例如 13588310149) 是否需要覆盖 user.role
-  // 为 admin。logout 时会清空。
+  // 登录成功后保存的当前账号（手机号），用于登录页回填。logout 时会清空。
   static const _mobileKey = 'mobile';
 
   /// 登录后本地缓存的头像 URL 与昵称，供下次启动 / 重新登录时在 myInfo

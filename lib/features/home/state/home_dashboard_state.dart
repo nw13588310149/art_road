@@ -12,13 +12,13 @@ class HomeQuickAction {
     required this.name,
     required this.icon,
     required this.route,
-    this.firstMenu,
+    this.arguments,
   });
 
   final String name;
   final String icon;
   final String route;
-  final int? firstMenu;
+  final Map<String, dynamic>? arguments;
 }
 
 class HomeNewsItem {
@@ -130,46 +130,39 @@ class HomeDashboardState {
   }
 }
 
-/// 首页九宫格按钮列表，从左到右从上到下对应 home1.png ~ home9.png
+/// 首页九宫格：美术学习入口（颜色按 3×3 交错排布）。
 List<HomeQuickAction> buildQuickActions(bool _) {
   return const <HomeQuickAction>[
     HomeQuickAction(
-      name: '听写',
-      icon: AppAssets.homeBtn1,
-      route: RoutePaths.dictation,
-      firstMenu: 8,
+      name: '学情',
+      icon: AppAssets.homeArtXueqing,
+      route: RoutePaths.studyCenter,
     ),
     HomeQuickAction(
-      name: '视唱',
-      icon: AppAssets.homeBtn2,
-      route: RoutePaths.sightSinging,
-      firstMenu: 1,
+      name: '作品',
+      icon: AppAssets.homeArtZuopin,
+      route: RoutePaths.artworks,
     ),
     HomeQuickAction(
-      name: '乐理',
-      icon: AppAssets.homeBtn3,
-      route: RoutePaths.musicTheory,
-      firstMenu: 5,
+      name: '范画',
+      icon: AppAssets.homeArtFanhua,
+      route: RoutePaths.gallery,
     ),
     HomeQuickAction(
-      name: '微校',
-      icon: AppAssets.homeBtn8,
-      route: RoutePaths.schoolWebsite,
+      name: '工具箱',
+      icon: AppAssets.homeArtGongju,
+      route: RoutePaths.artToolbox,
     ),
     HomeQuickAction(
-      name: '刷题',
+      name: '速写练习',
+      icon: AppAssets.homeArtSuxie,
+      route: RoutePaths.artToolbox,
+      arguments: <String, dynamic>{'tool': 'quickSketch'},
+    ),
+    HomeQuickAction(
+      name: '题库',
       icon: AppAssets.homeBtn5,
       route: RoutePaths.camp,
-    ),
-    HomeQuickAction(
-      name: '试题',
-      icon: AppAssets.homeBtn6,
-      route: RoutePaths.answerQuestions,
-    ),
-    HomeQuickAction(
-      name: '群聊',
-      icon: AppAssets.homeBtn7,
-      route: RoutePaths.smartCampus,
     ),
     HomeQuickAction(
       name: '资讯',
@@ -180,6 +173,11 @@ List<HomeQuickAction> buildQuickActions(bool _) {
       name: '校圈',
       icon: AppAssets.homeBtn9,
       route: RoutePaths.circle,
+    ),
+    HomeQuickAction(
+      name: '群聊',
+      icon: AppAssets.homeBtn7,
+      route: RoutePaths.smartCampus,
     ),
   ];
 }

@@ -2,11 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/art_subject_card.dart';
 import '../../../core/widgets/app_loading_indicator.dart';
 import '../../../core/widgets/dashboard_course_notice_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/art/art_subject.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/seamless_banner_carousel.dart';
@@ -180,7 +182,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                                         ),
                                       ),
                                       const SizedBox(width: mainGap),
-                                      const _VoiceInstrumentColumn(),
+                                      const _SubjectColumn(),
                                     ],
                                   ),
                                 ),
@@ -514,13 +516,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
       _openSchoolCircle();
       return;
     }
-    Navigator.pushNamed(
-      context,
-      action.route,
-      arguments: action.firstMenu == null
-          ? null
-          : <String, dynamic>{'firstMenu': action.firstMenu.toString()},
-    );
+    Navigator.pushNamed(context, action.route, arguments: action.arguments);
   }
 }
 
@@ -585,8 +581,9 @@ class _QuickActionItem extends StatelessWidget {
   }
 }
 
-class _VoiceInstrumentColumn extends StatelessWidget {
-  const _VoiceInstrumentColumn();
+/// 三科入口：素描 / 色彩 / 速写，点击进入对应科目的范画库。
+class _SubjectColumn extends StatelessWidget {
+  const _SubjectColumn();
 
   @override
   Widget build(BuildContext context) {
@@ -594,41 +591,23 @@ class _VoiceInstrumentColumn extends StatelessWidget {
       width: 146,
       child: Column(
         children: [
-          _VoiceCard(
-            asset: AppAssets.homeShengyue,
-            onTap: () => Navigator.pushNamed(context, RoutePaths.voice),
-          ),
-          const SizedBox(height: 19),
-          _VoiceCard(
-            asset: AppAssets.homeQiyue,
-            onTap: () => Navigator.pushNamed(context, RoutePaths.instrumental),
-          ),
+          for (var i = 0; i < ArtSubject.values.length; i++) ...[
+            if (i > 0) const SizedBox(height: 9.5),
+            SizedBox(
+              height: 98,
+              child: ArtSubjectCard(
+                subject: ArtSubject.values[i],
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  RoutePaths.gallery,
+                  arguments: <String, dynamic>{
+                    'subject': ArtSubject.values[i].label,
+                  },
+                ),
+              ),
+            ),
+          ],
         ],
-      ),
-    );
-  }
-}
-
-/// 声乐/器乐卡片：直接使用完整背景图，146×147，圆角 16
-class _VoiceCard extends StatelessWidget {
-  const _VoiceCard({required this.asset, required this.onTap});
-
-  final String asset;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Image.asset(
-          asset,
-          width: 146,
-          height: 147,
-          fit: BoxFit.fill,
-          filterQuality: FilterQuality.high,
-        ),
       ),
     );
   }

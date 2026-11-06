@@ -10,8 +10,6 @@ import '../../../core/network/network_page_refresh.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../home/state/home_dashboard_controller.dart';
-import '../../recording_system/state/recording_system_controller.dart';
-import '../../smart_sight_singing/state/smart_sight_singing_controller.dart';
 import '../state/school_binding_controller.dart';
 import '../state/school_binding_state.dart';
 import '../state/shell_controller.dart';
@@ -175,15 +173,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
       overlayChild: bindingState.shouldShowOverlay
           ? const SchoolBindingOverlay()
           : null,
-      // 应用户要求：在带音频播放器的页面，弹出底部钢琴键盘时不要让播放器
-      // 跟着上推。Scaffold 默认会因 viewInsets 把 body 收缩——这里对播放
-      // 类路由把 resizeToAvoidBottomInset 关掉，整个 body 保持原高度，
-      // 钢琴/小键盘自然以"覆盖层"的姿态浮在播放区域之上。
-      // 其它路由（AI 聊天、注册表单等）保持默认的 resize=true，避免输入框
-      // 被键盘挡住。
-      resizeToAvoidBottomInset: !_routeLocksLayoutForKeyboard(
-        widget.currentRoute,
-      ),
+      resizeToAvoidBottomInset: true,
       sidebar: RepaintBoundary(
         child: ShellLeftNav(
           state: state,
@@ -204,16 +194,6 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
       ),
       child: RepaintBoundary(child: widget.child),
     );
-  }
-
-  /// 路由白名单：键盘弹起时这些页面整页保持不动（Scaffold 不 resize）。
-  /// 当前都是"页面里塞了播放器 + 钢琴键盘"的入口，且页内本身没有需要避让
-  /// 系统软键盘的输入框（评论 / 分享 dialog 由各自的 dialog 自行处理布局）：
-  ///   - `/musicPlay`：通用音频播放页（听写、节奏、和弦…）；
-  ///   - `/answerEnd2`：试题模块"听写 / 视唱 / 乐理"的播放变体；
-  /// 其它路由（AI 聊天、注册表单、个人资料等）保持默认 resize=true。
-  bool _routeLocksLayoutForKeyboard(String route) {
-    return route == RoutePaths.musicPlay || route == RoutePaths.answerEnd2;
   }
 
   /// 当用户已加载且 VIP 失效时，把非豁免页面强制踢回个人中心，并 toast
@@ -259,17 +239,8 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
     }
 
     if (route == widget.currentRoute) {
-      // 录音系统的导航项再次点击时，直接调用 controller 把视图归位到列表
-      // 首页（同时停掉在跑的录音 / 试听）。其他模块再点同一项保持原有"啥
-      // 也不做"的行为，避免影响它们的页内 UI 状态。
-      if (route == RoutePaths.recording) {
-        ref.read(recordingSystemControllerProvider.notifier).enterListHome();
-      } else if (route == RoutePaths.smartSinging ||
-          route == RoutePaths.smartSightSinging) {
-        unawaited(
-          ref.read(smartSightSingingControllerProvider.notifier).returnToHome(),
-        );
-      } else if (route == RoutePaths.home &&
+      // 首页再次点击时刷新数据；其他模块再点同一项不做处理，保留页内 UI 状态。
+      if (route == RoutePaths.home &&
           ref.exists(homeDashboardControllerProvider)) {
         unawaited(ref.read(homeDashboardControllerProvider.notifier).refresh());
       }
@@ -284,17 +255,6 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         !ShellController.isRouteAllowedWithoutVip(route)) {
       AppToast.show(context, '请先开通会员');
       return;
-    }
-    // 离开录音系统前先停掉试听/播放：controller 是全局 Riverpod 单例，
-    // 仅靠 RecordingSystemPage.dispose 里的 ref.read 不够稳（dispose 阶段
-    // ref 可能已失效），这里在路由切换前主动收掉播放器。
-    if (widget.currentRoute == RoutePaths.recording &&
-        route != RoutePaths.recording) {
-      unawaited(
-        ref
-            .read(recordingSystemControllerProvider.notifier)
-            .abandonActiveSession(),
-      );
     }
     Navigator.pushReplacementNamed(context, route);
   }

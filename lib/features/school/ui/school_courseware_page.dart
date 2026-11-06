@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/art/art_subject.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/widgets/art_subject_card.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
@@ -504,7 +506,7 @@ class _QuickActionItem extends StatelessWidget {
   }
 }
 
-// ── Voice / Instrument row (315:121 aspect ratio, gap 16) ────────────────────
+// ── 三科入口行（素描 / 色彩 / 速写）──────────────────────────────────────────
 class _VoiceInstrumentRow extends StatelessWidget {
   const _VoiceInstrumentRow({required this.schoolId});
 
@@ -513,178 +515,34 @@ class _VoiceInstrumentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const gap = 16.0;
-    // 通过 LayoutBuilder 计算自适应宽度，再由 315:121 推算按钮高度。
     return LayoutBuilder(
       builder: (_, bc) {
-        final cardW = (bc.maxWidth - gap) / 2.0;
-        final cardH = cardW * 121.0 / 315.0;
+        final cardW = (bc.maxWidth - gap * 2) / 3.0;
+        final cardH = cardW * 121.0 / 210.0;
         return SizedBox(
           height: cardH,
           child: Row(
             children: [
-              Expanded(
-                child: _VoiceFeatureCard(
-                  onTap: () => _go(context, RoutePaths.voice),
+              for (var i = 0; i < ArtSubject.values.length; i++) ...[
+                if (i > 0) const SizedBox(width: gap),
+                Expanded(
+                  child: ArtSubjectCard(
+                    subject: ArtSubject.values[i],
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      RoutePaths.gallery,
+                      arguments: <String, dynamic>{
+                        'subject': ArtSubject.values[i].label,
+                        'school': schoolId != '0' ? schoolId : true,
+                      },
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: gap),
-              Expanded(
-                child: _InstrumentFeatureCard(
-                  onTap: () => _go(context, RoutePaths.instrumental),
-                ),
-              ),
+              ],
             ],
           ),
         );
       },
-    );
-  }
-
-  /// 与 1.0 `gosY` / `goQY` 一致：
-  ///   - 移除 firstMenu/secondMenu（这里不传即等价于"清空"）
-  ///   - 带上 school 标记，让 voice/instrumental 二级页走 schoolTextbookList 接口
-  void _go(BuildContext context, String route) {
-    final args = <String, dynamic>{'school': schoolId != '0' ? schoolId : true};
-    Navigator.pushNamed(context, route, arguments: args);
-  }
-}
-
-/// 声乐入口卡 — icon 位置独立维护。
-class _VoiceFeatureCard extends StatelessWidget {
-  const _VoiceFeatureCard({required this.onTap});
-
-  final VoidCallback onTap;
-
-  static const _iconRight = 22.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              AppAssets.homeShengyeu2Bg,
-              alignment: Alignment.center,
-            ),
-            const Padding(
-              padding: EdgeInsets.only(left: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '声乐',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
-                      height: 1,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    '掌握技巧，释放天籁之音',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF1A1A1A),
-                      height: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              right: _iconRight,
-              top: 0,
-              bottom: -5,
-              child: Center(
-                child: SizedBox(
-                  width: 70,
-                  height: 70 / 0.8795180722891566,
-                  child: Image.asset(
-                    AppAssets.homeShengyue2Icon,
-                    alignment: Alignment.center,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 器乐入口卡 — icon 位置独立维护（相对原 17 右距左移 5 → right 22）。
-class _InstrumentFeatureCard extends StatelessWidget {
-  const _InstrumentFeatureCard({required this.onTap});
-
-  final VoidCallback onTap;
-
-  /// 原 Figma 右距 17，单独左移 5。
-  static const _iconRight = 27.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(AppAssets.homeQiyue2Bg, alignment: Alignment.center),
-            const Padding(
-              padding: EdgeInsets.only(left: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '器乐',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
-                      height: 1,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    '习器乐技法，奏美妙乐章',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF1A1A1A),
-                      height: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              right: _iconRight,
-              top: 0,
-              bottom: -5,
-              child: Center(
-                child: SizedBox(
-                  width: 70,
-                  height: 70 / 0.8795180722891566,
-                  child: Image.asset(
-                    AppAssets.homeQieyue2Icon,
-                    alignment: Alignment.center,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

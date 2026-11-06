@@ -114,34 +114,23 @@ class SchoolPageState {
   }
 }
 
-/// 校园课件页六宫格按钮。
-///
-/// 与 1.0 `school.vue` 中 `btnArray` + `onButtonClick` 一致：
-///   - 听写: firstMenu=8、school 模式
-///   - 视唱: firstMenu=1、school 模式
-///   - 乐理: firstMenu=5、school 模式
-///   - 试题(=1.0 答题): 不预选 firstMenu、school 模式
-///   - 视频: 不预选 firstMenu、school 模式
-/// 2.0 多出的"刷题"走 [RoutePaths.schoolCamp]，接口携带真实 schoolId。
+/// 校园课件页六宫格按钮（校园专属资料，接口携带真实 schoolId）。
 List<SchoolQuickAction> buildSchoolQuickActions() {
   return const <SchoolQuickAction>[
     SchoolQuickAction(
-      name: '听写',
-      icon: AppAssets.homeBtn1,
-      route: RoutePaths.dictation,
-      firstMenu: 8,
+      name: '学情',
+      icon: AppAssets.homeArtXueqing,
+      route: RoutePaths.studyCenter,
     ),
     SchoolQuickAction(
-      name: '乐理',
-      icon: AppAssets.homeBtn3,
-      route: RoutePaths.musicTheory,
-      firstMenu: 5,
+      name: '作品',
+      icon: AppAssets.homeArtZuopin,
+      route: RoutePaths.artworks,
     ),
     SchoolQuickAction(
-      name: '视唱',
-      icon: AppAssets.homeBtn2,
-      route: RoutePaths.sightSinging,
-      firstMenu: 1,
+      name: '范画',
+      icon: AppAssets.homeArtFanhua,
+      route: RoutePaths.gallery,
     ),
     SchoolQuickAction(
       name: '刷题',
@@ -149,9 +138,9 @@ List<SchoolQuickAction> buildSchoolQuickActions() {
       route: RoutePaths.schoolCamp,
     ),
     SchoolQuickAction(
-      name: '试题',
-      icon: AppAssets.homeBtn6,
-      route: RoutePaths.answerQuestions,
+      name: '微校',
+      icon: AppAssets.homeBtn8,
+      route: RoutePaths.schoolWebsite,
     ),
     SchoolQuickAction(
       name: '视频',

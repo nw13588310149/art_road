@@ -69,9 +69,9 @@ import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../../core/widgets/wechat_emoji.dart';
-import '../../recording_system/audio/recording_bytes_loader.dart';
-import '../../recording_system/audio/recording_capture.dart';
-import '../../recording_system/audio/recording_playback.dart';
+import '../../../core/audio/recording/recording_bytes_loader.dart';
+import '../../../core/audio/recording/recording_capture.dart';
+import '../../../core/audio/recording/recording_playback.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../courseware/ui/courseware_file_picker.dart';
 import '../navigation/group_chat_return.dart';
@@ -5221,53 +5221,14 @@ void _navigateSharedContent(
       );
     case 'book':
       if (id == null || id.isEmpty) return;
-      final bookType = b.bookType;
-      if (bookType == 2) {
-        Navigator.pushNamed(
-          context,
-          RoutePaths.theory,
-          arguments: GroupChatReturnNavigator.wrapMap(
-            <String, dynamic>{'id': id},
-            classId: groupChatClassId,
-          ),
-        );
-      } else if (bookType == 1) {
-        Navigator.pushNamed(
-          context,
-          RoutePaths.musicPlay,
-          arguments: GroupChatReturnNavigator.wrapMap(
-            <String, dynamic>{'id': id, 'type': 3},
-            classId: groupChatClassId,
-          ),
-        );
-      } else if (bookType == 4 || bookType == 5) {
-        Navigator.pushNamed(
-          context,
-          RoutePaths.musicPlay,
-          arguments: GroupChatReturnNavigator.wrapMap(
-            <String, dynamic>{'id': id, 'type': 2},
-            classId: groupChatClassId,
-          ),
-        );
-      } else if (bookType == 10) {
-        Navigator.pushNamed(
-          context,
-          RoutePaths.answerEnd2,
-          arguments: GroupChatReturnNavigator.wrapMap(
-            <String, dynamic>{'id': id, 'closedByDefault': true},
-            classId: groupChatClassId,
-          ),
-        );
-      } else {
-        Navigator.pushNamed(
-          context,
-          RoutePaths.musicPlay,
-          arguments: GroupChatReturnNavigator.wrapMap(
-            <String, dynamic>{'id': id},
-            classId: groupChatClassId,
-          ),
-        );
-      }
+      Navigator.pushNamed(
+        context,
+        RoutePaths.gallery,
+        arguments: GroupChatReturnNavigator.wrapMap(
+          <String, dynamic>{'workId': id},
+          classId: groupChatClassId,
+        ),
+      );
     default:
       break;
   }

@@ -12,7 +12,6 @@ import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../../core/widgets/app_wheel_picker_sheet.dart';
-import '../../../music_play/state/music_play_controller.dart';
 import '../../data/shell_repository.dart';
 import '../../state/shell_controller.dart';
 import '../../state/shell_state.dart';
@@ -793,35 +792,28 @@ class _NoticeEmpty extends StatelessWidget {
   }
 }
 
-// ─────────────────────── 顶部全局搜索（对齐 1.0 TopNav.vue）───────────────────
+// ─────────────────────── 顶部全局搜索 ───────────────────────────────────────
 //
-// 行为对齐：
-//   1) 用户在输入框输入关键字 → 300ms 防抖后并行命中四个 1.0 列表接口；
-//   2) 输入框获得焦点且查询非空时，浮层下拉显示 4 个 tab（课程/视频/录音/笔记），
-//      tab 标题尾部带计数；
-//   3) 点击列表项 → 按 1.0 `goDetail` 的分发规则路由到对应详情页：
-//        type 1/3       → /musicPlay              {id}
-//        type 4/5       → /musicPlay              {id, type:2}
-//        type 2         → /theory                 {id}
+// 行为：
+//   1) 用户在输入框输入关键字 → 300ms 防抖后并行命中各列表接口；
+//   2) 输入框获得焦点且查询非空时，浮层下拉显示各 tab，tab 标题尾部带计数；
+//   3) 点击列表项 → 按 type 路由到对应详情页：
 //        type 6         → /video-tutorial         {openVideoId}
 //        type 9         → /consultationDetail     {id}
-//        type 'ly'      → /recording              {id: categoryId}
 //        type 'note'    → /noteDetail             {id, title, type, param1, sId}
 //
 // 视觉上沿用顶部 v2 设计（白底、12px 圆角、40px 高）；下拉浮层使用 Overlay
 // 居中弹出在输入框下方 8px，右下方阴影 + 1px 浅边框，与个人菜单风格一致。
 
-enum _SearchTab { text, video, ly, note }
+enum _SearchTab { text, video, note }
 
 extension _SearchTabExt on _SearchTab {
   String get label {
     switch (this) {
       case _SearchTab.text:
-        return '课程';
+        return '资讯';
       case _SearchTab.video:
         return '视频';
-      case _SearchTab.ly:
-        return '录音';
       case _SearchTab.note:
         return '笔记';
     }
@@ -842,12 +834,10 @@ class _SearchItem {
   final String id;
   final String title;
 
-  /// 1.0 `goDetail` 的分发字段：可能是数字（1/2/3/4/5/6/9）或字符串（'ly'/'note'）。
+  /// 分发字段：数字（6 视频 / 9 资讯）或字符串（'note'）。
   final dynamic type;
 
-  /// 录音 / 笔记列表项额外字段：
-  ///   - 录音：`categoryId` 用作跳 /recording 的 id。
-  ///   - 笔记：`categoryId` 是分类 id，`paperType`/`param1` 用于详情页。
+  /// 笔记列表项额外字段：`categoryId` 是分类 id，`paperType`/`param1` 用于详情页。
   final String? categoryId;
   final dynamic paperType;
   final String? param1;
@@ -880,7 +870,6 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
   Map<_SearchTab, List<_SearchItem>> _results = const {
     _SearchTab.text: <_SearchItem>[],
     _SearchTab.video: <_SearchItem>[],
-    _SearchTab.ly: <_SearchItem>[],
     _SearchTab.note: <_SearchItem>[],
   };
 
@@ -935,8 +924,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         _results = const {
           _SearchTab.text: <_SearchItem>[],
           _SearchTab.video: <_SearchItem>[],
-          _SearchTab.ly: <_SearchItem>[],
-          _SearchTab.note: <_SearchItem>[],
+                _SearchTab.note: <_SearchItem>[],
         };
       });
       if (_overlayController.isShowing) {
@@ -962,7 +950,6 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
       final responses = await Future.wait([
         repo.searchTextbookList(keyword: keyword, province: province),
         repo.searchVideoList(keyword: keyword, province: province),
-        repo.searchRecordingList(keyword: keyword),
         repo.searchNoteList(keyword: keyword, province: province),
       ]);
       // 过期请求兜底：在 await 期间用户可能继续打字，老 keyword 的结果应被丢弃。
@@ -974,11 +961,10 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         _results = {
           _SearchTab.text: _parseList(
             responses[0].data,
-            forcedType: null, // 课程接口自带 type 字段，按原值分发。
+            forcedType: null, // 资讯接口自带 type 字段，按原值分发。
           ),
           _SearchTab.video: _parseList(responses[1].data, forcedType: 6),
-          _SearchTab.ly: _parseList(responses[2].data, forcedType: 'ly'),
-          _SearchTab.note: _parseList(responses[3].data, forcedType: 'note'),
+          _SearchTab.note: _parseList(responses[2].data, forcedType: 'note'),
         };
       });
     } catch (_) {
@@ -988,8 +974,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         _results = const {
           _SearchTab.text: <_SearchItem>[],
           _SearchTab.video: <_SearchItem>[],
-          _SearchTab.ly: <_SearchItem>[],
-          _SearchTab.note: <_SearchItem>[],
+                _SearchTab.note: <_SearchItem>[],
         };
       });
     }
@@ -1031,26 +1016,6 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
     final dynamic type = item.type;
     if (type is int) {
       switch (type) {
-        case 1:
-        case 3:
-          unawaited(_openMusicPlayPage(
-            navigator,
-            <String, dynamic>{'id': item.id},
-          ));
-          return;
-        case 2:
-          navigator.pushNamed(
-            RoutePaths.theory,
-            arguments: <String, dynamic>{'id': item.id},
-          );
-          return;
-        case 4:
-        case 5:
-          unawaited(_openMusicPlayPage(
-            navigator,
-            <String, dynamic>{'id': item.id, 'type': 2},
-          ));
-          return;
         case 6:
           navigator.pushNamed(
             RoutePaths.videoTutorial,
@@ -1065,14 +1030,6 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
           return;
       }
     }
-    if (type == 'ly') {
-      final cid = item.categoryId ?? item.id;
-      navigator.pushNamed(
-        RoutePaths.recording,
-        arguments: <String, dynamic>{'id': cid},
-      );
-      return;
-    }
     if (type == 'note') {
       navigator.pushNamed(
         RoutePaths.noteDetail,
@@ -1086,28 +1043,6 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
       );
       return;
     }
-  }
-
-  Future<void> _openMusicPlayPage(
-    NavigatorState navigator,
-    Map<String, dynamic> arguments,
-  ) async {
-    await MusicPlayController.stopForegroundPlayback();
-    if (!mounted) {
-      return;
-    }
-    final currentRoute = ModalRoute.of(context)?.settings.name;
-    final replaceCurrent =
-        currentRoute == RoutePaths.musicPlay ||
-        currentRoute == RoutePaths.answerEnd2;
-    if (replaceCurrent) {
-      navigator.pushReplacementNamed(
-        RoutePaths.musicPlay,
-        arguments: arguments,
-      );
-      return;
-    }
-    navigator.pushNamed(RoutePaths.musicPlay, arguments: arguments);
   }
 
   void _handleClear() {

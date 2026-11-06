@@ -105,14 +105,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.5+3"
-  carousel_slider:
-    dependency: "direct main"
-    description:
-      name: carousel_slider
-      sha256: febf4b0163e0242adc13d7a863b04965351f59e7dfea56675c7c2caa7bcd7476
-      url: "https://pub.dev"
-    source: hosted
-    version: "5.1.2"
   characters:
     dependency: transitive
     description:
@@ -209,14 +201,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.2"
-  cupertino_icons:
-    dependency: "direct main"
-    description:
-      name: cupertino_icons
-      sha256: "41e005c33bd814be4d3096aff55b1908d419fde52ca656c8c47719ec745873cd"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.9"
   dbus:
     dependency: transitive
     description:
@@ -331,14 +315,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.6.1"
-  flutter_soloud:
-    dependency: "direct main"
-    description:
-      name: flutter_soloud
-      sha256: d9f832a6c16dcdc816faa9a95a055f60d4eff602c1432186843c6a76563d8d15
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.0.2"
   flutter_svg:
     dependency: "direct main"
     description:
@@ -661,14 +637,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
-  music_xml:
-    dependency: "direct main"
-    description:
-      name: music_xml
-      sha256: "0d7ad73adf7c594188fc8252e00681d6a6ec7deb59aee700b00da074e9a4f275"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.7.0"
   native_toolchain_c:
     dependency: transitive
     description:
@@ -893,14 +861,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.15.0"
-  pitch_detector_dart:
-    dependency: "direct main"
-    description:
-      name: pitch_detector_dart
-      sha256: "47b5dd1f1cd1fb6af553a9b920e271eba62b8a1b9e77fdfaa9421ae1dacb8a90"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.7"
   platform:
     dependency: transitive
     description:
@@ -1459,7 +1419,7 @@ packages:
     source: hosted
     version: "1.1.0"
   xml:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: xml
       sha256: "971043b3a0d3da28727e40ed3e0b5d18b742fa5a68665cca88e74b7876d5e025"

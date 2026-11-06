@@ -110,8 +110,6 @@ class AuthController extends StateNotifier<AuthState> {
       if (token.isNotEmpty) {
         await _repository.persistToken(token);
       }
-      // 持久化当前手机号，供 ShellController 在 refreshUserAndSchool 时
-      // 判定白名单管理员（如 13588310149）是否覆盖 user.role 为 admin。
       await _repository.persistMobile(state.mobile);
 
       // 登录成功后再拉一次字典/审核开关，结果写入本地供各业务页读取。
@@ -167,7 +165,6 @@ class AuthController extends StateNotifier<AuthState> {
       if (token.isNotEmpty) {
         await _repository.persistToken(token);
       }
-      // 注册成功也走自动登录流程，记下手机号供白名单管理员判定。
       await _repository.persistMobile(state.mobile);
 
       await _syncCheckStatus().catchError((_) {});

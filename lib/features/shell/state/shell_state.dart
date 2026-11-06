@@ -230,88 +230,96 @@ class ShellState {
   }
 }
 
+/// 后端 `myInfo.user.role` 是否为教职角色（任课老师 / 班主任 / 宿管 / 管理员）。
+/// 学情中心与作品档案对教职角色展示「班级学情」「作品点评」视角。
+bool isStaffRole(String role) {
+  final value = role.trim();
+  return value.isNotEmpty && value != 'student';
+}
+
 List<ShellNavItem> buildDefaultNavItems({
   required bool schoolCoursewareEnabled,
+  bool isStaff = false,
 }) {
-  const base = <ShellNavItem>[
-    ShellNavItem(
-      label: '\u9996\u9875',
+  final base = <ShellNavItem>[
+    const ShellNavItem(
+      label: '首页',
       route: RoutePaths.home,
       icon: AppAssets.leftNavHome,
       activeIcon: AppAssets.leftNavHome,
     ),
-    ShellNavItem(
-      label: '\u5c0f\u827a\u540c\u5b66',
+    const ShellNavItem(
+      label: '小艺同学',
       route: RoutePaths.personalAi,
       icon: AppAssets.leftNavAi,
       activeIcon: AppAssets.leftNavAi,
     ),
+    ShellNavItem(
+      label: isStaff ? '班级学情' : '我的学情',
+      route: RoutePaths.studyCenter,
+      icon: AppAssets.leftNavXueqing,
+      activeIcon: AppAssets.leftNavXueqing,
+    ),
+    ShellNavItem(
+      label: isStaff ? '作品点评' : '作品档案',
+      route: RoutePaths.artworks,
+      icon: AppAssets.leftNavZuopin,
+      activeIcon: AppAssets.leftNavZuopin,
+    ),
+    const ShellNavItem(
+      label: '范画库',
+      route: RoutePaths.gallery,
+      icon: AppAssets.leftNavFanhua,
+      activeIcon: AppAssets.leftNavFanhua,
+    ),
+    const ShellNavItem(
+      label: '画室工具箱',
+      route: RoutePaths.artToolbox,
+      icon: AppAssets.leftNavGongju,
+      activeIcon: AppAssets.leftNavGongju,
+    ),
   ];
 
-  final school = ShellNavItem(
-    label: '\u6821\u56ed\u8bfe\u4ef6',
+  const school = ShellNavItem(
+    label: '校园课件',
     route: RoutePaths.school,
     icon: AppAssets.leftNavSchool,
     activeIcon: AppAssets.leftNavSchool,
   );
 
-  final tail = <ShellNavItem>[
-    const ShellNavItem(
-      label: '\u6211\u7684\u4e91\u76d8',
+  const tail = <ShellNavItem>[
+    ShellNavItem(
+      label: '我的云盘',
       route: RoutePaths.courseware,
       icon: AppAssets.leftNavYunpan,
       activeIcon: AppAssets.leftNavYunpan,
     ),
-    const ShellNavItem(
-      label: '\u89c6\u9891\u4e2d\u5fc3',
+    ShellNavItem(
+      label: '视频中心',
       route: RoutePaths.videoTutorial,
       icon: AppAssets.leftNavVideo,
       activeIcon: AppAssets.leftNavVideo,
     ),
-    const ShellNavItem(
-      label: '\u667a\u80fd\u542c\u5199',
-      route: RoutePaths.smartDictation,
-      icon: AppAssets.leftNavTingxie,
-      activeIcon: AppAssets.leftNavTingxie,
-    ),
-    const ShellNavItem(
-      label: '\u667a\u80fd\u89c6\u5531',
-      route: RoutePaths.smartSinging,
-      icon: AppAssets.leftNavSing,
-      activeIcon: AppAssets.leftNavSing,
-    ),
-    const ShellNavItem(
-      label: '\u97f3\u4e50\u4f34\u4fa3',
-      route: RoutePaths.music,
-      icon: AppAssets.leftNavBanlv,
-      activeIcon: AppAssets.leftNavBanlv,
-    ),
-    const ShellNavItem(
-      label: '\u667a\u6167\u6821\u56ed',
+    ShellNavItem(
+      label: '智慧校园',
       route: RoutePaths.smartCampus,
       icon: AppAssets.leftNavXiaoyuan,
       activeIcon: AppAssets.leftNavXiaoyuan,
     ),
-    const ShellNavItem(
-      label: '\u6211\u7684\u7b14\u8bb0',
+    ShellNavItem(
+      label: '我的笔记',
       route: RoutePaths.myNotes,
       icon: AppAssets.leftNavBiji,
       activeIcon: AppAssets.leftNavBiji,
     ),
-    const ShellNavItem(
-      label: '\u5f55\u97f3\u7cfb\u7edf',
-      route: RoutePaths.recording,
-      icon: AppAssets.leftNavLuyin,
-      activeIcon: AppAssets.leftNavLuyin,
-    ),
-    const ShellNavItem(
-      label: '\u6211\u7684\u6536\u85cf',
+    ShellNavItem(
+      label: '我的收藏',
       route: RoutePaths.myCollection,
       icon: AppAssets.leftNavShoucang,
       activeIcon: AppAssets.leftNavShoucang,
     ),
-    const ShellNavItem(
-      label: '\u4e2a\u4eba\u4e2d\u5fc3',
+    ShellNavItem(
+      label: '个人中心',
       route: RoutePaths.personalCenter,
       icon: AppAssets.leftNavInfo,
       activeIcon: AppAssets.leftNavInfo,

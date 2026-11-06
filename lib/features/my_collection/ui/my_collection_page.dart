@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
@@ -101,35 +99,6 @@ class MyCollectionPage extends ConsumerWidget {
       return;
     }
     switch (item.type) {
-      case 1: // 视唱
-        Navigator.pushNamed(
-          context,
-          RoutePaths.musicPlay,
-          arguments: <String, dynamic>{'id': '$targetId', 'type': 3},
-        );
-      case 2: // 乐理
-        Navigator.pushNamed(
-          context,
-          RoutePaths.theory,
-          arguments: <String, dynamic>{'id': '$targetId'},
-        );
-      case 3: // 听写
-        Navigator.pushNamed(
-          context,
-          RoutePaths.musicPlay,
-          arguments: <String, dynamic>{
-            'id': '$targetId',
-            // 与听写课件列表入口一致：收藏进入也默认展示题面，答案由用户主动打开。
-            'closedByDefault': true,
-          },
-        );
-      case 4: // 声乐
-      case 5: // 器乐
-        Navigator.pushNamed(
-          context,
-          RoutePaths.musicPlay,
-          arguments: <String, dynamic>{'id': '$targetId', 'type': 2},
-        );
       case 6: // 视频
         // 视频详情接口（videoTutorialDetail）期望的 id 与 videoTutorialList
         // 返回的 id 一致——它就藏在收藏接口给到的 target 快照（rawPayload）
@@ -142,85 +111,24 @@ class MyCollectionPage extends ConsumerWidget {
           RoutePaths.videoTutorial,
           arguments: CollectionReturnNavigator.wrapVideoArgs(openVideoId),
         );
-      case 10: // 试题
-        // 按"是否带可播放音频"分流：试题项的 `file1` 是 JSON 字符串数组，
-        // 任一 URL 为音频文件（按扩展名识别）→ answerEnd2（musicPlay
-        // 题面+答案 + 播放器），否则 → answerEnd（PDF / 阅读式答案页）。
-        if (_hasPlayableAudioFile1(item)) {
-          Navigator.pushNamed(
-            context,
-            RoutePaths.answerEnd2,
-            arguments: <String, dynamic>{
-              'id': '$targetId',
-              'closedByDefault': true,
-            },
-          );
-        } else {
-          Navigator.pushNamed(
-            context,
-            RoutePaths.answerEnd,
-            arguments: <String, dynamic>{
-              'id': '$targetId',
-              'answerEndMode': true,
-            },
-          );
-        }
+      case 9: // 资讯
+        Navigator.pushNamed(
+          context,
+          RoutePaths.consultationDetail,
+          arguments: <String, dynamic>{'id': '$targetId'},
+        );
+      case 11: // 范画
+        final rawWorkId = item.rawPayload['id']?.toString().trim() ?? '';
+        Navigator.pushNamed(
+          context,
+          RoutePaths.gallery,
+          arguments: <String, dynamic>{
+            'workId': rawWorkId.isNotEmpty ? rawWorkId : '$targetId',
+          },
+        );
       default:
         AppToast.showError(context, '暂不支持的收藏类型');
     }
-  }
-
-  /// 收藏项的 `target.file1` 是否包含可播放音频。
-  ///
-  /// `file1` 一般是 JSON 字符串数组（如
-  /// `'["https://.../1.mp3","https://.../2.mp3"]'`），偶尔是单条 URL；
-  /// 只要其中任意一项的扩展名命中常见音频格式即返回 true。
-  bool _hasPlayableAudioFile1(CollectionEntry item) {
-    final raw = item.rawPayload['file1'];
-    if (raw == null) return false;
-    final str = raw.toString().trim();
-    if (str.isEmpty) return false;
-
-    final urls = <String>[];
-    try {
-      final decoded = jsonDecode(str);
-      if (decoded is List) {
-        for (final u in decoded) {
-          if (u is String) urls.add(u.trim());
-        }
-      } else if (decoded is String) {
-        urls.add(decoded.trim());
-      }
-    } catch (_) {
-      // 不是合法 JSON：可能就是裸 URL，整体当一项处理。
-      urls.add(str);
-    }
-    // jsonDecode 解析成空 list 的兜底（极少见）。
-    if (urls.isEmpty && !str.startsWith('[')) {
-      urls.add(str);
-    }
-
-    const audioExt = <String>[
-      '.mp3',
-      '.wav',
-      '.m4a',
-      '.aac',
-      '.ogg',
-      '.flac',
-      '.opus',
-      '.amr',
-      '.wma',
-    ];
-    for (final url in urls) {
-      if (url.isEmpty) continue;
-      final lower = url.toLowerCase();
-      final qIdx = lower.indexOf('?');
-      final clean = qIdx >= 0 ? lower.substring(0, qIdx) : lower;
-      if (audioExt.any(clean.endsWith)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   Future<void> _openShare(

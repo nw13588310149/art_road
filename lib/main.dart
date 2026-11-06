@@ -10,15 +10,13 @@ import 'core/network/media_url.dart';
 import 'core/providers/app_providers.dart';
 import 'core/push/push_notification_service.dart';
 import 'core/storage/app_storage.dart';
-import 'features/music_companion/audio/music_companion_audio_engine.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final imageCache = PaintingBinding.instance.imageCache;
   imageCache.maximumSize = 120;
   imageCache.maximumSizeBytes = 80 << 20;
-  // 与 c3f7d2e（最后已知不闪退版本）等价的启动顺序：
-  // main() 同步阶段触发 MediaKit / 音频预热 / 推送初始化，全部 fire-and-forget，
+  // main() 同步阶段触发 MediaKit / 推送初始化，全部 fire-and-forget，
   // 让原生层在 Flutter Engine 渲染管线就绪之前就开始 init，避免和首帧渲染争抢
   // 主线程资源（已验证：把这些挪到 addPostFrameCallback 反而引入 iPad 闪退）。
   try {
@@ -26,8 +24,6 @@ Future<void> main() async {
   } catch (error, stack) {
     debugPrint('MediaKit.ensureInitialized failed: $error\n$stack');
   }
-  // 7d9da87 不在启动时预热 SoLoud；各功能页独立 init + loadAsset，避免竞态。
-  unawaited(warmupMusicCompanionPianoAudio());
   await SystemChrome.setPreferredOrientations(const [
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,

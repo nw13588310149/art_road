@@ -37,9 +37,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
   flutter_riverpod: ^2.6.1
   flutter_svg: ^2.2.4
   dio: ^5.9.0
@@ -49,8 +46,6 @@ dependencies:
   media_kit_video: ^1.3.0
   media_kit_libs_android_video: ^1.3.8
   media_kit_libs_ios_video: ^1.1.4
-  # 锁定 4.0.2：与 7d9da87 稳定版一致；音乐伴侣 / 智能听写各自独立引擎加载。
-  flutter_soloud: 4.0.2
   audio_session: ^0.2.3
   # 录音系统统一选用以下两个最成熟的纯音频插件，全平台单一代码路径：
   #
@@ -72,12 +67,10 @@ dependencies:
   # 自绘 CustomPainter（live amplitudes + preview 静态条 + 进度光标）。
   record: ^6.1.2
   just_audio: ^0.10.5
-  pitch_detector_dart: ^0.0.7
   web: ^1.1.1
   photo_view: ^0.15.0
   pdfrx: 2.4.7
   flutter_widget_from_html_core: ^0.17.2
-  carousel_slider: ^5.0.0
   cached_network_image: ^3.4.1
   file_picker: ^8.3.7
   chinese_font_library: ^1.2.0
@@ -90,27 +83,13 @@ dependencies:
   geocoding: ^3.0.0
   camera: ^0.11.1
   image: ^4.5.4
-  music_xml: ^2.7.0
   webview_flutter: ^4.13.1
   webview_flutter_wkwebview: ^3.25.1
-  xml: ^6.6.1
   connectivity_plus: ^7.1.1
   video_thumbnail: ^0.5.6
   pencil_kit: ^2.1.1
   # 截屏防护改由原生层实现（iOS SceneDelegate / Android MainActivity）。
   # screen_protector 与显式 FlutterEngine + SceneDelegate 不兼容，会导致 iOS 启动黑屏。
-  # ───────────────────────────────────────────────────────────────────────
-  # 智能视唱依赖（已暂时停用）：
-  # 原计划：`audio_decoder: ^0.8.0` 把 MP3 → PCM，配合 `pitch_detector_dart`
-  # 做帧级 YIN，得到 KTV 参考音高曲线。
-  # 实测：在 iOS iPad 上引入后会在应用启动阶段 `GeneratedPluginRegistrant`
-  # 注册原生插件时立即闪退（audio_decoder 0.8.0 为 2026-05 新发版插件，
-  # iOS 原生层与当前 deployment target=13.0 / Xcode 链路存在兼容问题）。
-  # 处置：左侧入口与路由 case 已隐藏；feature 代码保留但走 stub。等
-  # audio_decoder 升级或换用更成熟的 MP3 解码方案（如 flutter_soloud
-  # readSamplesFromFile）时再启用。
-  # audio_decoder: ^0.8.0
-  # ───────────────────────────────────────────────────────────────────────
 
 dev_dependencies:
   flutter_test:
@@ -165,7 +144,6 @@ flutter:
     - assets/images/home/v2/
     - assets/images/home/dictation/
     - assets/images/home/art/
-    - assets/images/sightsing/
     - assets/images/404/
     - assets/images/school/
     - assets/images/aichat/
@@ -174,18 +152,13 @@ flutter:
     - assets/images/video/v2/
     - assets/images/yunpan/
     - assets/images/courseware/
-    - assets/images/smart_dictation/
-    - assets/images/smart_dictation/v2/
-    - assets/images/smart_dictation/figma/
     - assets/images/info/
     - assets/images/schoolA/
     - assets/images/adminHome/
     - assets/images/face/
     - assets/images/sound/
-    - assets/images/music/
     - assets/images/note/
     - assets/images/avtor/
-    - assets/images/piano/
     - assets/images/groupChat/
     - assets/images/xiaoquan/
     - assets/images/smartCampus/
@@ -232,14 +205,6 @@ flutter:
     - assets/demo/avatars/
     - assets/demo/video/
     - assets/images/circle/
-    - assets/audio/demo.mid
-    - assets/audio/demo.mp3
-    - assets/audio/demo_analysis.wav
-    - assets/audio/music_companion/metronome/beat0/
-    - assets/audio/music_companion/metronome/beat2/
-    - assets/audio/music_companion/metronome/beat3/
-    - assets/audio/smart_dictation/piano/
-    - assets/smart_sight_singing/opensheetmusicdisplay.min.js
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

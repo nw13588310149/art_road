@@ -13,7 +13,7 @@ import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../../core/widgets/scaled_dialog.dart';
-import '../../theory/ui/widgets/theory_pdf_view.dart';
+import '../../../core/widgets/pdf/app_pdf_view.dart';
 import '../data/ai_chat_attachment_picker.dart';
 import '../../shell/state/shell_controller.dart';
 import '../state/ai_chat_controller.dart';
@@ -2047,7 +2047,7 @@ class _AttachmentPreviewDialog extends StatelessWidget {
                       borderRadius: const BorderRadius.vertical(
                         bottom: Radius.circular(14),
                       ),
-                      child: TheoryPdfView(
+                      child: AppPdfView(
                         url: attachment.url,
                         authToken: authToken,
                       ),
