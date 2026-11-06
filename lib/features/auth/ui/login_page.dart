@@ -9,6 +9,7 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/demo/demo_accounts.dart';
 import '../../../core/demo/demo_config.dart';
+import '../../../core/demo/demo_store.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../../features/shell/state/school_binding_controller.dart';
 import '../../../features/shell/state/shell_controller.dart';
@@ -213,6 +214,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   enabled: !state.isSubmitting,
                   onPick: (account) =>
                       _onDemoLogin(context, controller, account),
+                  onReset: () => _onDemoReset(context),
                 ),
               ),
           ],
@@ -237,6 +239,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (result.success) {
       _enterApp(context);
     }
+  }
+
+  Future<void> _onDemoReset(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('重置演示数据'),
+        content: const Text('将清除本机上传的作品、点评、笔记、收藏、请假等演示写入，恢复到初始演示数据。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('重置'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+    await DemoStore.reset();
+    if (!context.mounted) {
+      return;
+    }
+    _showMessage(context, '演示数据已恢复初始状态');
   }
 
   Future<void> _onLogin(
@@ -286,11 +316,13 @@ class _DemoIdentityPanel extends StatelessWidget {
     required this.scale,
     required this.enabled,
     required this.onPick,
+    required this.onReset,
   });
 
   final double scale;
   final bool enabled;
   final ValueChanged<DemoAccount> onPick;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -306,14 +338,33 @@ class _DemoIdentityPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '演示版 · 选择体验身份（无需密码）',
-            style: TextStyle(
-              fontSize: s(12),
-              color: const Color(0xFF6D6B75),
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w500,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '演示版 · 选择体验身份（无需密码）',
+                  style: TextStyle(
+                    fontSize: s(12),
+                    color: const Color(0xFF6D6B75),
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w500,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: enabled ? onReset : null,
+                child: Text(
+                  '重置演示数据',
+                  style: TextStyle(
+                    fontSize: s(12),
+                    color: const Color(0xFF715EFE),
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
           SizedBox(height: s(10)),
           Wrap(

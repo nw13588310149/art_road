@@ -1,61 +1,60 @@
 # AGENTS
 
+## Product
+- 美术之路 (The Road of Art): a landscape iPad app for art-exam (美术艺考) students, studio teachers and studio staff, built around the marking system (阅卷系统).
+- v1 is a demo build: every request is answered by the local demo backend while keeping the real API paths.
+- Product plan: `docs/美术之路产品规划.md`. Backend gaps before going live: `docs/后端缺口清单.md`. Run instructions and demo accounts: `README.md`.
+
 ## Current Rules
-- All new feature work must use Flutter.
-- UI and business state must remain strictly separated.
-- Before every new modification, read this file and continue with the existing architecture.
-- After every modification, run `flutter analyze` and keep the project analyzer-clean.
+- All feature work uses Flutter. UI and business state stay strictly separated: feature folders `data/` (repository + models) → `state/` (Riverpod StateNotifier controllers) → `ui/`.
+- Read this file before every change and continue with the existing architecture.
+- After every change run `dart analyze` (must report no issues) and `flutter test --no-pub`. `flutter analyze` crashes on this machine; use `dart analyze`.
+- Dependencies resolve offline only (`flutter pub get --offline`). Do not add packages without the user's approval.
+- No music wording or imagery anywhere: strings, comments, asset names and pictures. Subjects are 素描 / 色彩 / 速写 (plus 美术常识 / 文化课); use `ArtSubject` for subject labels and colors.
+- Every API the app calls must have a demo fixture with art-themed data, and demo data must stay consistent across modules (same students, teachers, exams and scores).
+- Commit locally after each verified phase; never push.
 
 ## Layout Notes
-- The app uses a landscape dashboard shell.
-- Current implementation has moved away from whole-page global scaling.
-- Shared shell areas such as left navigation and top bar should remain reusable and stable.
+- Landscape dashboard shell (`ShellScaffold`: left nav + top bar) on a 1180×820 design base. `DashboardScaleScope` provides `ui()` scaling inside the shell only; auth pages use their own design canvas, so don't call `showScaledDialog` / `showConfirmDialog` from them.
+- Shared shell areas such as the left navigation and top bar stay reusable and stable.
+- Navigation labels are role-based (`isStaffRole`): students see 我的学情 / 作品档案, staff see 班级学情 / 作品点评.
 
-## Implemented / In Progress
-- Auth pages: migrated to Flutter 2.0 UI.
-- Home page: migrated to Flutter 2.0 UI baseline.
-- AI chat, courseware, cloud drive, video center, music companion, notes, collection, recording system: all have Flutter 2.0 pages connected.
-- Smart campus: currently kept in a stable placeholder-safe version to avoid project-wide breakage before the full rebuild.
-- Dictation secondary page: implemented with real menu + textbook APIs and 2.0 layout.
-- Sight singing / music theory / answer questions / voice / instrumental secondary pages:
-  - unified under `lib/features/study_catalog/`
-  - share the dictation 2.0 visual structure
-  - use 1.0 menu/textbook API rules and route branching
-  - router now points these routes to real Flutter pages instead of placeholders
-- Music play tertiary page:
-  - implemented under `lib/features/music_play/`
-  - route `/musicPlay` now points to a real Flutter page
-  - detail data uses 1.0 `textbookDetail` API rules
-  - long-audio playback uses `media_kit`
-  - bottom piano interaction reuses the existing Flutter short-audio ecosystem via `flutter_soloud`
-  - page startup must not block on full piano/metronome asset preload
-  - musicPlay should warm up piano audio in the background and load textbook detail first
-- iOS audio architecture (AppAudioService refactor):
-  - The shared native short-audio player is App-lifetime owned; feature/page disposal may call `stopAll()` but must never call its `dispose()`.
-  - `ios/Runner/AppAudioSessionCoordinator.swift` is the sole explicit iOS `AVAudioSession` owner; Dart session transitions go through its serialized MethodChannel.
-  - Normal iOS MusicPlay long-audio playback uses the AVPlayer-backed `MusicPlayAudioPlayer`; `media_kit` is reserved for active independent pitch shifting and non-iOS platforms.
-  - The native piano engine serializes all `AVAudioEngine` and node operations on one audio queue; `prepare` reports ready only after requested samples are decoded.
-  - `lib/core/audio/app_audio_service.dart` — single coordinator: shared `LowLatencyNotePlayer`, `reconcilePlaybackSession()` (no cache short-circuit; fixes mpv `moviePlayback` drift), `prepareForPianoKeypress()`, fire-and-forget `playPianoFromGesture()`.
-  - `lib/core/audio/native_playback_audio_session.dart` — cross-platform facade; iOS delegates session transitions to the native coordinator, while other platforms continue through `audio_session`.
-  - `lib/core/audio/page_audio_lifecycle.dart` — page enter/leave wrappers (re-exported from music_companion for compat).
-  - `lib/core/audio/ios_piano_bootstrap.dart` — app-launch preload of all piano + metronome assets (GarageBand-style); page nav only reconcile + ping.
-  - `ios/Runner/LowLatencyNoteAudio.swift` — one persistent 24-voice `AVAudioEngine`; all engine/node work is serialized on one audio queue; requested samples must decode before `prepare` reports ready.
-  - Long audio: normal iOS playback uses AVPlayer through `just_audio`; active pitch shifting and non-iOS platforms use `media_kit`.
-  - Piano/metronome/dictation use native AVAudioEngine via shared player — NOT SoLoud (SoLoud is analysis-only via `NativeAudioBootstrap`).
-- Smart sight singing (`/smart-singing`):
-  - implemented under `lib/features/smart_sight_singing/`
-  - left nav entry enabled; supports built-in demo, local `.mid/.midi` upload, and online URL
-  - after MIDI parse, user selects and confirms melody track; playback + scoring use that track only
-  - iPad defaults to visual-only follow (no speaker accompaniment during sing; KTV track timer only)
-  - iPad ready state offers melody preview; optional toggle to enable speaker accompaniment (headphones recommended)
-  - playback uses shared piano short-audio scheduler when accompaniment enabled
-  - follow-along scoring uses measurement mode (visual-only) or echo-cancel session (with accompaniment)
-  - online import supports `.mid` / `.midi` only; legacy YIN/mp3 path kept in code but unused for demo
+## Architecture
+- Routing: Navigator 1.0 `onGenerateRoute` with `RoutePaths`. Art routes and their arguments:
+  - `/study` → `StudyCenterPage` (`examId`, `view`, `subjectId`)
+  - `/artworks` → `ArtworksPage` (`artworkId`)
+  - `/gallery` → `GalleryPage` (`subject`, `keyword`, `category`, `workId`)
+  - `/toolbox` → `ArtToolboxPage` (`tool`, `imageUrl`, `title`)
+- Two API clients in `lib/core/providers/app_providers.dart`:
+  - `apiClientProvider`: platform API (api-v2), paths `/app/user|common|msg|courseware/*` and `/app/school/v2/*`.
+  - `markingApiClientProvider`: marking API (exam-api), students send `app-token`, teachers `school-token`.
+- Art kit: `lib/core/art/` (`ArtSubject`, `ArtColors`, `ArtText`, `formatScore`), `lib/core/widgets/art_widgets.dart`, `art_subject_card.dart`.
+- Art modules: `study_center`, `artworks`, `gallery`, `art_toolbox`. Toolbox tools work fully offline and run image processing through `compute`.
+- Generic modules kept from the original platform and art-ified: `ai_chat`, `courseware` (incl. cloud drive), `video_tutorial`, `my_notes`, `my_collection`, `quiz_practice`, `circle`, `school`, `smart_campus`, `personal_center`, `help_guide`, `feedback`, `consultation`.
 
-## Technical Direction
-- For secondary study pages, prefer a reusable catalog architecture instead of duplicating page logic.
-- Shared responsibilities are split into:
-  - `data/`: API repository
-  - `state/`: route args, state model, controller
-  - `ui/`: page and presentational widgets
-- Route-specific behavior such as target page parameters should be configured, not hard-coded per screen when possible.
+## Demo Mode
+- `kDemoMode` comes from `--dart-define=DEMO_MODE` (default `true`). `main.dart` initializes `DemoStore`, `DemoMedia` and the fixtures before `runApp`.
+- Each `ApiClient` gets a `DemoApiInterceptor` that answers through a `DemoRouter` (`DemoBackend.platform` / `DemoBackend.marking`):
+  - handlers return the `data` payload; the interceptor wraps `{code: 0, msg: 'ok', data}`;
+  - throw `DemoApiException` for business errors;
+  - literal routes win over `{param}` routes;
+  - unmatched routes return null data and are logged, so add a fixture instead of relying on that.
+- Fixtures live in `lib/core/demo/fixtures/` (`platform_core_*`, `content_*`, `interaction_*`, `campus/campus_a_*`, `campus/campus_b_*`, `marking_*`). Register new groups in `demo_fixtures.dart`.
+- `DemoStore` (memory + SharedPreferences, key prefix `demo_store:`) holds all writable demo state. `DemoStore.reset()` restores the seeds and is wired to 「重置演示数据」 on the login page, so never keep mutable demo state in static fields.
+- `DemoMedia`: on io a loopback HTTP server serves bundled assets (`/a/<asset>`) and uploads (`/f/<id>`, with Range support); on web it uses asset URLs and blob URLs (blob uploads don't survive a reload). Reference assets as `asset:assets/demo/...` and resolve them with `DemoMedia.url`.
+- `DemoSocketBridge` injects frames into `ChatSocketService`: AI streaming (type 10004 deltas + 10005 final) and chat pushes (type 2001).
+- Identity: `DemoAccounts` (student / teacher / head teacher / dorm manager / admin, mobiles 13809310001–05). Tokens look like `demo.<role>.<mobile>`; resolve them with `DemoAccounts.fromToken`.
+- Data:
+  - `DemoMarkingData` is a deterministic port of the uni-app mock data (mulberry32 RNG): 示范画室, three campuses, exams 21–27, 40 students, judges / trimmed mean / arbitration, A–E bands.
+  - `DemoCampusData` covers classes, staff, timetable and dorm beds; `DemoArtworkData` and `DemoFavorites` cover artworks and favorites.
+  - Smart campus part A and part B keep separate stores; only leave records are bridged between them.
+
+## Platform Notes
+- The `windows/` and `linux/` folders were removed (plugin symlinks require Developer Mode on this machine).
+- iOS: `AppAudioSessionCoordinator` (channel `com.yyzl.art/audio_session`) is the only `AVAudioSession` owner, used by voice messages and recording; `NoteCanvasZoomCoordinator` uses channel `the_road_of_art_flutter/note_canvas_zoom`.
+- Android `MainActivity` sets `FLAG_SECURE`. All platforms are landscape only.
+- Native changes can't be compiled on this machine (no Xcode / Android SDK); verify them on a Mac.
+- Web QA:
+  - build with `tool/build_web.ps1` and serve `build/web`;
+  - in automated browsers, enable Flutter semantics (click `flt-semantics-placeholder`) before clicking;
+  - Flutter text fields ignore injected keystrokes, so cover text input with tests instead.

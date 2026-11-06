@@ -109,7 +109,8 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
     final [stats, insights, list] = results;
     // 期间切换了筛选：列表以新的请求为准，统计与高频问题照常更新。
     final listCurrent = generation == _generation;
-    final failed = results.where((r) => !r.isSuccess).firstOrNull;
+    // 高频问题接口尚未上线时该卡片显示空状态，不影响作品列表的报错判断。
+    final failed = [stats, list].where((r) => !r.isSuccess).firstOrNull;
     final page = listCurrent && list.isSuccess
         ? ArtworkPage.fromJson(list.data)
         : null;
