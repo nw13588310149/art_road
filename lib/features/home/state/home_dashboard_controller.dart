@@ -236,9 +236,6 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
           : (int.tryParse(typeRaw?.toString() ?? '') ?? 0);
       final isSmallCourse = type == 1;
       final avatarRaw = teacher['headUrl']?.toString().trim() ?? '';
-      final logoRaw = item['logo']?.toString().trim().isNotEmpty == true
-          ? item['logo'].toString().trim()
-          : schoolClass['logo']?.toString().trim() ?? '';
 
       result.add(
         HomeCourseNotice(
@@ -246,9 +243,8 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
           endTime: endTime,
           subjectName: subjectName,
           teacherName: teacherName,
-          teacherAvatar: MediaUrl.resolve(
-            avatarRaw.isNotEmpty ? avatarRaw : logoRaw,
-          ),
+          // 没有教师头像时留空，由课程卡显示姓氏头像，不用班级 / 学校 logo 顶替。
+          teacherAvatar: MediaUrl.resolve(avatarRaw),
           description: durationText,
           status: _resolveCourseStatus(item),
           isSmallCourse: isSmallCourse,

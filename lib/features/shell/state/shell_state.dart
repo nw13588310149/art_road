@@ -249,7 +249,7 @@ List<ShellNavItem> buildDefaultNavItems({
       activeIcon: AppAssets.leftNavHome,
     ),
     const ShellNavItem(
-      label: '小艺同学',
+      label: '小美同学',
       route: RoutePaths.personalAi,
       icon: AppAssets.leftNavAi,
       activeIcon: AppAssets.leftNavAi,

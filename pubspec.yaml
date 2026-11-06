@@ -111,15 +111,15 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: assets/icon/app_icon.png
-    background_color: "#715EFE"
+    background_color: "#FFFFFF"
     theme_color: "#715EFE"
   macos:
     generate: true
   image_path: assets/icon/app_icon.png
-  adaptive_icon_background: "#715EFE"
-  adaptive_icon_foreground: assets/icon/app_icon.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/icon/app_icon_foreground.png
   remove_alpha_ios: true
-  background_color_ios: "#715EFE"
+  background_color_ios: "#FFFFFF"
   min_sdk_android: 21
 
 # For information on the generic Dart part of this file, see the
@@ -139,6 +139,7 @@ flutter:
   assets:
     - assets/images/auth/
     - assets/images/shell/
+    - assets/images/brand/
     - assets/images/shell/leftNav/
     - assets/images/shell/topbar_v2/
     - assets/images/home/

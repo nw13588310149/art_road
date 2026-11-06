@@ -2,7 +2,7 @@ import '../data/demo_marking_data.dart';
 import '../demo_accounts.dart';
 import 'interaction_common.dart';
 
-/// 演示版「小艺同学」的一次回答。
+/// 演示版「小美同学」的一次回答。
 class DemoAiAnswer {
   const DemoAiAnswer({required this.text, required this.reasoning});
 
@@ -69,7 +69,7 @@ abstract final class DemoAiTutor {
       buffer
         ..writeln()
         ..writeln()
-        ..write('> 演示模式未接入联网搜索，以上内容来自小艺同学内置的美术备考知识库。');
+        ..write('> 演示模式未接入联网搜索，以上内容来自小美同学内置的美术备考知识库。');
     }
     return DemoAiAnswer(
       text: buffer.toString().trim(),
@@ -425,7 +425,7 @@ const _topics = <_Topic>[
 String _greeting(_TutorContext context) {
   final brief = context.brief;
   final buffer = StringBuffer()
-    ..writeln('你好，我是**小艺同学**，美术之路的 AI 美术助教。')
+    ..writeln('你好，我是**小美同学**，美术之路的 AI 美术助教。')
     ..writeln()
     ..writeln('我可以帮你：')
     ..writeln('- 解答素描、色彩、速写的专业问题，例如起形、明暗、冷暖、动态')
@@ -780,7 +780,7 @@ String _artworkAnalysis(String subject, String fileName) {
   };
   return '''
 ### 作品分析（演示）
-> 演示模式：以下为示例分析，小艺同学没有真正识别这张图片，仅展示作品分析的维度和思路。正式点评请以任课老师在「作品档案」中的意见为准。
+> 演示模式：以下为示例分析，小美同学没有真正识别这张图片，仅展示作品分析的维度和思路。正式点评请以任课老师在「作品档案」中的意见为准。
 
 **预估档位**：$guess
 

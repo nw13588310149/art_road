@@ -11,6 +11,7 @@ import '../../features/common/ui/legacy_placeholder_content.dart';
 import '../../features/common/ui/terms_page.dart';
 import '../../features/courseware/ui/courseware_page.dart';
 import '../../features/circle/ui/circle_page.dart';
+import '../../features/design_system/design_system_page.dart';
 import '../../features/home/ui/home_page.dart';
 import '../../features/help_guide/ui/help_guide_page.dart';
 import '../../features/my_collection/ui/my_collection_page.dart'
@@ -122,6 +123,8 @@ class AppRouter {
         return const AppFeedbackPage();
       case RoutePaths.helpGuide:
         return const HelpGuidePage();
+      case RoutePaths.designSystem:
+        return const DesignSystemPage();
       case RoutePaths.mock:
         return const MockExamDefaultPage();
       case RoutePaths.camp:

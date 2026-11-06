@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/router/app_navigator.dart';
 import '../../features/shell/ui/shell_layout.dart';
+import '../ui/app_motion.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 const Color _kPickerPrimary = Color(0xFF715EFE);
@@ -37,7 +38,7 @@ Future<String?> showAppWheelPicker({
     barrierDismissible: true,
     barrierLabel: MaterialLocalizations.of(rootContext).modalBarrierDismissLabel,
     barrierColor: Colors.transparent,
-    transitionDuration: const Duration(milliseconds: 280),
+    transitionDuration: AppMotion.overlayMax,
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return DashboardScaleScope(
         data: scale,

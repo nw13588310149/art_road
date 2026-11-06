@@ -6,6 +6,8 @@ import 'package:flutter/gestures.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
+import '../ui/app_motion.dart';
+
 /// 全屏图片查看器：半透明黑底 + PhotoViewGallery，支持
 /// 双击 / 捏合缩放、左右滑切换、Hero 转场、按钮 90° 旋转（旋转后自动
 /// 按最大可视区域等比适配；本次预览内所有图片共享同一旋转角度，关闭后恢复）。
@@ -29,8 +31,8 @@ Future<void> showImageGallery(
     PageRouteBuilder<void>(
       opaque: false,
       fullscreenDialog: true,
-      transitionDuration: const Duration(milliseconds: 220),
-      reverseTransitionDuration: const Duration(milliseconds: 180),
+      transitionDuration: AppMotion.overlayMax,
+      reverseTransitionDuration: AppMotion.overlay,
       pageBuilder: (context, animation, secondaryAnimation) =>
           ImageGalleryViewer(
             images: images,

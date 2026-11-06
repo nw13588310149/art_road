@@ -46,6 +46,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           children: [
             Positioned(
               left: _s(scale, 691),
+              top: _s(scale, 96),
+              child: AuthBrandLogo(scale: scale),
+            ),
+            Positioned(
+              left: _s(scale, 691),
               top: _s(scale, 163),
               width: _s(scale, 399),
               height: _s(scale, 434),

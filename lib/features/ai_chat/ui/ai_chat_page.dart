@@ -566,7 +566,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
               children: [
                 // Figma: 20/500 / line-height 28 / #0B081A
                 Text(
-                  '我是小艺同学，很高兴见到你！',
+                  '我是小美同学，很高兴见到你！',
                   style: TextStyle(
                     color: _textPrimary,
                     fontSize: 20,
@@ -728,7 +728,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                   const SizedBox(height: 0),
                   // Figma: 12/400 / line-height 22 / #B6B5BB
                   Text(
-                    '学美术就找小艺同学',
+                    '学美术就找小美同学',
                     style: TextStyle(
                       color: _textHint,
                       fontSize: 12,
@@ -918,7 +918,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                           return const Padding(
                             padding: EdgeInsets.only(bottom: 14),
                             child: Text(
-                              '小艺同学正在思考中…',
+                              '小美同学正在思考中…',
                               style: TextStyle(
                                 color: _textHint,
                                 fontSize: 13,

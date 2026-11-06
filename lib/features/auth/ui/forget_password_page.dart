@@ -43,6 +43,11 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
           children: [
             Positioned(
               left: _s(scale, 691),
+              top: _s(scale, 127),
+              child: AuthBrandLogo(scale: scale),
+            ),
+            Positioned(
+              left: _s(scale, 691),
               top: _s(scale, 194),
               width: _s(scale, 399),
               height: _s(scale, _cardHeight),

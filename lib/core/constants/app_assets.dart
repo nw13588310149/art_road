@@ -14,7 +14,11 @@ abstract final class AppAssets {
   static const figmaLoginCardLayer2 =
       'assets/images/auth/figma_login_card_layer2.png';
 
-  static const shellLogo = 'assets/images/shell/logo_v2.png';
+  /// 艺考网标识（来自艺考网品牌库 yikao-marketing/brand/logo）。
+  static const shellLogo = 'assets/images/brand/yikaowang_logo.svg';
+  static const brandLogoWhite = 'assets/images/brand/yikaowang_logo_white.svg';
+  static const brandMark = 'assets/images/brand/yikaowang_mark.svg';
+  static const brandMarkWhite = 'assets/images/brand/yikaowang_mark_white.svg';
   static const shellMsg1 = 'assets/images/shell/msg1.png';
   static const shellMsg2 = 'assets/images/shell/msg2.png';
   static const shellMsg3 = 'assets/images/shell/msg3.png';
@@ -150,7 +154,7 @@ abstract final class AppAssets {
   static const aiChatSend = 'assets/images/aichat/v2/ai_send.svg';
   static const aiChatMenu = 'assets/images/aichat/v2/ai_history_more.svg';
   static const aiChatMascot = 'assets/images/aichat/qiu.gif';
-  // 小艺同学欢迎区头像：单图自带渐变背景与阴影，直接铺成 52×52
+  // 小美同学欢迎区头像：单图自带渐变背景与阴影，直接铺成 52×52
   static const aiChatXiaoYiIcon = 'assets/images/aichat/qiu.gif';
   // 效率工具卡背景图（与原渐变同色调，直接平铺即可）
   static const aiChatToolCardBg = 'assets/images/home/aibg.png';

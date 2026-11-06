@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../features/shell/ui/shell_layout.dart';
 import '../constants/app_assets.dart';
+import '../ui/app_motion.dart';
+import '../ui/app_pressable.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 下拉弹层行右侧选中/未选中标记（班级选择等场景）。
@@ -50,6 +52,7 @@ Future<T?> showAppPopupSelector<T>({
   double? width,
   double? minWidth,
   double? maxWidth,
+
   /// 弹层内容最大高度（逻辑像素）；超出后列表可滚动。适合省份等长列表。
   double? maxHeight,
 }) async {
@@ -61,8 +64,17 @@ Future<T?> showAppPopupSelector<T>({
   if (overlayBox == null) return null;
   final origin = renderBox.localToGlobal(Offset.zero, ancestor: overlayBox);
   final size = renderBox.size;
-  final scale = DashboardScaleScope.of(anchorContext);
+  final scale = DashboardScaleScope.maybeOf(anchorContext);
   final effectiveWidth = width ?? size.width;
+  final panel = Builder(
+    builder: (panelCtx) => PopupSelectorPanel<T>(
+      items: items,
+      value: value,
+      itemLabel: itemLabel,
+      maxHeight: maxHeight,
+      onSelected: (v) => Navigator.of(panelCtx).pop(v),
+    ),
+  );
 
   return showMenu<T>(
     context: anchorContext,
@@ -70,13 +82,17 @@ Future<T?> showAppPopupSelector<T>({
     color: Colors.transparent,
     shadowColor: Colors.transparent,
     surfaceTintColor: Colors.transparent,
+    popUpAnimationStyle: const AnimationStyle(
+      duration: AppMotion.overlay,
+      reverseDuration: AppMotion.overlay,
+    ),
     constraints: BoxConstraints(
       minWidth: minWidth ?? effectiveWidth,
       maxWidth: maxWidth ?? effectiveWidth,
     ),
     position: RelativeRect.fromLTRB(
       origin.dx,
-      origin.dy + size.height + scale.ui(4),
+      origin.dy + size.height + 4,
       overlayBox.size.width - origin.dx - size.width,
       overlayBox.size.height - origin.dy - size.height,
     ),
@@ -84,22 +100,16 @@ Future<T?> showAppPopupSelector<T>({
       PopupMenuItem<T>(
         enabled: false,
         padding: EdgeInsets.zero,
-        child: DashboardScaleScope(
-          data: scale,
-          child: Builder(
-            builder: (panelCtx) => PopupSelectorPanel<T>(
-              items: items,
-              value: value,
-              itemLabel: itemLabel,
-              maxHeight: maxHeight,
-              onSelected: (v) => Navigator.of(panelCtx).pop(v),
-            ),
-          ),
-        ),
+        child: scale == null
+            ? panel
+            : DashboardScaleScope(data: scale, child: panel),
       ),
     ],
   );
 }
+
+double _ui(BuildContext context, double value) =>
+    DashboardScaleScope.maybeOf(context)?.ui(value) ?? value;
 
 /// 项目内统一的「下拉选择」控件。
 ///
@@ -162,11 +172,10 @@ class _PopupSelectorFieldState<T> extends State<PopupSelectorField<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    double ui(double value) => _ui(context, value);
+    return AppPressable(
       key: _fieldKey,
       onTap: _openMenu,
-      borderRadius: BorderRadius.circular(ui(8)),
       child: Container(
         height: ui(widget.fieldHeight),
         padding: EdgeInsets.symmetric(horizontal: ui(16)),
@@ -190,14 +199,12 @@ class _PopupSelectorFieldState<T> extends State<PopupSelectorField<T>> {
                 ),
               ),
             ),
-            AnimatedRotation(
-              turns: _open ? 0.5 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: ui(18),
-                color: _kTextDark,
-              ),
+            Icon(
+              _open
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              size: ui(18),
+              color: _kTextDark,
             ),
           ],
         ),
@@ -234,7 +241,7 @@ class PopupSelectorPanel<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
+    double ui(double value) => _ui(context, value);
     final rows = <Widget>[];
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
@@ -253,7 +260,9 @@ class PopupSelectorPanel<T> extends StatelessWidget {
         ? Column(mainAxisSize: MainAxisSize.min, children: rows)
         : ConstrainedBox(
             constraints: BoxConstraints(maxHeight: ui(maxHeight!)),
-            child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: rows)),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: rows),
+            ),
           );
     return Container(
       decoration: BoxDecoration(
@@ -293,7 +302,7 @@ class _PopupSelectorDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
+    double ui(double value) => _ui(context, value);
     return Divider(
       height: 1,
       thickness: 1,
@@ -317,9 +326,10 @@ class _PopupSelectorRow<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    double ui(double value) => _ui(context, value);
+    return AppPressable(
       onTap: onTap,
+      selected: selected,
       child: Container(
         height: ui(40),
         padding: EdgeInsets.symmetric(horizontal: ui(14)),

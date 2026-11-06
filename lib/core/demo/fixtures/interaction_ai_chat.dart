@@ -9,7 +9,7 @@ import '../media/demo_media.dart';
 import 'interaction_ai_tutor.dart';
 import 'interaction_common.dart';
 
-/// 小艺同学（AI 美术助教）：会话 / 消息存 [DemoStore]，回复经演示 WebSocket
+/// 小美同学（AI 美术助教）：会话 / 消息存 [DemoStore]，回复经演示 WebSocket
 /// 以 10004 增量帧 + 10005 整包帧推送。
 void registerAiChatFixtures(DemoRouter r) {
   r.post('/app/user/chat-gpt/sessionList', (req) {

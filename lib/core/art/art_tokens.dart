@@ -1,35 +1,38 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_font.dart';
+import '../ui/app_colors.dart';
+import '../ui/app_text.dart';
 
-/// 美术之路设计令牌（与艺考网阅卷系统 / 学情小程序色板一致）。
+/// 美术模块色板：与 [AppColors] 同一套颜色，保留旧名供未迁移页面使用。
+///
+/// 新代码直接用 [AppColors]。
 abstract final class ArtColors {
-  static const brand = Color(0xFF715EFE);
-  static const brandDeep = Color(0xFF5D45ED);
-  static const brandSoft = Color(0xFF9585FF);
-  static const brandLight = Color(0xFFD7D5FF);
-  static const brandTint = Color(0xFFE3DFFF);
-  static const brandWash = Color(0xFFF5F3FF);
+  static const brand = AppColors.brand;
+  static const brandDeep = AppColors.brandDeep;
+  static const brandSoft = AppColors.brandSoft;
+  static const brandLight = AppColors.brandTint;
+  static const brandTint = AppColors.brandTint;
+  static const brandWash = AppColors.brandWash;
 
-  static const ink = Color(0xFF0B081A);
-  static const ink2 = Color(0xFF6D6B75);
-  static const ink3 = Color(0xFF8B8993);
-  static const ink4 = Color(0xFFB6B5BB);
-  static const line = Color(0xFFF0F0F4);
-  static const page = Color(0xFFEFF3FC);
-  static const card = Colors.white;
-  static const subtle = Color(0xFFF7F8FB);
+  static const ink = AppColors.ink;
+  static const ink2 = AppColors.textSecondary;
+  static const ink3 = AppColors.textTertiary;
+  static const ink4 = AppColors.textPlaceholder;
+  static const line = AppColors.lineSoft;
+  static const page = AppColors.page;
+  static const card = AppColors.surface;
+  static const subtle = AppColors.surfaceSubtle;
 
-  static const up = Color(0xFF47BA5F);
-  static const down = Color(0xFFEB6681);
-  static const warn = Color(0xFFE09A2D);
-  static const success = Color(0xFF16A37A);
-  static const danger = Color(0xFFC3313B);
+  static const up = AppColors.success;
+  static const down = AppColors.danger;
+  static const warn = AppColors.warning;
+  static const success = AppColors.success;
+  static const danger = AppColors.danger;
 
   static const brandGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [brand, Color(0xFF8E7FFF)],
+    colors: [AppColors.brand, AppColors.brandSoft],
   );
 
   /// 档位色：A 档品牌紫，B–E 依次蓝 / 青 / 金 / 红，F 及以后沿用 E。
@@ -72,51 +75,36 @@ abstract final class ArtColors {
   }
 }
 
-/// 常用文字样式（PingFang SC + 字重补偿；数字用 Manrope）。
+/// 美术模块文字样式：基于 [AppText]，保留可传字号的旧接口供未迁移页面使用。
+///
+/// 新代码直接用 [AppText] 的固定字阶。
 abstract final class ArtText {
   static TextStyle title({double size = 20, Color color = ArtColors.ink}) =>
-      TextStyle(
-        fontSize: size,
-        height: 1.25,
-        color: color,
-        fontWeight: AppFont.w600,
-        fontFamily: 'PingFang SC',
-      );
+      AppText.title20.copyWith(fontSize: size, height: 1.25, color: color);
 
   static TextStyle body({
     double size = 14,
     Color color = ArtColors.ink,
     FontWeight? weight,
     double height = 1.45,
-  }) => TextStyle(
+  }) => AppText.body14.copyWith(
     fontSize: size,
     height: height,
     color: color,
-    fontWeight: weight ?? AppFont.w400,
-    fontFamily: 'PingFang SC',
+    fontWeight: weight,
   );
 
   static TextStyle caption({double size = 12, Color color = ArtColors.ink3}) =>
-      TextStyle(
-        fontSize: size,
-        height: 1.35,
-        color: color,
-        fontWeight: AppFont.w400,
-        fontFamily: 'PingFang SC',
-      );
+      AppText.caption12.copyWith(fontSize: size, height: 1.35, color: color);
 
   static TextStyle number({
     double size = 24,
     Color color = ArtColors.ink,
     FontWeight weight = FontWeight.w500,
-  }) => TextStyle(
-    fontSize: size,
-    height: 1.1,
+  }) => AppText.number(
+    size: size,
     color: color,
-    fontWeight: weight,
-    fontFamily: 'Manrope',
-    fontFeatures: const [FontFeature.tabularFigures()],
-  );
+  ).copyWith(height: 1.1, fontWeight: weight);
 }
 
 /// 分数显示：整数不带小数，非整数保留 1 位。

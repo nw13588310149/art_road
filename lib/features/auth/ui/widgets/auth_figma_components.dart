@@ -9,6 +9,27 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_assets.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
+/// 登录 / 注册 / 找回密码卡片上方的艺考网标识，与卡片左缘对齐。
+class AuthBrandLogo extends StatelessWidget {
+  const AuthBrandLogo({required this.scale, super.key});
+
+  final double scale;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '艺考网',
+      image: true,
+      child: SvgPicture.asset(
+        AppAssets.shellLogo,
+        height: 40 * scale,
+        fit: BoxFit.contain,
+        alignment: Alignment.centerLeft,
+      ),
+    );
+  }
+}
+
 class AuthFigmaCardFrame extends StatelessWidget {
   const AuthFigmaCardFrame({
     required this.scale,

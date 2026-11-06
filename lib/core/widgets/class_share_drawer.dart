@@ -4,6 +4,7 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 import '../../features/shell/ui/shell_layout.dart';
 import '../network/media_url.dart';
+import '../ui/app_motion.dart';
 
 class ClassShareItem {
   const ClassShareItem({
@@ -31,7 +32,7 @@ Future<T?> showClassShareDrawer<T>({
     barrierColor: Colors.black.withValues(alpha: 0.20),
     barrierDismissible: true,
     barrierLabel: '关闭分享',
-    transitionDuration: const Duration(milliseconds: 240),
+    transitionDuration: AppMotion.overlayMax,
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return DashboardScaleScope(data: resolvedScale, child: child);
     },

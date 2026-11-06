@@ -59,11 +59,16 @@ class DashboardScaleScope extends InheritedWidget {
 
   final DashboardScaleData data;
 
+  /// 外壳之外（登录页、全屏阅读器等）没有 scope 时按 1:1 返回，
+  /// [DashboardScaleData.ui] 本身不缩放，结果与外壳内一致。
   static DashboardScaleData of(BuildContext context) {
     final scope = context
         .dependOnInheritedWidgetOfExactType<DashboardScaleScope>();
-    assert(scope != null, 'DashboardScaleScope not found in widget tree.');
-    return scope!.data;
+    return scope?.data ??
+        DashboardScaleData(
+          viewportScale: 1,
+          availableSize: MediaQuery.maybeSizeOf(context) ?? Size.zero,
+        );
   }
 
   static DashboardScaleData? maybeOf(BuildContext context) {

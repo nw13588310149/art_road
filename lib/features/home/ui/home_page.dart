@@ -11,8 +11,9 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/art/art_subject.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
+import '../../../core/ui/app_avatar.dart';
+import '../../../core/ui/app_course_card.dart';
 import '../../../core/widgets/seamless_banner_carousel.dart';
-import '../../../core/widgets/smooth_circle_network_avatar.dart';
 import '../state/home_dashboard_controller.dart';
 import '../state/home_dashboard_state.dart';
 import 'widgets/home_study_snapshot.dart';
@@ -439,32 +440,31 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                         const SizedBox(height: 11),
                     itemBuilder: (context, index) {
                       final notice = notices[index];
-                      return GestureDetector(
-                        onTap: _openMySchedule,
-                        child: DashboardCourseNoticeCard(
-                          startTime: notice.startTime,
-                          endTime: notice.endTime,
-                          subjectName: notice.subjectName,
-                          isSmallCourse: notice.isSmallCourse,
-                          displayName: notice.teacherName,
-                          subtitle: notice.description,
-                          runState: switch (notice.status) {
-                            HomeCourseStatus.ended =>
-                              DashboardCourseRunState.ended,
-                            HomeCourseStatus.inProgress =>
-                              DashboardCourseRunState.inProgress,
-                            HomeCourseStatus.upcoming =>
-                              DashboardCourseRunState.upcoming,
-                          },
-                          tagDotColor: DashboardCourseNoticeCard.dotColorFromHex(
-                            notice.cardColorHex,
-                            ended: notice.status == HomeCourseStatus.ended,
-                          ),
-                          avatar: _NoticeAvatar(
-                            primaryUrl: notice.teacherAvatar,
-                            size: 40,
-                          ),
+                      return DashboardCourseNoticeCard(
+                        startTime: notice.startTime,
+                        endTime: notice.endTime,
+                        subjectName: notice.subjectName,
+                        isSmallCourse: notice.isSmallCourse,
+                        displayName: notice.teacherName,
+                        subtitle: notice.description,
+                        runState: switch (notice.status) {
+                          HomeCourseStatus.ended =>
+                            DashboardCourseRunState.ended,
+                          HomeCourseStatus.inProgress =>
+                            DashboardCourseRunState.inProgress,
+                          HomeCourseStatus.upcoming =>
+                            DashboardCourseRunState.upcoming,
+                        },
+                        tagDotColor: DashboardCourseNoticeCard.dotColorFromHex(
+                          notice.cardColorHex,
+                          ended: notice.status == HomeCourseStatus.ended,
                         ),
+                        avatar: AppAvatar(
+                          name: notice.teacherName,
+                          url: notice.teacherAvatar,
+                          size: AppCourseCard.avatarSize,
+                        ),
+                        onTap: _openMySchedule,
                       );
                     },
                   ),
@@ -895,19 +895,3 @@ class _NewsBadge extends StatelessWidget {
     );
   }
 }
-
-class _NoticeAvatar extends StatelessWidget {
-  const _NoticeAvatar({required this.primaryUrl, required this.size});
-
-  final String primaryUrl;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return SmoothCircleNetworkAvatar(
-      url: MediaUrl.resolve(primaryUrl),
-      size: size,
-    );
-  }
-}
-

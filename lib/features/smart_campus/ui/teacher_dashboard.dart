@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_response.dart';
+import '../../../core/ui/app_avatar.dart';
+import '../../../core/ui/app_course_card.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../../core/widgets/dashboard_course_notice_card.dart';
-import '../../../core/widgets/smooth_circle_network_avatar.dart';
 import '../../school/data/school_repository.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../shell/state/shell_state.dart';
@@ -2077,15 +2078,14 @@ class _TeacherNoticeCard extends StatelessWidget {
 //   - 顶部 ui(12) 间距 + 标题→白卡 ui(20)
 //   - 数据来自 `/app/school/v2/teacher/courseList`（当日）+ `schoolTimeConfigList`（节次时间）
 //   - 白卡 padding 12 / radius 16 / 浅阴影
-//   - 白卡内部子卡与首页课程卡一致：复用 [DashboardCourseNoticeCard]（104 高 / radius 12 / 右上 60×22 状态角标；已结束标签灰度）
-//   - 时段 Barlow 18；头像 40 + 姓名 + 科目标签 + 大小课标签；副行提示文案
+//   - 白卡内部子卡与首页课程卡一致：复用 [DashboardCourseNoticeCard]（即 AppCourseCard，高度随内容；已结束标签灰度）
+//   - 时间 Barlow 18 + 状态；科目标签 + 大小课标签；任课老师头像 + 名称 + 副行提示文案
 //   - 数据为空时白卡保留，并展示占位文案
 // =============================================================================
 
 class _LessonRowData {
   const _LessonRowData({
     required this.avatarSeed,
-    required this.logoUrl,
     required this.teacherName,
     required this.courseName,
     required this.courseColor,
@@ -2095,15 +2095,17 @@ class _LessonRowData {
     required this.hint,
     required this.isSmallCourse,
     this.avatarUrl = '',
-    this.preferLogoOverAvatar = false,
+    this.logoUrl = '',
   });
 
+  /// 头像姓氏取自这里（任课老师姓名优先）。
   final String avatarSeed;
-  final String logoUrl;
-  /// 任课老师头像；学生端课表优先展示；教师端在无 logo 时作回退。
+
+  /// 任课老师照片；为空时头像显示 [avatarSeed] 的姓氏。
   final String avatarUrl;
-  /// true：先 [logoUrl] 再 [avatarUrl]；false：先 [avatarUrl] 再 [logoUrl]。
-  final bool preferLogoOverAvatar;
+
+  /// 班级 logo，学生端（student_dashboard.dart）仍会传入；课程卡头像不再使用。
+  final String logoUrl;
   final String teacherName;
   final String courseName;
   final Color courseColor;
@@ -2594,7 +2596,7 @@ _LessonRowData _lessonRowFromCourse(
   final displayName = className.isNotEmpty
       ? className
       : (teacher.isNotEmpty ? teacher : '—');
-  final avatarSeed = displayName.isEmpty ? '?' : displayName;
+  final avatarSeed = teacher.isNotEmpty ? teacher : displayName;
 
   var courseColor = isSmall
       ? const Color(0xFF0CAC40)
@@ -2622,7 +2624,6 @@ _LessonRowData _lessonRowFromCourse(
     avatarSeed: avatarSeed,
     logoUrl: resolveScheduleLogoUrl(row),
     avatarUrl: resolveScheduleTeacherHeadUrl(row),
-    preferLogoOverAvatar: true,
     teacherName: displayName,
     courseName: subjectName,
     courseColor: courseColor,
@@ -2866,13 +2867,7 @@ class _TappableLessonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = _LessonScheduleCard(data: data);
-    if (onTap == null) return card;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: card,
-    );
+    return _LessonScheduleCard(data: data, onTap: onTap);
   }
 }
 
@@ -2929,17 +2924,17 @@ class _LessonEmptyHint extends StatelessWidget {
   }
 }
 
-/// 与 [_LessonScheduleCard] / 签课管理「今日课程」单卡高度一致。
-double _lessonScheduleCardOuterHeight(double Function(double) ui) => ui(104);
+/// 与 [_LessonScheduleCard] 单节课时的自然高度一致，空态与有课时白卡高度不跳。
+double _lessonScheduleCardOuterHeight(double Function(double) ui) => ui(122);
 
 class _LessonScheduleCard extends StatelessWidget {
-  const _LessonScheduleCard({required this.data});
+  const _LessonScheduleCard({required this.data, this.onTap});
 
   final _LessonScheduleData data;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     final row = data.teachers.first;
     return DashboardCourseNoticeCard(
       startTime: data.startTime,
@@ -2950,78 +2945,12 @@ class _LessonScheduleCard extends StatelessWidget {
       subtitle: row.hint,
       runState: data.runState,
       tagDotColor: data.isPast ? null : row.tagDotColor,
-      avatar: _LessonSeedAvatar(
-        seed: row.avatarSeed,
-        logoUrl: row.logoUrl,
-        avatarUrl: row.avatarUrl,
-        preferLogoOverAvatar: row.preferLogoOverAvatar,
-        size: ui(40),
+      avatar: AppAvatar(
+        name: row.avatarSeed,
+        url: row.avatarUrl,
+        size: AppCourseCard.avatarSize,
       ),
-    );
-  }
-}
-
-/// 与学生端 `_SeedAvatar` 视觉一致的渐变首字头像。
-/// 各取首字 `seed.codeUnitAt(0)` 在 5 套调色盘中循环。
-class _LessonSeedAvatar extends StatelessWidget {
-  const _LessonSeedAvatar({
-    required this.seed,
-    required this.logoUrl,
-    required this.size,
-    this.avatarUrl = '',
-    this.preferLogoOverAvatar = false,
-  });
-
-  final String seed;
-  final String logoUrl;
-  final String avatarUrl;
-  final bool preferLogoOverAvatar;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final url = preferLogoOverAvatar
-        ? (logoUrl.isNotEmpty ? logoUrl : avatarUrl)
-        : (avatarUrl.isNotEmpty ? avatarUrl : logoUrl);
-    return SmoothCircleNetworkAvatar(
-      url: url,
-      size: size,
-      placeholder: _buildFallback(),
-    );
-  }
-
-  Widget _buildFallback() {
-    final palettes = <List<Color>>[
-      const [Color(0xFFFFD9E3), Color(0xFFFFBFD0)],
-      const [Color(0xFFD8E4FF), Color(0xFFB9D0FF)],
-      const [Color(0xFFE8DCFF), Color(0xFFD5BCFF)],
-      const [Color(0xFFE6FFF6), Color(0xFFB7F0DC)],
-      const [Color(0xFFFFF0D9), Color(0xFFFFD09B)],
-    ];
-    final index = seed.isEmpty ? 0 : (seed.codeUnitAt(0) % palettes.length);
-    final palette = palettes[index];
-    final initial = seed.isEmpty ? '?' : seed.substring(0, 1);
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: palette,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: size * 0.42,
-          color: const Color(0xFF5B536D),
-          fontWeight: FontWeight.w700,
-          height: 1,
-        ),
-      ),
+      onTap: onTap,
     );
   }
 }

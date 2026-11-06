@@ -31,6 +31,9 @@ import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart'
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
+import '../../../core/ui/app_avatar.dart';
+import '../../../core/ui/app_colors.dart';
+import '../../../core/ui/app_course_card.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/course_class_kind_tag.dart';
@@ -693,7 +696,6 @@ class _TodayClassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     final runState = switch (course.phase) {
       StudentCourseSlotPhase.ended => DashboardCourseRunState.ended,
       StudentCourseSlotPhase.inProgress => DashboardCourseRunState.inProgress,
@@ -705,11 +707,11 @@ class _TodayClassCard extends StatelessWidget {
       subjectName: course.subjectName,
       isSmallCourse: true,
       displayName: course.teacherName,
-      subtitle: '${course.durationLabel}·${course.location}',
-      avatar: _Avatar(
-        seed: course.teacherName,
-        size: ui(40),
-        imageUrl: course.teacherHeadUrl,
+      subtitle: '${course.durationLabel} · ${course.location}',
+      avatar: AppAvatar(
+        name: course.teacherName,
+        url: course.teacherHeadUrl,
+        size: AppCourseCard.avatarSize,
       ),
       runState: runState,
       isSelected: selected,
@@ -1546,16 +1548,18 @@ class _HistoryDrawerRecordCard extends StatelessWidget {
           subjectName: data.studentName,
           isSmallCourse: data.isSmallCourse,
           displayName: data.teacherName,
-          subtitle: '${data.duration}·${data.location}',
-          avatar: _Avatar(
-            seed: data.teacherName,
-            size: ui(40),
-            imageUrl: data.avatarUrl,
+          subtitle: '${data.duration} · ${data.location}',
+          avatar: AppAvatar(
+            name: data.teacherName,
+            url: data.avatarUrl,
+            size: AppCourseCard.avatarSize,
           ),
           runState: DashboardCourseRunState.ended,
           statusBadgeLabel: isAbsent ? '缺勤' : '正常',
-          statusBadgeBackground: isAbsent ? _kAttendRed : _kPurpleSoftBg,
-          statusBadgeTextColor: isAbsent ? Colors.white : _kTextDark,
+          statusBadgeBackground: isAbsent
+              ? AppColors.dangerSoft
+              : AppColors.successSoft,
+          statusBadgeTextColor: isAbsent ? AppColors.danger : AppColors.success,
         ),
         if (isAbsent && onApplyMakeup != null) ...[
           SizedBox(height: ui(8)),

@@ -35,6 +35,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           children: [
             Positioned(
               left: _s(scale, 691),
+              top: _s(scale, 96),
+              child: AuthBrandLogo(scale: scale),
+            ),
+            Positioned(
+              left: _s(scale, 691),
               top: _s(scale, 163),
               width: _s(scale, 399),
               height: _s(scale, 494),

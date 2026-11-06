@@ -79,7 +79,7 @@ class CampusCourse {
       'className': isSmall ? '${schoolClass.name} · 小课' : schoolClass.name,
       'classroomName': room,
       'color': CampusACourses.colorOf(subjectName, isSmall: isSmall),
-      'logo': CampusA.media('asset:assets/demo/brand/school_logo.png'),
+      'logo': '',
       'totalCount': isSmall ? 1 : schoolClass.students.length,
     };
   }

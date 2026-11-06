@@ -181,19 +181,11 @@ class _AttendClass {
       signStatus >= CourseSignFlowStatus.studentStart.code &&
       signStatus < CourseSignFlowStatus.teacherEnd.code;
 
-  /// 课程卡片头像：优先 courseList logo，缺失时回退 teacherHeadUrl。
-  String get cardAvatarUrl =>
-      logoUrl.trim().isNotEmpty ? logoUrl : teacherHeadUrl;
+  /// 课程卡片头像：任课老师头像，缺失时由头像组件显示老师姓氏。
+  String get cardAvatarUrl => teacherHeadUrl;
 
-  String get cardAvatarSeed {
-    if (logoUrl.trim().isNotEmpty) {
-      if (className.isNotEmpty) return className;
-      final studentName = primaryStudent?.name ?? '';
-      if (studentName.isNotEmpty) return studentName;
-      return courseName;
-    }
-    return teacherName.isNotEmpty ? teacherName : courseName;
-  }
+  String get cardAvatarSeed =>
+      teacherName.isNotEmpty ? teacherName : courseName;
 }
 
 class _StatItem {
@@ -1497,7 +1489,7 @@ class _TodayClassesPanel extends StatelessWidget {
           else ...[
             SizedBox(height: ui(12)),
             ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: ui(104) * 5 + ui(8) * 4),
+              constraints: BoxConstraints(maxHeight: ui(122) * 5 + ui(8) * 4),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -34,7 +34,7 @@ const _categories = <HelpGuideCategory>[
   HelpGuideCategory(id: 'toolbox', label: '画室工具箱'),
   HelpGuideCategory(id: 'video', label: '视频中心'),
   HelpGuideCategory(id: 'campus', label: '智慧校园'),
-  HelpGuideCategory(id: 'ai', label: '小艺同学'),
+  HelpGuideCategory(id: 'ai', label: '小美同学'),
   HelpGuideCategory(id: 'notes', label: '笔记与收藏'),
 ];
 
@@ -58,7 +58,7 @@ const _items = <HelpGuideItem>[
     categoryId: 'start',
     title: '完善个人资料',
     subtitle: '快速上手',
-    summary: '完善专业方向、擅长科目和目标院校，小艺同学会据此给出更贴合你的建议。',
+    summary: '完善专业方向、擅长科目和目标院校，小美同学会据此给出更贴合你的建议。',
     steps: [
       '点击左侧导航「个人中心」，再点击昵称旁的编辑图标进入「个人信息」。',
       '依次设置头像、姓名、专业方向、擅长科目、所在地区和目标院校。',
@@ -216,12 +216,12 @@ const _items = <HelpGuideItem>[
   HelpGuideItem(
     id: 'ai-ask',
     categoryId: 'ai',
-    title: '向小艺同学提问',
-    subtitle: '小艺同学',
-    summary: '小艺同学是 AI 美术助教，可以解答素描、色彩、速写和备考规划等问题。',
+    title: '向小美同学提问',
+    subtitle: '小美同学',
+    summary: '小美同学是 AI 美术助教，可以解答素描、色彩、速写和备考规划等问题。',
     steps: [
-      '点击左侧导航「小艺同学」，选择推荐问题或直接输入你的问题。',
-      '开启「深度思考」可以先看到小艺同学的思考过程，回答会更有条理。',
+      '点击左侧导航「小美同学」，选择推荐问题或直接输入你的问题。',
+      '开启「深度思考」可以先看到小美同学的思考过程，回答会更有条理。',
       '历史对话保存在左侧列表中，可以随时继续追问或删除。',
     ],
     tip: 'AI 生成的内容仅供学习参考，作品评价请以任课老师的意见为准。',
@@ -231,10 +231,10 @@ const _items = <HelpGuideItem>[
     id: 'ai-artwork',
     categoryId: 'ai',
     title: '上传作品获取 AI 分析',
-    subtitle: '小艺同学',
-    summary: '上传作品照片，小艺同学会从构图、造型、明暗或色彩等维度给出分析和练习建议。',
+    subtitle: '小美同学',
+    summary: '上传作品照片，小美同学会从构图、造型、明暗或色彩等维度给出分析和练习建议。',
     steps: [
-      '在小艺同学的输入框中点击附件按钮，选择作品照片。',
+      '在小美同学的输入框中点击附件按钮，选择作品照片。',
       '输入想重点了解的问题，例如「这张色彩静物的冷暖关系怎么样」。',
       '发送后查看「作品分析」，按改进建议和推荐练习安排下一步训练。',
     ],

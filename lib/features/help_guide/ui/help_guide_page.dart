@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/demo/demo_config.dart';
 import '../../../core/theme/app_font.dart';
+import '../../../core/ui/app_button.dart';
+import '../../../core/ui/app_spacing.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../state/help_guide_controller.dart';
@@ -119,6 +122,18 @@ class _GuideHeader extends StatelessWidget {
               ),
             ],
           ),
+          if (kDemoMode)
+            Positioned(
+              right: ui(12),
+              child: AppButton(
+                label: '组件库（演示）',
+                icon: Icons.widgets_outlined,
+                variant: AppButtonVariant.quiet,
+                size: AppButtonSize.sm,
+                onTap: () =>
+                    Navigator.of(context).pushNamed(RoutePaths.designSystem),
+              ),
+            ),
         ],
       ),
     );

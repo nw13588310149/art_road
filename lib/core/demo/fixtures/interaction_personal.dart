@@ -13,7 +13,7 @@ const _redeemCodes = <String, ({String plan, int days})>{
 
 const _vipBenefits = <String>[
   '范画库高清原图无限浏览与下载',
-  '小艺同学 AI 作品分析不限次数',
+  '小美同学 AI 作品分析不限次数',
   '视频中心全部专项课程',
   '题库考前密卷与错题集',
   '作品档案云端无限存储',
