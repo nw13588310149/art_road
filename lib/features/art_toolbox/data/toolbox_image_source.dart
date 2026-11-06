@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/network/media_url.dart';
+import '../logic/image_filters.dart';
 import '../logic/image_ops.dart';
 
 /// 工具箱当前处理的图片：显示用的 [image] 与像素运算用的 [data] 尺寸一致（长边 ≤ 1600）。
@@ -28,6 +30,14 @@ class ToolboxImage {
   int get width => data.width;
   int get height => data.height;
   double get aspectRatio => data.width / data.height;
+
+  Future<ArtImageData>? _work;
+
+  /// 滑块实时调整的工具使用的缩小副本（长边 ≤ [kToolboxWorkSide]），首次使用时在后台生成，换工具时复用。
+  Future<ArtImageData> workData() => _work ??=
+      math.max(data.width, data.height) <= kToolboxWorkSide
+      ? Future<ArtImageData>.value(data)
+      : compute(downscaleForWork, data);
 
   void dispose() => image.dispose();
 }

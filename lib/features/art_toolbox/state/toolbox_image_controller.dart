@@ -11,7 +11,7 @@ final toolboxImageLoaderProvider = Provider<ToolboxImageLoader>(
   (ref) => ToolboxImageLoader(),
 );
 
-/// 明度、镜像、网格、取色四个工具共用的当前图片（换工具不用重新选图）。
+/// 看画分析组各工具共用的当前图片（换工具不用重新选图）。
 final toolboxImageControllerProvider =
     StateNotifierProvider.autoDispose<
       ToolboxImageController,

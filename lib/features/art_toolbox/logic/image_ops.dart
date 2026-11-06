@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 
+import 'kmeans.dart';
+
 /// 工具箱处理图片的长边上限：超过先等比缩小，保证处理耗时与内存可控。
 const int kToolboxMaxSide = 1600;
 
@@ -372,32 +374,22 @@ List<PaletteSwatch> extractPalette(
   int count = 6,
   int maxSamples = 6000,
 }) {
-  final samples = _samplePixels(image, maxSamples);
+  final samples = sampleRgb(image.rgba, image.width, image.height, maxSamples);
   final n = samples.length ~/ 3;
   if (n == 0 || count <= 0) {
     return const <PaletteSwatch>[];
   }
-  final random = math.Random(7);
-  var centers = _seedCenters(samples, count * 2, random);
-  final assignment = Int32List(n);
-  for (var iteration = 0; iteration < 16; iteration++) {
-    final changed = _assign(samples, centers, assignment);
-    centers = _recenter(samples, centers, assignment).centers;
-    if (!changed && iteration > 0) {
-      break;
-    }
-  }
-  _assign(samples, centers, assignment);
-  final clustered = _recenter(samples, centers, assignment);
+  final clustered = kMeansRgb(samples, count * 2);
   final groups = <_Cluster>[
-    for (var c = 0; c < centers.length; c++)
+    for (var c = 0; c < clustered.centers.length; c++)
       if (clustered.sizes[c] > 0)
         _Cluster(clustered.centers[c], clustered.sizes[c].toDouble()),
   ];
   _mergeNear(groups, 20);
   final kept = _pickDistinct(groups, count);
   // 未入选色团的像素只计入最近入选色的占比，不改变入选色本身。
-  _assign(samples, kept, assignment);
+  final assignment = Int32List(n);
+  assignNearest(samples, kept, assignment);
   final sizes = List<int>.filled(kept.length, 0);
   for (var i = 0; i < n; i++) {
     sizes[assignment[i]]++;
@@ -416,132 +408,6 @@ List<PaletteSwatch> extractPalette(
   ];
   swatches.sort((a, b) => b.ratio.compareTo(a.ratio));
   return swatches;
-}
-
-/// 网格均匀采样，返回 [r, g, b, r, g, b, ...]。
-Uint8List _samplePixels(ArtImageData image, int maxSamples) {
-  final stride = math.max(
-    1,
-    math.sqrt(image.pixelCount / math.max(1, maxSamples)).ceil(),
-  );
-  final start = stride ~/ 2;
-  int countFrom(int extent) =>
-      start >= extent ? 0 : (extent - 1 - start) ~/ stride + 1;
-  final out = Uint8List(countFrom(image.width) * countFrom(image.height) * 3);
-  var o = 0;
-  for (var y = start; y < image.height; y += stride) {
-    for (var x = start; x < image.width; x += stride) {
-      final i = (y * image.width + x) * 4;
-      out[o++] = image.rgba[i];
-      out[o++] = image.rgba[i + 1];
-      out[o++] = image.rgba[i + 2];
-    }
-  }
-  return out;
-}
-
-double _dist2(Uint8List samples, int i, List<double> center) {
-  final dr = samples[i * 3] - center[0];
-  final dg = samples[i * 3 + 1] - center[1];
-  final db = samples[i * 3 + 2] - center[2];
-  return dr * dr + dg * dg + db * db;
-}
-
-List<List<double>> _seedCenters(Uint8List samples, int k, math.Random random) {
-  final n = samples.length ~/ 3;
-  List<double> centerOf(int i) => [
-    samples[i * 3].toDouble(),
-    samples[i * 3 + 1].toDouble(),
-    samples[i * 3 + 2].toDouble(),
-  ];
-  final centers = <List<double>>[centerOf(random.nextInt(n))];
-  final nearest = Float64List(n);
-  for (var i = 0; i < n; i++) {
-    nearest[i] = _dist2(samples, i, centers.first);
-  }
-  while (centers.length < k) {
-    var total = 0.0;
-    for (var i = 0; i < n; i++) {
-      total += nearest[i];
-    }
-    if (total <= 0) {
-      break;
-    }
-    var target = random.nextDouble() * total;
-    var pick = n - 1;
-    for (var i = 0; i < n; i++) {
-      target -= nearest[i];
-      if (target <= 0) {
-        pick = i;
-        break;
-      }
-    }
-    final center = centerOf(pick);
-    centers.add(center);
-    for (var i = 0; i < n; i++) {
-      final d = _dist2(samples, i, center);
-      if (d < nearest[i]) {
-        nearest[i] = d;
-      }
-    }
-  }
-  return centers;
-}
-
-bool _assign(
-  Uint8List samples,
-  List<List<double>> centers,
-  Int32List assignment,
-) {
-  var changed = false;
-  final n = samples.length ~/ 3;
-  for (var i = 0; i < n; i++) {
-    var best = 0;
-    var bestD = double.infinity;
-    for (var c = 0; c < centers.length; c++) {
-      final d = _dist2(samples, i, centers[c]);
-      if (d < bestD) {
-        bestD = d;
-        best = c;
-      }
-    }
-    if (assignment[i] != best) {
-      assignment[i] = best;
-      changed = true;
-    }
-  }
-  return changed;
-}
-
-({List<List<double>> centers, List<int> sizes}) _recenter(
-  Uint8List samples,
-  List<List<double>> centers,
-  Int32List assignment,
-) {
-  final k = centers.length;
-  final sums = List.generate(k, (_) => [0.0, 0.0, 0.0]);
-  final sizes = List<int>.filled(k, 0);
-  final n = samples.length ~/ 3;
-  for (var i = 0; i < n; i++) {
-    final c = assignment[i];
-    sums[c][0] += samples[i * 3];
-    sums[c][1] += samples[i * 3 + 1];
-    sums[c][2] += samples[i * 3 + 2];
-    sizes[c]++;
-  }
-  return (
-    centers: [
-      for (var c = 0; c < k; c++)
-        sizes[c] == 0
-            ? centers[c]
-            : [
-                sums[c][0] / sizes[c],
-                sums[c][1] / sizes[c],
-                sums[c][2] / sizes[c],
-              ],
-    ],
-    sizes: sizes,
-  );
 }
 
 class _Cluster {

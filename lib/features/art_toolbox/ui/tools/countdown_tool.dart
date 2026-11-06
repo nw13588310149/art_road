@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/art/art_tokens.dart';
-import '../../../../core/theme/app_font.dart';
+import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/app_date_time_pickers.dart';
-import '../../../../core/widgets/app_loading_indicator.dart';
-import '../../../../core/widgets/app_text_field.dart';
-import '../../../../core/widgets/app_toast.dart';
-import '../../../../core/widgets/art_widgets.dart';
-import '../../../../core/widgets/scaled_dialog.dart';
 import '../../data/countdown_repository.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../state/countdown_controller.dart';
+import '../widgets/image_tool_frame.dart';
+import '../widgets/tool_panel.dart';
 
 /// 考试倒计时：本地保存的考试日期卡片，可增删改。
 class CountdownTool extends ConsumerWidget {
@@ -24,10 +20,9 @@ class CountdownTool extends ConsumerWidget {
     WidgetRef ref, [
     ExamCountdown? item,
   ]) async {
-    final draft = await showScaledDialog<_CountdownDraft>(
+    final draft = await showAppDrawer<_CountdownDraft>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.3),
-      builder: (_) => _CountdownEditorDialog(initial: item),
+      builder: (_) => _CountdownEditor(initial: item),
     );
     if (draft == null) {
       return;
@@ -39,7 +34,7 @@ class CountdownTool extends ConsumerWidget {
       await controller.update(item.id, draft.name, draft.date);
     }
     if (context.mounted) {
-      AppToast.show(context, item == null ? '已添加倒计时' : '已保存修改');
+      AppToast.showSuccess(context, item == null ? '已添加倒计时' : '已保存修改');
     }
   }
 
@@ -48,18 +43,19 @@ class CountdownTool extends ConsumerWidget {
     WidgetRef ref,
     ExamCountdown item,
   ) async {
-    final confirmed = await showConfirmDialog(
+    final confirmed = await showAppConfirm(
       context: context,
       title: '删除倒计时',
-      content: '确定删除「${item.name}」吗？',
+      message: '确定删除「${item.name}」吗？删除后不能恢复。',
       confirmLabel: '删除',
+      danger: true,
     );
     if (!confirmed) {
       return;
     }
     await ref.read(countdownControllerProvider.notifier).remove(item.id);
     if (context.mounted) {
-      AppToast.show(context, '已删除');
+      AppToast.showSuccess(context, '已删除');
     }
   }
 
@@ -68,89 +64,56 @@ class CountdownTool extends ConsumerWidget {
     final state = ref.watch(countdownControllerProvider);
     final now = DateTime.now();
     final items = state.sorted(now);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ArtPageHeader(
-          title: ArtTool.countdown.label,
-          subtitle: ArtTool.countdown.description,
-          onBack: onBack,
-          actions: [
-            ArtButton(
-              label: '添加',
-              icon: Icons.add_rounded,
-              height: 34,
-              onTap: () => _edit(context, ref),
-            ),
-          ],
+    Widget content;
+    if (state.loading) {
+      content = const _CountdownGrid.skeleton();
+    } else if (items.isEmpty) {
+      content = Padding(
+        padding: const EdgeInsets.only(top: AppSpace.s32),
+        child: AppEmptyState(
+          title: '还没有考试倒计时',
+          description: '添加联考、校考的日期，随时查看还剩多少天',
+          icon: Icons.event_available_rounded,
+          actionLabel: '添加倒计时',
+          onAction: () => _edit(context, ref),
         ),
-        Expanded(
-          child: state.loading
-              ? const Center(child: AppLoadingIndicator())
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const _ExampleNotice(),
-                      const SizedBox(height: 16),
-                      if (items.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 40),
-                          child: ArtEmptyState(
-                            icon: Icons.event_available_rounded,
-                            message: '还没有倒计时，添加一个考试日期吧',
-                            actionLabel: '添加倒计时',
-                            onAction: () => _edit(context, ref),
-                          ),
-                        )
-                      else
-                        _CountdownGrid(
-                          items: items,
-                          now: now,
-                          onEdit: (item) => _edit(context, ref, item),
-                          onDelete: (item) => _delete(context, ref, item),
-                        ),
-                    ],
-                  ),
-                ),
+      );
+    } else {
+      content = _CountdownGrid(
+        items: items,
+        now: now,
+        onEdit: (item) => _edit(context, ref, item),
+        onDelete: (item) => _delete(context, ref, item),
+      );
+    }
+    return ToolPageScaffold(
+      tool: ArtTool.countdown,
+      onBack: onBack,
+      actions: [
+        AppButton(
+          label: '添加倒计时',
+          icon: Icons.add_rounded,
+          size: AppButtonSize.sm,
+          onTap: state.loading ? null : () => _edit(context, ref),
         ),
       ],
-    );
-  }
-}
-
-class _ExampleNotice extends StatelessWidget {
-  const _ExampleNotice();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7EA),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF6DDB0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
-            child: Icon(
-              Icons.info_outline_rounded,
-              size: 16,
-              color: ArtColors.warn,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.page,
+          0,
+          AppSpace.page,
+          AppSpace.s24,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const ToolNotice(
+              '默认日期仅为示例，具体考试时间请以甘肃省教育考试院及各招生院校发布的官方公告为准，点击卡片可以修改。',
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '默认日期仅为示例，具体考试时间请以甘肃省教育考试院及各招生院校发布的官方公告为准，可点击卡片修改。',
-              style: ArtText.caption(size: 12, color: const Color(0xFF8A6420)),
-            ),
-          ),
-        ],
+            const SizedBox(height: AppSpace.s16),
+            content,
+          ],
+        ),
       ),
     );
   }
@@ -162,21 +125,46 @@ class _CountdownGrid extends StatelessWidget {
     required this.now,
     required this.onEdit,
     required this.onDelete,
-  });
+  }) : skeleton = false;
+
+  const _CountdownGrid.skeleton()
+    : items = const <ExamCountdown>[],
+      now = null,
+      onEdit = null,
+      onDelete = null,
+      skeleton = true;
 
   final List<ExamCountdown> items;
-  final DateTime now;
-  final ValueChanged<ExamCountdown> onEdit;
-  final ValueChanged<ExamCountdown> onDelete;
+  final DateTime? now;
+  final ValueChanged<ExamCountdown>? onEdit;
+  final ValueChanged<ExamCountdown>? onDelete;
+  final bool skeleton;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const gap = 16.0;
+        const gap = AppSpace.s16;
         final width = constraints.maxWidth;
         final columns = width >= 840 ? 3 : (width >= 500 ? 2 : 1);
         final itemWidth = (width - gap * (columns - 1)) / columns;
+        if (skeleton) {
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: [
+              for (var i = 0; i < columns; i++)
+                SizedBox(
+                  width: itemWidth,
+                  child: const AppSkeleton(
+                    height: _CountdownCard.height,
+                    radius: AppRadius.card,
+                  ),
+                ),
+            ],
+          );
+        }
+        final today = now!;
         return Wrap(
           spacing: gap,
           runSpacing: gap,
@@ -186,10 +174,10 @@ class _CountdownGrid extends StatelessWidget {
                 width: itemWidth,
                 child: _CountdownCard(
                   item: items[i],
-                  daysLeft: items[i].daysLeftFrom(now),
-                  highlight: i == 0 && items[i].daysLeftFrom(now) >= 0,
-                  onEdit: () => onEdit(items[i]),
-                  onDelete: () => onDelete(items[i]),
+                  daysLeft: items[i].daysLeftFrom(today),
+                  highlight: i == 0 && items[i].daysLeftFrom(today) >= 0,
+                  onEdit: () => onEdit?.call(items[i]),
+                  onDelete: () => onDelete?.call(items[i]),
                 ),
               ),
           ],
@@ -208,57 +196,38 @@ class _CountdownCard extends StatelessWidget {
     required this.onDelete,
   });
 
+  static const double height = 168;
+
   final ExamCountdown item;
   final int daysLeft;
 
-  /// 最近一场未开始的考试，用渐变卡片突出。
+  /// 下一场未开始的考试，浅紫底突出。
   final bool highlight;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final accent = ArtTool.countdown.accent;
     final past = daysLeft < 0;
-    final primaryText = highlight ? Colors.white : ArtColors.ink;
-    final secondaryText = highlight
-        ? Colors.white.withValues(alpha: 0.8)
-        : ArtColors.ink3;
-    final numberColor = highlight
-        ? Colors.white
-        : (past ? ArtColors.ink4 : accent);
     final status = switch (daysLeft) {
-      0 => '就是今天，加油！',
-      > 0 => '距离考试还有',
+      0 => '就是今天，加油',
+      > 0 => highlight ? '下一场考试 · 还有' : '距离考试还有',
       _ => '已结束',
     };
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    final numberColor = past
+        ? AppColors.textTertiary
+        : (highlight ? AppColors.brand : AppColors.ink);
+    return AppCard(
       onTap: onEdit,
-      child: Container(
-        height: 172,
-        padding: const EdgeInsets.fromLTRB(18, 14, 10, 16),
-        decoration: BoxDecoration(
-          gradient: highlight
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [accent, const Color(0xFFF08A6E)],
-                )
-              : null,
-          color: highlight ? null : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: highlight ? null : Border.all(color: ArtColors.line),
-          boxShadow: highlight
-              ? [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.3),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
-        ),
+      color: highlight ? AppColors.brandWash : AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s16,
+        AppSpace.s12,
+        AppSpace.s8,
+        AppSpace.s16,
+      ),
+      child: SizedBox(
+        height: height - AppSpace.s12 - AppSpace.s16,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -267,35 +236,35 @@ class _CountdownCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: AppSpace.s4),
                     child: Text(
                       item.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.35,
-                        color: primaryText,
-                        fontWeight: AppFont.w600,
-                        fontFamily: 'PingFang SC',
-                      ),
+                      style: AppText.title16,
                     ),
                   ),
                 ),
-                _CardIconButton(
+                AppIconButton(
                   icon: Icons.edit_outlined,
-                  color: secondaryText,
+                  semanticLabel: '编辑',
+                  size: AppButtonSize.sm,
+                  filled: false,
+                  color: AppColors.textSecondary,
                   onTap: onEdit,
                 ),
-                _CardIconButton(
+                AppIconButton(
                   icon: Icons.delete_outline_rounded,
-                  color: secondaryText,
+                  semanticLabel: '删除',
+                  size: AppButtonSize.sm,
+                  filled: false,
+                  color: AppColors.textSecondary,
                   onTap: onDelete,
                 ),
               ],
             ),
             const Spacer(),
-            Text(status, style: ArtText.caption(color: secondaryText)),
+            Text(status, style: AppText.caption12),
             const SizedBox(height: 2),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -303,55 +272,44 @@ class _CountdownCard extends StatelessWidget {
                 Text(
                   daysLeft == 0 ? '今天' : '${daysLeft.abs()}',
                   style: daysLeft == 0
-                      ? ArtText.title(size: 34, color: numberColor)
-                      : ArtText.number(size: 44, color: numberColor),
+                      ? AppText.title24.copyWith(color: numberColor)
+                      : AppText.displayNumber(size: 32, color: numberColor),
                 ),
                 if (daysLeft != 0) ...[
-                  const SizedBox(width: 4),
+                  const SizedBox(width: AppSpace.s4),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 5),
+                    padding: const EdgeInsets.only(bottom: 3),
                     child: Text(
                       past ? '天前' : '天',
-                      style: ArtText.body(color: secondaryText),
+                      style: AppText.body14.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ],
-                const Spacer(),
-                Padding(
-                  padding: const EdgeInsets.only(right: 8, bottom: 5),
-                  child: Text(
-                    '${item.dateText} ${item.weekdayText}',
-                    style: ArtText.caption(color: secondaryText),
+                const SizedBox(width: AppSpace.s8),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      right: AppSpace.s8,
+                      bottom: 3,
+                    ),
+                    child: Text(
+                      '${item.dateText} ${item.weekdayText}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: AppText.number(
+                        size: 12,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _CardIconButton extends StatelessWidget {
-  const _CardIconButton({
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: 18, color: color),
       ),
     );
   }
@@ -364,20 +322,22 @@ class _CountdownDraft {
   final DateTime date;
 }
 
-class _CountdownEditorDialog extends StatefulWidget {
-  const _CountdownEditorDialog({this.initial});
+class _CountdownEditor extends StatefulWidget {
+  const _CountdownEditor({this.initial});
 
   final ExamCountdown? initial;
 
   @override
-  State<_CountdownEditorDialog> createState() => _CountdownEditorDialogState();
+  State<_CountdownEditor> createState() => _CountdownEditorState();
 }
 
-class _CountdownEditorDialogState extends State<_CountdownEditorDialog> {
+class _CountdownEditorState extends State<_CountdownEditor> {
   late final TextEditingController _name = TextEditingController(
     text: widget.initial?.name ?? '',
   );
   late DateTime? _date = widget.initial?.date;
+  String? _nameError;
+  String? _dateError;
 
   @override
   void dispose() {
@@ -395,19 +355,21 @@ class _CountdownEditorDialogState extends State<_CountdownEditorDialog> {
       helpText: '选择考试日期',
     );
     if (picked != null && mounted) {
-      setState(() => _date = picked);
+      setState(() {
+        _date = picked;
+        _dateError = null;
+      });
     }
   }
 
   void _submit() {
     final name = _name.text.trim();
     final date = _date;
-    if (name.isEmpty) {
-      AppToast.show(context, '请输入考试名称');
-      return;
-    }
-    if (date == null) {
-      AppToast.show(context, '请选择考试日期');
+    setState(() {
+      _nameError = name.isEmpty ? '请输入考试名称，如「2027 年美术联考」' : null;
+      _dateError = date == null ? '请选择考试日期' : null;
+    });
+    if (name.isEmpty || date == null) {
       return;
     }
     Navigator.of(context).pop(_CountdownDraft(name, date));
@@ -420,106 +382,94 @@ class _CountdownEditorDialogState extends State<_CountdownEditorDialog> {
         ? '请选择日期'
         : '${date.year}-${date.month.toString().padLeft(2, '0')}-'
               '${date.day.toString().padLeft(2, '0')}';
-    final fieldDecoration = BoxDecoration(
-      color: ArtColors.subtle,
-      borderRadius: BorderRadius.circular(12),
-    );
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(24),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 420),
-        padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+    return AppDrawer(
+      title: widget.initial == null ? '添加倒计时' : '编辑倒计时',
+      subtitle: '只保存在本机',
+      actions: [
+        AppButton(
+          label: '取消',
+          variant: AppButtonVariant.secondary,
+          onTap: () => Navigator.of(context).pop(),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                widget.initial == null ? '添加倒计时' : '编辑倒计时',
-                style: ArtText.title(size: 17),
-              ),
-              const SizedBox(height: 18),
-              Text('考试名称', style: ArtText.caption(color: ArtColors.ink2)),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: fieldDecoration,
-                child: AppTextField(
-                  controller: _name,
-                  maxLength: 30,
-                  style: ArtText.body(),
-                  cursorColor: ArtColors.brand,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    counterText: '',
-                    hintText: '如：2027 年美术联考',
-                    hintStyle: ArtText.body(color: ArtColors.ink4),
-                  ),
+        AppButton(label: '保存', onTap: _submit),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppInputField(
+            controller: _name,
+            label: '考试名称',
+            hint: '如：2027 年美术联考',
+            required: true,
+            maxLength: 30,
+            errorText: _nameError,
+            onChanged: (_) {
+              if (_nameError != null) {
+                setState(() => _nameError = null);
+              }
+            },
+          ),
+          const SizedBox(height: AppSpace.s16),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '* ',
+                  style: AppText.body14.copyWith(color: AppColors.danger),
+                ),
+                TextSpan(text: '考试日期', style: AppText.body14),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          AppPressable(
+            onTap: _pickDate,
+            semanticLabel: '选择考试日期',
+            child: Container(
+              height: AppSize.control,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppRadius.br8,
+                border: Border.all(
+                  color: _dateError == null ? AppColors.line : AppColors.danger,
                 ),
               ),
-              const SizedBox(height: 14),
-              Text('考试日期', style: ArtText.caption(color: ArtColors.ink2)),
-              const SizedBox(height: 6),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _pickDate,
-                child: Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: fieldDecoration,
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today_outlined,
-                        size: 18,
-                        color: ArtColors.ink3,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          dateText,
-                          style: ArtText.body(
-                            color: date == null
-                                ? ArtColors.ink4
-                                : ArtColors.ink,
-                          ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20,
-                        color: ArtColors.ink4,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 22),
-              Row(
+              child: Row(
                 children: [
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 16,
+                    color: AppColors.textTertiary,
+                  ),
+                  const SizedBox(width: AppSpace.s8),
                   Expanded(
-                    child: ArtButton(
-                      label: '取消',
-                      primary: false,
-                      height: 42,
-                      onTap: () => Navigator.of(context).pop(),
+                    child: Text(
+                      dateText,
+                      style: date == null
+                          ? AppText.body14.copyWith(
+                              color: AppColors.textPlaceholder,
+                            )
+                          : AppText.number(size: 14),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ArtButton(label: '保存', height: 42, onTap: _submit),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: AppColors.textTertiary,
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
+          if (_dateError != null) ...[
+            const SizedBox(height: AppSpace.s4),
+            Text(
+              _dateError!,
+              style: AppText.caption12.copyWith(color: AppColors.danger),
+            ),
+          ],
+        ],
       ),
     );
   }

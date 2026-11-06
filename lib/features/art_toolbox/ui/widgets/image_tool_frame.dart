@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/art/art_tokens.dart';
-import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/app_loading_indicator.dart';
-import '../../../../core/widgets/art_widgets.dart';
-import '../../../../core/widgets/scaled_dialog.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../state/toolbox_image_controller.dart';
@@ -32,8 +28,40 @@ class ToolboxImagePending extends InheritedWidget {
       oldWidget.pending != pending;
 }
 
-/// 图片类工具的骨架：页头（返回 + 换图）、未选图时的选图引导、处理中状态，
-/// 选好图后交给 [builder] 渲染工具本体。
+/// 所有工具页统一的外框：页头（返回 + 工具名 + 一句话用法提示 + 右侧操作）+ 内容。
+class ToolPageScaffold extends StatelessWidget {
+  const ToolPageScaffold({
+    required this.tool,
+    required this.onBack,
+    required this.body,
+    this.actions = const <Widget>[],
+    super.key,
+  });
+
+  final ArtTool tool;
+  final VoidCallback onBack;
+  final Widget body;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: tool.label,
+          subtitle: tool.help,
+          onBack: onBack,
+          actions: actions,
+        ),
+        Expanded(child: body),
+      ],
+    );
+  }
+}
+
+/// 图片类工具的骨架：未选图时显示选图区（上传图片 / 使用示例画作），处理中显示加载，
+/// 选好图后交给 [builder] 渲染工具本体；页头右侧可随时换图。
 class ImageToolScaffold extends ConsumerWidget {
   const ImageToolScaffold({
     required this.tool,
@@ -63,9 +91,9 @@ class ImageToolScaffold extends ConsumerWidget {
     if (image == null) {
       body = state.loading || ToolboxImagePending.of(context)
           ? const _ProcessingHint()
-          : _ImageSourcePrompt(
+          : ImageSourcePanel(
               tool: tool,
-              onPickAlbum: controller.pickFromAlbum,
+              onUpload: controller.pickFromAlbum,
               onPickSample: pickSample,
               onSample: controller.loadSample,
             );
@@ -75,7 +103,7 @@ class ImageToolScaffold extends ConsumerWidget {
           Positioned.fill(child: builder(context, image)),
           if (state.loading)
             const Positioned(
-              top: 8,
+              top: AppSpace.s8,
               left: 0,
               right: 0,
               child: Center(child: _LoadingChip()),
@@ -84,47 +112,53 @@ class ImageToolScaffold extends ConsumerWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ArtPageHeader(
-          title: tool.label,
-          subtitle: image == null
-              ? tool.description
-              : '${tool.description} · 当前：${image.label}',
-          onBack: onBack,
-          actions: image == null
-              ? const <Widget>[]
-              : [
-                  ArtButton(
-                    label: '相册',
-                    icon: Icons.photo_library_outlined,
-                    primary: false,
-                    height: 34,
-                    onTap: state.loading ? null : controller.pickFromAlbum,
-                  ),
-                  const SizedBox(width: 8),
-                  ArtButton(
-                    label: '示例',
-                    icon: Icons.collections_outlined,
-                    primary: false,
-                    height: 34,
-                    onTap: state.loading ? null : pickSample,
-                  ),
-                ],
-        ),
-        Expanded(child: body),
-      ],
+    return ToolPageScaffold(
+      tool: tool,
+      onBack: onBack,
+      actions: image == null
+          ? const <Widget>[]
+          : [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Text(
+                  '当前：${image.label}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption12,
+                ),
+              ),
+              AppButton(
+                label: '上传图片',
+                icon: Icons.upload_rounded,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.sm,
+                onTap: state.loading ? null : controller.pickFromAlbum,
+              ),
+              AppButton(
+                label: '使用示例画作',
+                icon: Icons.collections_outlined,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.sm,
+                onTap: state.loading ? null : pickSample,
+              ),
+            ],
+      body: body,
     );
   }
 }
 
-/// 画面 + 控制面板：宽屏左右排列，窄屏上下排列（面板可滚动）。
+/// 画面 + 控制面板：宽屏左右排列（面板 320 宽），窄屏上下排列；面板内容可滚动。
 class ImageToolLayout extends StatelessWidget {
-  const ImageToolLayout({required this.stage, required this.panel, super.key});
+  const ImageToolLayout({
+    required this.stage,
+    required this.panel,
+    this.panelWidth = 320,
+    super.key,
+  });
 
   final Widget Function(BuildContext context, bool wide) stage;
   final Widget Function(BuildContext context, bool wide) panel;
+  final double panelWidth;
 
   static const wideBreakpoint = 760.0;
 
@@ -133,39 +167,50 @@ class ImageToolLayout extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= wideBreakpoint;
-        final panelBox = Container(
+        final panelBox = DecoratedBox(
           decoration: BoxDecoration(
-            color: ArtColors.subtle,
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.surface,
+            borderRadius: AppRadius.br12,
+            border: Border.all(color: AppColors.lineSoft),
           ),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpace.card),
             child: panel(context, wide),
           ),
         );
         if (wide) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              0,
+              AppSpace.page,
+              AppSpace.page,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: stage(context, wide)),
-                const SizedBox(width: 16),
-                SizedBox(width: 300, child: panelBox),
+                const SizedBox(width: AppSpace.s16),
+                SizedBox(width: panelWidth, child: panelBox),
               ],
             ),
           );
         }
         final panelHeight = (constraints.maxHeight * 0.42)
-            .clamp(170.0, 300.0)
+            .clamp(180.0, 320.0)
             .toDouble();
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.page,
+            0,
+            AppSpace.page,
+            AppSpace.s16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(child: stage(context, wide)),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpace.s12),
               SizedBox(height: panelHeight, child: panelBox),
             ],
           ),
@@ -175,16 +220,18 @@ class ImageToolLayout extends StatelessWidget {
   }
 }
 
-class _ImageSourcePrompt extends StatelessWidget {
-  const _ImageSourcePrompt({
+/// 选图区：上传图片 / 使用示例画作，下方可直接点一张示例。
+class ImageSourcePanel extends StatelessWidget {
+  const ImageSourcePanel({
     required this.tool,
-    required this.onPickAlbum,
+    required this.onUpload,
     required this.onPickSample,
     required this.onSample,
+    super.key,
   });
 
   final ArtTool tool;
-  final VoidCallback onPickAlbum;
+  final VoidCallback onUpload;
   final VoidCallback onPickSample;
   final ValueChanged<ToolboxSample> onSample;
 
@@ -192,77 +239,85 @@ class _ImageSourcePrompt extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                color: tool.accent.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.s24,
+          0,
+          AppSpace.s24,
+          AppSpace.s24,
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.tint(tool.accent),
+                  borderRadius: AppRadius.br12,
+                ),
+                child: Icon(tool.icon, color: tool.accent, size: 28),
               ),
-              child: Icon(tool.icon, color: tool.accent, size: 36),
-            ),
-            const SizedBox(height: 14),
-            Text('选择一张画作开始${tool.label}', style: ArtText.title(size: 17)),
-            const SizedBox(height: 6),
-            Text(
-              '可以拍下自己的作业，也可以先用示例画作体验；图片只在本机处理',
-              textAlign: TextAlign.center,
-              style: ArtText.caption(size: 13),
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 12,
-              runSpacing: 10,
-              alignment: WrapAlignment.center,
-              children: [
-                ArtButton(
-                  label: '从相册选择',
-                  icon: Icons.photo_library_outlined,
-                  height: 42,
-                  onTap: onPickAlbum,
-                ),
-                ArtButton(
-                  label: '使用示例画作',
-                  icon: Icons.collections_outlined,
-                  primary: false,
-                  height: 42,
-                  onTap: onPickSample,
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            Text('或直接选一张示例', style: ArtText.caption()),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              alignment: WrapAlignment.center,
-              children: [
-                for (final sample in toolboxSamples.take(6))
-                  _SampleThumb(
-                    sample: sample,
-                    size: 72,
-                    onTap: () => onSample(sample),
+              const SizedBox(height: AppSpace.s12),
+              Text('选择一张画作开始${tool.label}', style: AppText.title16),
+              const SizedBox(height: AppSpace.s4),
+              Text(
+                '可以上传自己作业的照片，也可以先用示例画作体验；图片只在本机处理，不会上传到服务器',
+                textAlign: TextAlign.center,
+                style: AppText.body13,
+              ),
+              const SizedBox(height: AppSpace.s20),
+              Wrap(
+                spacing: AppSpace.s12,
+                runSpacing: AppSpace.s12,
+                alignment: WrapAlignment.center,
+                children: [
+                  AppButton(
+                    label: '上传图片',
+                    icon: Icons.upload_rounded,
+                    onTap: onUpload,
                   ),
-              ],
-            ),
-          ],
+                  AppButton(
+                    label: '使用示例画作',
+                    icon: Icons.collections_outlined,
+                    variant: AppButtonVariant.secondary,
+                    onTap: onPickSample,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpace.s24),
+              Text('或直接选一张示例', style: AppText.caption12),
+              const SizedBox(height: AppSpace.s12),
+              Wrap(
+                spacing: AppSpace.s12,
+                runSpacing: AppSpace.s12,
+                alignment: WrapAlignment.center,
+                children: [
+                  for (final sample in toolboxSamples)
+                    SampleThumb(
+                      sample: sample,
+                      size: 88,
+                      showLabel: true,
+                      onTap: () => onSample(sample),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SampleThumb extends StatelessWidget {
-  const _SampleThumb({
+class SampleThumb extends StatelessWidget {
+  const SampleThumb({
     required this.sample,
     required this.size,
     required this.onTap,
     this.showLabel = false,
+    super.key,
   });
 
   final ToolboxSample sample;
@@ -275,16 +330,16 @@ class _SampleThumb extends StatelessWidget {
     // 横图按 cover 裁成方形时，解码宽度需大于显示宽度才不发虚。
     final decodeWidth = (size * MediaQuery.devicePixelRatioOf(context) * 1.5)
         .round();
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return AppPressable(
       onTap: onTap,
+      semanticLabel: sample.label,
       child: SizedBox(
         width: size,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.br8,
               child: Image.asset(
                 sample.asset,
                 width: size,
@@ -295,12 +350,14 @@ class _SampleThumb extends StatelessWidget {
               ),
             ),
             if (showLabel) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpace.s4),
               Text(
                 sample.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: ArtText.caption(size: 12, color: ArtColors.ink2),
+                style: AppText.caption12.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ],
@@ -320,8 +377,8 @@ class _ProcessingHint extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const AppLoadingIndicator(size: 40),
-          const SizedBox(height: 10),
-          Text('正在处理图片…', style: ArtText.caption(size: 13)),
+          const SizedBox(height: AppSpace.s8),
+          Text('正在处理图片…', style: AppText.body13),
         ],
       ),
     );
@@ -334,10 +391,13 @@ class _LoadingChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s12,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.ink.withValues(alpha: 0.7),
+        borderRadius: AppRadius.br8,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -347,11 +407,14 @@ class _LoadingChip extends StatelessWidget {
             height: 14,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.white,
+              color: AppColors.onBrand,
             ),
           ),
-          const SizedBox(width: 8),
-          Text('正在载入新图片…', style: ArtText.caption(color: Colors.white)),
+          const SizedBox(width: AppSpace.s8),
+          Text(
+            '正在载入新图片…',
+            style: AppText.caption12.copyWith(color: AppColors.onBrand),
+          ),
         ],
       ),
     );
@@ -360,73 +423,24 @@ class _LoadingChip extends StatelessWidget {
 
 /// 示例画作选择弹窗；返回选中的示例，取消返回 null。
 Future<ToolboxSample?> showToolboxSamplePicker(BuildContext context) {
-  return showScaledDialog<ToolboxSample>(
+  return showAppDialog<ToolboxSample>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.3),
-    builder: (dialogContext) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(24),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 560),
-          padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '选择示例画作',
-                      style: TextStyle(
-                        fontSize: 17,
-                        color: ArtColors.ink,
-                        fontWeight: AppFont.w600,
-                        fontFamily: 'PingFang SC',
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => Navigator.of(dialogContext).pop(),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 20,
-                        color: ArtColors.ink3,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Wrap(
-                    spacing: 14,
-                    runSpacing: 14,
-                    children: [
-                      for (final sample in toolboxSamples)
-                        _SampleThumb(
-                          sample: sample,
-                          size: 112,
-                          showLabel: true,
-                          onTap: () => Navigator.of(dialogContext).pop(sample),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
+    builder: (dialogContext) => AppDialog(
+      title: '选择示例画作',
+      width: AppSize.dialogWide,
+      child: Wrap(
+        spacing: AppSpace.s12,
+        runSpacing: AppSpace.s12,
+        children: [
+          for (final sample in toolboxSamples)
+            SampleThumb(
+              sample: sample,
+              size: 112,
+              showLabel: true,
+              onTap: () => Navigator.of(dialogContext).pop(sample),
+            ),
+        ],
+      ),
+    ),
   );
 }
