@@ -8,7 +8,7 @@ import 'package:web/web.dart' as web;
 /// 多个 [AppPdfView] 同时存活时也优先全屏最近一个。
 web.HTMLIFrameElement? _activeAppPdfIframe;
 
-/// 乐理 PDF 预览区背景（与 Native pdfrx、iframe 背景一致）。
+/// PDF 预览区背景（与 Native pdfrx、iframe 背景一致）。
 const Color kAppPdfBackgroundColor = Color(0xFFFAFAFB);
 
 /// Web 端 PDF 显示：用 iframe 直接交给浏览器原生 PDF Viewer 渲染。

@@ -274,57 +274,58 @@ class _ConsultationBanner extends StatelessWidget {
       width: double.infinity,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(ui(12)),
-        child: Image.asset(
-          'assets/images/home/consultation_banner.png',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stack) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF5F6FA),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/demo/scene/studio-wall.jpg',
+              fit: BoxFit.cover,
+              alignment: const Alignment(0.4, -0.2),
+              errorBuilder: (context, error, stack) =>
+                  const ColoredBox(color: Color(0xFF715EFE)),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                  colors: [
+                    const Color(0xFF2A1F6B).withValues(alpha: 0.92),
+                    const Color(0xFF715EFE).withValues(alpha: 0.55),
+                    const Color(0xFF715EFE).withValues(alpha: 0.0),
+                  ],
+                  stops: const [0, 0.45, 0.85],
                 ),
               ),
+            ),
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: ui(28)),
-              child: Row(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '资讯中心',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: ui(22),
-                            fontFamily: 'PingFang SC',
-                            fontWeight: AppFont.w600,
-                          ),
-                        ),
-                        SizedBox(height: ui(8)),
-                        Text(
-                          '艺考热点 · 招生简章一手掌握',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.85),
-                            fontSize: ui(13),
-                            fontFamily: 'PingFang SC',
-                          ),
-                        ),
-                      ],
+                  Text(
+                    '资讯中心',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: ui(22),
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w600,
                     ),
                   ),
-                  Icon(
-                    Icons.campaign_rounded,
-                    color: Colors.white.withValues(alpha: 0.9),
-                    size: ui(56),
+                  SizedBox(height: ui(8)),
+                  Text(
+                    '联考政策 · 校考简章 · 备考经验一手掌握',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: ui(13),
+                      fontFamily: 'PingFang SC',
+                    ),
                   ),
                 ],
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );

@@ -206,13 +206,13 @@ class _InfoRows extends StatelessWidget {
         ),
         const _RowDivider(),
         _InfoRow(
-          title: '主项',
+          title: '专业方向',
           value: user['primary']?.toString() ?? '',
           onTap: () => _editPrimary(context, controller, user),
         ),
         const _RowDivider(),
         _InfoRow(
-          title: '副项',
+          title: '擅长科目',
           value: user['secondary']?.toString() ?? '',
           onTap: () => _editSecondary(context, controller, user),
         ),
@@ -588,8 +588,8 @@ Future<void> _editPrimary(
 ) async {
   final value = await showTextInputDialog(
     context: context,
-    title: '修改主项',
-    hintText: '请输入主项',
+    title: '修改专业方向',
+    hintText: '请输入专业方向，如美术与设计类',
     initialValue: user['primary']?.toString() ?? '',
     maxLength: 30,
   );
@@ -610,8 +610,8 @@ Future<void> _editSecondary(
 ) async {
   final value = await showTextInputDialog(
     context: context,
-    title: '修改副项',
-    hintText: '请输入副项',
+    title: '修改擅长科目',
+    hintText: '请输入擅长科目，如素描、色彩、速写',
     initialValue: user['secondary']?.toString() ?? '',
     maxLength: 30,
   );

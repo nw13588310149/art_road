@@ -13,6 +13,7 @@ import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../../core/widgets/app_wheel_picker_sheet.dart';
 import '../../data/shell_repository.dart';
+import '../../../gallery/data/gallery_repository.dart';
 import '../../state/shell_controller.dart';
 import '../../state/shell_state.dart';
 import '../shell_layout.dart';
@@ -800,16 +801,19 @@ class _NoticeEmpty extends StatelessWidget {
 //   3) 点击列表项 → 按 type 路由到对应详情页：
 //        type 6         → /video-tutorial         {openVideoId}
 //        type 9         → /consultationDetail     {id}
-//        type 'note'    → /noteDetail             {id, title, type, param1, sId}
+//        type 'gallery' → /gallery                {workId}
+//        type 'note'    → /my-notes
 //
 // 视觉上沿用顶部 v2 设计（白底、12px 圆角、40px 高）；下拉浮层使用 Overlay
 // 居中弹出在输入框下方 8px，右下方阴影 + 1px 浅边框，与个人菜单风格一致。
 
-enum _SearchTab { text, video, note }
+enum _SearchTab { gallery, text, video, note }
 
 extension _SearchTabExt on _SearchTab {
   String get label {
     switch (this) {
+      case _SearchTab.gallery:
+        return '范画';
       case _SearchTab.text:
         return '资讯';
       case _SearchTab.video:
@@ -865,9 +869,10 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
   String _pendingKeyword = '';
 
   String _query = '';
-  _SearchTab _activeTab = _SearchTab.text;
+  _SearchTab _activeTab = _SearchTab.gallery;
   bool _loading = false;
   Map<_SearchTab, List<_SearchItem>> _results = const {
+    _SearchTab.gallery: <_SearchItem>[],
     _SearchTab.text: <_SearchItem>[],
     _SearchTab.video: <_SearchItem>[],
     _SearchTab.note: <_SearchItem>[],
@@ -922,7 +927,8 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
       setState(() {
         _loading = false;
         _results = const {
-          _SearchTab.text: <_SearchItem>[],
+          _SearchTab.gallery: <_SearchItem>[],
+    _SearchTab.text: <_SearchItem>[],
           _SearchTab.video: <_SearchItem>[],
                 _SearchTab.note: <_SearchItem>[],
         };
@@ -951,6 +957,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         repo.searchTextbookList(keyword: keyword, province: province),
         repo.searchVideoList(keyword: keyword, province: province),
         repo.searchNoteList(keyword: keyword, province: province),
+        ref.read(galleryRepositoryProvider).getWorks(keyword: keyword, size: 30),
       ]);
       // 过期请求兜底：在 await 期间用户可能继续打字，老 keyword 的结果应被丢弃。
       if (!mounted || _pendingKeyword != keyword) {
@@ -959,6 +966,10 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
       setState(() {
         _loading = false;
         _results = {
+          _SearchTab.gallery: _parseList(
+            responses[3].data,
+            forcedType: 'gallery',
+          ),
           _SearchTab.text: _parseList(
             responses[0].data,
             forcedType: null, // 资讯接口自带 type 字段，按原值分发。
@@ -972,7 +983,8 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
       setState(() {
         _loading = false;
         _results = const {
-          _SearchTab.text: <_SearchItem>[],
+          _SearchTab.gallery: <_SearchItem>[],
+    _SearchTab.text: <_SearchItem>[],
           _SearchTab.video: <_SearchItem>[],
                 _SearchTab.note: <_SearchItem>[],
         };
@@ -981,6 +993,9 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
   }
 
   List<_SearchItem> _parseList(dynamic raw, {dynamic forcedType}) {
+    if (raw is Map && raw['records'] is List) {
+      raw = raw['records'];
+    }
     if (raw is! List) return const <_SearchItem>[];
     final items = <_SearchItem>[];
     for (final entry in raw) {
@@ -1030,17 +1045,15 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
           return;
       }
     }
-    if (type == 'note') {
+    if (type == 'gallery') {
       navigator.pushNamed(
-        RoutePaths.noteDetail,
-        arguments: <String, dynamic>{
-          'id': item.categoryId ?? '',
-          'title': item.title,
-          'type': item.paperType,
-          'param1': item.param1 ?? '',
-          'sId': item.id,
-        },
+        RoutePaths.gallery,
+        arguments: <String, dynamic>{'workId': item.id},
       );
+      return;
+    }
+    if (type == 'note') {
+      navigator.pushNamed(RoutePaths.myNotes);
       return;
     }
   }

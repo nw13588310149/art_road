@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+/// 云盘文件类型（接口 `param1`）。
+///
+/// [score] 承载图片资料：只有图片时是「图片」，带讲解音频（`param2`）时是
+/// 「图文讲解」（范画步骤图 + 老师讲解）。
 enum CloudFileType {
   audio(1),
   score(2),
@@ -24,7 +28,7 @@ enum CloudFileType {
   String get label {
     return switch (this) {
       CloudFileType.audio => '音频',
-      CloudFileType.score => '谱例',
+      CloudFileType.score => '图文讲解',
       CloudFileType.courseware => '课件',
     };
   }
@@ -48,7 +52,7 @@ enum CloudDriveSortType {
 
 enum CloudUploadKind {
   image('图片'),
-  score('谱例'),
+  score('图文讲解'),
   courseware('课件');
 
   const CloudUploadKind(this.label);
@@ -60,9 +64,9 @@ enum CloudUploadKind {
     CloudUploadKind.image =>
       '*支持 jpg / png / gif / webp 等格式，15M 以内',
     CloudUploadKind.score =>
-      '*音频支持 mp3 / wav / m4a 等，图片 15M 以内',
+      '*讲解音频支持 mp3 / wav / m4a，图片 15M 以内',
     CloudUploadKind.courseware =>
-      '*支持 PDF / Word / 图片 / HTML 等格式',
+      '*支持 PDF / Word / 图片 / 视频等格式',
   };
 }
 
@@ -260,16 +264,17 @@ class CloudDriveState {
   /// 当前正在预览的文件；为 `null` 时显示文件列表，否则显示预览页。
   final CloudFileItem? previewingFile;
 
-  /// 谱例预览页的播放/进度状态（由 controller 内部 `media_kit` 播放器驱动）。
+  /// 图文讲解预览页的讲解音频播放 / 进度状态（由 controller 内部 `media_kit`
+  /// 播放器驱动）。
   final bool previewIsPlaying;
   final Duration previewPosition;
   final Duration previewDuration;
   final double previewSpeed;
 
-  /// 谱例 / 图片类型预览中，右侧缩略图栏激活的页码（0-based）。
+  /// 图文讲解 / 图片类型预览中，当前展示的图片页码（0-based）。
   final int previewActiveImageIndex;
 
-  /// 谱例预览页右下角的"已收藏"按钮状态（仅本地维持）。
+  /// 图文讲解预览页右下角的"已收藏"按钮状态（仅本地维持）。
   final bool previewFavorite;
 
   /// 0–100，用于进度条（已用 / 总量）。

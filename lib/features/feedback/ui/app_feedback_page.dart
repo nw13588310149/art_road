@@ -172,7 +172,7 @@ class _AppFeedbackPageState extends ConsumerState<AppFeedbackPage> {
                           SizedBox(height: ui(8)),
                           _BodyField(
                             controller: _bodyCtrl,
-                            hint: '请描述你的意见或建议（如功能改进、体验优化等）',
+                            hint: '请描述你的意见或建议，如想要的范画资源、作品点评或画室工具的使用体验等',
                           ),
                         ],
                       ),
@@ -304,7 +304,7 @@ class _FeedbackHeader extends StatelessWidget {
                 ),
                 SizedBox(height: ui(4)),
                 Text(
-                  '可将需要的资料或建议反馈，工作人员会尽快处理',
+                  '想要的范画资料、功能建议都可以告诉我们，工作人员会尽快处理',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: ui(12),

@@ -15,12 +15,28 @@ class HelpGuideItem {
     required this.categoryId,
     required this.title,
     required this.subtitle,
+    required this.summary,
+    required this.steps,
+    this.tip = '',
+    this.route,
   });
 
   final String id;
   final String categoryId;
   final String title;
   final String subtitle;
+
+  /// 详情弹窗顶部的一句话说明。
+  final String summary;
+
+  /// 操作步骤，按顺序编号展示。
+  final List<String> steps;
+
+  /// 补充提示；空串时不展示。
+  final String tip;
+
+  /// 「去看看」跳转的页面路由；为 null 时只展示说明。
+  final String? route;
 }
 
 @immutable

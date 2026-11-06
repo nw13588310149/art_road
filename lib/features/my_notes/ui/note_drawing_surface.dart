@@ -566,8 +566,8 @@ class NotePaperPainter extends CustomPainter {
       case NotePaperType.notebook:
         _drawNotebook(canvas, size, paint);
         break;
-      case NotePaperType.staff:
-        _drawStaff(canvas, size, paint);
+      case NotePaperType.grid:
+        _drawGrid(canvas, size);
         break;
     }
   }
@@ -587,14 +587,30 @@ class NotePaperPainter extends CustomPainter {
     }
   }
 
-  void _drawStaff(Canvas canvas, Size size, Paint paint) {
-    double startY = 36;
-    while (startY < size.height - 20) {
-      for (var i = 0; i < 5; i++) {
-        final y = startY + i * 9;
-        canvas.drawLine(Offset(20, y), Offset(size.width - 20, y), paint);
-      }
-      startY += 66;
+  /// 方格纸：细线 24px 一格，每 4 格一条粗线，便于对照比例与透视。
+  void _drawGrid(Canvas canvas, Size size) {
+    const cell = 24.0;
+    final thin = Paint()
+      ..color = const Color(0xFFE9EDF7)
+      ..strokeWidth = 1;
+    final bold = Paint()
+      ..color = const Color(0xFFD6DCE9)
+      ..strokeWidth = 1.2;
+    var index = 0;
+    for (double x = cell; x < size.width; x += cell, index++) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        (index + 1) % 4 == 0 ? bold : thin,
+      );
+    }
+    index = 0;
+    for (double y = cell; y < size.height; y += cell, index++) {
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        (index + 1) % 4 == 0 ? bold : thin,
+      );
     }
   }
 

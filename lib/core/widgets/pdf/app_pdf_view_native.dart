@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-/// 乐理 PDF 预览区背景（与 Web iframe、pdfrx backgroundColor 一致）。
+/// PDF 预览区背景（与 Web iframe、pdfrx backgroundColor 一致）。
 const Color kAppPdfBackgroundColor = Color(0xFFFAFAFB);
 
 class AppPdfView extends StatelessWidget {

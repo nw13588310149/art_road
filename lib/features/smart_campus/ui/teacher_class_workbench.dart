@@ -1241,7 +1241,7 @@ Future<void> _showPublishNoticeDialog(
                   fontWeight: AppFont.w400,
                 ),
                 decoration: InputDecoration(
-                  hintText: '示例：本周五合唱排练通知',
+                  hintText: '示例：本周六色彩写生通知',
                   hintStyle: TextStyle(
                     fontSize: ui(14),
                     color: _kTextHintLight,
@@ -1293,7 +1293,7 @@ Future<void> _showPublishNoticeDialog(
                   height: 20 / 14,
                 ),
                 decoration: InputDecoration(
-                  hintText: '示例：本周五16:30合唱排练，地点音乐厅A201。',
+                  hintText: '示例：本周六14:00色彩写生集合，地点城东校区色彩教室B。',
                   hintStyle: TextStyle(
                     fontSize: ui(14),
                     color: _kTextHintLight,
@@ -5130,11 +5130,11 @@ class _StudentDetailPanel extends ConsumerStatefulWidget {
 class _StudentDetailPanelState extends ConsumerState<_StudentDetailPanel> {
   // 班主任标签集合；来自 API tags 字段（逗号分隔），合并已知预设。
   static const List<String> _kPresetTags = [
-    '合唱团',
-    '声乐部',
-    '钢琴组',
-    '艺术节',
-    '校宣部',
+    '素描课代表',
+    '色彩课代表',
+    '速写之星',
+    '写生小组',
+    '画室宣传',
     '社团骨干',
   ];
 

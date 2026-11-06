@@ -85,9 +85,9 @@ class ClassNoticeController extends StateNotifier<List<ClassNotice>> {
 List<ClassNotice> _seedNotices() => const [
   ClassNotice(
     id: 'seed-1',
-    text: '本周五16:30合唱排练，地点音乐厅A201，穿统一排练服。',
+    text: '本周六14:00色彩写生集合，地点城东校区色彩教室B，请自带水粉工具。',
     date: '04-02',
     highlighted: true,
   ),
-  ClassNotice(id: 'seed-2', text: '乐理单元测验改至周四第1节，座位表已发班群。', date: '04-02'),
+  ClassNotice(id: 'seed-2', text: '美术常识单元测验改至周四第1节，座位表已发班群。', date: '04-02'),
 ];

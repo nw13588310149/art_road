@@ -312,7 +312,7 @@ class _Submission {
       action = '查看';
     } else if (statusInt == 1 || (statusInt == 0 && hasSubmitTime)) {
       state = _SubmissionState.pending;
-      action = '试听/评分';
+      action = '查看/评分';
     } else {
       state = _SubmissionState.missing;
       action = '催交/详情';
@@ -2304,7 +2304,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
   List<({int id, String name})> _subjects = [];
   int? _selectedSubjectId;
   bool _loadingSubjects = false;
-  String _medium = '音频';
+  String _medium = '图片';
   DateTime? _deadlineDate;
   final Set<int> _selectedClassIndices = {};
   List<Map> _classList = [];

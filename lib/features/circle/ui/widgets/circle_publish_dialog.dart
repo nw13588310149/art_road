@@ -461,7 +461,7 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
           const SizedBox(height: 16),
           _TextArea(
             controller: _textCtrl,
-            hint: '说点什么...（必填）',
+            hint: '分享作品、写生日记或模考心得...（必填）',
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 16),

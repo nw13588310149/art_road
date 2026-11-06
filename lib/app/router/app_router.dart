@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../features/ai_chat/ui/ai_chat_page.dart';
+import '../../features/art_toolbox/ui/art_toolbox_page.dart';
+import '../../features/artworks/ui/artworks_page.dart';
 import '../../features/auth/ui/forget_password_page.dart';
 import '../../features/auth/ui/login_page.dart';
 import '../../features/auth/ui/register_page.dart';
@@ -26,7 +28,9 @@ import '../../features/school/ui/school_video_tutorial_page.dart';
 import '../../features/school_website/ui/school_website_page.dart';
 import '../../features/shell/ui/shell_scaffold.dart';
 import '../../features/feedback/ui/app_feedback_page.dart';
+import '../../features/gallery/ui/gallery_page.dart';
 import '../../features/smart_campus/ui/smart_campus_page.dart';
+import '../../features/study_center/ui/study_center_page.dart';
 import '../../features/video_tutorial/ui/video_tutorial_page.dart';
 import 'route_paths.dart';
 
@@ -82,6 +86,14 @@ class AppRouter {
         return const HomePage();
       case RoutePaths.personalAi:
         return const AiChatPage();
+      case RoutePaths.studyCenter:
+        return const StudyCenterPage();
+      case RoutePaths.artworks:
+        return const ArtworksPage();
+      case RoutePaths.gallery:
+        return const GalleryPage();
+      case RoutePaths.artToolbox:
+        return const ArtToolboxPage();
       case RoutePaths.school:
         return const SchoolCoursewareV2Page();
       case RoutePaths.circle:
@@ -158,10 +170,6 @@ class AppRouter {
 
   static String _legacyPageTitle(String routeName) {
     const legacyRoutes = <String, String>{
-      RoutePaths.studyCenter: '学情中心',
-      RoutePaths.artworks: '作品档案',
-      RoutePaths.gallery: '范画库',
-      RoutePaths.artToolbox: '画室工具箱',
       RoutePaths.smartCampusSignRecords: '签到记录',
       RoutePaths.smartCampusSignApprovals: '签到审批',
       RoutePaths.noteBg: '笔记背景',

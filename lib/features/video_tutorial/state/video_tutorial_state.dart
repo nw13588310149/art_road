@@ -51,6 +51,8 @@ class VideoListItem {
     required this.playCount,
     required this.vip,
     this.isFavorite = false,
+    this.teacherName = '',
+    this.teacherAvatar = '',
   });
 
   final String id;
@@ -61,6 +63,10 @@ class VideoListItem {
   final int vip;
   final bool isFavorite;
 
+  /// 授课老师；为空时卡片按视频 id 稳定兜底一位画室老师。
+  final String teacherName;
+  final String teacherAvatar;
+
   VideoListItem copyWith({bool? isFavorite}) {
     return VideoListItem(
       id: id,
@@ -70,6 +76,8 @@ class VideoListItem {
       playCount: playCount,
       vip: vip,
       isFavorite: isFavorite ?? this.isFavorite,
+      teacherName: teacherName,
+      teacherAvatar: teacherAvatar,
     );
   }
 
@@ -81,6 +89,7 @@ class VideoListItem {
       'duration': duration,
       'playCount': playCount,
       'vip': vip,
+      if (teacherName.isNotEmpty) 'teacherName': teacherName,
     };
   }
 }
@@ -107,6 +116,8 @@ class VideoDetail {
   final String description;
   final int vip;
   final bool isFavorite;
+
+  /// 步骤图 / 范画（接口 `param1`），在详情「步骤图」页签展示。
   final List<String> scoreImages;
   final List<VideoListItem> seriesVideoList;
   final String duration;

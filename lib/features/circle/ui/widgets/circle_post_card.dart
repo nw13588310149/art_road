@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/widgets/art_widgets.dart';
 import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_state.dart';
 import 'circle_action_buttons.dart';
@@ -94,7 +95,11 @@ class _CardAuthor extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _Avatar(url: post.author.avatarUrl, size: ui(40)),
+        ArtAvatar(
+          name: post.author.name,
+          url: post.author.avatarUrl,
+          size: ui(40),
+        ),
         SizedBox(width: ui(11)),
         Expanded(
           child: Column(
@@ -151,36 +156,6 @@ class _CardAuthor extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.url, required this.size});
-
-  final String url;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipOval(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: Image.network(
-          url,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stack) => Container(
-            color: const Color(0xFFE3DFFF),
-            alignment: Alignment.center,
-            child: Icon(
-              Icons.person,
-              color: const Color(0xFF715EFE),
-              size: size * 0.55,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -386,7 +361,7 @@ class _VideoCover extends StatelessWidget {
   }
 }
 
-/// 音频帖封面：渐变背景 + 大音符 + 中央播放按钮 + 左下"音频" chip。
+/// 音频帖封面：渐变背景 + 声波图标 + 中央播放按钮 + 左下"音频" chip。
 class _AudioCover extends StatelessWidget {
   const _AudioCover({required this.post});
 

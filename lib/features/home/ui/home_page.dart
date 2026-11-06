@@ -15,6 +15,7 @@ import '../../../core/widgets/seamless_banner_carousel.dart';
 import '../../../core/widgets/smooth_circle_network_avatar.dart';
 import '../state/home_dashboard_controller.dart';
 import '../state/home_dashboard_state.dart';
+import 'widgets/home_study_snapshot.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../smart_campus/state/smart_campus_controller.dart';
@@ -131,7 +132,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // ── 精确计算左右面板尺寸，使右侧底部与器乐卡底部齐平 ──────────
+        // ── 精确计算左右面板尺寸，使右侧底部与三科入口卡底部齐平 ──────
         const rightW = 307.0;
         const mainGap = 16.0;
         const actionH = 313.0;
@@ -154,7 +155,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 左侧：Banner + 功能矩阵+声乐器乐
+                          // 左侧：Banner + 功能矩阵 + 三科入口
                           SizedBox(
                             width: leftW,
                             child: Column(
@@ -169,7 +170,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                                   ),
                                 ),
                                 const SizedBox(height: mainGap),
-                                // 功能矩阵 + 声乐/器乐 横排，固定高度 313
+                                // 功能矩阵 + 三科入口 横排，固定高度 313
                                 SizedBox(
                                   height: actionH,
                                   child: Row(
@@ -190,7 +191,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                             ),
                           ),
                           const SizedBox(width: mainGap),
-                          // 右侧：高度精确匹配左侧，使底部与器乐卡底部齐平
+                          // 右侧：高度精确匹配左侧，使底部与三科入口卡底部齐平
                           SizedBox(
                             width: rightW,
                             height: rightH,
@@ -198,6 +199,8 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 14),
+                      const HomeStudySnapshotCard(),
                       const SizedBox(height: 14),
                       _buildLatestHeader(),
                       const SizedBox(height: 10),

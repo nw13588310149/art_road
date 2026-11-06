@@ -8,6 +8,7 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/anchored_popup_menu.dart';
+import '../../../core/widgets/art_widgets.dart';
 import '../../../core/widgets/class_share_drawer.dart';
 import '../../../core/widgets/course_empty_placeholder.dart';
 import '../../../core/widgets/scaled_dialog.dart';
@@ -19,12 +20,12 @@ import '../state/my_collection_state.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 我的收藏页：
-/// - 顶部 6 个 Tab（声乐 / 器乐 / 听写 / 视唱 / 乐理 / 视频），样式与设计稿
-///   分段控件一致：#F5F6FA 胶囊容器 + 选中态白色卡片+阴影。
+/// - 顶部 4 个 Tab（全部 / 范画 / 视频 / 资讯），样式与设计稿分段控件一致：
+///   #F5F6FA 胶囊容器 + 选中态白色卡片+阴影。
 /// - 主体区域根据 [activeType] 渲染三种网格之一：
-///     * 声乐 / 器乐：仿首页 `_VoiceSongCard`（173×182、#F4F4FF 卡片）
-///     * 听写 / 视唱 / 乐理：仿学习目录 `_LessonCard`（220×100、左侧 60×80 紫色封面）
-///     * 视频：仿视频中心 `_VideoGridCard`（220×180，封面+缩略图+作者）
+///     * 范画：作品卡（173×182、#F4F4FF 卡片，大图封面）
+///     * 全部 / 资讯：横向卡片（220×100、左侧 60×80 封面 + 类型标签）
+///     * 视频：仿视频中心 `_VideoGridCard`（220×180，封面+缩略图+授课老师）
 class MyCollectionPage extends ConsumerWidget {
   const MyCollectionPage({super.key});
 
@@ -48,7 +49,7 @@ class MyCollectionPage extends ConsumerWidget {
             loading: state.loading && state.items.isEmpty,
             child: Stack(
               children: [
-                // 与录音/云盘一致：空状态按整个页面容器（含顶部 Tab）居中。
+                // 与笔记 / 云盘一致：空状态按整个页面容器（含顶部 Tab）居中。
                 if (showPageEmpty)
                   const Positioned.fill(
                     child: CourseEmptyPlaceholder(
@@ -93,38 +94,31 @@ class MyCollectionPage extends ConsumerWidget {
   }
 
   void _openItem(BuildContext context, CollectionEntry item) {
-    final targetId = item.targetId > 0 ? item.targetId : item.id;
-    if (targetId <= 0) {
+    // 目标 id 优先取 target 快照里的 id（与详情接口一致），再退回收藏记录的 targetId。
+    final rawId = item.rawPayload['id']?.toString().trim() ?? '';
+    final targetId = rawId.isNotEmpty ? rawId : item.targetId;
+    if (targetId.isEmpty) {
       AppToast.showError(context, '收藏内容已失效');
       return;
     }
     switch (item.type) {
-      case 6: // 视频
-        // 视频详情接口（videoTutorialDetail）期望的 id 与 videoTutorialList
-        // 返回的 id 一致——它就藏在收藏接口给到的 target 快照（rawPayload）
-        // 里。优先从 rawPayload['id'] 直接取字符串，避免 CollectionEntry.targetId
-        // 走 _toInt 时把非数字 id 折成 0；为空时再退回 targetId。
-        final rawVideoId = item.rawPayload['id']?.toString().trim() ?? '';
-        final openVideoId = rawVideoId.isNotEmpty ? rawVideoId : '$targetId';
+      case CollectionType.video:
         Navigator.pushNamed(
           context,
           RoutePaths.videoTutorial,
-          arguments: CollectionReturnNavigator.wrapVideoArgs(openVideoId),
+          arguments: CollectionReturnNavigator.wrapVideoArgs(targetId),
         );
-      case 9: // 资讯
+      case CollectionType.news:
         Navigator.pushNamed(
           context,
           RoutePaths.consultationDetail,
-          arguments: <String, dynamic>{'id': '$targetId'},
+          arguments: <String, dynamic>{'id': targetId},
         );
-      case 11: // 范画
-        final rawWorkId = item.rawPayload['id']?.toString().trim() ?? '';
+      case CollectionType.artwork:
         Navigator.pushNamed(
           context,
           RoutePaths.gallery,
-          arguments: <String, dynamic>{
-            'workId': rawWorkId.isNotEmpty ? rawWorkId : '$targetId',
-          },
+          arguments: <String, dynamic>{'workId': targetId},
         );
       default:
         AppToast.showError(context, '暂不支持的收藏类型');
@@ -145,7 +139,7 @@ class MyCollectionPage extends ConsumerWidget {
       AppToast.show(context, message);
       return;
     }
-    // 复用公共"班级分享"左侧抽屉组件，与课件 / 视频 / 乐理详情等分享 UI 保持一致。
+    // 复用公共"班级分享"左侧抽屉组件，与课件 / 视频 / 资讯详情等分享 UI 保持一致。
     await showClassShareDrawer<void>(
       context: context,
       child: const _CollectionShareDrawer(),
@@ -303,11 +297,11 @@ class _CollectionGrid extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final activeType = state.activeType;
 
-    // 设计稿三种卡片的栅格规格：
-    //   - 声乐/器乐：5 列 / 173×182 / 间距 16,14
-    //   - 听写/视唱/乐理：4 列 / 220×100 / 间距 16
+    // 三种卡片的栅格规格：
+    //   - 范画：5 列 / 173×182 / 间距 16,14
+    //   - 全部 / 资讯：4 列 / 220×100 / 间距 16
     //   - 视频：4 列 / 220×180 / 间距 16
-    if (activeType == 4 || activeType == 5) {
+    if (activeType == CollectionType.artwork) {
       return GridView.builder(
         padding: EdgeInsets.zero,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -320,9 +314,9 @@ class _CollectionGrid extends StatelessWidget {
         itemCount: state.items.length,
         itemBuilder: (context, index) {
           final item = state.items[index];
-          // 声乐 / 器乐：右下角图标点击后弹出 "分享 / 取消收藏" 菜单
+          // 范画：右下角图标点击后弹出 "分享 / 取消收藏" 菜单
           // （样式同 my-notes 左侧分类菜单）。
-          return _SongCollectionCard(
+          return _ArtworkCollectionCard(
             item: item,
             onTap: () => onOpenItem(item),
             onShare: () => onShare(item),
@@ -332,7 +326,7 @@ class _CollectionGrid extends StatelessWidget {
       );
     }
 
-    if (activeType == 6) {
+    if (activeType == CollectionType.video) {
       return GridView.builder(
         padding: EdgeInsets.zero,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -356,7 +350,7 @@ class _CollectionGrid extends StatelessWidget {
       );
     }
 
-    // 听写 / 视唱 / 乐理
+    // 全部 / 资讯
     return GridView.builder(
       padding: EdgeInsets.zero,
       physics: const AlwaysScrollableScrollPhysics(),
@@ -369,8 +363,9 @@ class _CollectionGrid extends StatelessWidget {
       itemCount: state.items.length,
       itemBuilder: (context, index) {
         final item = state.items[index];
-        return _LessonCollectionCard(
+        return _CompactCollectionCard(
           item: item,
+          showTypeTag: activeType == CollectionType.all,
           onOpen: () => onOpenItem(item),
           onMenu: () => _showItemActionSheet(context, item, onRemove, onShare),
         );
@@ -426,11 +421,11 @@ Future<void> _showItemActionSheet(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 声乐 / 器乐 卡片：173×182，对齐首页 _VoiceSongCard 设计
+// 范画卡片：173×182，大图封面 + 标题 + 科目 / 作者
 // ──────────────────────────────────────────────────────────────────────────────
 
-class _SongCollectionCard extends StatefulWidget {
-  const _SongCollectionCard({
+class _ArtworkCollectionCard extends StatefulWidget {
+  const _ArtworkCollectionCard({
     required this.item,
     required this.onTap,
     required this.onShare,
@@ -443,15 +438,15 @@ class _SongCollectionCard extends StatefulWidget {
   final VoidCallback onRemove;
 
   @override
-  State<_SongCollectionCard> createState() => _SongCollectionCardState();
+  State<_ArtworkCollectionCard> createState() => _ArtworkCollectionCardState();
 }
 
-class _SongCollectionCardState extends State<_SongCollectionCard> {
+class _ArtworkCollectionCardState extends State<_ArtworkCollectionCard> {
   // 用于把"分享 / 取消收藏"菜单锚定在右下角图标上。
   final GlobalKey _menuTriggerKey = GlobalKey();
 
   Future<void> _openActionMenu() async {
-    final action = await _showSongCollectionMenu(
+    final action = await _showArtworkCollectionMenu(
       context: context,
       triggerKey: _menuTriggerKey,
     );
@@ -459,9 +454,9 @@ class _SongCollectionCardState extends State<_SongCollectionCard> {
       return;
     }
     switch (action) {
-      case _SongMenuAction.share:
+      case _ArtworkMenuAction.share:
         widget.onShare();
-      case _SongMenuAction.remove:
+      case _ArtworkMenuAction.remove:
         widget.onRemove();
     }
   }
@@ -487,7 +482,7 @@ class _SongCollectionCardState extends State<_SongCollectionCard> {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(ui(8)),
-                child: _SongCover(coverUrl: item.coverUrl),
+                child: _ArtworkCover(coverUrl: item.coverUrl),
               ),
             ),
             SizedBox(height: ui(10)),
@@ -527,7 +522,7 @@ class _SongCollectionCardState extends State<_SongCollectionCard> {
                   ),
                 ),
                 SizedBox(width: ui(8)),
-                _SongActionButton(key: _menuTriggerKey, onTap: _openActionMenu),
+                _ArtworkActionButton(key: _menuTriggerKey, onTap: _openActionMenu),
               ],
             ),
           ],
@@ -537,8 +532,8 @@ class _SongCollectionCardState extends State<_SongCollectionCard> {
   }
 }
 
-class _SongCover extends StatelessWidget {
-  const _SongCover({required this.coverUrl});
+class _ArtworkCover extends StatelessWidget {
+  const _ArtworkCover({required this.coverUrl});
 
   final String coverUrl;
 
@@ -558,10 +553,15 @@ class _SongCover extends StatelessWidget {
   }
 
   Widget _fallback() {
-    return Image.asset(
-      AppAssets.homeFmCover,
-      fit: BoxFit.cover,
+    return Container(
       width: double.infinity,
+      color: const Color(0xFFEDEDF2),
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.palette_outlined,
+        color: Color(0xFFB6B5BB),
+        size: 28,
+      ),
     );
   }
 }
@@ -569,13 +569,13 @@ class _SongCover extends StatelessWidget {
 /// 卡片右下角 20×20 操作图标。设计稿要求此处展示
 /// `assets/images/note/1.png`，点击后弹出"分享 / 取消收藏"菜单。
 ///
-/// 图标尺寸 20×20 与「录音」/「我的云盘」**文件夹卡片**右上角的「⋯」
+/// 图标尺寸 20×20 与「我的云盘」**文件夹卡片**右上角的「⋯」
 /// （[AppAssets.cloudActionMore]，统一 ui(20)×ui(20)）保持一致，避免
 /// 不同列表里"三个点"忽大忽小。资源仍用 `note/1.png` —— 收藏卡片是
 /// 浅色填充小圆图标的另一种视觉，与云盘文件夹的纯线性 ⋯ 是不同图，
 /// 这次只统一**尺寸**而不换图。
-class _SongActionButton extends StatelessWidget {
-  const _SongActionButton({super.key, required this.onTap});
+class _ArtworkActionButton extends StatelessWidget {
+  const _ArtworkActionButton({super.key, required this.onTap});
 
   final VoidCallback onTap;
 
@@ -600,17 +600,21 @@ class _SongActionButton extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 听写 / 视唱 / 乐理 卡片：220×100，对齐学习目录 _LessonCard 设计
+// 全部 / 资讯 卡片：220×100，左侧 60×80 封面 + 标题 / 副标题 + 「去查看」
 // ──────────────────────────────────────────────────────────────────────────────
 
-class _LessonCollectionCard extends StatelessWidget {
-  const _LessonCollectionCard({
+class _CompactCollectionCard extends StatelessWidget {
+  const _CompactCollectionCard({
     required this.item,
+    required this.showTypeTag,
     required this.onOpen,
     required this.onMenu,
   });
 
   final CollectionEntry item;
+
+  /// 「全部」页签下在封面左上角标出类型（范画 / 视频 / 资讯）。
+  final bool showTypeTag;
   final VoidCallback onOpen;
   final VoidCallback onMenu;
 
@@ -631,7 +635,7 @@ class _LessonCollectionCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _LessonArtwork(type: item.type, title: item.title),
+            _CompactCover(item: item, showTypeTag: showTypeTag),
             SizedBox(width: ui(8)),
             Expanded(
               child: SizedBox(
@@ -677,7 +681,7 @@ class _LessonCollectionCard extends StatelessWidget {
                     Positioned(
                       right: 0,
                       bottom: 0,
-                      child: _LessonStudyButton(onTap: onOpen),
+                      child: _CompactOpenButton(onTap: onOpen),
                     ),
                     Positioned(
                       right: 0,
@@ -706,8 +710,8 @@ class _LessonCollectionCard extends StatelessWidget {
   }
 }
 
-class _LessonStudyButton extends StatelessWidget {
-  const _LessonStudyButton({required this.onTap});
+class _CompactOpenButton extends StatelessWidget {
+  const _CompactOpenButton({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -725,7 +729,7 @@ class _LessonStudyButton extends StatelessWidget {
         ),
         alignment: Alignment.center,
         child: Text(
-          '去学习',
+          '去查看',
           style: TextStyle(
             fontSize: ui(11),
             color: Colors.white,
@@ -739,15 +743,44 @@ class _LessonStudyButton extends StatelessWidget {
   }
 }
 
-class _LessonArtwork extends StatelessWidget {
-  const _LessonArtwork({required this.type, required this.title});
+/// 60×80 封面：收藏快照里的封面图；没有封面时用品牌渐变 + 两行类型文字。
+class _CompactCover extends StatelessWidget {
+  const _CompactCover({required this.item, required this.showTypeTag});
 
-  final int type;
-  final String title;
+  final CollectionEntry item;
+  final bool showTypeTag;
 
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
+    final resolved = _resolveRemoteUrl(item.coverUrl);
+    final fallback = DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFE6E0FF), Color(0xFFC9BEFF)],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          switch (item.type) {
+            CollectionType.video => '美术\n视频',
+            CollectionType.news => '美术\n资讯',
+            CollectionType.artwork => '范画\n作品',
+            _ => '收藏\n内容',
+          },
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: ui(12),
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF715EFE),
+            fontFamily: 'Alimama ShuHeiTi',
+            height: 1.2,
+          ),
+        ),
+      ),
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(ui(8)),
@@ -755,49 +788,46 @@ class _LessonArtwork extends StatelessWidget {
         width: ui(60),
         height: ui(80),
         child: Stack(
-          alignment: Alignment.center,
+          fit: StackFit.expand,
           children: [
-            Positioned.fill(
-              child: Image.asset(
-                AppAssets.homeDictationBookCover,
+            if (resolved == null)
+              fallback
+            else
+              CachedNetworkImage(
+                imageUrl: resolved,
                 fit: BoxFit.cover,
+                placeholder: (_, _) => fallback,
+                errorWidget: (_, _, _) => fallback,
               ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: ui(10),
-              child: Text(
-                _coverText(),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: ui(12),
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFFB16AFF),
-                  fontFamily: 'Alimama ShuHeiTi',
-                  height: 1.2,
+            if (showTypeTag)
+              Positioned(
+                left: ui(4),
+                top: ui(4),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ui(4),
+                    vertical: ui(2),
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF715EFE).withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(ui(4)),
+                  ),
+                  child: Text(
+                    CollectionType.labelOf(item.type),
+                    style: TextStyle(
+                      fontSize: ui(9),
+                      color: Colors.white,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w500,
+                      height: 1.2,
+                    ),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
     );
-  }
-
-  /// 与首页 _LessonArtwork 同款两行封面文字：
-  ///   听写 → "听选\n单音"
-  ///   视唱 → "视唱\n训练"
-  ///   乐理 → "乐理\n练习"
-  ///   试题 → "试题\n练习"
-  String _coverText() {
-    return switch (type) {
-      1 => '视唱\n训练',
-      2 => '乐理\n练习',
-      3 => '听选\n单音',
-      10 => '试题\n练习',
-      _ => '收藏\n内容',
-    };
   }
 }
 
@@ -849,12 +879,11 @@ class _VideoCollectionCard extends StatelessWidget {
         const metaUpOffset = 2.0;
 
         final coverUrl = MediaUrl.resolve(item.coverUrl);
-        final publisher = item.authorName.isNotEmpty
-            ? _StaticPublisher(
-                nickname: item.authorName,
-                avatarAsset: 'assets/images/avtor/1.jpg',
-              )
-            : _publisherFor(item);
+        final publisher = videoPublisherFor(
+          item.targetId,
+          name: item.authorName == '美术之路' ? '' : item.authorName,
+          avatarUrl: item.avatarUrl,
+        );
 
         return Material(
           color: const Color(0xFFF5F6FA),
@@ -950,21 +979,10 @@ class _VideoCollectionCard extends StatelessWidget {
                                     alignment: Alignment.centerLeft,
                                     child: Row(
                                       children: [
-                                        ClipOval(
-                                          child: Image.asset(
-                                            publisher.avatarAsset,
-                                            width: 16.0 * s,
-                                            height: 16.0 * s,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, _, _) =>
-                                                Container(
-                                                  width: 16.0 * s,
-                                                  height: 16.0 * s,
-                                                  color: const Color(
-                                                    0xFFE0DEFF,
-                                                  ),
-                                                ),
-                                          ),
+                                        ArtAvatar(
+                                          name: publisher.nickname,
+                                          url: publisher.avatarUrl,
+                                          size: 16.0 * s,
                                         ),
                                         SizedBox(width: 4.0 * s),
                                         Expanded(
@@ -1045,22 +1063,6 @@ class _VideoCollectionCard extends StatelessWidget {
   }
 }
 
-class _StaticPublisher {
-  const _StaticPublisher({required this.nickname, required this.avatarAsset});
-
-  final String nickname;
-  final String avatarAsset;
-}
-
-_StaticPublisher _publisherFor(CollectionEntry item) {
-  final id = item.targetId > 0 ? item.targetId : item.id;
-  final info = videoPublisherFor('$id');
-  return _StaticPublisher(
-    nickname: info.nickname,
-    avatarAsset: info.avatarAsset,
-  );
-}
-
 class _CollectionImage extends StatelessWidget {
   const _CollectionImage({
     required this.url,
@@ -1117,16 +1119,16 @@ String? _resolveRemoteUrl(String? rawUrl) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 声乐 / 器乐 卡片右下角图标的弹出菜单：分享 + 取消收藏
+// 范画卡片右下角图标的弹出菜单：分享 + 取消收藏
 // 视觉与 my_notes_page 左侧分类的省略号菜单一致：
 //   - 142×N 白色面板，圆角 12，浅灰描边 + 双层投影
 //   - 行高 36，左侧 20×20 图标 + 13/20 文字
 //   - "取消收藏" 行使用红色文字 + 删除图标，与"删除"语义统一
 // ──────────────────────────────────────────────────────────────────────────────
 
-enum _SongMenuAction { share, remove }
+enum _ArtworkMenuAction { share, remove }
 
-Future<_SongMenuAction?> _showSongCollectionMenu({
+Future<_ArtworkMenuAction?> _showArtworkCollectionMenu({
   required BuildContext context,
   required GlobalKey triggerKey,
 }) {
@@ -1135,21 +1137,21 @@ Future<_SongMenuAction?> _showSongCollectionMenu({
   // 估算高度：top padding(8) + 36 + 6(divider) + 36 + bottom padding(8) ≈ 94
   final approxMenuHeight = scale.ui(96);
 
-  return showAnchoredPopupMenu<_SongMenuAction>(
+  return showAnchoredPopupMenu<_ArtworkMenuAction>(
     context: context,
     triggerKey: triggerKey,
     menuWidth: menuWidth,
     approxMenuHeight: approxMenuHeight,
-    builder: (dialogContext, _) => _SongMenuPanel(
+    builder: (dialogContext, _) => _ArtworkMenuPanel(
       onSelected: (action) => Navigator.of(dialogContext).pop(action),
     ),
   );
 }
 
-class _SongMenuPanel extends StatelessWidget {
-  const _SongMenuPanel({required this.onSelected});
+class _ArtworkMenuPanel extends StatelessWidget {
+  const _ArtworkMenuPanel({required this.onSelected});
 
-  final ValueChanged<_SongMenuAction> onSelected;
+  final ValueChanged<_ArtworkMenuAction> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1180,10 +1182,10 @@ class _SongMenuPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(height: ui(8)),
-          _SongMenuRow(
+          _ArtworkMenuRow(
             label: '分享',
             icon: AppAssets.coursewareActionShare,
-            onTap: () => onSelected(_SongMenuAction.share),
+            onTap: () => onSelected(_ArtworkMenuAction.share),
           ),
           SizedBox(height: ui(2)),
           Container(
@@ -1192,11 +1194,11 @@ class _SongMenuPanel extends StatelessWidget {
             color: const Color(0xFFF3F4F6),
           ),
           SizedBox(height: ui(3)),
-          _SongMenuRow(
+          _ArtworkMenuRow(
             label: '取消收藏',
             icon: AppAssets.coursewareActionDelete,
             danger: true,
-            onTap: () => onSelected(_SongMenuAction.remove),
+            onTap: () => onSelected(_ArtworkMenuAction.remove),
           ),
           SizedBox(height: ui(8)),
         ],
@@ -1205,8 +1207,8 @@ class _SongMenuPanel extends StatelessWidget {
   }
 }
 
-class _SongMenuRow extends StatelessWidget {
-  const _SongMenuRow({
+class _ArtworkMenuRow extends StatelessWidget {
+  const _ArtworkMenuRow({
     required this.label,
     required this.icon,
     required this.onTap,

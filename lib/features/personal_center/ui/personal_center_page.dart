@@ -258,9 +258,9 @@ class _ProfileHero extends StatelessWidget {
                   Expanded(
                     child: _VipPriceCard(
                       annualLayout: true,
-                      title: pkg0?.name ?? '年卡365天',
-                      subtitle: pkg0?.description ?? '每月仅需116.5元',
-                      price: pkg0?.price ?? '1,398',
+                      title: pkg0?.name ?? '年卡 365 天',
+                      subtitle: pkg0?.description ?? '每月仅需99元，范画随心看',
+                      price: pkg0?.price ?? '1,188',
                       trailingLabel: days != null && days > 3 ? '已开通' : null,
                       showPrice: days == null || days <= 3,
                     ),
@@ -269,9 +269,9 @@ class _ProfileHero extends StatelessWidget {
                   Expanded(
                     child: _VipPriceCard(
                       annualLayout: false,
-                      title: pkg1?.name ?? '3天体验卡',
-                      subtitle: pkg1?.description ?? '每天仅需6.6元',
-                      price: pkg1?.price ?? '198',
+                      title: pkg1?.name ?? '季卡 90 天',
+                      subtitle: pkg1?.description ?? '每天仅需3.9元，冲刺季必备',
+                      price: pkg1?.price ?? '349',
                       trailingLabel: days != null && days >= 1 ? '已开通' : null,
                       showPrice: days == null || days < 1,
                     ),

@@ -171,7 +171,7 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
   }
 
   /// 服务端返回的分类列表只是用来确认每个 Tab 是否启用，
-  /// 顺序统一以设计稿（声乐 → 器乐 → 听写 → 视唱 → 乐理 → 视频）为准。
+  /// 顺序统一以设计稿（全部 → 范画 → 视频 → 资讯）为准。
   List<CollectionTabItem> _parseTabs(dynamic data) {
     final allowed = <int>{};
     if (data is List) {
@@ -211,15 +211,16 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
       if (title.isEmpty) {
         continue;
       }
+      final rawType = _toInt(raw['type']);
+      final type = rawType == 0 ? activeType : rawType;
+      final targetId = _toIdString(raw['targetId']);
       result.add(
         CollectionEntry(
-          id: _toInt(raw['id']),
-          targetId: _toInt(raw['targetId']) > 0
-              ? _toInt(raw['targetId'])
-              : _toInt(target['id']),
-          type: _toInt(raw['type']) == 0 ? activeType : _toInt(raw['type']),
+          id: _toIdString(raw['id']),
+          targetId: targetId.isNotEmpty ? targetId : _toIdString(target['id']),
+          type: type,
           title: title,
-          subtitle: _resolveSubtitle(target, activeType),
+          subtitle: _resolveSubtitle(target, type),
           coverUrl: _resolveCover(target),
           authorName: _resolveAuthor(target),
           avatarUrl: _resolveAvatar(target),
@@ -251,13 +252,11 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
     if (tabs.any((item) => item.type == current)) {
       return current;
     }
-    return tabs.isNotEmpty ? tabs.first.type : 4;
+    return tabs.isNotEmpty ? tabs.first.type : CollectionType.all;
   }
 
-  /// 副标题展示规则：
-  /// - 声乐/器乐：调号信息（如 1=bA），字段一般为 keySignature/musicKey/param2
-  /// - 听写/视唱/乐理：使用副标题或当前菜单名兜底
-  /// - 视频：「主分类·副标题·作者」式描述（fallback 为 subtitle）
+  /// 副标题：优先使用收藏快照里的 `subtitle`（如「素描 · 李静」「联考政策 ·
+  /// 2026-11-05」），缺失时按类型回退到分类 / 作者 / 发布时间。
   String _resolveSubtitle(Map<String, dynamic> target, int type) {
     String pickFirstNonEmpty(List<String> keys) {
       for (final key in keys) {
@@ -269,36 +268,23 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
       return '';
     }
 
-    if (type == 4 || type == 5) {
-      final key = pickFirstNonEmpty(<String>[
-        'keySignature',
-        'musicKey',
-        'tonality',
-        'param2',
-        'subtitle',
-      ]);
-      return key.isEmpty ? '1=bA' : key;
-    }
-
-    if (type == 6) {
-      final desc = pickFirstNonEmpty(<String>[
-        'subtitle',
-        'description',
-        'param2',
-        'category',
-      ]);
-      return desc;
-    }
-
-    final raw = pickFirstNonEmpty(<String>['subtitle', 'param2', 'param1']);
-    if (raw.isNotEmpty) {
-      return raw;
+    final subtitle = pickFirstNonEmpty(<String>['subtitle', 'description']);
+    if (subtitle.isNotEmpty) {
+      return subtitle;
     }
     return switch (type) {
-      1 => '标准音上下行二度',
-      2 => '基础乐理知识梳理',
-      3 => '听音单音专项练习',
-      10 => '试题专项练习',
+      CollectionType.video => pickFirstNonEmpty(<String>[
+        'category',
+        'teacherName',
+      ]),
+      CollectionType.news => pickFirstNonEmpty(<String>[
+        'shortText1',
+        'updateTime',
+      ]),
+      CollectionType.artwork => pickFirstNonEmpty(<String>[
+        'subject',
+        'author',
+      ]),
       _ => '',
     };
   }
@@ -309,7 +295,8 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
       'cover',
       'imgUrl',
       'thumb',
-      'param1',
+      'shortText3',
+      'imageUrl',
     ]) {
       final value = target[key]?.toString().trim() ?? '';
       if (value.isNotEmpty && value.toLowerCase() != 'string') {
@@ -321,10 +308,10 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
 
   String _resolveAuthor(Map<String, dynamic> target) {
     for (final key in <String>[
-      'nickname',
-      'realname',
       'teacherName',
       'author',
+      'nickname',
+      'realname',
       'userName',
     ]) {
       final value = target[key]?.toString().trim() ?? '';
@@ -337,6 +324,7 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
 
   String _resolveAvatar(Map<String, dynamic> target) {
     for (final key in <String>[
+      'teacherAvatar',
       'avatarUrl',
       'headImg',
       'avatar',
@@ -384,7 +372,8 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
     if (value == null) return '';
     if (value is int) return value.toString();
     if (value is num) return value.toInt().toString();
-    return value.toString().trim();
+    final text = value.toString().trim();
+    return text == 'null' ? '' : text;
   }
 
   String _apiError(ApiResponse response) => response.displayMsg;

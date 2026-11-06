@@ -4,6 +4,7 @@ import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/app_asset_graphic.dart';
+import '../../../../core/widgets/art_widgets.dart';
 import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_state.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
@@ -212,7 +213,11 @@ class _CommentTile extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _CommentAvatar(url: comment.author.avatarUrl, size: ui(44)),
+        ArtAvatar(
+          name: comment.author.name,
+          url: comment.author.avatarUrl,
+          size: ui(44),
+        ),
         SizedBox(width: ui(11)),
         Expanded(
           child: Column(
@@ -295,50 +300,6 @@ class _CommentTile extends StatelessWidget {
         SizedBox(width: ui(8)),
         _CommentLike(comment: comment, onTap: onLike),
       ],
-    );
-  }
-}
-
-class _CommentAvatar extends StatelessWidget {
-  const _CommentAvatar({required this.url, required this.size});
-
-  final String url;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipOval(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: url.isEmpty
-            ? Container(
-                color: const Color(0xFFE3DFFF),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.person,
-                  color: const Color(0xFF715EFE),
-                  size: size * 0.55,
-                ),
-              )
-            : Image.network(
-                url,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stack) => Container(
-                  color: const Color(0xFFE3DFFF),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.person,
-                    color: const Color(0xFF715EFE),
-                    size: size * 0.55,
-                  ),
-                ),
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return Container(color: const Color(0xFFF3F4F8));
-                },
-              ),
-      ),
     );
   }
 }

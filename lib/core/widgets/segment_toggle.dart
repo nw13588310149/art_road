@@ -22,7 +22,7 @@ class SegmentToggleOption {
 
 /// 统一的「两段（或多段）开关」分段控件。
 ///
-/// 视觉与动效统一参考 musicPlay「关闭 / 答案」切换：浅灰轨道 + 品牌紫滑块，
+/// 视觉与动效统一参考「关闭 / 答案」切换：浅灰轨道 + 品牌紫滑块，
 /// 选中态白字、未选中黑字；切换时仅滑块用 [AnimatedAlign] 平滑滑动（180ms /
 /// easeOut）。文字颜色与字重随选中态即时切换，避免与滑块动画叠加产生闪烁。
 class SegmentToggle extends StatelessWidget {

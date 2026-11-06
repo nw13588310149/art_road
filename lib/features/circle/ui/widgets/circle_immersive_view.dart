@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/app_toast.dart';
+import '../../../../core/widgets/art_widgets.dart';
 import '../../../../core/widgets/scaled_dialog.dart';
 import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_controller.dart';
@@ -530,7 +531,11 @@ class _ImmersiveActions extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ImmersiveAvatar(url: post.author.avatarUrl, size: avatarSize),
+        _ImmersiveAvatar(
+          name: post.author.name,
+          url: post.author.avatarUrl,
+          size: avatarSize,
+        ),
         SizedBox(height: gapAfterAvatar),
         CircleActionButton(
           iconAsset: post.liked ? AppAssets.circleFav1 : AppAssets.circleFav,
@@ -561,8 +566,13 @@ class _ImmersiveActions extends StatelessWidget {
 }
 
 class _ImmersiveAvatar extends StatelessWidget {
-  const _ImmersiveAvatar({required this.url, required this.size});
+  const _ImmersiveAvatar({
+    required this.name,
+    required this.url,
+    required this.size,
+  });
 
+  final String name;
   final String url;
   final double size;
 
@@ -571,27 +581,6 @@ class _ImmersiveAvatar extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     // 与 shell 顶栏头像一致：外圈白底，内圈图片缩小 ui(4) 形成白边。
     final innerSize = size - ui(4);
-    final fallback = Container(
-      width: innerSize,
-      height: innerSize,
-      color: const Color(0xFF252035),
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.person,
-        color: Colors.white.withValues(alpha: 0.6),
-        size: innerSize * 0.55,
-      ),
-    );
-    final avatarWidget = url.isNotEmpty
-        ? Image.network(
-            url,
-            width: innerSize,
-            height: innerSize,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stack) => fallback,
-          )
-        : fallback;
-
     return Container(
       width: size,
       height: size,
@@ -600,9 +589,7 @@ class _ImmersiveAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: ClipOval(
-        child: SizedBox(width: innerSize, height: innerSize, child: avatarWidget),
-      ),
+      child: ArtAvatar(name: name, url: url, size: innerSize),
     );
   }
 }

@@ -29,7 +29,7 @@ Map<String, dynamic> demoUserInfo(DemoAccount account) {
     'introduce':
         profile['introduce'] ??
         (isStudent ? '目标：联考素描 90+，色彩稳定在 85 分以上。' : '示范画室教学团队'),
-    'vipExpireDate': '2027-12-31 23:59:59',
+    'vipExpireDate': profile['vipExpireDate'] ?? '2027-12-31 23:59:59',
   };
 }
 
@@ -59,8 +59,8 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
       'id': 1,
       'targetType': 1,
       'content': student
-          ? '【学情】2026 年 9 月月考成绩已发布：总分 263.0，城东校区第 1 名，点击学情中心查看原卷与评分标准。'
-          : '【学情】2026 年 9 月月考已出分，班级均分较 8 月提升 2.6 分。',
+          ? '【学情】2026 年 9 月月考成绩已发布：总分 265.5，素描进入 A 档，点击「我的学情」查看原卷与评分标准。'
+          : '【学情】2026 年 9 月月考已出分，可在「班级学情」查看分数分布与校区对比。',
       'createTime': '2026-11-06 18:20:00',
       'read': false,
     },
@@ -143,6 +143,26 @@ void registerPlatformCoreFixtures(DemoRouter r) {
 
   // ── 学校 ────────────────────────────────────────────────────────────
   r.any('/app/school/v2/user/schoolList', (req) => [demoSchool()]);
+  // 科目 id 与课表、考试、作业演示数据一致（素描 38 / 色彩 39 / 速写 40）。
+  r.any('/app/school/v2/user/subjectList', (req) {
+    const names = ['素描', '色彩', '速写', '美术常识', '文化课', '模拟考试'];
+    return [
+      for (var i = 0; i < names.length; i++)
+        <String, dynamic>{'id': 38 + i, 'name': names[i]},
+    ];
+  });
+  r.any('/app/school/v2/user/schoolConfigList', (req) {
+    return [
+      <String, dynamic>{
+        'configKey': 'dormitoryNightCheckTime',
+        'configValue': '22:10',
+      },
+      <String, dynamic>{
+        'configKey': 'dormitoryMorningCheckTime',
+        'configValue': '07:10',
+      },
+    ];
+  });
 
   // ── 消息 ────────────────────────────────────────────────────────────
   List<Map<String, dynamic>> notices(DemoRequest req) => DemoStore.list(

@@ -89,8 +89,12 @@ const Color _kPendingOrangeBg = Color(0xFFFFEDD3);
 const Color _kOverdueRed = Color(0xFFFF323C);
 const Color _kOverdueRedBg = Color(0xFFFFE4E5);
 const Color _kRiseGreen = Color(0xFF12CE51);
-const Color _kVocalTagBgRed = Color(0xFFFEE4E8);
-const Color _kVocalTagFgRed = Color(0xFFFF386B);
+const Color _kSketchTagBg = Color(0xFFEAF0FB);
+const Color _kSketchTagFg = Color(0xFF4A74D6);
+const Color _kColorTagBg = Color(0xFFE7F5EE);
+const Color _kColorTagFg = Color(0xFF3B9A6E);
+const Color _kSpeedTagBg = Color(0xFFE4F3F7);
+const Color _kSpeedTagFg = Color(0xFF1F8FA8);
 
 DateTime? _tryParseStudentHwDate(String? raw) {
   if (raw == null) return null;
@@ -292,12 +296,11 @@ String _expectedExtCn(String raw) {
 }
 
 _HomeworkSubject _subjectPillFromApi(String? subjectName, int? subjectId) {
-  final n = (subjectName ?? '').toLowerCase();
-  if (n.contains('声乐')) {
-    final alt = (subjectId ?? 0) & 1;
-    return alt == 0 ? _HomeworkSubject.vocal : _HomeworkSubject.vocalRed;
-  }
-  return _HomeworkSubject.music;
+  final n = subjectName ?? '';
+  if (n.contains('素描')) return _HomeworkSubject.sketch;
+  if (n.contains('色彩')) return _HomeworkSubject.color;
+  if (n.contains('速写')) return _HomeworkSubject.speed;
+  return _HomeworkSubject.other;
 }
 
 class StudentMyHomeworkView extends ConsumerStatefulWidget {
@@ -1296,7 +1299,7 @@ class _SegmentedControl<T> extends StatelessWidget {
 // 作业卡（数据 + 网格 + 单卡）
 // =============================================================================
 
-enum _HomeworkSubject { music, vocal, vocalRed }
+enum _HomeworkSubject { sketch, color, speed, other }
 
 enum _HomeworkStatus { pending, overdue, submitted, reviewed }
 
@@ -1821,9 +1824,10 @@ class _SubjectTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final (bg, fg, text) = switch (subject) {
-      _HomeworkSubject.music => (_kSubmittedGreenBg, _kSubmittedGreen, '乐理'),
-      _HomeworkSubject.vocal => (_kPurpleSoftBg, _kPurple, '声乐'),
-      _HomeworkSubject.vocalRed => (_kVocalTagBgRed, _kVocalTagFgRed, '声乐'),
+      _HomeworkSubject.sketch => (_kSketchTagBg, _kSketchTagFg, '素描'),
+      _HomeworkSubject.color => (_kColorTagBg, _kColorTagFg, '色彩'),
+      _HomeworkSubject.speed => (_kSpeedTagBg, _kSpeedTagFg, '速写'),
+      _HomeworkSubject.other => (_kPurpleSoftBg, _kPurple, '综合'),
     };
     return Container(
       padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
@@ -3274,9 +3278,10 @@ class _HomeworkDetailDialogState extends ConsumerState<_HomeworkDetailDialog> {
 }
 
 String _subjectLabelOf(_HomeworkSubject s) => switch (s) {
-  _HomeworkSubject.music => '乐理',
-  _HomeworkSubject.vocal => '声乐',
-  _HomeworkSubject.vocalRed => '声乐',
+  _HomeworkSubject.sketch => '素描',
+  _HomeworkSubject.color => '色彩',
+  _HomeworkSubject.speed => '速写',
+  _HomeworkSubject.other => '综合',
 };
 
 class _DetailStatusTag extends StatelessWidget {

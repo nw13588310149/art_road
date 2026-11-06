@@ -12,8 +12,9 @@ enum MyNotesFilter {
   final String label;
 }
 
+/// 笔记纸张：网格纸用于比例 / 透视 / 构图推敲。
 enum NotePaperType {
-  staff(0, '五线谱'),
+  grid(0, '网格纸'),
   notebook(1, '笔记本'),
   blank(2, '白纸');
 
@@ -64,6 +65,7 @@ class NoteEntry {
     required this.createdAt,
     required this.paperType,
     this.drawingData = '',
+    this.baseImageUrl = '',
     this.isFavorite = false,
   });
 
@@ -74,6 +76,9 @@ class NoteEntry {
 
   /// 矢量笔迹：`param2`（内联 `pk:`/`strokes:` 或文件 path）。
   final String drawingData;
+
+  /// 底图：`param3`（范画 / 参考图），打开笔记时始终垫在笔迹下方。
+  final String baseImageUrl;
   final DateTime createdAt;
   final NotePaperType paperType;
   final bool isFavorite;
@@ -90,6 +95,7 @@ class NoteEntry {
     String? title,
     String? imageUrl,
     String? drawingData,
+    String? baseImageUrl,
     DateTime? createdAt,
     NotePaperType? paperType,
     bool? isFavorite,
@@ -100,6 +106,7 @@ class NoteEntry {
       title: title ?? this.title,
       imageUrl: imageUrl ?? this.imageUrl,
       drawingData: drawingData ?? this.drawingData,
+      baseImageUrl: baseImageUrl ?? this.baseImageUrl,
       createdAt: createdAt ?? this.createdAt,
       paperType: paperType ?? this.paperType,
       isFavorite: isFavorite ?? this.isFavorite,
@@ -138,6 +145,7 @@ class MyNotesState {
     this.strokeWidth = 12,
     this.editingNote,
     this.editorBackgroundImageUrl,
+    this.editorBackgroundIsBase = false,
     this.pendingPencilKitData,
     this.editorHasVectorLayer = false,
   });
@@ -159,6 +167,9 @@ class MyNotesState {
   final double strokeWidth;
   final NoteEntry? editingNote;
   final String? editorBackgroundImageUrl;
+
+  /// 背景是笔记底图（完整展示）还是旧笔记的整页预览图（铺满画布）。
+  final bool editorBackgroundIsBase;
 
   /// 打开笔记后待注入 PencilKit 的 base64（注入成功后清空）。
   final String? pendingPencilKitData;
@@ -200,6 +211,7 @@ class MyNotesState {
     bool clearEditingNote = false,
     String? editorBackgroundImageUrl,
     bool clearEditorBackgroundImageUrl = false,
+    bool? editorBackgroundIsBase,
     String? pendingPencilKitData,
     bool clearPendingPencilKitData = false,
     bool? editorHasVectorLayer,
@@ -224,6 +236,9 @@ class MyNotesState {
       editorBackgroundImageUrl: clearEditorBackgroundImageUrl
           ? null
           : (editorBackgroundImageUrl ?? this.editorBackgroundImageUrl),
+      editorBackgroundIsBase: clearEditorBackgroundImageUrl
+          ? false
+          : (editorBackgroundIsBase ?? this.editorBackgroundIsBase),
       pendingPencilKitData: clearPendingPencilKitData
           ? null
           : (pendingPencilKitData ?? this.pendingPencilKitData),

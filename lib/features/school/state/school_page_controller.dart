@@ -109,22 +109,30 @@ class SchoolPageController extends StateNotifier<SchoolPageState> {
     return result;
   }
 
-  /// 解析 `/app/user/schoolHomeLearningProgress` 返回的 `LearningProgressRes`：
-  /// `tx` 听写、`sc` 视唱、`yl` 乐理，每项含 completeCount / allCount / progress。
+  /// 解析 `/app/user/schoolHomeLearningProgress`：`sketch` 素描、`color` 色彩、
+  /// `speed` 速写，每项含 completeCount / allCount（课时）/ progress。
   List<SchoolLearningItem> _parseLearning(dynamic data) {
     final map = _asMap(data);
     if (map.isEmpty) {
       return const [];
     }
 
-    final dictation = _parseProgressEntry(map['tx']);
-    final sightSinging = _parseProgressEntry(map['sc']);
-    final theory = _parseProgressEntry(map['yl']);
-
     return [
-      _buildLearningItem('听写', dictation, const Color(0xFFB184FF)),
-      _buildLearningItem('视唱', sightSinging, const Color(0xFF13E8BE)),
-      _buildLearningItem('乐理', theory, const Color(0xFFFF5681)),
+      _buildLearningItem(
+        '素描',
+        _parseProgressEntry(map['sketch']),
+        const Color(0xFFB184FF),
+      ),
+      _buildLearningItem(
+        '色彩',
+        _parseProgressEntry(map['color']),
+        const Color(0xFFFF5681),
+      ),
+      _buildLearningItem(
+        '速写',
+        _parseProgressEntry(map['speed']),
+        const Color(0xFF13E8BE),
+      ),
     ];
   }
 

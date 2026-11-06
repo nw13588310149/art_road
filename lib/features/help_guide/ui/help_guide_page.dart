@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/theme/app_font.dart';
+import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../state/help_guide_controller.dart';
 import '../state/help_guide_state.dart';
@@ -226,44 +227,155 @@ class _GuideCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.all(ui(10)),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(ui(12)),
+      child: InkWell(
         borderRadius: BorderRadius.circular(ui(12)),
+        onTap: () => _showGuideDetail(context, item),
+        child: Padding(
+          padding: EdgeInsets.all(ui(10)),
+          child: _buildContent(ui),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            item.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: _textPrimary,
-              fontFamily: 'PingFang SC',
-              fontSize: ui(13),
-              height: 1.2,
-              fontWeight: AppFont.w500,
+    );
+  }
+
+  Widget _buildContent(double Function(num) ui) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          item.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: _textPrimary,
+            fontFamily: 'PingFang SC',
+            fontSize: ui(13),
+            height: 1.2,
+            fontWeight: AppFont.w500,
+          ),
+        ),
+        SizedBox(height: ui(4)),
+        Text(
+          item.subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: _textSecondary,
+            fontFamily: 'PingFang SC',
+            fontSize: ui(10),
+            height: 1.1,
+            fontWeight: AppFont.w400,
+          ),
+        ),
+        SizedBox(height: ui(8)),
+        Expanded(child: _GuideCover(subject: item.title)),
+      ],
+    );
+  }
+}
+
+Future<void> _showGuideDetail(BuildContext context, HelpGuideItem item) {
+  final route = item.route;
+  return showScaledDialog<void>(
+    context: context,
+    barrierColor: Colors.black.withValues(alpha: 0.6),
+    builder: (dialogContext) => GradientHeaderDialog(
+      title: item.title,
+      width: 460,
+      actionBar: AppDialogActionBar(
+        cancelLabel: '关闭',
+        confirmLabel: route == null ? '我知道了' : '去看看',
+        onCancel: () => Navigator.of(dialogContext).pop(),
+        onConfirm: () {
+          Navigator.of(dialogContext).pop();
+          if (route != null && context.mounted) {
+            Navigator.of(context).pushNamed(route);
+          }
+        },
+      ),
+      child: _GuideDetailBody(item: item),
+    ),
+  );
+}
+
+class _GuideDetailBody extends StatelessWidget {
+  const _GuideDetailBody({required this.item});
+
+  final HelpGuideItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final bodyStyle = TextStyle(
+      color: _textPrimary,
+      fontFamily: 'PingFang SC',
+      fontSize: ui(14),
+      height: 1.6,
+      fontWeight: AppFont.w400,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          item.summary,
+          style: bodyStyle.copyWith(color: const Color(0xFF6D6B75)),
+        ),
+        SizedBox(height: ui(14)),
+        for (var i = 0; i < item.steps.length; i++)
+          Padding(
+            padding: EdgeInsets.only(bottom: ui(10)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: ui(20),
+                  height: ui(20),
+                  margin: EdgeInsets.only(top: ui(2), right: ui(10)),
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF715EFE),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '${i + 1}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Barlow',
+                      fontSize: ui(12),
+                      height: 1,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Expanded(child: Text(item.steps[i], style: bodyStyle)),
+              ],
             ),
           ),
-          SizedBox(height: ui(4)),
-          Text(
-            item.subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: _textSecondary,
-              fontFamily: 'PingFang SC',
-              fontSize: ui(10),
-              height: 1.1,
-              fontWeight: AppFont.w400,
+        if (item.tip.isNotEmpty)
+          Container(
+            width: double.infinity,
+            margin: EdgeInsets.only(top: ui(4)),
+            padding: EdgeInsets.symmetric(
+              horizontal: ui(12),
+              vertical: ui(10),
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F4FF),
+              borderRadius: BorderRadius.circular(ui(10)),
+            ),
+            child: Text(
+              item.tip,
+              style: bodyStyle.copyWith(
+                color: const Color(0xFF715EFE),
+                fontSize: ui(13),
+              ),
             ),
           ),
-          SizedBox(height: ui(8)),
-          Expanded(child: _GuideCover(subject: item.title)),
-        ],
-      ),
+      ],
     );
   }
 }

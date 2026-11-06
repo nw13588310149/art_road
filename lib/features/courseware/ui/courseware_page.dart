@@ -492,7 +492,7 @@ class _MyCloudDrivePageState extends ConsumerState<MyCloudDrivePage> {
       child: StatefulBuilder(
         builder: (drawerContext, setDrawerState) {
           return ClassShareDrawer(
-            title: '分享课件',
+            title: '分享资料',
             targetCard: ShareTargetCard(
               label: '您即将分享的资料',
               title: file.title,
@@ -806,7 +806,7 @@ class _CloudContentArea extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(ui(30), ui(28), ui(20), ui(16)),
         child: Stack(
         children: [
-          // 与录音系统一致：空状态按整个右侧内容区（含标题/搜索栏）居中。
+          // 空状态按整个右侧内容区（含标题/搜索栏）居中。
           if (showPageEmpty)
             Positioned.fill(
               child: CourseEmptyPlaceholder(message: emptyMessage),
@@ -1196,7 +1196,7 @@ class _AddCategoryCard extends StatelessWidget {
 class _FolderBreadcrumb extends StatelessWidget {
   const _FolderBreadcrumb({required this.items, required this.onItemTap});
 
-  /// 自顶向下的层级文本，例如 ["我的云盘", "声乐教学", "谱例学习第三期汇总"]。
+  /// 自顶向下的层级文本，例如 ["我的云盘", "素描资料", "石膏头像范画"]。
   final List<String> items;
 
   /// 点击非末位条目时回调，传入被点击条目的索引。
@@ -1281,7 +1281,7 @@ class _CloudSearchField extends StatelessWidget {
         cursorWidth: 1.5,
         cursorHeight: ui(15),
         decoration: InputDecoration(
-          hintText: '传统音乐',
+          hintText: '搜索资料名称',
           hintStyle: TextStyle(
             fontSize: ui(14),
             color: const Color(0xFFD1D1D1),
@@ -1704,15 +1704,40 @@ class _FileCardState extends State<_FileCard> {
               Expanded(
                 child: Stack(
                   children: [
-                    // 中央：88×88 文件类型图标
-                    Center(
-                      child: Image.asset(
-                        visual.iconAsset,
-                        width: ui(88),
-                        height: ui(88),
-                        fit: BoxFit.contain,
+                    // 图片类资料铺满缩略图；其它类型居中显示 88×88 文件类型图标。
+                    if (visual.thumbnailUrl.isNotEmpty)
+                      Positioned.fill(
+                        child: LayoutBuilder(
+                          builder: (context, box) => CachedNetworkImage(
+                            imageUrl: visual.thumbnailUrl,
+                            fit: BoxFit.cover,
+                            memCacheWidth: _coursewareDecodeExtent(
+                              context,
+                              box.maxWidth,
+                              480,
+                            ),
+                            placeholder: (_, _) =>
+                                const ColoredBox(color: Color(0xFFF5F6FA)),
+                            errorWidget: (_, _, _) => Center(
+                              child: Image.asset(
+                                visual.iconAsset,
+                                width: ui(88),
+                                height: ui(88),
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Center(
+                        child: Image.asset(
+                          visual.iconAsset,
+                          width: ui(88),
+                          height: ui(88),
+                          fit: BoxFit.contain,
+                        ),
                       ),
-                    ),
                     // 右上角：类型徽标（操作菜单移到下方灰色信息条）。
                     Positioned(
                       top: ui(8),
@@ -1987,10 +2012,10 @@ class _UploadKindOption extends StatelessWidget {
 /// 文件预览页：占据 courseware 页面整个内容区（左侧外壳侧栏依然由
 /// `ShellPageSurface` 负责显示）。根据 [CloudFileItem.type] 派发到三种正文：
 ///  - 图片：头部条 + 主体（PageView 缩放）+ 右侧 160 缩略图栏
-///  - 谱例：复刻 music_play 的「声乐/器乐」布局（左转盘 + 右乐谱 + 底部播放条），
-///    去掉「升降调 / 五线谱-简谱」切换；保留分享按钮。
-///  - 课件：头部条 + 全宽主体（按文件后缀解析；图片直显，PDF/Doc 等显示
-///    「在新窗口打开」入口）。
+///  - 图文讲解：左侧封面 + 标题 + 简介，右侧步骤图（PageView），底部讲解音频
+///    播放条；保留分享按钮。
+///  - 课件：头部条 + 全宽主体（按文件后缀解析；图片直显，PDF 内嵌阅读，
+///    视频内嵌播放，其它类型显示占位）。
 class _CoursewarePreviewPage extends StatelessWidget {
   const _CoursewarePreviewPage({
     required this.state,
@@ -2013,9 +2038,9 @@ class _CoursewarePreviewPage extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final item = state.previewingFile!;
 
-    // 业务上「图片」与「谱例」共用 `CloudFileType.score`：仅有 imageUrls
+    // 业务上「图片」与「图文讲解」共用 `CloudFileType.score`：仅有 imageUrls
     // 且没有 audioUrl 视为「图片」，应该走图片预览（带右侧缩略图列）；
-    // 否则才是真正的谱例预览。
+    // 否则才是带讲解音频的图文讲解预览。
     final isImageOnlyScore =
         item.type == CloudFileType.score &&
         item.audioUrl.trim().isEmpty &&
@@ -2683,9 +2708,8 @@ class _CoursewareEmptyPreview extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Score preview: replicates music_play "vocal/instrumental" layout.
-// 左侧：返回 + 分享 + 转盘 + 标题滚动 + 简介；右侧：乐谱（PageView）；底部：播放条。
-// 没有「升降调」与「五线谱/简谱」切换。
+// 图文讲解预览：左侧返回 + 分享 + 封面画框 + 标题 + 简介；右侧步骤图
+// （PageView）；底部讲解音频播放条。
 // ──────────────────────────────────────────────────────────────────────────
 
 class _PreviewScoreBody extends StatelessWidget {
@@ -2721,6 +2745,11 @@ class _PreviewScoreBody extends StatelessWidget {
                     children: [
                       _PreviewScoreTurntable(
                         title: item.title,
+                        coverUrl: item.imageUrls.isEmpty
+                            ? ''
+                            : CloudDriveController.resolveMediaUrl(
+                                item.imageUrls.first,
+                              ),
                         isPlaying: state.previewIsPlaying,
                         onBack: onClose,
                         onShare: onShare,
@@ -2756,16 +2785,18 @@ class _PreviewScoreBody extends StatelessWidget {
   }
 }
 
-/// 谱例预览左上角的转盘面板：返回 / 分享 + 转盘 + 标题胶囊（跑马灯）+ 频谱。
+/// 图文讲解预览左上角面板：返回 / 分享 + 封面画框 + 标题胶囊 + 讲解音频频谱。
 class _PreviewScoreTurntable extends StatelessWidget {
   const _PreviewScoreTurntable({
     required this.title,
+    required this.coverUrl,
     required this.isPlaying,
     required this.onBack,
     required this.onShare,
   });
 
   final String title;
+  final String coverUrl;
   final bool isPlaying;
   final VoidCallback onBack;
   final Future<void> Function() onShare;
@@ -2815,7 +2846,9 @@ class _PreviewScoreTurntable extends StatelessWidget {
           ],
         ),
         SizedBox(height: ui(22)),
-        Center(child: _PreviewTurntableDisc(playing: isPlaying)),
+        Center(
+          child: _PreviewCoverFrame(coverUrl: coverUrl, playing: isPlaying),
+        ),
         SizedBox(height: ui(14)),
         Center(
           child: Container(
@@ -2855,43 +2888,94 @@ class _PreviewScoreTurntable extends StatelessWidget {
   }
 }
 
-class _PreviewTurntableDisc extends StatelessWidget {
-  const _PreviewTurntableDisc({required this.playing});
+/// 封面画框：白色卡纸 + 首张步骤图；讲解播放时右下角亮起「讲解中」。
+class _PreviewCoverFrame extends StatelessWidget {
+  const _PreviewCoverFrame({required this.coverUrl, required this.playing});
 
+  final String coverUrl;
   final bool playing;
 
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return SizedBox(
-      width: ui(180),
-      height: ui(180),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/home/plyabj.png',
-              fit: BoxFit.contain,
+    final placeholder = Container(
+      color: const Color(0xFFF4F4FF),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.palette_outlined,
+        size: ui(40),
+        color: const Color(0xFFB6B5BB),
+      ),
+    );
+    return AnimatedScale(
+      scale: playing ? 1.0 : 0.96,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOutCubic,
+      child: Container(
+        width: ui(180),
+        height: ui(180),
+        padding: EdgeInsets.all(ui(10)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(ui(12)),
+          border: Border.all(color: const Color(0xFFF3F2F3), width: ui(1)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0x1A715EFE),
+              blurRadius: ui(20),
+              offset: Offset(0, ui(8)),
             ),
-          ),
-          Positioned(
-            left: ui(102),
-            top: ui(10),
-            child: AnimatedRotation(
-              turns: playing ? 0 : -0.075,
-              duration: const Duration(milliseconds: 900),
-              curve: Curves.easeInOutCubic,
-              alignment: const Alignment(0.64, -0.79),
-              child: Image.asset(
-                'assets/images/home/play1.png',
-                width: ui(65),
-                height: ui(138),
-                fit: BoxFit.contain,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(ui(6)),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (coverUrl.isEmpty)
+                placeholder
+              else
+                CachedNetworkImage(
+                  imageUrl: coverUrl,
+                  fit: BoxFit.cover,
+                  memCacheWidth: _coursewareDecodeExtent(
+                    context,
+                    ui(160),
+                    480,
+                  ),
+                  placeholder: (_, _) => placeholder,
+                  errorWidget: (_, _, _) => placeholder,
+                ),
+              Positioned(
+                right: ui(6),
+                bottom: ui(6),
+                child: AnimatedOpacity(
+                  opacity: playing ? 1 : 0,
+                  duration: const Duration(milliseconds: 300),
+                  child: Container(
+                    height: ui(20),
+                    padding: EdgeInsets.symmetric(horizontal: ui(8)),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF715EFE),
+                      borderRadius: BorderRadius.circular(ui(10)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '讲解中',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: ui(10),
+                        fontFamily: 'PingFang SC',
+                        fontWeight: AppFont.w500,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -3011,7 +3095,7 @@ class _PreviewDescriptionCard extends StatelessWidget {
   }
 }
 
-/// 谱例右侧乐谱区：PageView + 当前页/总页计数。无切换 toggle，无 "升降调"。
+/// 图文讲解右侧步骤图区：PageView + 当前页/总页计数，双击放大查看。
 class _PreviewScoreSheet extends StatefulWidget {
   const _PreviewScoreSheet({
     required this.images,
@@ -3073,7 +3157,7 @@ class _PreviewScoreSheetState extends State<_PreviewScoreSheet> {
               fit: BoxFit.contain,
             ),
             Text(
-              '暂无乐谱',
+              '暂无步骤图',
               style: TextStyle(
                 color: const Color.fromARGB(255, 22, 22, 22),
                 fontSize: ui(16),
@@ -3167,7 +3251,7 @@ class _PreviewScoreSheetState extends State<_PreviewScoreSheet> {
   }
 }
 
-/// 底部播放条（与 music_play 视觉一致）：封面 + 标题 + 跳转/播放 + 倍速 + 进度 + 收藏。
+/// 底部讲解音频播放条：封面 + 标题 + 跳转/播放 + 倍速 + 进度 + 收藏。
 class _PreviewPlaybackBar extends StatelessWidget {
   const _PreviewPlaybackBar({required this.state, required this.controller});
 
@@ -3186,6 +3270,13 @@ class _PreviewPlaybackBar extends StatelessWidget {
     final favorite = state.previewFavorite;
     final cover = item.imageUrls.isNotEmpty ? item.imageUrls.first : '';
     final coverUrl = CloudDriveController.resolveMediaUrl(cover);
+    final coverFallback = Center(
+      child: Icon(
+        Icons.palette_outlined,
+        size: ui(22),
+        color: const Color(0xFFB6B5BB),
+      ),
+    );
 
     return Container(
       height: ui(72),
@@ -3219,12 +3310,9 @@ class _PreviewPlaybackBar extends StatelessWidget {
                       ui(48),
                       160,
                     ),
-                    errorWidget: (_, _, _) => Image.asset(
-                      'assets/images/home/feng.png',
-                      fit: BoxFit.cover,
-                    ),
+                    errorWidget: (_, _, _) => coverFallback,
                   )
-                : Image.asset('assets/images/home/feng.png', fit: BoxFit.cover),
+                : coverFallback,
           ),
           SizedBox(width: ui(12)),
           SizedBox(
@@ -3246,7 +3334,7 @@ class _PreviewPlaybackBar extends StatelessWidget {
                 ),
                 SizedBox(height: ui(6)),
                 Text(
-                  '谱例',
+                  '图文讲解',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -3663,7 +3751,7 @@ class _PreviewSpeedChipState extends State<_PreviewSpeedChip> {
 /// 真正读字节 / 拼 multipart 时 OOM 导致 iPad / iPhone 上 APP 闪退。
 ///
 /// - 图片：15MB（与 UI 提示「图片支持 15M 以内」一致）
-/// - 音频 / 课件文件：1GB（覆盖一节课的高码率录音 / 大型 PDF）
+/// - 音频 / 课件文件：1GB（覆盖较长的示范视频 / 大型 PDF）
 const int _kMaxImageBytes = 15 * 1024 * 1024;
 const int _kMaxFileBytes = 1024 * 1024 * 1024;
 
@@ -3674,10 +3762,10 @@ const int _kMaxFileBytes = 1024 * 1024 * 1024;
 /// 解码到 200×200 已经足够清晰、内存足够低。
 const int _kThumbDecodeMaxPx = 200;
 
-/// 图片 / 谱例 / 课件在「未选文件」时上传区域的统一高度（设计稿逻辑 px）。
+/// 图片 / 图文讲解 / 课件在「未选文件」时上传区域的统一高度（设计稿逻辑 px）。
 const double _kUploadEmptyZoneHeight = 140;
 
-/// 已选文件列表（图片网格 / 谱例区等）的最大可视高度；超出后区域内滚动，
+/// 已选文件列表（图片网格 / 图文讲解区等）的最大可视高度；超出后区域内滚动，
 /// 避免弹窗被撑高把底部「取消 / 确认」顶出屏幕。
 const double _kUploadListMaxHeight = 220;
 
@@ -3741,7 +3829,7 @@ class _UploadSlot {
   }
 }
 
-/// 上传课件对话框。保持原有视觉风格，增加：
+/// 上传资料对话框。保持原有视觉风格，增加：
 /// - 每个文件独立的实时上传进度（LinearProgressIndicator / CircularProgressIndicator）
 /// - 图片文件用内存字节显示缩略图
 /// - 每个文件独立的删除/重试按钮
@@ -3765,8 +3853,8 @@ class _UploadDialogState extends State<_UploadDialog> {
   /// 时承载唯一的课件文件。
   final List<_UploadSlot> _slots = [];
 
-  /// 仅在 score 类型下使用：与图片并列的「音频」上传槽。
-  /// `_slots` + `_scoreAudio` 一起完成 1.0 谱例「音频 + 图片」的上传。
+  /// 仅在 score 类型下使用：与图片并列的「讲解音频」上传槽。
+  /// `_slots` + `_scoreAudio` 一起完成图文讲解「讲解音频 + 步骤图」的上传。
   _UploadSlot? _scoreAudio;
 
   bool _confirming = false;
@@ -3797,7 +3885,7 @@ class _UploadDialogState extends State<_UploadDialog> {
       case CloudUploadKind.image:
         return _doneSlots.isNotEmpty;
       case CloudUploadKind.score:
-        // 谱例必须同时具备音频与至少一张图片
+        // 图文讲解必须同时具备讲解音频与至少一张图片
         return _doneSlots.isNotEmpty && (_scoreAudio?.isDone ?? false);
       case CloudUploadKind.courseware:
         return _doneSlots.isNotEmpty;
@@ -3835,7 +3923,7 @@ class _UploadDialogState extends State<_UploadDialog> {
     try {
       final allowMultiple =
           _kind == CloudUploadKind.image || _kind == CloudUploadKind.score;
-      // 图片 / 谱例选图直接走 image 类型 — 移动端会拉起相册而不是文件管理。
+      // 图片 / 图文讲解选图直接走 image 类型 — 移动端会拉起相册而不是文件管理。
       final pickType =
           (_kind == CloudUploadKind.image || _kind == CloudUploadKind.score)
           ? CoursewarePickType.image
@@ -3896,7 +3984,7 @@ class _UploadDialogState extends State<_UploadDialog> {
     }
   }
 
-  /// 谱例专用：选取单个音频文件。
+  /// 图文讲解专用：选取单个讲解音频文件。
   Future<void> _pickScoreAudio() async {
     if (_picking) return;
     setState(() => _picking = true);
@@ -4032,7 +4120,7 @@ class _UploadDialogState extends State<_UploadDialog> {
         audioUrl = '';
         break;
       case CloudUploadKind.score:
-        // 谱例：必须同时携带音频 + 图片。
+        // 图文讲解：必须同时携带讲解音频 + 图片。
         fileType = CloudFileType.score;
         imageInput = done.map((s) => s.uploadedUrl!).join('\n');
         audioUrl = _scoreAudio?.uploadedUrl ?? '';
@@ -4119,7 +4207,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                         // ── title ──
                         Center(
                           child: Text(
-                            '上传课件',
+                            '上传资料',
                             style: appDialogTitleTextStyle(ui),
                           ),
                         ),
@@ -4144,7 +4232,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                               fontWeight: AppFont.w400,
                             ),
                             decoration: InputDecoration(
-                              hintText: '请输入课件标题',
+                              hintText: '请输入资料标题',
                               hintStyle: TextStyle(
                                 fontSize: ui(14),
                                 color: const Color(0xFFB6B5BB),
@@ -4191,11 +4279,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                         SizedBox(height: ui(12)),
                         Row(
                           children: CloudUploadKind.values.map((item) {
-                            final label = switch (item) {
-                              CloudUploadKind.image => '图片',
-                              CloudUploadKind.score => '谱例',
-                              CloudUploadKind.courseware => '课件',
-                            };
+                            final label = item.label;
                             return Padding(
                               padding: EdgeInsets.only(
                                 right: item == CloudUploadKind.courseware
@@ -4607,9 +4691,9 @@ class _UploadDialogState extends State<_UploadDialog> {
 
   // ── score (audio + images) zone ───────────────────────────────────────────
 
-  /// 谱例：左侧「点击将音频在此处上传」+ 右侧「点击将图片在此处上传」。
-  /// 与 1.0 的 `param2`（音频）+ `param3`（图片数组）保持一致：上传后
-  /// 音频走 `_scoreAudio`，图片走 `_slots`，提交时一并组装为 score 类型。
+  /// 图文讲解：左侧「点击将讲解音频在此处上传」+ 右侧「点击将图片在此处上传」。
+  /// 对应接口 `param2`（讲解音频）+ `param3`（图片数组）：上传后音频走
+  /// `_scoreAudio`，图片走 `_slots`，提交时一并组装为 score 类型。
   Widget _buildScoreZone(double Function(double) ui) {
     return _wrapUploadZoneWithPicking(
       Column(
@@ -4622,7 +4706,7 @@ class _UploadDialogState extends State<_UploadDialog> {
               Expanded(
                 child: _ScoreUploadCell(
                   ui: ui,
-                  label: '音频',
+                  label: '讲解音频',
                   iconAsset: AppAssets.coursewareUploadFile,
                   onTap: _pickDisabled ? null : _pickScoreAudio,
                 ),
@@ -4659,7 +4743,7 @@ class _UploadDialogState extends State<_UploadDialog> {
   Widget _buildFileZone(double Function(double) ui) {
     final uploadLabel = switch (_kind) {
       CloudUploadKind.image => '图片',
-      CloudUploadKind.score => '谱例',
+      CloudUploadKind.score => '讲解图片',
       CloudUploadKind.courseware => '文件',
     };
 
@@ -4880,7 +4964,7 @@ class _UploadDialogState extends State<_UploadDialog> {
   }
 }
 
-/// 谱例上传对话框中的「点击将 X 在此处上传」单元格，高度与图片/课件空态上传区一致。
+/// 图文讲解上传区中的「点击将 X 在此处上传」单元格，高度与图片/课件空态上传区一致。
 class _ScoreUploadCell extends StatelessWidget {
   const _ScoreUploadCell({
     required this.ui,
@@ -4984,23 +5068,27 @@ int? _coursewarePreviewMemCacheWidth(
 
 enum _CloudFileAction { preview, play, rename, share, delete }
 
-/// 文件卡片的视觉数据：图标资源 + 类型徽标背景/文字色 + 徽标文案。
-/// 由文件后缀名 + [CloudFileType] 共同决定。
+/// 文件卡片的视觉数据：图标资源 + 类型徽标背景/文字色 + 徽标文案，
+/// 图片类资料额外带缩略图地址。由文件后缀名 + [CloudFileType] 共同决定。
 class _FileVisual {
   const _FileVisual({
     required this.iconAsset,
     required this.badgeLabel,
     required this.badgeBg,
     required this.badgeColor,
+    this.thumbnailUrl = '',
   });
 
   final String iconAsset;
   final String badgeLabel;
   final Color badgeBg;
   final Color badgeColor;
+
+  /// 非空时卡片主体显示该图片缩略图，加载失败再回退到 [iconAsset]。
+  final String thumbnailUrl;
 }
 
-// 文件徽标只保留三种业务分类：图片 / 谱例 / 课件。
+// 文件徽标按业务分类：图片 / 讲解 / 课件（视频文件标为「视频」）。
 // 文件主体图标仍然按后缀自动选择（PDF / DOC / 图片 / 课件占位图）。
 const Color _kBadgeBgImage = Color(0x1A715EFE);
 const Color _kBadgeFgImage = Color(0xFF715EFE);
@@ -5038,11 +5126,16 @@ _FileVisual _resolveFileVisual(CloudFileItem item) {
 
   // ── 主体图标：保留各种文件类型缩略图（PDF/DOC/图片/课件）。
   final iconAsset = _resolveFileIcon(url);
+  const imageExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'];
+  final firstImage = item.imageUrls.isNotEmpty
+      ? item.imageUrls.first
+      : (_hasExt(item.audioUrl, imageExts) ? item.audioUrl : '');
+  final thumbnailUrl = CloudDriveController.resolveMediaUrl(firstImage);
 
-  // ── 类型徽标：仅区分 图片 / 谱例 / 课件。
-  // 判定规则：
+  // ── 类型徽标：
   //  · 仅有图片资源（imageUrls 非空且 audioUrl 为空）→ 图片
-  //  · CloudFileType.score                          → 谱例
+  //  · CloudFileType.score（图片 + 讲解音频）       → 讲解
+  //  · 视频后缀的课件                               → 视频
   //  · 其它（courseware / audio）                   → 课件
   final hasOnlyImages =
       item.imageUrls.isNotEmpty && item.audioUrl.trim().isEmpty;
@@ -5052,20 +5145,24 @@ _FileVisual _resolveFileVisual(CloudFileItem item) {
       badgeLabel: '图片',
       badgeBg: _kBadgeBgImage,
       badgeColor: _kBadgeFgImage,
+      thumbnailUrl: thumbnailUrl,
     );
   }
+  final isVideo = _hasExt(item.audioUrl, ['mp4', 'mov', 'm4v', 'webm']);
   return switch (item.type) {
     CloudFileType.score => _FileVisual(
       iconAsset: iconAsset,
-      badgeLabel: '谱例',
+      badgeLabel: '讲解',
       badgeBg: _kBadgeBgScore,
       badgeColor: _kBadgeFgScore,
+      thumbnailUrl: thumbnailUrl,
     ),
     CloudFileType.courseware || CloudFileType.audio => _FileVisual(
       iconAsset: iconAsset,
-      badgeLabel: '课件',
+      badgeLabel: isVideo ? '视频' : '课件',
       badgeBg: _kBadgeBgCourseware,
       badgeColor: _kBadgeFgCourseware,
+      thumbnailUrl: thumbnailUrl,
     ),
   };
 }

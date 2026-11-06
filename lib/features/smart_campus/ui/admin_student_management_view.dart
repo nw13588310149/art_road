@@ -121,8 +121,8 @@ class _Student {
     this.faceImgUrl = '',
     this.tags = const [],
     this.major = '—',
-    this.direction = '民族唱法',
-    this.adminClass = '高三音乐实验班',
+    this.direction = '联考',
+    this.adminClass = '联考冲刺1班',
     this.dorm = '女生公寓 A-602',
     this.phone = '17656287947',
     this.parentPhone = '17656287947',
@@ -214,13 +214,13 @@ class _Student {
       'major',
       'subject',
       'subjectName',
-    ], '声乐');
+    ], '素描');
     final directionName = _pickString(json, [
       'directionName',
       'direction',
       'directionText',
       'majorDirection',
-    ], '民族唱法');
+    ], '联考');
 
     final bedInfo = _pickString(json, ['bedInfo'], '');
     final bedIdRaw = json['bedId'];

@@ -97,7 +97,7 @@ class _ShellLeftNavState extends State<ShellLeftNav>
     return current.startsWith('$navRoute/');
   }
 
-  /// 当前路由对应的侧栏索引；不在侧栏内的二级页（听写、试题等）返回 -1，
+  /// 当前路由对应的侧栏索引；不在侧栏内的二级页（资讯详情、刷题等）返回 -1，
   /// 避免误把「首页」标为选中。
   int _activeNavIndex() {
     for (var i = 0; i < widget.state.navItems.length; i++) {

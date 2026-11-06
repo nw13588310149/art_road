@@ -11,7 +11,7 @@ Future<Uint8List> readRecordedBytes(String source) {
 
 String createTemporaryRecordingPath() {
   final timestamp = DateTime.now().millisecondsSinceEpoch;
-  return '${Directory.systemTemp.path}${Platform.pathSeparator}music_recording_$timestamp.m4a';
+  return '${Directory.systemTemp.path}${Platform.pathSeparator}art_recording_$timestamp.m4a';
 }
 
 Future<String> createPublishedRecordingUrl(
@@ -20,7 +20,7 @@ Future<String> createPublishedRecordingUrl(
 }) async {
   final timestamp = DateTime.now().millisecondsSinceEpoch;
   final path =
-      '${Directory.systemTemp.path}${Platform.pathSeparator}music_recording_merged_$timestamp.m4a';
+      '${Directory.systemTemp.path}${Platform.pathSeparator}art_recording_merged_$timestamp.m4a';
   await File(path).writeAsBytes(bytes, flush: true);
   return path;
 }

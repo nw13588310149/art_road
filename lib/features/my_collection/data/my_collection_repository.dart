@@ -28,7 +28,7 @@ class MyCollectionRepository {
   }
 
   Future<ApiResponse> removeFavorite({
-    required int targetId,
+    required String targetId,
     required int type,
   }) {
     return client.post(
@@ -55,7 +55,11 @@ class MyCollectionRepository {
       data: <String, dynamic>{
         'classId': classId,
         'content': jsonEncode(payload),
-        'param1': type == 6 ? 'video' : 'book',
+        'param1': switch (type) {
+          6 => 'video',
+          9 => 'news',
+          _ => 'book',
+        },
         'param2': '',
         'param3': '',
         'param4': '',

@@ -15,7 +15,7 @@ const Color _kToolbarBorder = Color(0xFFE6E8EB);
 /// 仿 iOS 系统「地区」等 Picker：自底部滑出，中间滚轮切换，点确定返回选中项。
 /// 不使用 [CupertinoPicker]：其在 iOS 上会对每个刻度播放
 /// `SystemSoundType.tick` + 触觉，快速滚动时听感像滋滋声，且与后台
-/// 长音频（musicPlay 等）叠在一起更明显。
+/// 长音频播放等场景叠在一起更明显。
 /// 通过根 Navigator 的 [showGeneralDialog] 铺满整屏宽度（含侧栏区域），
 /// 避免 [showModalBottomSheet] 在宽屏/横屏 dashboard 下只覆盖内容区的问题。
 Future<String?> showAppWheelPicker({

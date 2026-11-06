@@ -16,7 +16,7 @@ import '../state/school_page_controller.dart';
 import '../state/school_page_state.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-/// iPad Pro 12.9 横屏常见逻辑分辨率 1366×1024；此宽度下左列 Banner/声乐卡
+/// iPad Pro 12.9 横屏常见逻辑分辨率 1366×1024；此宽度下左列 Banner/三科卡
 /// 会挤占快捷按钮区高度，需单独收紧图标与内边距。
 abstract final class _SchoolIpadProLayout {
   static bool matches(BuildContext context) {
@@ -81,8 +81,8 @@ class _SchoolView extends StatelessWidget {
                     // Banner 高度（647:190 比例）—— 保持响应式比例不变。
                     final bannerH = leftW * 190.0 / 647.0;
 
-                    // 声乐/器乐：每张卡宽 = (leftW - 16) / 2，高 = 宽 × 121/315
-                    // —— 保持响应式比例不变。
+                    // 三科卡行高：(leftW - 16) / 2 × 121/315，与三卡
+                    // 121/210 的卡片比例等高 —— 保持响应式比例不变。
                     final voiceCardW = math.max(0.0, (leftW - gap) / 2.0);
                     final voiceH = voiceCardW * 121.0 / 315.0;
                     final quickAreaH = leftH - bannerH - voiceH - gap * 2;
@@ -120,7 +120,7 @@ class _SchoolView extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: gap),
-                              // 声乐 / 器乐：紧贴底部，与右栏底部对齐。
+                              // 三科卡（素描 / 色彩 / 速写）：紧贴底部，与右栏底部对齐。
                               SizedBox(
                                 height: voiceH,
                                 child: _VoiceInstrumentRow(
@@ -196,9 +196,9 @@ class _SchoolView extends StatelessWidget {
     if (input.length >= 3) return input.take(3).toList();
 
     const subjects = <({String text, Color color})>[
-      (text: '听写', color: Color(0xFFB184FF)),
-      (text: '视唱', color: Color(0xFF13E8BE)),
-      (text: '乐理', color: Color(0xFFFF5681)),
+      (text: '素描', color: Color(0xFFB184FF)),
+      (text: '色彩', color: Color(0xFFFF5681)),
+      (text: '速写', color: Color(0xFF13E8BE)),
     ];
 
     final byText = {for (final item in input) item.text: item};
@@ -1043,51 +1043,42 @@ class _ProgressMeta {
   final double progress;
   final Color gradientStart;
   final Color gradientEnd;
-  // Figma 中进度气泡颜色不等同 gradientEnd —— 听写 #B991FF / 视唱 #20E7C0 /
-  // 乐理 #FF7699，单独维护一个字段以便严格还原。
+  // 进度气泡颜色不等同 gradientEnd —— 素描 #B991FF / 色彩 #FF7699 /
+  // 速写 #20E7C0，单独维护一个字段。
   final Color chipColor;
   final String tip;
 
   factory _ProgressMeta.fromItem(SchoolLearningItem item) {
     final progress = item.progress.clamp(0, 100).toDouble();
-    final totalHours = item.allCount;
-    final completedHours = item.completeCount;
-    final remainingHours = item.remainingCount;
     final completed =
         progress >= 100 ||
         (item.allCount > 0 && item.completeCount >= item.allCount);
-
-    if (item.text.contains('乐理')) {
-      return _ProgressMeta(
-        totalHours: totalHours,
-        completedHours: completedHours,
-        remainingHours: remainingHours,
-        progress: progress,
-        gradientStart: const Color(0xFFFFBECE),
-        gradientEnd: const Color(0xFFFF5681),
-        chipColor: const Color(0xFFFF7699),
-        tip: completed ? '恭喜你！你完成了乐理的全部课程' : '',
-      );
-    }
-    if (item.text.contains('视唱')) {
-      return _ProgressMeta(
-        totalHours: totalHours,
-        completedHours: completedHours,
-        remainingHours: remainingHours,
-        progress: progress,
-        gradientStart: const Color(0xFF4DE6C8),
-        gradientEnd: const Color(0xFF13E8BE),
-        chipColor: const Color(0xFF20E7C0),
-      );
-    }
+    final (Color start, Color end, Color chip) = switch (item.text) {
+      final t when t.contains('色彩') => (
+        const Color(0xFFFFBECE),
+        const Color(0xFFFF5681),
+        const Color(0xFFFF7699),
+      ),
+      final t when t.contains('速写') => (
+        const Color(0xFF4DE6C8),
+        const Color(0xFF13E8BE),
+        const Color(0xFF20E7C0),
+      ),
+      _ => (
+        const Color(0xFFD4BFFF),
+        const Color(0xFFB184FF),
+        const Color(0xFFB991FF),
+      ),
+    };
     return _ProgressMeta(
-      totalHours: totalHours,
-      completedHours: completedHours,
-      remainingHours: remainingHours,
+      totalHours: item.allCount,
+      completedHours: item.completeCount,
+      remainingHours: item.remainingCount,
       progress: progress,
-      gradientStart: const Color(0xFFD4BFFF),
-      gradientEnd: const Color(0xFFB184FF),
-      chipColor: const Color(0xFFB991FF),
+      gradientStart: start,
+      gradientEnd: end,
+      chipColor: chip,
+      tip: completed ? '恭喜你！你完成了${item.text}的全部课程' : '',
     );
   }
 }

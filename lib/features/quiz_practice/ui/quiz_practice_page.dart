@@ -15,8 +15,8 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 // ─────────────────────────────────────────────────────────────────────
 // 视觉常量
 //
-// 乐理刷题：紫色为主，错题集红色。
-// 听写刷题：绿色为主，错题集红色（暂未开放，所有数据 0）。
+// 美术常识刷题：紫色为主，错题集红色。
+// 看图识画刷题：绿色为主，错题集红色（暂未开放，所有数据 0）。
 // ─────────────────────────────────────────────────────────────────────
 
 /// 正确率过低时统计卡片整列变红高亮使用的颜色。
@@ -83,7 +83,7 @@ class QuizPracticePage extends ConsumerWidget {
               summaries: state.summaries,
               onSelect: (summary) =>
                   _openSession(context, controller, summary),
-              onDictationTap: () =>
+              onPictureQuizTap: () =>
                   showInfoDialog(context: context, title: '功能暂未开放'),
             ),
     );
@@ -109,25 +109,25 @@ class QuizPracticePage extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 整页可滚动主体：乐理刷题区 + 听写刷题区
+// 整页可滚动主体：美术常识刷题区 + 看图识画刷题区
 // ─────────────────────────────────────────────────────────────────────
 
 class _QuizContent extends StatelessWidget {
   const _QuizContent({
     required this.summaries,
     required this.onSelect,
-    required this.onDictationTap,
+    required this.onPictureQuizTap,
   });
 
   final List<QuizPracticeSummary> summaries;
   final ValueChanged<QuizPracticeSummary> onSelect;
-  final VoidCallback onDictationTap;
+  final VoidCallback onPictureQuizTap;
 
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final theorySequence = _summaryOf(QuizPracticeType.sequence);
-    final dictationSummaries = QuizPracticeType.values
+    final pictureQuizSummaries = QuizPracticeType.values
         .map(QuizPracticeSummary.empty)
         .toList(growable: false);
 
@@ -136,7 +136,7 @@ class _QuizContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SectionTitle('乐理刷题'),
+          const _SectionTitle('美术常识刷题'),
           SizedBox(height: ui(12)),
           _StatsRow(
             notDone: theorySequence.notDoneCount,
@@ -156,15 +156,15 @@ class _QuizContent extends StatelessWidget {
             onSelect: onSelect,
           ),
           SizedBox(height: ui(28)),
-          const _SectionTitle('听写刷题'),
+          const _SectionTitle('看图识画刷题'),
           SizedBox(height: ui(12)),
           const _StatsRow(notDone: 0, done: 0, wrong: 0, accuracyPercent: 0),
           SizedBox(height: ui(20)),
           _PracticeRingRow(
-            summaries: dictationSummaries,
+            summaries: pictureQuizSummaries,
             groupRingGradient: _kGreenRingGradient,
             groupCardGradient: _kGreenCardGradient,
-            onSelect: (_) => onDictationTap(),
+            onSelect: (_) => onPictureQuizTap(),
           ),
         ],
       ),

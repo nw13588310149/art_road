@@ -2113,16 +2113,20 @@ class _SubjectTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final isPurple =
-        subject == _SubjectKind.vocal || subject == _SubjectKind.instrument;
-    final bg = isPurple ? _kPurpleSoftBg : _kSubjectGreenBg;
-    final fg = isPurple ? _kPurple : _kSubjectGreen;
-    final label = switch (subject) {
-      _SubjectKind.vocal => '声乐',
-      _SubjectKind.instrument => '器乐',
-      _SubjectKind.sightSinging => '视唱',
-      _SubjectKind.theory => '乐理',
-      _SubjectKind.dictation => '听写',
+    final (bg, fg, label) = switch (subject) {
+      _SubjectKind.sketch => (
+        const Color(0xFFEAF0FB),
+        const Color(0xFF4A74D6),
+        '素描',
+      ),
+      _SubjectKind.color => (_kSubjectGreenBg, _kSubjectGreen, '色彩'),
+      _SubjectKind.speed => (
+        const Color(0xFFE4F3F7),
+        const Color(0xFF1F8FA8),
+        '速写',
+      ),
+      _SubjectKind.knowledge => (_kPurpleSoftBg, _kPurple, '美术常识'),
+      _SubjectKind.culture => (_kPurpleSoftBg, _kPurple, '文化课'),
     };
     return Container(
       height: ui(16),
@@ -2166,6 +2170,12 @@ class _MediaTag extends StatelessWidget {
         _kPurple,
         '可回听录音',
         Icons.mic_none_rounded,
+      ),
+      _ReplayMedia.image => (
+        _kPurpleSoftBg,
+        _kPurple,
+        '可查看原卷',
+        Icons.image_outlined,
       ),
       _ReplayMedia.none => (_kBorderHair, _kTextHint, '本场无回放录制', null),
     };
@@ -2237,9 +2247,9 @@ class _ViewDetailButton extends StatelessWidget {
 // 页面展示模型
 // =============================================================================
 
-enum _SubjectKind { vocal, instrument, sightSinging, theory, dictation }
+enum _SubjectKind { sketch, color, speed, knowledge, culture }
 
-enum _ReplayMedia { video, audio, none }
+enum _ReplayMedia { video, audio, image, none }
 
 class _ExamSubjectData {
   const _ExamSubjectData({
@@ -2355,13 +2365,11 @@ String _resourceMediumLabel(String path) {
 }
 
 _SubjectKind _subjectKindFromName(String name) {
-  if (name.contains('声乐')) return _SubjectKind.vocal;
-  if (name.contains('器乐') || name.contains('钢琴')) {
-    return _SubjectKind.instrument;
-  }
-  if (name.contains('视唱')) return _SubjectKind.sightSinging;
-  if (name.contains('听写')) return _SubjectKind.dictation;
-  return _SubjectKind.theory;
+  if (name.contains('素描')) return _SubjectKind.sketch;
+  if (name.contains('色彩')) return _SubjectKind.color;
+  if (name.contains('速写')) return _SubjectKind.speed;
+  if (name.contains('文化')) return _SubjectKind.culture;
+  return _SubjectKind.knowledge;
 }
 
 _ReplayMedia _mediaFromPath(String path) {
@@ -2373,6 +2381,12 @@ _ReplayMedia _mediaFromPath(String path) {
       lower.endsWith('.wav') ||
       lower.endsWith('.m4a')) {
     return _ReplayMedia.audio;
+  }
+  if (lower.endsWith('.jpg') ||
+      lower.endsWith('.jpeg') ||
+      lower.endsWith('.png') ||
+      lower.endsWith('.webp')) {
+    return _ReplayMedia.image;
   }
   return _ReplayMedia.none;
 }

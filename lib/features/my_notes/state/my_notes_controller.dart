@@ -202,6 +202,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
       title: trimmed,
       imageUrl: note.imageUrl,
       param2: note.drawingData.isEmpty ? 'string' : note.drawingData,
+      param3: note.baseImageUrl.isEmpty ? 'string' : note.baseImageUrl,
     );
     state = state.copyWith(busy: false);
     if (!response.isSuccess) {
@@ -226,7 +227,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
     state = state.copyWith(
       view: MyNotesView.template,
       draftTitle: trimmed.isEmpty ? '笔记名称' : trimmed,
-      paperType: NotePaperType.staff,
+      paperType: NotePaperType.grid,
       strokes: const <NoteStroke>[],
       redoStrokes: const <NoteStroke>[],
       toolMode: NoteToolMode.pen,
@@ -273,12 +274,17 @@ class MyNotesController extends StateNotifier<MyNotesState> {
 
   Future<void> openExistingNote(NoteEntry note) async {
     _clearStrokeHistory();
+    // 有底图时始终垫底图；否则沿用旧逻辑：先用 param1 整页图，加载到矢量层后再移除。
+    final hasBase = note.baseImageUrl.isNotEmpty;
+    final background = hasBase ? note.baseImageUrl : note.imageUrl;
     state = state.copyWith(
       view: MyNotesView.editor,
       draftTitle: note.title,
       paperType: note.paperType,
       editingNote: note,
-      editorBackgroundImageUrl: note.imageUrl.isEmpty ? null : note.imageUrl,
+      editorBackgroundImageUrl: background.isEmpty ? null : background,
+      clearEditorBackgroundImageUrl: background.isEmpty,
+      editorBackgroundIsBase: hasBase,
       strokes: const <NoteStroke>[],
       redoStrokes: const <NoteStroke>[],
       toolMode: NoteToolMode.pen,
@@ -290,7 +296,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
 
     final payload = await _resolveDrawingPayload(note.drawingData);
     if (payload == null) {
-      // 旧笔记：保留 param1 底图叠画。
+      // 旧笔记 / 只有底图的笔记：保留背景图叠画。
       state = state.copyWith(busy: false, editorHasVectorLayer: false);
       return;
     }
@@ -300,7 +306,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
         state = state.copyWith(
           busy: false,
           editorHasVectorLayer: true,
-          clearEditorBackgroundImageUrl: true,
+          clearEditorBackgroundImageUrl: !hasBase,
           pendingPencilKitData: payload.pencilKitBase64,
         );
         break;
@@ -312,7 +318,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
         state = state.copyWith(
           busy: false,
           editorHasVectorLayer: true,
-          clearEditorBackgroundImageUrl: true,
+          clearEditorBackgroundImageUrl: !hasBase,
           strokes: payload.strokes,
           redoStrokes: const <NoteStroke>[],
           clearPendingPencilKitData: true,
@@ -568,6 +574,8 @@ class MyNotesController extends StateNotifier<MyNotesState> {
         ? '笔记名称'
         : state.draftTitle.trim();
     final editingId = state.editingNote?.id ?? 0;
+    final base = state.editingNote?.baseImageUrl ?? '';
+    final param3 = base.isEmpty ? 'string' : base;
     final saveResponse = editingId > 0
         ? await _repository.updateNote(
             id: editingId,
@@ -576,6 +584,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
             title: title,
             imageUrl: imagePath,
             param2: param2,
+            param3: param3,
           )
         : await _repository.saveNote(
             categoryId: categoryId,
@@ -583,6 +592,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
             title: title,
             imageUrl: imagePath,
             param2: param2,
+            param3: param3,
           );
     if (!saveResponse.isSuccess) {
       state = state.copyWith(busy: false);
@@ -707,6 +717,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
               (key, value) => MapEntry(key.toString(), value),
             );
       final drawingRaw = map['param2']?.toString() ?? '';
+      final baseRaw = map['param3']?.toString() ?? '';
       result.add(
         NoteEntry(
           id: _toInt(map['id']),
@@ -718,6 +729,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
           drawingData: NoteDrawingCodec.isPlaceholder(drawingRaw)
               ? ''
               : drawingRaw,
+          baseImageUrl: NoteDrawingCodec.isPlaceholder(baseRaw) ? '' : baseRaw,
           createdAt: _parseDate(map['createTime']),
           paperType: NotePaperType.fromValue(map['paperType']),
           isFavorite: _toBool(map['favorite']) || _toBool(map['isFavorite']),

@@ -444,7 +444,7 @@ class AuthFigmaAgreementRow extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: () => onChanged(!checked),
           child: Text(
-            '同意并愿意遵守',
+            '已阅读并同意',
             style: TextStyle(
               color: Colors.black,
               fontSize: _s(14),
@@ -462,7 +462,7 @@ class AuthFigmaAgreementRow extends StatelessWidget {
             onAgreementTap();
           },
           child: Text(
-            '《美术之路服务协议》',
+            '《服务协议与隐私政策》',
             style: TextStyle(
               color: const Color(0xFF856FE2),
               fontSize: _s(14),

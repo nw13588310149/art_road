@@ -51,13 +51,13 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
 
   static const int _pageSize = 20;
   static const List<String> _menuOrder = <String>[
-    '声乐',
-    '歌剧',
-    '键盘',
-    '中国乐器',
-    '西洋乐器',
-    '音乐会',
-    '大师课',
+    '素描',
+    '色彩',
+    '速写',
+    '创作',
+    '设计',
+    '联考解析',
+    '校考指导',
   ];
 
   Future<void> refresh() async {
@@ -661,11 +661,31 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
           playCount: _toInt(item['playCount']),
           vip: _toInt(item['vip']),
           isFavorite: _toBool(item['isFavorite']),
+          teacherName: _firstText(item, const [
+            'teacherName',
+            'author',
+            'nickname',
+          ]),
+          teacherAvatar: _firstText(item, const [
+            'teacherAvatar',
+            'avatar',
+            'headUrl',
+          ]),
         ),
       );
     }
 
     return result;
+  }
+
+  String _firstText(Map<String, dynamic> item, List<String> keys) {
+    for (final key in keys) {
+      final value = item[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty && value != 'null') {
+        return value;
+      }
+    }
+    return '';
   }
 
   VideoDetail? _parseVideoDetail(dynamic data) {

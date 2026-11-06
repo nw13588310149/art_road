@@ -138,7 +138,7 @@ class CircleRepository {
   /// { "current": 1, "size": 10, "keyword": "", "sortType": 0, "type": 0 }
   /// ```
   /// - [sortType]：0-最新发布 / 1-热门推荐 / 2-为你推荐
-  /// - [type]：0-文章 / 1-图片 / 2-视频 / 3-音乐；传 `null` 表示不限类型
+  /// - [type]：0-文章 / 1-图片 / 2-视频 / 3-音频；传 `null` 表示不限类型
   /// - [keyword]：去掉首尾空白后才下发；空字符串不带，避免后端按空串严格匹配
   Future<ApiResponse> postsList({
     int current = 1,

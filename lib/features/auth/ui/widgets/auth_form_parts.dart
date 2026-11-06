@@ -104,7 +104,7 @@ class AuthAgreementRow extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               const Text(
-                '同意并愿意遵守',
+                '已阅读并同意',
                 style: TextStyle(
                   fontSize: 14,
                   height: 12 / 14,
@@ -114,7 +114,7 @@ class AuthAgreementRow extends StatelessWidget {
               InkWell(
                 onTap: () => Navigator.pushNamed(context, RoutePaths.xieyi2),
                 child: const Text(
-                  '《美术之路服务协议》',
+                  '《服务协议与隐私政策》',
                   style: TextStyle(
                     fontSize: 14,
                     height: 12 / 14,

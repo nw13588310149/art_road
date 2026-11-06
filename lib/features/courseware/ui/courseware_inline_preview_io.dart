@@ -1,7 +1,13 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:pdfrx/pdfrx.dart';
+
+import '../../../core/audio/mpv_player_smooth.dart';
 
 /// 原生平台（iOS / Android / 桌面）通用文件内嵌预览。
 ///
@@ -10,7 +16,8 @@ import 'package:pdfrx/pdfrx.dart';
 /// - PDF：用 [PdfViewer.uri] 跑 pdfrx，与 theory 页面同款渲染、加载/错误
 ///   样式（参见 `lib/core/widgets/pdf/app_pdf_view_native.dart`）。
 /// - 图片：直接交给 [CachedNetworkImage]，居中、按比例缩放。
-/// - 其它（音频 / 视频 / Office / 文本 / 未知后缀）：返回 [placeholder]
+/// - 视频：media_kit 播放器 + 系统风格控制条（示范视频、写生实录等）。
+/// - 其它（音频 / Office / 文本 / 未知后缀）：返回 [placeholder]
 ///   或一个友好的占位提示，让上层走"在浏览器中查看 / 下载"路径。
 class CoursewareInlinePreview extends StatelessWidget {
   const CoursewareInlinePreview({
@@ -38,8 +45,9 @@ class CoursewareInlinePreview extends StatelessWidget {
         return _CoursewarePdfPreview(url: url, authToken: authToken);
       case _PreviewKind.image:
         return _CoursewareImagePreview(url: url);
-      case _PreviewKind.audio:
       case _PreviewKind.video:
+        return _CoursewareVideoPreview(url: url);
+      case _PreviewKind.audio:
       case _PreviewKind.office:
       case _PreviewKind.text:
       case _PreviewKind.unknown:
@@ -180,18 +188,100 @@ class _CoursewareImagePreview extends StatelessWidget {
   }
 }
 
-class _UnsupportedPreview extends StatelessWidget {
-  const _UnsupportedPreview();
+/// 原生视频预览：进入页面加载但不自动播放，离开页面释放播放器。
+class _CoursewareVideoPreview extends StatefulWidget {
+  const _CoursewareVideoPreview({required this.url});
+
+  final String url;
+
+  @override
+  State<_CoursewareVideoPreview> createState() =>
+      _CoursewareVideoPreviewState();
+}
+
+class _CoursewareVideoPreviewState extends State<_CoursewareVideoPreview> {
+  Player? _player;
+  VideoController? _controller;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _open();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CoursewareVideoPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _release();
+      _failed = false;
+      _open();
+    }
+  }
+
+  void _open() {
+    try {
+      MediaKit.ensureInitialized();
+      final player = Player();
+      _player = player;
+      _controller = VideoController(player);
+      unawaited(
+        MpvPlayerSmooth.openSmooth(
+          player,
+          Media(widget.url),
+          play: false,
+        ).catchError((Object _) {
+          if (mounted) setState(() => _failed = true);
+        }),
+      );
+    } catch (_) {
+      _release();
+      _failed = true;
+    }
+  }
+
+  void _release() {
+    final player = _player;
+    _player = null;
+    _controller = null;
+    if (player != null) {
+      unawaited(player.dispose());
+    }
+  }
+
+  @override
+  void dispose() {
+    _release();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final controller = _controller;
+    if (_failed || controller == null) {
+      return const _UnsupportedPreview(message: '视频加载失败，请稍后重试。');
+    }
+    return Video(controller: controller, fill: Colors.black);
+  }
+}
+
+class _UnsupportedPreview extends StatelessWidget {
+  const _UnsupportedPreview({
+    this.message = '当前平台暂不支持预览此文件类型，请在浏览器中查看或下载。',
+  });
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Text(
-          '当前平台暂不支持预览此文件类型，请在浏览器中查看或下载。',
+          message,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF8F86A8)),
+          style: const TextStyle(color: Color(0xFF8F86A8)),
         ),
       ),
     );

@@ -5,6 +5,21 @@ class CollectionTabItem {
   final String label;
 }
 
+/// 收藏类型（与 `favoriteList` / `favoriteSave` 的 type 一致，0 表示全部）。
+abstract final class CollectionType {
+  static const all = 0;
+  static const video = 6;
+  static const news = 9;
+  static const artwork = 11;
+
+  static String labelOf(int type) => switch (type) {
+    video => '视频',
+    news => '资讯',
+    artwork => '范画',
+    _ => '收藏',
+  };
+}
+
 class CollectionEntry {
   const CollectionEntry({
     required this.id,
@@ -20,8 +35,9 @@ class CollectionEntry {
     required this.rawPayload,
   });
 
-  final int id;
-  final int targetId;
+  /// 收藏记录 id 与目标 id 都按字符串承载（雪花 id / 范画 `g-1` 等非数字 id）。
+  final String id;
+  final String targetId;
   final int type;
   final String title;
   final String subtitle;
@@ -32,9 +48,9 @@ class CollectionEntry {
   final String durationText;
   final Map<String, dynamic> rawPayload;
 
-  bool get isVideo => type == 6;
-  bool get isVocalOrInstrument => type == 4 || type == 5;
-  bool get isLesson => type == 1 || type == 2 || type == 3 || type == 10;
+  bool get isVideo => type == CollectionType.video;
+  bool get isNews => type == CollectionType.news;
+  bool get isArtwork => type == CollectionType.artwork;
 }
 
 class CollectionShareClass {
@@ -72,7 +88,7 @@ class MyCollectionState {
     this.busy = false,
     this.errorMessage,
     this.tabs = const <CollectionTabItem>[],
-    this.activeType = 4,
+    this.activeType = CollectionType.all,
     this.items = const <CollectionEntry>[],
     this.shareClasses = const <CollectionShareClass>[],
     this.shareTarget,
@@ -116,25 +132,17 @@ class MyCollectionState {
   }
 }
 
-/// 我的收藏 Tab 顺序：声乐 → 器乐 → 听写 → 视唱 → 乐理 → 试题 → 视频，
-/// 与设计稿顶部分段控件顺序一致，与服务端返回的 type 字段保持一一对应。
-/// type=10 对应"试题"，与 study_catalog / answerQuestions 模块一致。
+/// 我的收藏 Tab 顺序：全部 → 范画 → 视频 → 资讯。
 const List<CollectionTabItem> kCollectionDefaultTabs = <CollectionTabItem>[
-  CollectionTabItem(type: 4, label: '声乐'),
-  CollectionTabItem(type: 5, label: '器乐'),
-  CollectionTabItem(type: 3, label: '听写'),
-  CollectionTabItem(type: 1, label: '视唱'),
-  CollectionTabItem(type: 2, label: '乐理'),
-  CollectionTabItem(type: 10, label: '试题'),
-  CollectionTabItem(type: 6, label: '视频'),
+  CollectionTabItem(type: CollectionType.all, label: '全部'),
+  CollectionTabItem(type: CollectionType.artwork, label: '范画'),
+  CollectionTabItem(type: CollectionType.video, label: '视频'),
+  CollectionTabItem(type: CollectionType.news, label: '资讯'),
 ];
 
 const Map<String, int> kCollectionTypeByLabel = <String, int>{
-  '视唱': 1,
-  '乐理': 2,
-  '听写': 3,
-  '声乐': 4,
-  '器乐': 5,
-  '视频': 6,
-  '试题': 10,
+  '全部': CollectionType.all,
+  '范画': CollectionType.artwork,
+  '视频': CollectionType.video,
+  '资讯': CollectionType.news,
 };

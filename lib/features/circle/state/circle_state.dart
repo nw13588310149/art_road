@@ -101,22 +101,22 @@ extension CircleSortTypeApi on CircleSortType {
 }
 
 /// 校圈帖子按内容形态过滤（与后端 `PostsListReq.type` 一一对应）。
-///   0-文章 / 1-图片 / 2-视频 / 3-音乐；`null` 代表不限。
-enum CirclePostType { article, image, video, music }
+///   0-文章 / 1-图片 / 2-视频 / 3-音频；`null` 代表不限。
+enum CirclePostType { article, image, video, audio }
 
 extension CirclePostTypeApi on CirclePostType {
   int get apiCode => switch (this) {
     CirclePostType.article => 0,
     CirclePostType.image => 1,
     CirclePostType.video => 2,
-    CirclePostType.music => 3,
+    CirclePostType.audio => 3,
   };
 
   String get label => switch (this) {
     CirclePostType.article => '文章',
     CirclePostType.image => '图片',
     CirclePostType.video => '视频',
-    CirclePostType.music => '音乐',
+    CirclePostType.audio => '音频',
   };
 }
 
@@ -220,7 +220,7 @@ class CirclePost {
   final List<CircleComment> comments;
 
   /// 内容形态：image / video / audio。来自后端 `type` 字段：
-  /// 1=图片 / 2=视频 / 3=音乐；`type==0`（文章）暂按图片处理。
+  /// 1=图片 / 2=视频 / 3=音频；`type==0`（文章）暂按图片处理。
   final PostMediaKind mediaKind;
 
   /// 与 `mediaKind` 配套的资源地址列表，已 resolve 过域名。

@@ -71,7 +71,7 @@ CirclePost _mapPost(Map<String, dynamic> m) {
     description: description,
   );
 
-  // 后端 `type`：1=图片 / 2=视频 / 3=音乐；0（文章）当成图片处理。
+  // 后端 `type`：1=图片 / 2=视频 / 3=音频；0（文章）当成图片处理。
   final type = _asInt(m['type']);
   final mediaKind = switch (type) {
     2 => PostMediaKind.video,
@@ -157,7 +157,9 @@ CirclePost _mapPost(Map<String, dynamic> m) {
     ),
     badges: badges,
     text: composedText,
-    timeLabel: _pickString(m, const ['createTime', 'time', 'publishTime', 'createdAt']),
+    timeLabel: _friendlyTime(
+      _pickString(m, const ['createTime', 'time', 'publishTime', 'createdAt']),
+    ),
     imageUrl: firstImage,
     imageAspectRatio: aspect,
     hasExplicitAspectRatio: hasExplicitAspectRatio,
@@ -241,10 +243,32 @@ CircleComment _mapComment(Map<String, dynamic> m) {
       avatarUrl: avatarRaw.isNotEmpty ? MediaUrl.resolve(avatarRaw) : '',
     ),
     text: text,
-    timeLabel: _pickString(m, const ['createTime', 'time', 'createdAt']),
+    timeLabel: _friendlyTime(
+      _pickString(m, const ['createTime', 'time', 'createdAt']),
+    ),
     likeCount: likeCount,
     liked: liked,
   );
+}
+
+/// 接口时间为 `yyyy-MM-dd HH:mm:ss`；卡片按「刚刚 / N 分钟前 / 今天 / 昨天 / 月-日」展示，
+/// 解析失败时原样返回。
+String _friendlyTime(String raw) {
+  final time = DateTime.tryParse(raw);
+  if (time == null) return raw;
+  final now = DateTime.now();
+  final diff = now.difference(time);
+  if (diff.inMinutes < 1) return '刚刚';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
+  String two(int v) => v.toString().padLeft(2, '0');
+  final clock = '${two(time.hour)}:${two(time.minute)}';
+  final days = DateTime(now.year, now.month, now.day)
+      .difference(DateTime(time.year, time.month, time.day))
+      .inDays;
+  if (days == 0) return '今天 $clock';
+  if (days == 1) return '昨天 $clock';
+  if (time.year == now.year) return '${two(time.month)}-${two(time.day)} $clock';
+  return '${time.year}-${two(time.month)}-${two(time.day)}';
 }
 
 List<String> _parseMediasField(dynamic raw) {

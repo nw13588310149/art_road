@@ -648,7 +648,7 @@ class _NotesAddCategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    // 与录音系统侧栏「添加分类」保持一致：163×60 胶囊背景，纵向居中排版。
+    // 与云盘侧栏「添加分类」保持一致：163×60 胶囊背景，纵向居中排版。
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -890,7 +890,7 @@ class _NotesFloatingCreateButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 与录音系统「新建文件夹」FAB 保持一致：20×20 图标。
+            // 与云盘「新建文件夹」FAB 保持一致：20×20 图标。
             Image.asset(
               'assets/images/note/3.png',
               width: ui(20),
@@ -995,10 +995,10 @@ class _NoteTemplateViewState extends State<_NoteTemplateView> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _TemplatePreviewCard(
-                      type: NotePaperType.staff,
-                      selected: _pending == NotePaperType.staff,
+                      type: NotePaperType.grid,
+                      selected: _pending == NotePaperType.grid,
                       onTap: () =>
-                          setState(() => _pending = NotePaperType.staff),
+                          setState(() => _pending = NotePaperType.grid),
                     ),
                     SizedBox(width: ui(16)),
                     _TemplatePreviewCard(
@@ -1292,7 +1292,9 @@ class _NoteEditorView extends StatelessWidget {
                     paperType: state.paperType,
                     backgroundImage: _buildOptionalRemoteImage(
                       state.editorBackgroundImageUrl,
-                      fit: BoxFit.cover,
+                      fit: state.editorBackgroundIsBase
+                          ? BoxFit.contain
+                          : BoxFit.cover,
                     ),
                     strokeColor: state.selectedColor,
                     strokeWidth: state.strokeWidth,

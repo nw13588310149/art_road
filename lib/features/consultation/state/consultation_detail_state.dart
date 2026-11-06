@@ -8,7 +8,7 @@ class ConsultationDetailArgs {
 
   final int id;
 
-  /// 校园课件等入口透传的学校名称（schoolList.name）；有值时覆盖默认「美术之路」。
+  /// 校园课件等入口透传的学校名称（schoolList.name）；有值时覆盖接口来源。
   final String? sourceName;
 
   factory ConsultationDetailArgs.fromRaw(dynamic raw) {
@@ -58,7 +58,7 @@ class ConsultationDetail {
   final int id;
   final String title;
 
-  /// 1.0 中固定显示"美术之路"，但接口可能也提供来源字段，留作扩展。
+  /// 来源：接口 `source` / `author`，缺省显示「美术之路」；校园入口会用学校名覆盖。
   final String source;
 
   /// yyyy-MM-dd HH:mm:ss 字符串，直接展示。
@@ -71,12 +71,12 @@ class ConsultationDetail {
   final String coverUrl;
 
   factory ConsultationDetail.fromJson(Map raw) {
+    // shortText1 是列表卡片的短标题，不作为来源展示。
+    final source = (raw['source'] ?? raw['author'])?.toString().trim() ?? '';
     return ConsultationDetail(
       id: _toInt(raw['id']) ?? 0,
       title: raw['title']?.toString() ?? '',
-      source: raw['shortText1']?.toString().trim().isNotEmpty == true
-          ? raw['shortText1'].toString().trim()
-          : '美术之路',
+      source: source.isNotEmpty ? source : '美术之路',
       updateTime: raw['updateTime']?.toString() ?? '',
       viewCount: _toInt(raw['viewCount']) ?? 0,
       htmlContent: raw['longText1']?.toString() ?? '',

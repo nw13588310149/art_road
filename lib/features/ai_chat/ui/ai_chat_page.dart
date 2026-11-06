@@ -42,12 +42,12 @@ const _conversationBottomInset = 8.0;
 const Color _theoryRankDim = Color(0xFFCECED1);
 
 const _theoryPrompts = <_AiPromptQuestion>[
-  _AiPromptQuestion('1', '大小调怎么快速区分？', Color(0xFFEB2F2F)),
-  _AiPromptQuestion('2', '增四度和减五度为什么是三全音？', Color(0xFFEB2F2F)),
-  _AiPromptQuestion('3', '属七为什么必须解决？', Color(0xFFFE7B3F)),
-  _AiPromptQuestion('4', '4/4 和 6/8 区别在哪？', _theoryRankDim),
-  _AiPromptQuestion('5', '同主音大小调区别？', _theoryRankDim),
-  _AiPromptQuestion('6', '常用音乐术语（中英对照）', _theoryRankDim),
+  _AiPromptQuestion('1', '素描起形总是不准怎么办？', Color(0xFFEB2F2F)),
+  _AiPromptQuestion('2', '明暗五大调子分别是什么？', Color(0xFFEB2F2F)),
+  _AiPromptQuestion('3', '色彩画面发灰怎么调整？', Color(0xFFFE7B3F)),
+  _AiPromptQuestion('4', '速写人体比例和动态怎么抓？', _theoryRankDim),
+  _AiPromptQuestion('5', '联考评分 A–E 档怎么划分？', _theoryRankDim),
+  _AiPromptQuestion('6', '静物构图有哪些常用法则？', _theoryRankDim),
 ];
 
 const _toolShortcuts = <_AiToolShortcut>[
@@ -59,14 +59,14 @@ const _toolShortcuts = <_AiToolShortcut>[
   ),
   _AiToolShortcut(
     title: '提供练习建议',
-    subtitle: 'AI 科学规划练习内容',
-    prompt: '请根据音乐艺考训练场景，帮我制定一份更高效的练习建议。',
+    subtitle: 'AI 科学规划素描、色彩、速写练习',
+    prompt: '请结合我的成绩，帮我制定一份更高效的素描、色彩、速写练习建议。',
     asset: AppAssets.aiChatV2ToolSuggest,
   ),
   _AiToolShortcut(
     title: '制定考试计划',
-    subtitle: 'AI 定制备考方案',
-    prompt: '请帮我制定一份音乐艺考备考计划，分阶段说明每日练习重点。',
+    subtitle: 'AI 定制联考备考方案',
+    prompt: '请帮我制定一份美术联考备考计划，分阶段说明每日练习重点。',
   ),
 ];
 
@@ -580,7 +580,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                 // 41 个字符 × 13px ≈ 533px，与 Expanded 宽度 ~544px 是临界点，
                 // PingFang OTF 字宽稍大就会换行；softWrap:false 直接禁止换行。
                 Text(
-                  '专属音乐AI问答助手，秒解专业疑问，梳理艺考考点，全程陪伴学习，让音乐备考更轻松高效。',
+                  '专属美术AI问答助手，秒解专业疑问，梳理联考考点，全程陪伴学习，让美术备考更轻松高效。',
                   maxLines: 1,
                   softWrap: false,
                   overflow: TextOverflow.visible,
@@ -614,7 +614,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           children: [
             // Figma: 16/500 / line-height 22 / #0B081A
             Text(
-              '音乐理论问题',
+              '美术专业问题',
               style: TextStyle(
                 color: _textPrimary,
                 fontSize: 16,
@@ -711,8 +711,8 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 标题/副标题间距与左侧"音乐理论问题"卡保持一致，
-                  // 确保第一行内容（"分析乐谱"按钮顶）与左卡第一题项顶严格对齐。
+                  // 标题/副标题间距与左侧"美术专业问题"卡保持一致，
+                  // 确保第一行内容（第一个工具按钮顶）与左卡第一题项顶严格对齐。
                   // Figma: 16/500 / line-height 22 / #0B081A
                   Text(
                     '效率工具',
@@ -728,7 +728,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                   const SizedBox(height: 0),
                   // Figma: 12/400 / line-height 22 / #B6B5BB
                   Text(
-                    '音乐学习就用艺同学',
+                    '学美术就找小艺同学',
                     style: TextStyle(
                       color: _textHint,
                       fontSize: 12,
@@ -1283,7 +1283,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                   decoration: InputDecoration(
                     isCollapsed: true,
                     border: InputBorder.none,
-                    hintText: '流行音乐中常见的和弦进行有哪些？',
+                    hintText: '石膏头像的明暗交界线怎么画才有体积感？',
                     hintStyle: TextStyle(
                       color: Color(0x7326244C),
                       fontSize: 14,

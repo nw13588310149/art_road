@@ -18,7 +18,7 @@ class AnchoredPopupPosition {
   final double approxMenuHeight;
 
   /// Whether the menu visually sits above the trigger center. Used to pick
-  /// slide direction so the entrance matches [music_play_page] speed menus.
+  /// slide direction so the entrance matches the app's other anchored menus.
   final bool above;
 }
 
@@ -74,7 +74,7 @@ AnchoredPopupPosition? computeAnchoredPopupPosition({
 }
 
 /// Shows an anchored popup with the same fade + slide transition used by
-/// musicPlay speed / pitch pickers.
+/// compact option pickers.
 Future<T?> showAnchoredPopupMenu<T>({
   required BuildContext context,
   required GlobalKey triggerKey,

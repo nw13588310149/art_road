@@ -250,10 +250,7 @@ abstract final class AppAssets {
   static const folderCategoryIdleIcon = 'assets/images/home/nav5.png';
   // 录音作品（recording）页 左侧分类 —— 非选中态 icon（历史资源，已由 nav5 替代）。
   static const recordingCategoryIdleIcon = 'assets/images/sound/ly.png';
-  static const homeDictationBookCover = 'assets/images/home/dictation/2.png';
   static const homeV2VoiceCardBg = 'assets/images/home/v2/voice_card_bg.png';
-  /// 声乐二级页（[VoicePage]）卡片封面：紫色霓虹「VOCAL MUSIC / 声乐」海报。
-  static const homeFmCover = 'assets/images/home/fm.png';
   /// 智能视唱列表卡片封面（纯图，无文字叠加）。
   /// 智能视唱底部控制条「试听旋律」按钮（整图）。
   /// 「试听旋律」播放中（暂停态）按钮（整图）。
@@ -349,7 +346,6 @@ abstract final class AppAssets {
   /// 对话消息「编辑 / 复用」操作图标。
   static const aiChatRemove = 'assets/images/aichat/remove.png';
 
-  static const videoBanner = 'assets/images/video/video_banner.jpg';
   static const videoPlay = 'assets/images/video/video_play.jpg';
   static const videoAction1 = 'assets/images/video/video_1.png';
   static const videoAction2 = 'assets/images/video/video_2.png';

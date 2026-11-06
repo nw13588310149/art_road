@@ -95,41 +95,37 @@ class _CampBanner extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     return ClipRRect(
       borderRadius: BorderRadius.circular(ui(16)),
-      child: Image.asset(
-        'assets/images/home/camp_banner.jpg',
-        fit: BoxFit.cover,
-        width: double.infinity,
-        errorBuilder: (_, _, _) => const _CampBannerFallback(),
-      ),
-    );
-  }
-}
-
-class _CampBannerFallback extends StatelessWidget {
-  const _CampBannerFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
-        ),
-      ),
-      padding: EdgeInsets.symmetric(horizontal: ui(36)),
-      child: Row(
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          Expanded(
+          Image.asset(
+            'assets/demo/scene/exam-hall.jpg',
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) =>
+                const ColoredBox(color: Color(0xFF715EFE)),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  const Color(0xFF2A1F6B).withValues(alpha: 0.9),
+                  const Color(0xFF715EFE).withValues(alpha: 0.5),
+                  const Color(0xFF715EFE).withValues(alpha: 0.0),
+                ],
+                stops: const [0, 0.5, 0.9],
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: ui(36)),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '刷题练习',
+                  '美术常识刷题',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: ui(26),
@@ -139,7 +135,7 @@ class _CampBannerFallback extends StatelessWidget {
                 ),
                 SizedBox(height: ui(8)),
                 Text(
-                  '夯实基础 · 知识点专项突破',
+                  '美术常识 · 美术史 · 联考考点专项突破',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.85),
                     fontSize: ui(14),
@@ -148,11 +144,6 @@ class _CampBannerFallback extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          Icon(
-            Icons.menu_book_rounded,
-            color: Colors.white.withValues(alpha: 0.9),
-            size: ui(64),
           ),
         ],
       ),

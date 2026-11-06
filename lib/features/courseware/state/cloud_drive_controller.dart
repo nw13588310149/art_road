@@ -29,8 +29,8 @@ class CloudDriveController extends StateNotifier<CloudDriveState> {
 
   final CloudDriveRepository _repository;
 
-  // ── 谱例预览页：媒体播放器 ───────────────────────────────────────────────
-  // 仅在打开谱例预览且 `audioUrl` 非空时延迟创建。关闭预览时一并 dispose。
+  // ── 图文讲解预览页：讲解音频播放器 ───────────────────────────────────────
+  // 仅在打开图文讲解预览且 `audioUrl` 非空时延迟创建。关闭预览时一并 dispose。
   Player? _previewPlayer;
   StreamSubscription<bool>? _previewPlayingSub;
   StreamSubscription<Duration>? _previewPositionSub;
@@ -504,7 +504,7 @@ class CloudDriveController extends StateNotifier<CloudDriveState> {
       return '请先选择图片并上传';
     }
     if (type == CloudFileType.courseware && cleanAudio.isEmpty) {
-      return '请先选择课件文件并上传';
+      return '请先选择文件并上传';
     }
 
     // 主文件路径：图片类型取第一张，否则取 audio/课件文件 URL。
@@ -616,7 +616,7 @@ class CloudDriveController extends StateNotifier<CloudDriveState> {
 
   // ── Preview page lifecycle ─────────────────────────────────────────────
 
-  /// 打开预览页。对谱例 (`CloudFileType.score`) 且有音频地址的文件，会自动
+  /// 打开预览页。对带讲解音频的图文讲解（`CloudFileType.score`）文件，会自动
   /// 创建 `media_kit` 播放器并加载（不自动播放）。
   void openPreview(CloudFileItem item) {
     state = state.copyWith(
@@ -630,7 +630,7 @@ class CloudDriveController extends StateNotifier<CloudDriveState> {
     );
 
     // 仅当真正存在音频地址时才创建播放器：
-    // - score 类型 + 有 audioUrl → 真正的谱例预览（音频 + 乐谱）
+    // - score 类型 + 有 audioUrl → 图文讲解（讲解音频 + 步骤图）
     // - audio 类型 + 有 audioUrl → 旧式音频/兜底
     // - score 类型但 audioUrl 为空 → 业务上是「图片」，走图片预览，无需播放器
     if (item.audioUrl.trim().isNotEmpty &&

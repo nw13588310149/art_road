@@ -23,6 +23,7 @@ import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/app_toast.dart';
+import '../../../core/widgets/art_widgets.dart';
 import '../../../core/widgets/class_share_drawer.dart';
 import '../../../core/widgets/seamless_banner_carousel.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -843,7 +844,7 @@ class _VideoDetailSheetState extends ConsumerState<_VideoDetailSheet>
     );
   }
 
-  Future<void> _previewScoreImage(String url) async {
+  Future<void> _previewStepImage(String url) async {
     if (url.isEmpty) return;
     await showDialog<void>(
       context: context,
@@ -915,10 +916,10 @@ class _VideoDetailSheetState extends ConsumerState<_VideoDetailSheet>
                 resolveUrl: widget.resolveUrl,
                 onOpenSeriesVideo: _switchToVideo,
               ),
-              _ScoreTab(
-                scoreImages: detail.scoreImages,
+              _StepImagesTab(
+                images: detail.scoreImages,
                 resolveUrl: widget.resolveUrl,
-                onPreviewImage: _previewScoreImage,
+                onPreviewImage: _previewStepImage,
               ),
             ],
           ),
@@ -3303,7 +3304,7 @@ class _DetailActionBar extends StatelessWidget {
                   ),
                   const SizedBox(width: 14),
                   _DetailTabButton(
-                    text: '查看谱例',
+                    text: '步骤图',
                     selected: tabController.index == 1,
                     onTap: () => tabController.index = 1,
                   ),
@@ -3550,33 +3551,34 @@ class _DetailInfoTabState extends State<_DetailInfoTab> {
   }
 }
 
-class _ScoreTab extends StatelessWidget {
-  const _ScoreTab({
-    required this.scoreImages,
+/// 「步骤图」页签：示范步骤 / 范画大图，点击可放大查看。
+class _StepImagesTab extends StatelessWidget {
+  const _StepImagesTab({
+    required this.images,
     required this.resolveUrl,
     required this.onPreviewImage,
   });
 
-  final List<String> scoreImages;
+  final List<String> images;
   final String Function(String) resolveUrl;
   final ValueChanged<String> onPreviewImage;
 
   @override
   Widget build(BuildContext context) {
-    if (scoreImages.isEmpty) {
+    if (images.isEmpty) {
       return const Center(
         child: Text(
-          '暂无谱例',
+          '暂无步骤图',
           style: TextStyle(fontSize: 14, color: Color(0xFFB6B5BB)),
         ),
       );
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: scoreImages.length,
+      itemCount: images.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final url = scoreImages[index];
+        final url = images[index];
         return GestureDetector(
           onTap: () => onPreviewImage(url),
           child: Container(
@@ -3976,7 +3978,10 @@ class _BannerAndLatestSection extends StatelessWidget {
                           )
                         : loading
                         ? const ColoredBox(color: Color(0xFFF5F6FA))
-                        : Image.asset(AppAssets.videoBanner, fit: BoxFit.cover),
+                        : Image.asset(
+                            'assets/demo/scene/studio-wall.jpg',
+                            fit: BoxFit.cover,
+                          ),
                   ),
                   Positioned(
                     left: 0,
@@ -4111,38 +4116,33 @@ class _LatestVideoListCard extends StatelessWidget {
   }
 }
 
-/// 视频卡片作者行：头像 + 昵称 + 播放量（与网格卡一致）
+/// 视频卡片作者行：授课老师头像 + 姓名 + 播放量（与网格卡一致）
 class _VideoPublisherMetaRow extends StatelessWidget {
   const _VideoPublisherMetaRow({
-    required this.videoId,
+    required this.item,
     required this.size,
-    this.playCount = 0,
     this.showPlayCount = true,
   });
 
-  final String videoId;
-  final int playCount;
+  final VideoListItem item;
   final double Function(double designPx) size;
   final bool showPlayCount;
 
   @override
   Widget build(BuildContext context) {
-    final publisher = videoPublisherFor(videoId);
+    final publisher = videoPublisherFor(
+      item.id,
+      name: item.teacherName,
+      avatarUrl: item.teacherAvatar,
+    );
+    final playCount = item.playCount;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        ClipOval(
-          child: Image.asset(
-            publisher.avatarAsset,
-            width: size(16),
-            height: size(16),
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(
-              width: size(16),
-              height: size(16),
-              color: const Color(0xFFE0DEFF),
-            ),
-          ),
+        ArtAvatar(
+          name: publisher.nickname,
+          url: publisher.avatarUrl,
+          size: size(16),
         ),
         SizedBox(width: size(4)),
         Expanded(
@@ -4250,7 +4250,7 @@ class _LatestVideoRow extends StatelessWidget {
                     SizedBox(
                       height: ui(16),
                       child: _VideoPublisherMetaRow(
-                        videoId: item.id,
+                        item: item,
                         size: ui,
                         showPlayCount: false,
                       ),
@@ -4476,8 +4476,7 @@ class _VideoGridCard extends StatelessWidget {
                                 child: Align(
                                   alignment: Alignment.centerLeft,
                                   child: _VideoPublisherMetaRow(
-                                    videoId: item.id,
-                                    playCount: item.playCount,
+                                    item: item,
                                     size: (px) => px * s,
                                   ),
                                 ),

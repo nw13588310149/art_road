@@ -245,7 +245,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     bool agreeTerms,
   ) async {
     if (!agreeTerms) {
-      _showMessage(context, '请先同意服务协议');
+      _showMessage(context, '请先阅读并同意服务协议与隐私政策');
       return;
     }
 
