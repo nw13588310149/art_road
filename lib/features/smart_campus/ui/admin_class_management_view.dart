@@ -114,8 +114,7 @@ class _StudentRecord {
       'subject',
       'subjectName',
     ], '');
-    // 若后端没下发完整专业字符串，回落到短描述 `major`，不再用「音乐专业部·…」
-    // 这种演示填充。
+    // 若后端没下发完整专业字符串，回落到短描述 `major`，不做演示填充。
     final fullMajor = _pickString(json, [
       'fullMajor',
       'majorFullName',

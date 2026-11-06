@@ -28,7 +28,7 @@ void main() {
     final reminders = parseAdminHomeWorkReminders([
       {
         'tag': '预警',
-        'title': '高三音乐实验班·昨晚查寝1人未打卡未闭环',
+        'title': '联考冲刺1班·昨晚查寝1人未打卡未闭环',
         'subtitle': '宿管端已登记，待确认是否转晚归备案。',
       },
       {

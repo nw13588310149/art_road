@@ -12,6 +12,9 @@ abstract final class CampusALeaves {
 
   static String _key(DemoAccount account) => 'campusA:leaves:${account.userId}';
 
+  /// 班主任端审批后回写学生端存储（两端共用同一批请假记录）。
+  static void save(DemoAccount account) => DemoStore.save(_key(account));
+
   static List<Map<String, dynamic>> listOf(DemoAccount account) {
     final key = _key(account);
     final list = DemoStore.list(key, () => _seed(account));

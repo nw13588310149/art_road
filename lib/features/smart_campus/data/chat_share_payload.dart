@@ -39,13 +39,3 @@ Map<String, dynamic> buildNewsShareContent({
     if (updateTime.isNotEmpty) 'updateTime': updateTime,
   };
 }
-
-/// musicPlay / answerEnd2 分享时兜底教材 type。
-int resolveMusicPlayShareBookType({
-  required int detailType,
-  int? routeType,
-}) {
-  if (detailType > 0) return detailType;
-  if (routeType == 3) return 1;
-  return 0;
-}

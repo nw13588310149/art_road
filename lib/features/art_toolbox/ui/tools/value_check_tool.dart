@@ -283,6 +283,7 @@ class _ValueDistribution extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (var i = 0; i < distribution.length; i++)
                   if (distribution[i] > 0)

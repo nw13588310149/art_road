@@ -1033,10 +1033,10 @@ class _AdminScheduleManagementViewState
   /// 字段映射对齐后端真实回包：
   /// ```json
   /// {
-  ///   "subjectName": "视唱",
-  ///   "teacherRealname": "宁为",
-  ///   "teacherNickname": "哈哈",
-  ///   "className": "音乐一班",
+  ///   "subjectName": "素描",
+  ///   "teacherRealname": "李静",
+  ///   "teacherNickname": "李老师",
+  ///   "className": "联考冲刺1班",
   ///   "classroomName": "艺术楼101",
   ///   "color": "#D2C4FF",
   ///   "type": 0,
@@ -3336,7 +3336,7 @@ class _ApplyRecord {
     final classIdStr = _pickString(json, ['classId'], '');
     final teacherIdStr = _pickString(json, ['teacherId'], '');
 
-    // 标题：优先显示 班级 + 科目，例如「视唱1班 · 视唱」；都拿不到时再
+    // 标题：优先显示 班级 + 科目，例如「联考冲刺1班 · 素描」；都拿不到时再
     // 回退到接口可能下发的 subjectName / title 字段，再不行用通用文案。
     final className = classNameById?[classIdStr] ?? '';
     final subjectName = subjectId != null

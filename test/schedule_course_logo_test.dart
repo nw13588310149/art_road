@@ -31,14 +31,14 @@ void main() {
   test('schedule card carries logo and keeps empty fallback', () {
     final withLogo = buildScheduleCourseCard({
       'type': 0,
-      'className': '音乐一班',
-      'subjectName': '视唱',
+      'className': '联考冲刺1班',
+      'subjectName': '素描',
       'logo': 'https://img.example.com/class.jpg',
     }, 0);
     final withoutLogo = buildScheduleCourseCard({
       'type': 0,
-      'className': '音乐二班',
-      'subjectName': '练耳',
+      'className': '联考冲刺2班',
+      'subjectName': '色彩',
     }, 0);
 
     expect(withLogo.logoUrl, 'https://img.example.com/class.jpg');
@@ -48,7 +48,7 @@ void main() {
   test('course sign session carries manager course logo', () {
     final session = CourseSignSession.fromJson({
       'id': '1',
-      'subjectName': '视唱',
+      'subjectName': '速写',
       'logo': 'app/upload/sign-class.jpg',
     });
 

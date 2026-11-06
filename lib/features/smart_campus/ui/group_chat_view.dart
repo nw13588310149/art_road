@@ -11,7 +11,7 @@
 //   2. 双栏聊天主区（高 ~648）：
 //      左 280 会话栏（白底圆左角）：
 //          · 顶部返回按钮（原「会话」标题位）
-//          · 264×40 灰底搜索框（占位"传统音乐"，仅视觉）
+//          · 264×40 灰底搜索框（仅视觉）
 //          · 多条会话 cell（36 头像 + 群名 + 摘要 + 时间 + 红色未读徽章 +
 //            免打扰图标），当前会话灰色高亮 #F5F6FA。
 //      右 ~690 聊天主区（白底圆右角）：
@@ -26,7 +26,7 @@
 //                          「群公告 李老师发布了最新群公告」
 //               - 日期分隔："4月13日"
 //               - 文本气泡（白底）：陈老师 — 招生简章已挂网
-//               - 文件气泡：上海音乐学院2026本科招生简章.pdf 3.32M（蓝渐变 + 红 PDF 角标）
+//               - 文件气泡：院校招生简章.pdf 3.32M（蓝渐变 + 红 PDF 角标）
 //               - 语音气泡：紫播放按钮 + 灰色波形 + 28s
 //               - 当前正在播放的语音：紫色波形（已播放部分）+ 灰色（未播）
 //            ③ 输入栏（白底 52 高）：左 attach + textfield + 表情 + 录音 +
@@ -36,7 +36,7 @@
 //      / #325BFF 蓝（@提及/链接）/ #FF323C 红（未读）/ #F04545 红（角标）
 // 字体：PingFang SC（中文） + Manrope（数字徽章）
 //
-// 消息模型：参考 1.0 `the-road-of-music/pages/SmartCampus/chat.vue`
+// 消息模型（与 1.0 后端 chat 协议一致）：
 //   - type=0 系统通知（item.text）/ type=1 文本（item.content）/
 //   - type=2 图片（item.content url）/ type=3 富内容（item.param1 决定子类）
 //      · param1=='kj'    课件分享
@@ -6042,7 +6042,7 @@ class _SharedCardBubble extends _ChatBubble {
   final List<String> kjImageUrls;
   final String? kjTypeValue;
 
-  /// 课程教材 type（1 视唱 / 2 乐理 / 3 听写 / 4 声乐 / 5 器乐）。
+  /// 课程教材 type（平台教材分类 id，原样透传）。
   final int? bookType;
 
   /// 校园课件视频（走 schoolVideoTutorialDetail），否则为公开视频中心。

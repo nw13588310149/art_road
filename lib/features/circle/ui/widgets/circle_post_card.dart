@@ -409,7 +409,7 @@ class _AudioCover extends StatelessWidget {
           left: ui(8),
           bottom: ui(8),
           child: const _MediaTypeChip(
-            iconAsset: AppAssets.circleMusic,
+            iconAsset: AppAssets.circleAudio,
             label: '音频',
           ),
         ),

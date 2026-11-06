@@ -65,18 +65,12 @@ class AppAssetGraphic extends StatelessWidget {
       'assets/images/shell/topbar_v2/notice.png',
       'assets/images/shell/topbar_v2/search.png',
       'assets/images/shell/topbar_v2/setting.png',
-      'assets/images/aichat/ai_v2_intro_logo.png',
     };
     if (rasterPngOverrides.contains(asset)) {
       return false;
     }
 
-    if (asset.contains('/shell/nav_v2/') ||
-        asset.contains('/shell/topbar_v2/')) {
-      return true;
-    }
-
-    if (asset.contains('/home/v2/') && !asset.endsWith('/banner_guitar.png')) {
+    if (asset.contains('/shell/topbar_v2/')) {
       return true;
     }
 

@@ -11,7 +11,7 @@ void main() {
       'trendLines': [
         {
           'subjectId': 1,
-          'subjectName': '视唱',
+          'subjectName': '素描',
           'avgScores': [85.5, 88.2],
         },
       ],
@@ -25,7 +25,7 @@ void main() {
             'studentId': 100,
             'realname': '李铮辉',
             'no': 'G3030201',
-            'subjectName': '视唱',
+            'subjectName': '素描',
             'score': 86,
             'teacherName': '李牧茵',
             'comment': '表现不错',
@@ -41,7 +41,7 @@ void main() {
 
     expect(overview.examAxis, hasLength(2));
     expect(overview.examAxis.first.axisLabel, '3月18日');
-    expect(overview.trendLines.first.subjectName, '视唱');
+    expect(overview.trendLines.first.subjectName, '素描');
     expect(overview.trendLines.first.avgScores, [85.5, 88.2]);
     expect(overview.indexOfCurrentExam(), 0);
     expect(overview.hasChartData, isTrue);

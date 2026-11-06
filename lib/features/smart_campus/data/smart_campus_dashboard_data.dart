@@ -560,7 +560,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badgeForeground: _green,
               badgeBackground: _greenSoft,
               title: '19:10 - 19:55',
-              subtitle: '琴房 3 区 · 晚自习集体答疑',
+              subtitle: '画室 3 区 · 晚自习集体答疑',
               person: '晚自习答疑',
               personHint: '计划面向高三与校考冲刺生',
               trailing: '未开始',

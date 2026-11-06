@@ -2824,7 +2824,7 @@ class _PreviewScoreTurntable extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Image.asset(
-                      'assets/images/home/dictation/10.png',
+                      'assets/images/home/open_external.png',
                       width: ui(20),
                       height: ui(20),
                       fit: BoxFit.contain,

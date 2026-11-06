@@ -65,7 +65,7 @@ class CountdownRepository {
   static List<ExamCountdown> defaults() => [
     ExamCountdown(
       id: 'default-liankao',
-      name: '2027 年甘肃省美术联考（示例日期）',
+      name: '2027 届甘肃省美术统考（示例日期）',
       date: DateTime(2026, 12, 6),
     ),
     ExamCountdown(

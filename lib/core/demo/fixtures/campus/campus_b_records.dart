@@ -4,7 +4,9 @@ library;
 
 import '../../data/demo_campus_data.dart';
 import '../../data/demo_marking_data.dart';
+import '../../demo_accounts.dart';
 import '../../demo_store.dart';
+import 'campus_a_leave.dart';
 import 'campus_b_common.dart';
 
 DemoPerson _p(int index) => DemoMarkingData.instance.person(index);
@@ -293,10 +295,27 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
   ];
 }
 
-List<Map<String, dynamic>> cbStudentLeaves() =>
-    DemoStore.list(cbStudentLeavesKey, _seedStudentLeaves);
+/// 林小雨（演示学生账号）的请假直接取学生端存储，班主任审批后学生端同步可见；
+/// 其他学生的请假仍使用本地种子。
+List<Map<String, dynamic>> cbStudentLeaves() {
+  final own = DemoStore.list(cbStudentLeavesKey, _seedStudentLeaves);
+  final linked = CampusALeaves.listOf(DemoAccounts.student);
+  final classId = cbStr(cbHomeClassOf(_p(1))?['id']);
+  for (final m in linked) {
+    m['studentId'] = _sid(1);
+    m['classId'] = classId;
+  }
+  return [
+    ...linked,
+    for (final m in own)
+      if (cbStr(m['studentId']) != _sid(1)) m,
+  ];
+}
 
-void cbSaveStudentLeaves() => DemoStore.save(cbStudentLeavesKey);
+void cbSaveStudentLeaves() {
+  DemoStore.save(cbStudentLeavesKey);
+  CampusALeaves.save(DemoAccounts.student);
+}
 
 Map<String, dynamic> cbStudentLeaveJson(Map<String, dynamic> m) {
   final p = cbPerson(m['studentId']);

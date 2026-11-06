@@ -402,6 +402,7 @@ class _PaletteView extends StatelessWidget {
           child: SizedBox(
             height: 28,
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final swatch in palette)
                   Expanded(

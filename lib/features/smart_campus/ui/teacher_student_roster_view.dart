@@ -1359,12 +1359,12 @@ class _Avatar extends StatelessWidget {
 //
 // 触发：学生卡 "详情 ›" 链接。视觉对齐 Figma 600 宽×自适应高（820 设计高）：
 //   1. 顶部 "学生档案" 标题（紫条 + 16/600 黑字 + 1px #F3F2F3 底分隔线）
-//   2. Profile：avatar 40 + 姓名 16/600 + 学号 12/400 #B6B5BB + 主项 "声乐 ·
-//      民族唱法" 12/400 #6D6B75
+//   2. Profile：avatar 40 + 姓名 16/600 + 学号 12/400 #B6B5BB + 主项 "美术 ·
+//      联考" 12/400 #6D6B75
 //   3. 信息列表（每行 14/400 标签 #B6B5BB + 14/400 值 #0B081A）：
 //      学生性别 / 学生宿舍 / 本人手机 / 家长手机 / 所在班级（灰底 tag）/ 标签（紫底 badge）
 //   4. "教师备注" 灰底卡（16/600 标题 + 14/400 备注）
-//   5. "我教科目 · 分数走势" 灰底卡（顶部副标 + 科目切换 [声乐/乐理] +
+//   5. "我教科目 · 分数走势" 灰底卡（顶部副标 + 科目切换 [素描/色彩] +
 //      6 期 X 轴（2-6月+期中）+ Y 轴 100/95/90/85/80/0 + 紫色 outline
 //      polyline + 渐变填充 + 6 个白底紫边圆点 + 数值标签）
 //   6. "联系家长" 紫色 #9585FF→#715EFE 渐变 CTA（48 高，圆角 12，phone icon）
@@ -1413,7 +1413,7 @@ class _StudentDetailDrawer extends ConsumerStatefulWidget {
 }
 
 class _StudentDetailDrawerState extends ConsumerState<_StudentDetailDrawer> {
-  // 0 = 声乐 / 1 = 乐理（与 Figma toggle 顺序一致）。
+  // 分数走势当前选中的科目下标（对应 _scoreSeries.subjects）。
   int _subjectIdx = 0;
 
   Map<String, dynamic>? _detail;

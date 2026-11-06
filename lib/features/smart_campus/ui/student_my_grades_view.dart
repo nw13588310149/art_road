@@ -30,7 +30,7 @@
 //         "均分 91分" tag
 //   3. 双列卡：
 //      左 640「6次考试 折线趋势」（496 高白卡）：
-//         · 顶部科目 tabs（总均分 / 主项 / 副项 / 听写 / 乐理 / 视唱）
+//         · 顶部科目 tabs（总均分 / 素描 / 色彩 / 速写 / 美术常识 / 文化课）
 //         · 左 Y 轴标签 100/95/90/85/80/0（80→0 用一段压缩刻度）
 //         · 6 个数据点（86/87/86.5/91/93/90），紫线 + 紫渐变填充
 //         · 每点上方紫色数值标签
@@ -41,13 +41,13 @@
 //   4. 「考试记录与各科成绩」2 列 × 多行卡片网格（每张 477 宽）：
 //      - 表头：「X月月考」16 + 日期灰字 + 折叠图标按钮
 //      - 5 项一排统计 (12px)：总均分 / 及格科数 / 优秀科数 / 班级排名 / 全校排名
-//      - 展开态：4 张科目子卡（声乐紫 / 器乐紫 / 视唱绿 / 乐理绿），
+//      - 展开态：科目子卡（素描 / 色彩 / 速写 / 美术常识 / 文化课），
 //        含 老师名 + 科目 tag + 班/全校排名 + 教师评语 + 录像/录音/无录制
 //        tag + 蓝色右上角分数 + "查看详情"按钮
 //      - 折叠态：仅头 + 统计行
 //
 // 颜色：白卡 / #F5F6FA 浅灰 / #715EFE 主紫 / #325BFF 蓝（科目分数）
-//      / #0CAC40 绿 / #DFFCF0 绿底（视唱/乐理 tag） / #E3DFFF 紫底（声乐/器乐）
+//      / #0CAC40 绿 / 科目 tag 色与 ArtSubject 一致（素描蓝 / 色彩绿 / 速写青）
 //      / #12CE51 上升绿 / #F4F4FF 进度条底 / #E2D0FF→#715EFE 进度条渐变
 // 字体：PingFang SC（中文） + Barlow（数字 32 / 20）
 // =============================================================================
@@ -4688,7 +4688,7 @@ class _UploadedFileTile extends ConsumerWidget {
   IconData _iconForKind() => switch (upload.kind) {
     StudentExamMediaKind.video => Icons.videocam_rounded,
     StudentExamMediaKind.image => Icons.image_rounded,
-    StudentExamMediaKind.audio => Icons.audiotrack_rounded,
+    StudentExamMediaKind.audio => Icons.graphic_eq_rounded,
   };
 
   @override

@@ -21,6 +21,7 @@ class HomeStudySnapshot {
     this.totalScore,
     this.maxScore,
     this.ranking,
+    this.topScore,
     this.participants,
     this.scoreChange,
     this.rankingChange,
@@ -35,8 +36,11 @@ class HomeStudySnapshot {
   final double? totalScore;
   final double? maxScore;
 
-  /// 学生：总排名；老师：最高分（取整展示）。
+  /// 学生：总排名。
   final int? ranking;
+
+  /// 老师：本场最高分。
+  final double? topScore;
   final int? participants;
   final double? scoreChange;
   final int? rankingChange;
@@ -86,7 +90,7 @@ final homeStudySnapshotProvider =
           examDate: exam.examDate,
           totalScore: averageOf(totals),
           maxScore: exam.fullScore,
-          ranking: totals.reduce((a, b) => a > b ? a : b).round(),
+          topScore: totals.reduce((a, b) => a > b ? a : b),
           participants: totals.length,
           subjects: [
             for (final subject in ArtSubject.values)
@@ -212,9 +216,9 @@ class _Summary extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 84,
+          width: 96,
           height: 84,
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
@@ -226,10 +230,13 @@ class _Summary extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                formatScore(data.totalScore),
-                maxLines: 1,
-                style: ArtText.number(size: 24, color: Colors.white),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  formatScore(data.totalScore),
+                  maxLines: 1,
+                  style: ArtText.number(size: 24, color: Colors.white),
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -268,7 +275,7 @@ class _Summary extends StatelessWidget {
                   Text(data.examDate, style: ArtText.caption()),
                   if (data.staff) ...[
                     Text('参考 ${data.participants ?? '—'} 人', style: ArtText.caption()),
-                    Text('最高 ${data.ranking ?? '—'} 分', style: ArtText.caption()),
+                    Text('最高 ${formatScore(data.topScore)} 分', style: ArtText.caption()),
                   ] else
                     Text(
                       '总排名 ${data.ranking ?? '—'} / ${data.participants ?? '—'}',

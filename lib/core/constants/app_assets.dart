@@ -1,82 +1,27 @@
 abstract final class AppAssets {
-  static const authBackground = 'assets/images/auth/logo_bg.jpg';
   static const authBg = 'assets/images/auth/bg_art.jpg';
-  static const authLogo = 'assets/images/auth/logo_b.png';
   static const authPhone = 'assets/images/auth/phone.png';
   static const authPassword = 'assets/images/auth/pass.png';
   static const authCode = 'assets/images/auth/code.png';
   static const loginPhone = 'assets/images/auth/login_phone.png';
   static const loginPassword = 'assets/images/auth/login_password.png';
   static const loginSms = 'assets/images/auth/login_sms.png';
-  static const figmaLoginBgShape =
-      'assets/images/auth/figma_login_bg_shape.svg';
-  static const figmaLoginPhoneIcon =
-      'assets/images/auth/figma_login_phone_icon.svg';
-  static const figmaLoginPasswordIcon =
-      'assets/images/auth/figma_login_password_icon.svg';
   static const figmaLoginCheckboxChecked =
       'assets/images/auth/figma_login_checkbox_checked.svg';
   static const figmaLoginDivider = 'assets/images/auth/figma_login_divider.svg';
-  static const figmaLoginNote = 'assets/images/auth/figma_login_note.svg';
-  static const figmaLoginNoteLayer1 =
-      'assets/images/auth/figma_login_note_layer1.png';
-  static const figmaLoginNoteLayer2 =
-      'assets/images/auth/figma_login_note_layer2.png';
-  static const figmaLoginPiano = 'assets/images/auth/figma_login_piano.png';
-  static const figmaLoginCastle = 'assets/images/auth/figma_login_castle.png';
-  static const figmaLoginMic = 'assets/images/auth/figma_login_mic.png';
-  static const figmaLoginCardMask =
-      'assets/images/auth/figma_login_card_mask.svg';
   static const figmaLoginCardLayer1 =
       'assets/images/auth/figma_login_card_layer1.png';
   static const figmaLoginCardLayer2 =
       'assets/images/auth/figma_login_card_layer2.png';
-  static const figmaLoginEllipseBig =
-      'assets/images/auth/figma_login_ellipse_big.svg';
-  static const figmaLoginEllipseSmall =
-      'assets/images/auth/figma_login_ellipse_small.svg';
-  static const figmaAuthIconPhoneSmall =
-      'assets/images/auth/figma_auth_icon_phone_small.png';
-  static const figmaAuthIconSmsSmall =
-      'assets/images/auth/figma_auth_icon_sms_small.png';
-  static const figmaAuthIconPasswordSmall =
-      'assets/images/auth/figma_auth_icon_password_small.png';
 
-  static const shellBackground = 'assets/images/shell/bg.jpg';
   static const shellLogo = 'assets/images/shell/logo_v2.png';
-  static const shellSearch = 'assets/images/shell/search.png';
-  static const shellNotice = 'assets/images/shell/remind.png';
-  static const shellSetting = 'assets/images/shell/set.png';
-  static const shellQrcode = 'assets/images/shell/qrcode.png';
-  static const shellAvatar = 'assets/images/shell/head.jpg';
   static const shellMsg1 = 'assets/images/shell/msg1.png';
   static const shellMsg2 = 'assets/images/shell/msg2.png';
   static const shellMsg3 = 'assets/images/shell/msg3.png';
   static const shellMsg4 = 'assets/images/shell/msg4.png';
   static const shellWechat = 'assets/images/shell/wechat.png';
   static const shellWechatClose = 'assets/images/shell/wechat1.png';
-  static const shellMetronome = 'assets/images/shell/jpq_icon.jpg';
-  static const shellRecorder = 'assets/images/shell/fd2.png';
-  static const shellPiano = 'assets/images/shell/fd3.png';
-  static const navExpand = 'assets/images/shell/xz.png';
-  static const navCollapse = 'assets/images/shell/xy.png';
 
-  static const navV2HomeActive = 'assets/images/shell/nav_v2/home_active.png';
-  static const navV2Ai = 'assets/images/shell/nav_v2/ai.png';
-  static const navV2School = 'assets/images/shell/nav_v2/school.png';
-  static const navV2Cloud = 'assets/images/shell/nav_v2/cloud.png';
-  static const navV2Video = 'assets/images/shell/nav_v2/video.png';
-  static const navV2Dictation = 'assets/images/shell/nav_v2/dictation.png';
-  static const navV2MusicMain = 'assets/images/shell/nav_v2/music_main.png';
-  static const navV2MusicBg = 'assets/images/shell/nav_v2/music_bg.png';
-  static const navV2Campus = 'assets/images/shell/nav_v2/campus.png';
-  static const navV2Notes = 'assets/images/shell/nav_v2/notes.png';
-  static const navV2Recording = 'assets/images/shell/nav_v2/recording.png';
-  static const navV2Favorite = 'assets/images/shell/nav_v2/favorite.png';
-  static const navV2Profile = 'assets/images/shell/nav_v2/profile.png';
-  static const navV2CollapseBar = 'assets/images/shell/nav_v2/collapse_bar.png';
-  static const navV2CollapseArrow =
-      'assets/images/shell/nav_v2/collapse_arrow.png';
   static const leftNavHome = 'assets/images/shell/leftNav/home.png';
   static const leftNavAi = 'assets/images/shell/leftNav/AI.png';
   static const leftNavSchool = 'assets/images/shell/leftNav/school.png';
@@ -112,48 +57,8 @@ abstract final class AppAssets {
   static const shellV2MoreArrow =
       'assets/images/shell/topbar_v2/more_arrow.png';
 
-  static const navHome = 'assets/images/shell/nav_index.png';
-  static const navHomeActive = 'assets/images/shell/nav_indexA.png';
-  static const navCourseware = 'assets/images/shell/nav_kj.png';
-  static const navCoursewareActive = 'assets/images/shell/nav_kjA.png';
-  static const navVideo = 'assets/images/shell/nav_play.png';
-  static const navVideoActive = 'assets/images/shell/nav_palyA.png';
-  static const navDictation = 'assets/images/shell/nav_tx.png';
-  static const navDictationActive = 'assets/images/shell/nav_txA.png';
-  static const navMusic = 'assets/images/shell/nav_music.png';
-  static const navMusicActive = 'assets/images/shell/nav_musicA.png';
-  static const navCampus = 'assets/images/shell/nav_sc.png';
-  static const navCampusActive = 'assets/images/shell/nav_scA.png';
-  static const navNotes = 'assets/images/shell/nav_note.png';
-  static const navNotesActive = 'assets/images/shell/nav_noteA.png';
-  static const navRecording = 'assets/images/shell/nav_ly.png';
-  static const navRecordingActive = 'assets/images/shell/nav_lyA.png';
-  static const navFavorite = 'assets/images/shell/nav_fav.png';
-  static const navFavoriteActive = 'assets/images/shell/nav_favA.png';
-  static const navProfile = 'assets/images/shell/nav_person.png';
-  static const navProfileActive = 'assets/images/shell/nav_personA.png';
-  static const navHelp = 'assets/images/shell/nav_help.png';
-  static const navAi = 'assets/images/shell/nav_ai.png';
-  static const navAiActive = 'assets/images/shell/nav_aiA.png';
-  static const navSchool = 'assets/images/shell/nav_school.png';
-  static const navSchoolActive = 'assets/images/shell/nav_schoolA.png';
-
-  static const homeIcon1 = 'assets/images/home/homeIcon1.png';
-  static const homeIcon2 = 'assets/images/home/homeIcon2.png';
-  static const homeIcon3 = 'assets/images/home/homeIcon3.png';
-  static const homeIcon4 = 'assets/images/home/homeIcon4.png';
-  static const homeIcon5 = 'assets/images/home/homeIcon5.png';
-  static const homeIcon6 = 'assets/images/home/homeIcon6.png';
-  static const homeIcon7 = 'assets/images/home/homeIcon7.png';
-  static const homeIcon8 = 'assets/images/home/homeIcon8.png';
-  static const homeIcon9 = 'assets/images/home/homeIcon9.png';
-  static const homeIcon10 = 'assets/images/home/homeIcon10.png';
-
   /// 全局页面 loading / 下拉刷新动画。
   static const homeLoading = 'assets/images/home/loading.gif';
-
-  /// musicPlay 播放列表抽屉 · 当前播放项动效图标。
-  static const homeMusicPlaying = 'assets/images/home/music.gif';
 
   // 用户菜单弹层图标（地区 / 资料修改 / 退出登录）
   static const homeUserMenuRegion = 'assets/images/home/1.png';
@@ -194,73 +99,16 @@ abstract final class AppAssets {
   /// 用于 rejected（同学未通过）状态，与 [homeTipsBadge] 形状一致仅颜色不同。
   static const homeTipsBadgeError = 'assets/images/home/tserror.png';
 
-  // 首页九宫格新图标 home1.png ~ home9.png
-  static const homeBtn1 = 'assets/images/home/home1.png';
-  static const homeBtn2 = 'assets/images/home/home2.png';
-  static const homeBtn3 = 'assets/images/home/home3.png';
+  // 首页九宫格通用图标
   static const homeBtn4 = 'assets/images/home/home4.png';
   static const homeBtn5 = 'assets/images/home/home5.png';
-  static const homeBtn6 = 'assets/images/home/home6.png';
   static const homeBtn7 = 'assets/images/home/home7.png';
   static const homeBtn8 = 'assets/images/home/home8.png';
   static const homeBtn9 = 'assets/images/home/home9.png';
 
-  static const homeShengyue = 'assets/images/home/shengyue.png';
-  static const homeShengyue2 = 'assets/images/home/shengyue2.png';
-  static const homeQiyue2 = 'assets/images/home/qiyue2.png';
-  static const homeQiyue = 'assets/images/home/qiyue.png';
-  static const homeShengyeu2Bg = 'assets/images/home/shengyeu2Bg.png';
-  static const homeShengyue2Icon = 'assets/images/home/shengyue2Icon.png';
-  static const homeQiyue2Bg = 'assets/images/home/qiyue2Bg.png';
-  static const homeQieyue2Icon = 'assets/images/home/qieyue2Icon.png';
-  static const homeV2BannerGuitar = 'assets/images/home/qiyue.png';
-  static const homeV2BannerGlow = 'assets/images/home/v2/banner_glow.png';
-  static const homeV2BannerArrow = 'assets/images/home/v2/banner_arrow.png';
-  static const homeV2QuickDictation =
-      'assets/images/home/v2/quick_dictation.png';
-  static const homeV2QuickSightBg = 'assets/images/home/v2/quick_sight_bg.png';
-  static const homeV2QuickSightUnion =
-      'assets/images/home/v2/quick_sight_union.png';
-  static const homeV2QuickSightNote =
-      'assets/images/home/v2/quick_sight_note.png';
-  static const homeV2QuickTheoryCard =
-      'assets/images/home/v2/quick_theory_card.png';
-  static const homeV2QuickTheoryPen =
-      'assets/images/home/v2/quick_theory_pen.png';
-  static const homeV2QuickTheoryNote =
-      'assets/images/home/v2/quick_theory_note.png';
-  static const homeV2QuickMockCheck =
-      'assets/images/home/v2/quick_mock_check.png';
-  static const homeV2QuickProblemCard =
-      'assets/images/home/v2/quick_problem_card.png';
-  static const homeV2QuickProblemPen =
-      'assets/images/home/v2/quick_problem_pen.png';
-  static const homeV2QuickProblemNote =
-      'assets/images/home/v2/quick_problem_note.png';
-  static const homeV2QuickQuestion = 'assets/images/home/v2/quick_question.png';
-  static const homeV2QuickNews = 'assets/images/home/v2/quick_news.png';
-  static const homeV2QuickMall = 'assets/images/home/v2/quick_mall.png';
-  static const homeV2QuickCampus = 'assets/images/home/v2/quick_campus.png';
-  static const homeDictationNavIcon = 'assets/images/home/dictation/1.png';
-  // 听写 / 视唱 / 乐理 / 试题 左侧分类 —— 选中 / 未选中 icon。
-  static const homeCategorySelectedIcon = 'assets/images/home/nav2.png';
-  static const homeCategoryIdleIcon = 'assets/images/home/nav3.png';
-  // 我的云盘 / 我的笔记 / 录音系统 左侧分类 —— 选中 / 未选中 icon。
+  // 我的云盘 / 我的笔记 左侧分类 —— 选中 / 未选中 icon。
   static const folderCategorySelectedIcon = 'assets/images/home/nav4.png';
   static const folderCategoryIdleIcon = 'assets/images/home/nav5.png';
-  // 录音作品（recording）页 左侧分类 —— 非选中态 icon（历史资源，已由 nav5 替代）。
-  static const recordingCategoryIdleIcon = 'assets/images/sound/ly.png';
-  static const homeV2VoiceCardBg = 'assets/images/home/v2/voice_card_bg.png';
-  /// 智能视唱列表卡片封面（纯图，无文字叠加）。
-  /// 智能视唱底部控制条「试听旋律」按钮（整图）。
-  /// 「试听旋律」播放中（暂停态）按钮（整图）。
-  /// 「开始跟唱」按钮（整图，紫色渐变）。
-  /// 跟唱中「停止」按钮（整图）。
-  /// 倒计时「取消」按钮（整图）。
-  /// 调试面板右上角关闭按钮（紫色圆形 X）。
-  /// 器乐二级页（[InstrumentalPage] 内部复用 [VoicePage]）卡片封面：
-  /// 紫色霓虹「INSTRUMENTAL MUSIC / 器乐」海报。与 [homeFmCover] 同尺寸/同设计语言。
-  static const homeFm2Cover = 'assets/images/home/fm2.png';
   /// 左侧导航选中态背景图：深色（≈ #202020）圆角矩形 PNG，替代原本写死的纯色。
   /// 在 [_NavTile] 展开/折叠两态都通过 `BoxFit.cover` 铺满命中区，外层
   /// `BorderRadius.circular(12)` 仍保留，把图本身边缘渐变的透明像素裁掉。
@@ -268,27 +116,9 @@ abstract final class AppAssets {
   /// 首页右侧周课表「今日」日期卡片的渐变背景图（≈ 64×88，#715EFE→#9585FF
   /// 顶到底的紫渐变，自带 12 圆角）。替代 [_WeekCard] 中写死的 LinearGradient。
   static const homeWeekTodayBg = 'assets/images/home/bgc.png';
-  /// 视唱播放页（MusicPlayPage）的「上一首」按钮图标。
-  /// 替代旧的 [home/left.png] 倒退 5s 图标——仅在多课程视唱场景启用。
-  static const homeShang = 'assets/images/home/shang.png';
-  /// 视唱播放页（MusicPlayPage）的「下一首」按钮图标。
-  /// 替代旧的 [home/right.png] 快进 5s 图标——仅在多课程视唱场景启用。
-  static const homeXia = 'assets/images/home/xia.png';
-  /// 多曲目播放器进度条右侧的循环模式图标——「随机播放」（紫色洗牌箭头）。
-  static const homeShufflePlayMode = 'assets/images/home/sj.png';
-  /// 多曲目播放器进度条右侧的循环模式图标——「顺序循环」（灰色循环箭头）。
-  static const homeLoopPlayMode = 'assets/images/home/xh.png';
-  /// 多曲目播放器进度条右侧的循环模式图标——「单曲循环」（紫色循环箭头 + "1"）。
-  static const homeSingleLoopPlayMode = 'assets/images/home/dq.png';
-  /// 多曲目播放器进度条右侧的「音频列表」图标（紫色音符 + 列表横线）。
-  static const homePlaylistIcon = 'assets/images/home/list.png';
   static const homeSearchIcon = 'assets/images/home/search.png';
   /// 侧栏底部「需求反馈」入口图标。
   static const homeFeedbackIcon = 'assets/images/home/yj.png';
-  /// 乐理详情页顶栏：课程作业 / 查看答案 / 分享。
-  static const theoryAssignmentIcon = 'assets/images/home/the1.png';
-  static const theoryAnswerIcon = 'assets/images/home/the2.png';
-  static const theoryShareIcon = 'assets/images/home/the3.png';
   static const emptyCoursePlaceholder = 'assets/images/404/kc.png';
   /// 我的收藏页空状态插图。
   static const emptyCollectionPlaceholder = 'assets/images/404/sc.png';
@@ -296,8 +126,6 @@ abstract final class AppAssets {
   static const emptyReviewPlaceholder = 'assets/images/404/st.png';
   /// 考试 / 成绩类空状态插图（翻开的书本）。
   static const emptyExamPlaceholder = 'assets/images/404/jp.png';
-  static const homeV2InstrumentCardBg =
-      'assets/images/home/v2/instrument_card_bg.png';
   static const schoolV2QuickVideo = 'assets/images/home/schoolVideo.png';
   static const homeLatestUnderline = 'assets/images/home/syzx.png';
   static const homeViews = 'assets/images/home/views.png';
@@ -322,7 +150,6 @@ abstract final class AppAssets {
   static const aiChatSend = 'assets/images/aichat/v2/ai_send.svg';
   static const aiChatMenu = 'assets/images/aichat/v2/ai_history_more.svg';
   static const aiChatMascot = 'assets/images/aichat/qiu.gif';
-  static const aiChatV2IntroLogo = 'assets/images/aichat/v2/ai_intro_logo.png';
   // 小艺同学欢迎区头像：单图自带渐变背景与阴影，直接铺成 52×52
   static const aiChatXiaoYiIcon = 'assets/images/aichat/qiu.gif';
   // 效率工具卡背景图（与原渐变同色调，直接平铺即可）
@@ -346,15 +173,6 @@ abstract final class AppAssets {
   /// 对话消息「编辑 / 复用」操作图标。
   static const aiChatRemove = 'assets/images/aichat/remove.png';
 
-  static const videoPlay = 'assets/images/video/video_play.jpg';
-  static const videoAction1 = 'assets/images/video/video_1.png';
-  static const videoAction2 = 'assets/images/video/video_2.png';
-  static const videoAction3 = 'assets/images/video/video_3.png';
-  static const videoActionYes = 'assets/images/video/video_yes.png';
-  static const videoTime = 'assets/images/video/play_time.jpg';
-  static const videoViews = 'assets/images/video/play_num.jpg';
-  static const videoLogo = 'assets/images/video/logo_radio.jpg';
-  static const videoTopArrow = 'assets/images/video/right.png';
   static const videoV2CardViews = 'assets/images/video/1.png';
   static const videoV2Back = 'assets/images/video/2.png';
   static const videoV2CenterPlay = 'assets/images/video/3.png';
@@ -393,7 +211,7 @@ abstract final class AppAssets {
   static const cloudBreadcrumbArrow = 'assets/images/yunpan/right1.png';
 
   /// 我的云盘 / 课件中心 2.0 资产
-  /// 1.png 上传弹窗顶部装饰图（含纸张、五线谱）
+  /// 1.png 上传弹窗顶部装饰图（含纸张、结构素描）
   static const coursewareUploadHeader = 'assets/images/courseware/1.png';
   static const coursewareSort = 'assets/images/courseware/4.png';
   static const coursewareRefresh = 'assets/images/courseware/5.png';
@@ -411,7 +229,6 @@ abstract final class AppAssets {
   static const coursewareActionCopy = 'assets/images/courseware/15.png';
   static const coursewareActionRename = 'assets/images/courseware/16.png';
   static const coursewareActionShare = 'assets/images/courseware/17.png';
-
 
   /// 刷题完成弹窗的"推荐"气泡（紫色 badge + 下指三角，整体 38×30）。
   static const quizRecommendBubble = 'assets/images/home/tj.png';
@@ -442,7 +259,7 @@ abstract final class AppAssets {
   /// 校圈列表模式预览图左下格式图标
   static const circleTp = 'assets/images/circle/tp.png';
   static const circleVideo = 'assets/images/circle/video.png';
-  static const circleMusic = 'assets/images/circle/music.png';
+  static const circleAudio = 'assets/images/circle/audio.png';
 
   /// 校圈右下角悬浮发布按钮（48×48 紫色「+」）。
   static const schoolFabAdd = 'assets/images/home/add.png';
@@ -469,32 +286,7 @@ abstract final class AppAssets {
   static const circlePublishPickAudio =
       'assets/images/new/校圈/音频.png';
 
-  /// 录音系统 2.0 资产
-  /// 1.png 列表页右下角 FAB（新建录音）图标
-  /// 2.png 录音文件占位图（卡片中央 cassette/折角图）
-  /// 3..6.png 保存弹窗里 4 种音效缩略图：原声 / 考场 / 录音棚 / 音乐厅
-  static const soundFabIcon = 'assets/images/sound/1.png';
-  static const soundFilePlaceholder = 'assets/images/sound/2.png';
-  static const soundEffectOriginal = 'assets/images/sound/3.png';
-  static const soundEffectExamHall = 'assets/images/sound/4.png';
-  static const soundEffectStudio = 'assets/images/sound/5.png';
-  static const soundEffectConcert = 'assets/images/sound/6.png';
-  static const soundRecordPauseButton = 'assets/images/sound/7.png';
-  static const soundSeekBack15 = 'assets/images/sound/8.png';
-  static const soundRecordingActive = 'assets/images/sound/9.png';
-  static const soundSeekForward15 = 'assets/images/sound/10.png';
-  static const soundFinishButton = 'assets/images/sound/11.png';
-  static const soundPlayCircle = 'assets/images/sound/12.png';
-  static const soundContinueButton = 'assets/images/sound/13.png';
-  static const soundPauseCircle = 'assets/images/sound/14.png';
-  static const soundRecordIdle = 'assets/images/sound/15.png';
-  static const soundRerecordButton = 'assets/images/sound/16.png';
-  static const soundMicDisc = 'assets/images/sound/17.png';
-  static const soundStartButton = 'assets/images/sound/19.png';
   // 录音文件在文件夹列表里的占位卡片图（对齐我的云盘的占位风格）。
-  static const soundRecordingFile = 'assets/images/sound/18.png';
-  /// 收藏页声乐/器乐卡片右下角播放样式按钮（更多操作入口）。
-  static const soundPlay = 'assets/images/sound/play.png';
 
   /// 个人中心（设计资源）
   static const infoBg = 'assets/images/info/bg.png';
