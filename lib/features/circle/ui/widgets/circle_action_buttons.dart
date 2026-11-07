@@ -6,6 +6,7 @@ import '../../state/circle_state.dart';
 /// 单个操作按钮（点赞 / 评论 / 收藏）：图标 + 数量。
 ///
 /// 卡片模式横排、三级灰图标；大图模式（[dark]）竖排、白色图标。激活态统一品牌紫。
+/// 大图模式的按钮可能压在浅色画面（白纸素描）上，图标和数字带一层柔和投影。
 class CircleActionButton extends StatelessWidget {
   const CircleActionButton({
     super.key,
@@ -28,14 +29,20 @@ class CircleActionButton extends StatelessWidget {
   final bool active;
   final bool dark;
 
+  static final _darkShadows = <Shadow>[
+    Shadow(color: AppColors.ink.withValues(alpha: 0.5), blurRadius: 4),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final idleColor = dark ? AppColors.onBrand : AppColors.textTertiary;
     final color = active ? AppColors.brand : idleColor;
+    final shadows = dark ? _darkShadows : null;
     final glyph = Icon(
       active ? (activeIcon ?? icon) : icon,
       size: dark ? 28 : 20,
       color: color,
+      shadows: shadows,
     );
     final number = Text(
       formatCircleCount(count),
@@ -43,7 +50,7 @@ class CircleActionButton extends StatelessWidget {
       style: AppText.number(
         size: dark ? 14 : 13,
         color: dark ? AppColors.onBrand : AppColors.textSecondary,
-      ),
+      ).copyWith(shadows: shadows),
     );
     return AppPressable(
       onTap: onTap,

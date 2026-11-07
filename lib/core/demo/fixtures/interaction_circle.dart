@@ -8,11 +8,14 @@ import '../demo_store.dart';
 import '../media/demo_media.dart';
 import 'interaction_common.dart';
 
+part 'interaction_circle_governance.dart';
+
 const _postsKey = 'circle:posts';
 const _commentsKey = 'circle:comments';
 const _base = '/app/school/v2/posts';
 
-/// 校圈：全校共享一份帖子 / 评论数据，点赞按用户记录，删除校验作者或管理员。
+/// 校圈：全校共享一份帖子 / 评论数据，点赞按用户记录，删除校验作者或管理员；
+/// 举报与管理员治理接口见 `interaction_circle_governance.dart`。
 void registerCircleFixtures(DemoRouter r) {
   r.post('$_base/postsList', (req) {
     final viewer = req.account;
@@ -92,10 +95,8 @@ void registerCircleFixtures(DemoRouter r) {
     if (post['userId'] != viewer.userId && viewer.role != DemoRole.admin) {
       throw const DemoApiException('只能删除自己发布的动态');
     }
-    final id = post['id'];
-    _posts().removeWhere((p) => p['id'] == id);
-    _comments().removeWhere((c) => c['postId'] == id);
-    _persist();
+    _closeReportsOnDelete(post, viewer);
+    _removePost(post);
     return true;
   });
 
@@ -184,6 +185,8 @@ void registerCircleFixtures(DemoRouter r) {
     _persist();
     return true;
   });
+
+  _registerCircleGovernance(r);
 }
 
 List<Map<String, dynamic>> _posts() =>
@@ -198,6 +201,15 @@ void _persist() {
   _comments();
   DemoStore.save(_postsKey);
   DemoStore.save(_commentsKey);
+}
+
+/// 从校圈移除一条动态及其评论；它的举报记录留一份快照。
+void _removePost(Map<String, dynamic> post) {
+  final id = post['id'];
+  _posts().removeWhere((p) => p['id'] == id);
+  _comments().removeWhere((c) => c['postId'] == id);
+  _persist();
+  _keepRemovedPostInReports(post);
 }
 
 Map<String, dynamic>? _findPost(String id) =>
@@ -453,6 +465,7 @@ class _SeedComment {
 
 class _SeedPost {
   const _SeedPost({
+    this.ref = '',
     required this.author,
     required this.minutesAgo,
     required this.content,
@@ -466,11 +479,13 @@ class _SeedPost {
     this.comments = const <_SeedComment>[],
   });
 
+  /// 举报种子按它找到对应的动态；不被举报的动态留空。
+  final String ref;
   final String author;
   final int minutesAgo;
   final String content;
 
-  /// 图片帖的配图；视频帖只放一张封面。
+  /// 图片帖的配图；视频帖只放一张封面；为空时是纯文字帖。
   final List<String> images;
   final String video;
   final int likes;
@@ -482,10 +497,13 @@ class _SeedPost {
 }
 
 class _CircleSeed {
-  _CircleSeed(this.posts, this.comments);
+  _CircleSeed(this.posts, this.comments, this.reports);
 
   final List<Map<String, dynamic>> posts;
   final List<Map<String, dynamic>> comments;
+
+  /// 举报记录，一条动态一条（见 `interaction_circle_governance.dart`）。
+  final List<Map<String, dynamic>> reports;
 }
 
 final _CircleSeed _seed = _buildSeed();
@@ -497,38 +515,51 @@ DemoAuthorCard _seedAuthor(String spec) {
   return demoStaffAuthor(DemoCampusData.staffById(spec.substring(2))!);
 }
 
+Map<String, dynamic> _seedPostRecord(
+  _SeedPost spec,
+  String id,
+  DateTime created,
+) {
+  final author = _seedAuthor(spec.author);
+  final isVideo = spec.video.isNotEmpty;
+  return <String, dynamic>{
+    'id': id,
+    'userId': author.userId,
+    'authorName': author.name,
+    'authorIdentity': author.identity,
+    'authorAvatar': author.avatarRef,
+    'content': spec.content,
+    'type': isVideo ? 2 : (spec.images.isEmpty ? 0 : 1),
+    'medias': isVideo ? <String>[spec.video] : spec.images,
+    'coverImg': spec.images.isEmpty ? '' : spec.images.first,
+    'createTime': demoTimeText(created),
+    'likeUserIds': <String>[
+      if (spec.likedByStudent) DemoAccounts.student.userId,
+    ],
+    'baseLikes': spec.likes - (spec.likedByStudent ? 1 : 0),
+    'favoriteCount': spec.favorites,
+    'isTop': spec.top,
+    'isHot': spec.hot,
+  };
+}
+
 _CircleSeed _buildSeed() {
   final now = DemoClock.now();
   final posts = <Map<String, dynamic>>[];
   final comments = <Map<String, dynamic>>[];
+  final postsByRef = <String, Map<String, dynamic>>{};
   for (var i = 0; i < _seedPosts.length; i++) {
     final spec = _seedPosts[i];
     final id = '1990000000${100101 + i}';
-    final author = _seedAuthor(spec.author);
     // 错开分钟数，避免整小时倒推出一串同分钟的发帖时间。
     final created = DemoClock.ago(
       Duration(minutes: spec.minutesAgo + (i * 17) % 50),
     );
-    final isVideo = spec.video.isNotEmpty;
-    posts.add(<String, dynamic>{
-      'id': id,
-      'userId': author.userId,
-      'authorName': author.name,
-      'authorIdentity': author.identity,
-      'authorAvatar': author.avatarRef,
-      'content': spec.content,
-      'type': isVideo ? 2 : 1,
-      'medias': isVideo ? <String>[spec.video] : spec.images,
-      'coverImg': spec.images.first,
-      'createTime': demoTimeText(created),
-      'likeUserIds': <String>[
-        if (spec.likedByStudent) DemoAccounts.student.userId,
-      ],
-      'baseLikes': spec.likes - (spec.likedByStudent ? 1 : 0),
-      'favoriteCount': spec.favorites,
-      'isTop': spec.top,
-      'isHot': spec.hot,
-    });
+    final post = _seedPostRecord(spec, id, created);
+    posts.add(post);
+    if (spec.ref.isNotEmpty) {
+      postsByRef[spec.ref] = post;
+    }
     for (var j = 0; j < spec.comments.length; j++) {
       final c = spec.comments[j];
       final commenter = _seedAuthor(c.author);
@@ -552,7 +583,16 @@ _CircleSeed _buildSeed() {
       });
     }
   }
-  return _CircleSeed(posts, comments);
+  for (var j = 0; j < _removedSeedPosts.length; j++) {
+    final spec = _removedSeedPosts[j];
+    final created = DemoClock.ago(Duration(minutes: spec.minutesAgo));
+    postsByRef[spec.ref] = _seedPostRecord(
+      spec,
+      '1990000000${100901 + j}',
+      created,
+    );
+  }
+  return _CircleSeed(posts, comments, _buildSeedReports(postsByRef, now));
 }
 
 const _seedPosts = <_SeedPost>[
@@ -633,6 +673,7 @@ const _seedPosts = <_SeedPost>[
     ],
   ),
   _SeedPost(
+    ref: 'sketch-video',
     author: 't:t-4',
     minutesAgo: 10 * 60,
     content:
@@ -667,7 +708,7 @@ const _seedPosts = <_SeedPost>[
     author: 't:t-2',
     minutesAgo: 26 * 60 + 40,
     content:
-        '排线基本功：手腕放松，线条两头轻中间重；第二层排线和第一层的夹角不要接近 90°，'
+        '排线基本功：手腕放松，线条两头轻中间重；叠加排线时两层线的夹角不要接近 90°，'
         '否则会出现网格感。几何体阶段把排线练扎实，后面画头像会轻松很多。',
     images: ['${_art}sketch-still-3.jpg'],
     video: '${_video}hatching.mp4',
@@ -701,6 +742,7 @@ const _seedPosts = <_SeedPost>[
     ],
   ),
   _SeedPost(
+    ref: 'studio-wall',
     author: 's:10',
     minutesAgo: 33 * 60,
     content: '画室日常｜作品墙又更新了，从几何体到石膏头像，再到色彩静物。翻到四月份画的立方体，真想把它悄悄藏起来。',
@@ -868,5 +910,37 @@ const _seedPosts = <_SeedPost>[
     likes: 29,
     favorites: 5,
     comments: [_SeedComment('t:t-4', '重心线落点准确，裤子的衣纹可以再概括一些。', 80)],
+  ),
+  // 以下两条被举报，等待管理员在「校圈治理」中处理。
+  _SeedPost(
+    ref: 'ghost-drawing',
+    author: 's:29',
+    minutesAgo: 2 * 24 * 60 + 2 * 60,
+    content: '接速写、色彩作业代画，晚自习前交稿，需要的同学私信我。',
+    images: ['${_art}speed-figure-3.jpg'],
+    likes: 3,
+    favorites: 0,
+  ),
+  _SeedPost(
+    ref: 'exam-rumor',
+    author: 's:33',
+    minutesAgo: 20 * 60,
+    content: '听说这次月考色彩考风景、速写考场景，已经有人拿到题了，想要的私聊。',
+    images: ['${_scene}exam-hall.jpg'],
+    likes: 6,
+    favorites: 2,
+  ),
+];
+
+/// 已被管理员删除的动态：不在校圈里，只作为「已处理」记录里的快照。
+const _removedSeedPosts = <_SeedPost>[
+  _SeedPost(
+    ref: 'milk-tea',
+    author: 's:36',
+    minutesAgo: 3 * 24 * 60 + 5 * 60,
+    content: '校门口新开的奶茶店第二杯半价，报我名字还送小料，晚自习下课一起去。',
+    images: [],
+    likes: 2,
+    favorites: 0,
   ),
 ];

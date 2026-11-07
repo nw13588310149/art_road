@@ -6,6 +6,7 @@ import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/app_refresh_indicator.dart';
 import '../../state/circle_controller.dart';
 import '../../state/circle_state.dart';
+import 'circle_post_actions.dart';
 import 'circle_post_card.dart';
 
 /// 卡片模式：瀑布流。按列累计估算高度，把每张卡片放到当前最矮的那一列。
@@ -14,13 +15,15 @@ class CircleListView extends StatelessWidget {
     super.key,
     required this.state,
     required this.controller,
-    required this.permissions,
+    required this.menuActions,
     this.onPublish,
   });
 
   final CircleState state;
   final CircleController controller;
-  final CirclePermissions permissions;
+  final CirclePostMenuActions menuActions;
+
+  /// 为空时（校圈治理）空状态不引导发布。
   final VoidCallback? onPublish;
 
   static const _gap = AppSpace.s16;
@@ -41,6 +44,7 @@ class CircleListView extends StatelessWidget {
 
     if (posts.isEmpty) {
       final searching = state.searchKeyword.trim().isNotEmpty;
+      final canPublish = onPublish != null;
       return AppRefreshIndicator(
         onRefresh: () => controller.refreshPosts(),
         child: LayoutBuilder(
@@ -51,8 +55,12 @@ class CircleListView extends StatelessWidget {
               child: AppEmptyState(
                 icon: Icons.forum_outlined,
                 title: searching ? '没有找到相关动态' : '还没有动态',
-                description: searching ? '换个关键词试试' : '分享一张作品或写生日记，同学和老师都能看到',
-                actionLabel: searching ? null : '发布动态',
+                description: searching
+                    ? '换个关键词试试'
+                    : (canPublish
+                          ? '分享一张作品或写生日记，同学和老师都能看到'
+                          : '同学和老师发布的动态会出现在这里'),
+                actionLabel: searching || !canPublish ? null : '发布动态',
                 onAction: searching ? null : onPublish,
               ),
             ),
@@ -117,9 +125,8 @@ class CircleListView extends StatelessWidget {
                             onFavorite: () =>
                                 controller.toggleFavorite(post.id),
                             onTap: () => _onCardTap(post.id),
-                            onDeletePost: permissions.canDeletePost(post)
-                                ? () => _confirmDeletePost(context, post)
-                                : null,
+                            onDeletePost: menuActions.deleteFor(context, post),
+                            onReportPost: menuActions.reportFor(context, post),
                           ),
                           const SizedBox(height: _gap),
                         ],
@@ -142,23 +149,6 @@ class CircleListView extends StatelessWidget {
     final message = await action();
     if (!context.mounted || message == null || message.isEmpty) return;
     AppToast.show(context, message);
-  }
-
-  Future<void> _confirmDeletePost(BuildContext context, CirclePost post) async {
-    final ok = await showAppConfirm(
-      context: context,
-      title: '删除动态',
-      message: '删除后这条动态和它的评论都不可恢复。',
-      danger: true,
-    );
-    if (!ok || !context.mounted) return;
-    final message = await controller.deletePost(post.id);
-    if (!context.mounted) return;
-    if (message != null && message.isNotEmpty) {
-      AppToast.showError(context, message);
-    } else {
-      AppToast.showSuccess(context, '动态已删除');
-    }
   }
 
   void _onCardTap(String postId) {

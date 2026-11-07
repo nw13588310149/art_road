@@ -64,7 +64,7 @@ class AdminHomeActionBadgeCounts {
   /// 人脸库：`schoolUserFaceSum.status0Count`（待审核）。
   final int faceAudit;
 
-  /// 校圈治理：`indexSum.postStatus0Count`（今日校圈）。
+  /// 校圈治理：`indexSum.postStatus0Count`（待处理的校圈举报数）。
   final int postReview;
 
   /// 校长信箱：`headmaster/principalMailboxList` status=0 total（待回复）。

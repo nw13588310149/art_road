@@ -1,6 +1,7 @@
 import 'dart:convert' show jsonDecode;
 
 import '../../../core/network/media_url.dart';
+import '../state/circle_governance_state.dart';
 import '../state/circle_state.dart';
 
 List<CirclePost> mapPostsListData(dynamic data) {
@@ -28,6 +29,71 @@ List<CircleComment> mapCommentsListData(dynamic data) {
 CirclePost? mapSinglePostData(dynamic data) {
   if (data is! Map) return null;
   return _mapPost(Map<String, dynamic>.from(data));
+}
+
+/// `manager/postsReportList` 的 records。
+List<CircleReportCase> mapReportCasesData(dynamic data) => [
+  for (final e in _asList(data))
+    if (e is Map) ?_mapReportCase(Map<String, dynamic>.from(e)),
+];
+
+/// `manager/postsReportHandle`、`manager/postsDelete` 返回的单条举报记录。
+CircleReportCase? mapSingleReportCase(dynamic data) {
+  if (data is! Map) return null;
+  return _mapReportCase(Map<String, dynamic>.from(data));
+}
+
+/// 分页接口的 `total`；没有时用 [fallback]。
+int mapPageTotal(dynamic data, int fallback) {
+  if (data is Map && data['total'] != null) return _asInt(data['total']);
+  return fallback;
+}
+
+CircleReportCase? _mapReportCase(Map<String, dynamic> m) {
+  final id = _pickString(m, const ['id']);
+  if (id.isEmpty) return null;
+  final postRaw = m['post'];
+  final reasonsRaw = m['reasons'];
+  final reportsRaw = m['reports'];
+  var latestRemark = '';
+  if (reportsRaw is List) {
+    for (final r in reportsRaw) {
+      if (r is! Map) continue;
+      final remark = r['remark']?.toString().trim() ?? '';
+      if (remark.isNotEmpty) {
+        latestRemark = remark;
+        break;
+      }
+    }
+  }
+  return CircleReportCase(
+    id: id,
+    postId: _pickString(m, const ['postsId', 'postId']),
+    post: postRaw is Map ? _mapPost(Map<String, dynamic>.from(postRaw)) : null,
+    postDeleted: _truthy(m['postDeleted']),
+    pending: _asInt(m['status']) == 0,
+    result: switch (_asInt(m['result'])) {
+      1 => CircleReportResult.kept,
+      2 => CircleReportResult.deleted,
+      _ => CircleReportResult.none,
+    },
+    reportCount: _asInt(m['reportCount']),
+    reasons: [
+      if (reasonsRaw is List)
+        for (final r in reasonsRaw)
+          if (r is Map && (r['reason']?.toString().trim() ?? '').isNotEmpty)
+            CircleReportReasonCount(
+              reason: r['reason'].toString().trim(),
+              count: _asInt(r['count']),
+            ),
+    ],
+    latestRemark: latestRemark,
+    lastReportTime: _friendlyTime(_pickString(m, const ['lastReportTime'])),
+    handleReason: _pickString(m, const ['handleReason']),
+    handleRemark: _pickString(m, const ['handleRemark']),
+    handlerName: _pickString(m, const ['handlerName']),
+    handleTime: _friendlyTime(_pickString(m, const ['handleTime'])),
+  );
 }
 
 CirclePost _mapPost(Map<String, dynamic> m) {

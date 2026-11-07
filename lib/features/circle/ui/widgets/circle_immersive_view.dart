@@ -10,6 +10,8 @@ import 'circle_action_buttons.dart';
 import 'circle_badges.dart';
 import 'circle_comment_panel.dart';
 import 'circle_media_player.dart';
+import 'circle_post_actions.dart';
+import 'circle_post_menu.dart';
 
 /// 沉浸模式：全屏单帖，纵向 PageView 翻页，右侧操作按钮，下方文字浮层；
 /// 评论面板从右侧滑入，覆盖在沉浸面板之上。
@@ -19,12 +21,14 @@ class CircleImmersiveView extends StatefulWidget {
     required this.state,
     required this.controller,
     required this.permissions,
+    required this.menuActions,
     required this.mediaStopEpoch,
   });
 
   final CircleState state;
   final CircleController controller;
   final CirclePermissions permissions;
+  final CirclePostMenuActions menuActions;
   final int mediaStopEpoch;
 
   @override
@@ -84,23 +88,6 @@ class _CircleImmersiveViewState extends State<CircleImmersiveView> {
     AppToast.show(context, message);
   }
 
-  Future<void> _confirmDeletePost(BuildContext context, CirclePost post) async {
-    final ok = await showAppConfirm(
-      context: context,
-      title: '删除动态',
-      message: '删除后这条动态和它的评论都不可恢复。',
-      danger: true,
-    );
-    if (!ok || !context.mounted) return;
-    final message = await widget.controller.deletePost(post.id);
-    if (!context.mounted) return;
-    if (message != null && message.isNotEmpty) {
-      AppToast.showError(context, message);
-    } else {
-      AppToast.showSuccess(context, '动态已删除');
-    }
-  }
-
   Future<void> _confirmDeleteComment(
     BuildContext context,
     String commentId,
@@ -136,10 +123,12 @@ class _CircleImmersiveViewState extends State<CircleImmersiveView> {
         color: AppColors.surface,
         child: state.listLoading
             ? const Center(child: AppLoadingIndicator())
-            : const AppEmptyState(
+            : AppEmptyState(
                 icon: Icons.forum_outlined,
                 title: '还没有动态',
-                description: '分享一张作品或写生日记，同学和老师都能看到',
+                description: widget.menuActions.governance
+                    ? '同学和老师发布的动态会出现在这里'
+                    : '分享一张作品或写生日记，同学和老师都能看到',
               ),
       );
     }
@@ -164,10 +153,8 @@ class _CircleImmersiveViewState extends State<CircleImmersiveView> {
                 post: post,
                 isActive: index == state.immersiveIndex,
                 mediaStopEpoch: widget.mediaStopEpoch,
-                canDeletePost: widget.permissions.canDeletePost(post),
-                onDeletePost: widget.permissions.canDeletePost(post)
-                    ? () => _confirmDeletePost(context, post)
-                    : null,
+                onDeletePost: widget.menuActions.deleteFor(context, post),
+                onReportPost: widget.menuActions.reportFor(context, post),
                 onLike: () => unawaited(_togglePostLike(context, post.id)),
                 onComment: () => unawaited(controller.openCommentPanel(post.id)),
                 onFavorite: () => controller.toggleFavorite(post.id),
@@ -220,8 +207,8 @@ class _ImmersiveSlide extends StatelessWidget {
     required this.onLike,
     required this.onComment,
     required this.onFavorite,
-    required this.canDeletePost,
     this.onDeletePost,
+    this.onReportPost,
   });
 
   final CirclePost post;
@@ -230,8 +217,8 @@ class _ImmersiveSlide extends StatelessWidget {
   final VoidCallback onLike;
   final VoidCallback onComment;
   final VoidCallback onFavorite;
-  final bool canDeletePost;
   final VoidCallback? onDeletePost;
+  final VoidCallback? onReportPost;
 
   @override
   Widget build(BuildContext context) {
@@ -251,23 +238,14 @@ class _ImmersiveSlide extends StatelessWidget {
           ),
         ),
 
-        if (canDeletePost && onDeletePost != null)
+        if (onDeletePost != null || onReportPost != null)
           Positioned(
             top: AppSpace.s16,
             right: AppSpace.s16,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppColors.ink.withValues(alpha: 0.4),
-                borderRadius: AppRadius.br8,
-              ),
-              child: AppIconButton(
-                icon: Icons.delete_outline_rounded,
-                semanticLabel: '删除动态',
-                size: AppButtonSize.sm,
-                filled: false,
-                color: AppColors.onBrand,
-                onTap: onDeletePost,
-              ),
+            child: CirclePostMenuButton(
+              onDelete: onDeletePost,
+              onReport: onReportPost,
+              onDark: true,
             ),
           ),
 

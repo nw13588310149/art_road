@@ -65,7 +65,6 @@ abstract final class AppAssets {
   /// 考评 / 批改类空状态插图（执笔评卷）。
   /// 考试 / 成绩类空状态插图（翻开的书本）。
   static const emptyExamPlaceholder = 'assets/images/404/jp.png';
-  static const schoolV2QuickVideo = 'assets/images/home/schoolVideo.png';
 
   /// 联网搜索 chip——未开启态：浅灰描边的地球 PNG。
   /// 联网搜索 chip——开启态：紫色描边的地球 PNG，与深度思考激活态色系
@@ -111,54 +110,6 @@ abstract final class AppAssets {
   static const xiaoquanHeaderBg = 'assets/images/xiaoquan/bg.png';
   /// 课表页顶栏背景（auth 模块 bgtop，白→淡紫渐变 + 顶圆角）
   static const authBgTop = 'assets/images/auth/bgtop.png';
-  static const schoolIconPin = 'assets/images/school/1.png';
-  static const schoolIconHot = 'assets/images/school/2.png';
-  static const schoolIconLiked = 'assets/images/school/3.png';
-  static const schoolIconComment = 'assets/images/school/4.png';
-  static const schoolIconFavorite = 'assets/images/school/5.png';
-
-  /// 校圈列表模式专用图标
-  static const circleDel1 = 'assets/images/circle/del1.png';
-  static const circleFav1 = 'assets/images/circle/fav1.png';
-  static const circleFav2 = 'assets/images/circle/fav2.png';
-  static const circleMsg1 = 'assets/images/circle/msg1.png';
-  static const circleSc1 = 'assets/images/circle/sc1.png';
-  static const circleSc2 = 'assets/images/circle/sc2.png';
-
-  /// 校圈沉浸模式专用图标
-  static const circleFav = 'assets/images/circle/fav.png';
-  static const circleMsg = 'assets/images/circle/msg.png';
-  static const circleSc = 'assets/images/circle/sc.png';
-
-  /// 校圈列表模式预览图左下格式图标
-  static const circleTp = 'assets/images/circle/tp.png';
-  static const circleVideo = 'assets/images/circle/video.png';
-  static const circleAudio = 'assets/images/circle/audio.png';
-
-  /// 校圈右下角悬浮发布按钮（48×48 紫色「+」）。
-  static const schoolFabAdd = 'assets/images/home/add.png';
-
-  /// 校圈「发布动态」弹窗：类型 Tab 图标（未选中 / 选中）。
-  static const circlePublishTabImage =
-      'assets/images/new/校圈/3Frame.png';
-  static const circlePublishTabImageSelected =
-      'assets/images/new/校圈/Fra00me.png';
-  static const circlePublishTabVideo =
-      'assets/images/new/校圈/1Frame.png';
-  static const circlePublishTabVideoSelected =
-      'assets/images/new/校圈/Frame.png';
-  static const circlePublishTabAudio =
-      'assets/images/new/校圈/2Frame.png';
-  static const circlePublishTabAudioSelected =
-      'assets/images/new/校圈/Fra1me.png';
-
-  /// 校圈「发布动态」弹窗：上传占位 / 缩略图兜底图标。
-  static const circlePublishPickImage =
-      'assets/images/new/校圈/图片.png';
-  static const circlePublishPickVideo =
-      'assets/images/new/校圈/视频.png';
-  static const circlePublishPickAudio =
-      'assets/images/new/校圈/音频.png';
 
   // 录音文件在文件夹列表里的占位卡片图（对齐我的云盘的占位风格）。
 

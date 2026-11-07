@@ -138,12 +138,10 @@ flutter:
 
   assets:
     - assets/images/auth/
-    - assets/images/shell/
     - assets/images/brand/
     - assets/images/shell/leftNav/
     - assets/images/shell/topbar_v2/
     - assets/images/home/
-    - assets/images/home/art/
     - assets/images/404/
     - assets/images/school/
     - assets/images/aichat/
@@ -173,11 +171,9 @@ flutter:
     - assets/images/smartCampus/admin/student_management/
     - assets/images/smartCampus/student/homework/
     - assets/images/smartCampus/student/leave/
-    - assets/images/smartCampus/student/my_class/
     - assets/images/smartCampus/teacher/student_roster/
     - assets/images/smartCampus/teacher/homework/
     - assets/images/smartCampus/teacher/exam/
-    - assets/images/smartCampus/home_actions/
     - assets/images/smartCampus/home_actions/student/
     - assets/images/smartCampus/home_actions/teacher/
     - assets/images/smartCampus/home_actions/head_teacher/
@@ -194,7 +190,6 @@ flutter:
     - assets/images/new/智慧校园/班主任/
     - assets/images/new/智慧校园/宿管/
     - assets/images/new/智慧校园/管理员/
-    - assets/images/new/校圈/
     - assets/images/new/群聊/
     - assets/web/baidu_map.html
     - assets/demo/art/
@@ -204,7 +199,6 @@ flutter:
     - assets/demo/video/
     - assets/demo/brand/
     - assets/demo/ebooks/
-    - assets/images/circle/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

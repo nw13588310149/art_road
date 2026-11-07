@@ -11,7 +11,7 @@ import '../../data/circle_video_cache.dart';
 import '../../state/circle_state.dart';
 import 'circle_video_play_button.dart';
 
-/// 沉浸媒体 contain 尺寸：在可用区域内等比缩放至最大，与 [_ImmersiveDouyinVideoFrame] 一致。
+/// 沉浸媒体 contain 尺寸：在可用区域内等比缩放并尽量铺满，与 [_ImmersiveDouyinVideoFrame] 一致。
 Size _immersiveContainSize({
   required double maxWidth,
   required double maxHeight,

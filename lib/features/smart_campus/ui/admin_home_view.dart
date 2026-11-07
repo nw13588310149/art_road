@@ -192,7 +192,7 @@ class _AdminHomeViewState extends ConsumerState<AdminHomeView> {
     _StatItem('${summary.leaveStatus0Count}', '待审请假'),
     _StatItem('${summary.smallCourseSignStatus5Count}', '小课待审'),
     _StatItem('${summary.userFaceNotRecordedCount}', '人脸待补录'),
-    _StatItem('${summary.postStatus0Count}', '今日校圈'),
+    _StatItem('${summary.postStatus0Count}', '校圈待处理'),
   ];
 
   Widget _buildMainColumn(

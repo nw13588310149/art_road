@@ -6,7 +6,8 @@ import 'package:flutter/foundation.dart';
 /// roles CSV（含 `headmaster` / `manager` / `principal` / `admin` 任一即
 /// 视为最高权限管理员）。
 ///
-/// - 删帖：管理员任意删；普通用户仅删自己发布的帖子。
+/// - 删帖：普通校圈里只能删自己发布的帖子，别人的帖子可以举报；管理员在
+///   「校圈治理」里删除任意帖子，需写明原因。
 /// - 删评论：管理员任意删；评论作者删自己的评论；**帖子作者**可删自己
 ///   帖子下的任意评论（普通用户管理自己动态下的评论）。
 @immutable
@@ -16,11 +17,8 @@ class CirclePermissions {
   final String currentUserId;
   final bool isAdmin;
 
-  bool canDeletePost(CirclePost post) {
-    if (isAdmin) return true;
-    if (currentUserId.isEmpty) return false;
-    return currentUserId == post.author.id;
-  }
+  bool isOwnPost(CirclePost post) =>
+      currentUserId.isNotEmpty && currentUserId == post.author.id;
 
   bool canDeleteComment(CirclePost post, CircleComment comment) {
     if (isAdmin) return true;

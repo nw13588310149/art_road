@@ -4,9 +4,12 @@ import '../../../../core/ui/ui.dart';
 import '../../state/circle_state.dart';
 import 'circle_action_buttons.dart';
 import 'circle_badges.dart';
+import 'circle_post_menu.dart';
 import 'circle_video_play_button.dart';
 
 /// 卡片模式下的单个帖子：作者 / 文字 / 配图 / 操作按钮。
+///
+/// 删除、举报收在作者行右侧的「···」菜单里，两者都没有时不显示菜单。
 class CirclePostCard extends StatelessWidget {
   const CirclePostCard({
     super.key,
@@ -16,6 +19,7 @@ class CirclePostCard extends StatelessWidget {
     required this.onFavorite,
     required this.onTap,
     this.onDeletePost,
+    this.onReportPost,
   });
 
   final CirclePost post;
@@ -24,6 +28,7 @@ class CirclePostCard extends StatelessWidget {
   final VoidCallback onFavorite;
   final VoidCallback onTap;
   final VoidCallback? onDeletePost;
+  final VoidCallback? onReportPost;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +44,11 @@ class CirclePostCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _CardAuthor(post: post, onDeletePost: onDeletePost),
+          _CardAuthor(
+            post: post,
+            onDeletePost: onDeletePost,
+            onReportPost: onReportPost,
+          ),
           const SizedBox(height: AppSpace.s8),
           Text(
             post.text,
@@ -65,10 +74,11 @@ class CirclePostCard extends StatelessWidget {
 }
 
 class _CardAuthor extends StatelessWidget {
-  const _CardAuthor({required this.post, this.onDeletePost});
+  const _CardAuthor({required this.post, this.onDeletePost, this.onReportPost});
 
   final CirclePost post;
   final VoidCallback? onDeletePost;
+  final VoidCallback? onReportPost;
 
   @override
   Widget build(BuildContext context) {
@@ -108,33 +118,7 @@ class _CardAuthor extends StatelessWidget {
             ],
           ),
         ),
-        if (onDeletePost != null)
-          Builder(
-            builder: (anchor) => AppIconButton(
-              icon: Icons.more_horiz_rounded,
-              semanticLabel: '动态操作',
-              size: AppButtonSize.sm,
-              filled: false,
-              color: AppColors.textTertiary,
-              onTap: () async {
-                final action = await showAppMenu<String>(
-                  context: anchor,
-                  width: 132,
-                  items: const [
-                    AppMenuItem(
-                      value: 'delete',
-                      label: '删除动态',
-                      icon: Icons.delete_outline_rounded,
-                      danger: true,
-                    ),
-                  ],
-                );
-                if (action == 'delete') {
-                  onDeletePost?.call();
-                }
-              },
-            ),
-          ),
+        CirclePostMenuButton(onDelete: onDeletePost, onReport: onReportPost),
       ],
     );
   }

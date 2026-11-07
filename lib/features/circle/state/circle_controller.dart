@@ -347,7 +347,27 @@ class CircleController extends StateNotifier<CircleState> {
   Future<String?> deletePost(String postId) async {
     final resp = await _repo.postsDelete(postsId: postId);
     if (!resp.isSuccess) return resp.displayMsg;
+    removePostLocally(postId);
+    return null;
+  }
 
+  /// 举报别人的动态；成功返回 `null`，失败返回接口 [msg]。
+  Future<String?> reportPost(
+    String postId, {
+    required String reason,
+    String remark = '',
+  }) async {
+    final resp = await _repo.postsReport(
+      postsId: postId,
+      reason: reason,
+      remark: remark,
+    );
+    return resp.isSuccess ? null : resp.displayMsg;
+  }
+
+  /// 动态已在服务端删除（自己删除或治理删除）后，从列表 / 沉浸里移除并修正索引。
+  void removePostLocally(String postId) {
+    if (_findPost(postId) == null) return;
     final oldVisible = state.visiblePosts;
     final delVisIndex = oldVisible.indexWhere((p) => p.id == postId);
     var newImmersive = state.immersiveIndex;
@@ -379,7 +399,6 @@ class CircleController extends StateNotifier<CircleState> {
       commentTargetPostId: closePanel ? '' : state.commentTargetPostId,
       clearCommentsLoading: closePanel,
     );
-    return null;
   }
 
   bool _matchesSearch(CirclePost p) {
