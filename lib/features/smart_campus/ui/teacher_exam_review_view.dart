@@ -57,7 +57,6 @@ import 'widgets/smart_campus_empty_state.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
-const Color _kPageBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kPageGrey = AppColors.surfaceSubtle;
 const Color _kPickGrey = AppColors.brandWash;
@@ -152,11 +151,9 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
     final active = visibleItems.isEmpty ? null : visibleItems[activeIdx];
 
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyScrollable: false,
       bodyBorderRadius: 8,
       header: AppPageHeader(
-        centerTitle: true,
         title: '考评管理',
         subtitle: '给任教科目的月考提交评分和点评，评分同步到艺考网阅卷系统，复核后在「班级学情」发布',
         onBack: widget.onBack,

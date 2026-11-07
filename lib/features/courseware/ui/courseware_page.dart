@@ -876,11 +876,10 @@ class _CloudContentArea extends StatelessWidget {
           alignment: Alignment.centerRight,
           child: AppButton(
             label: state.isFolderView ? '上传资料' : '新建文件夹',
-            icon: state.isFolderView
-                ? Icons.upload_rounded
-                : Icons.create_new_folder_outlined,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
+            iconAsset: state.isFolderView
+                ? AppAssets.coursewareUploadFab
+                : AppAssets.coursewareNewFolder,
+            variant: AppButtonVariant.floating,
             onTap: state.isFolderView ? onUpload : onCreateFolder,
           ),
         ),

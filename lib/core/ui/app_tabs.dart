@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_font.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
+import 'app_spacing.dart';
 import 'app_text.dart';
 
 /// [AppTabs] 的单个页签。
@@ -16,13 +17,14 @@ class AppTab<T> {
   final int? count;
 }
 
-/// 页面级文字页签：选中为墨色加粗 + 2px 品牌紫下划线，切换立即生效。
+/// 文字页签：使用短圆角指示条，视频分类可用无指示条的大字样式。
 class AppTabs<T> extends StatelessWidget {
   const AppTabs({
     required this.tabs,
     required this.value,
     required this.onChanged,
     this.gap = 24,
+    this.textOnly = false,
     super.key,
   });
 
@@ -32,6 +34,7 @@ class AppTabs<T> extends StatelessWidget {
 
   /// 页签之间的间距。
   final double gap;
+  final bool textOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +46,7 @@ class AppTabs<T> extends StatelessWidget {
           _TabItem<T>(
             tab: tabs[i],
             selected: tabs[i].value == value,
+            textOnly: textOnly,
             onTap: () => onChanged(tabs[i].value),
           ),
         ],
@@ -55,55 +59,68 @@ class _TabItem<T> extends StatelessWidget {
   const _TabItem({
     required this.tab,
     required this.selected,
+    required this.textOnly,
     required this.onTap,
   });
 
   final AppTab<T> tab;
   final bool selected;
+  final bool textOnly;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.ink : AppColors.textSecondary;
     final count = tab.count;
+    final label = count == null ? tab.label : '${tab.label}($count)';
+    final color = selected
+        ? (textOnly ? AppColors.ink : AppColors.brand)
+        : AppColors.textSecondary;
+    final style = AppText.body13.copyWith(
+      color: color,
+      fontWeight: selected || textOnly ? AppFont.w500 : AppFont.w400,
+      fontSize: textOnly ? (selected ? 18 : 14) : 13,
+    );
     return AppPressable(
       onTap: onTap,
       selected: selected,
-      child: Container(
-        height: 44,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? AppColors.brand : const Color(0x00000000),
-              width: 2,
-            ),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
+      child: SizedBox(
+        height: textOnly ? 36 : 44,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Text(
-              tab.label,
-              maxLines: 1,
-              softWrap: false,
-              style: AppText.body16.copyWith(
-                color: color,
-                fontWeight: selected ? AppFont.w600 : AppFont.w400,
-              ),
-            ),
-            if (count != null) ...[
-              const SizedBox(width: 4),
-              Text(
-                '$count',
-                style: AppText.number(
-                  size: 13,
-                  color: selected ? AppColors.ink : AppColors.textTertiary,
+            if (textOnly)
+              ExcludeSemantics(
+                child: RichText(
+                  text: TextSpan(
+                    text: label,
+                    style: style.copyWith(
+                      fontSize: 18,
+                      color: Colors.transparent,
+                    ),
+                  ),
                 ),
               ),
-            ],
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(tab.label, maxLines: 1, softWrap: false, style: style),
+                if (count != null) Text('($count)', style: style),
+              ],
+            ),
+            if (selected && !textOnly)
+              const Positioned(
+                bottom: 0,
+                child: SizedBox(
+                  width: 28,
+                  height: 3,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.brand,
+                      borderRadius: AppRadius.brPill,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

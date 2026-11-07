@@ -179,7 +179,7 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.page,
+        backgroundColor: AppColors.surface,
         body: SafeArea(
           child: _finished
               ? _SketchReview(
@@ -479,7 +479,9 @@ class _CountdownRing extends StatelessWidget {
                       Text(
                         paused ? '已暂停' : (warn ? '准备换下一张' : '剩余时间'),
                         style: AppText.caption12.copyWith(
-                          color: warn ? AppColors.danger : AppColors.textTertiary,
+                          color: warn
+                              ? AppColors.danger
+                              : AppColors.textTertiary,
                         ),
                       ),
                     ],

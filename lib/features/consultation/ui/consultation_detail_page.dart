@@ -80,7 +80,6 @@ class _ConsultationDetailPageState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppPageHeader(
-            centerTitle: true,
             title: '资讯',
             subtitle: detail?.source,
             onBack: () => GroupChatReturnNavigator.pop(context, ref: ref),

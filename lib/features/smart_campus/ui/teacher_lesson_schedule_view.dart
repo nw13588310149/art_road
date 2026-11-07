@@ -1114,7 +1114,6 @@ class _TeacherLessonScheduleViewState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppPageHeader(
-          centerTitle: true,
           title: '授课课表',
           subtitle: _subtitle,
           onBack: widget.onBack,

@@ -20,7 +20,6 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 // 颜色常量
 // ============================================================================
 
-const Color _kBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kTextPrimary = AppColors.ink;
 const Color _kTextHint = AppColors.textPlaceholder;
@@ -536,10 +535,8 @@ class _AdminTeacherManagementViewState
     final total = _sumTotal >= 0 ? _sumTotal : 0;
 
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
-        centerTitle: true,
         title: '教师管理',
         subtitle: '管理教师档案、任课班级与角色',
         onBack: widget.onBack,

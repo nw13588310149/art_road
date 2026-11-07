@@ -76,7 +76,6 @@ class _TermsContentState extends State<TermsContent> {
             title: '服务协议与隐私政策',
             subtitle: '更新日期 2026-11-01 · 生效日期 2026-11-01',
             onBack: widget.onBack,
-            centerTitle: true,
           ),
           Expanded(
             child: SingleChildScrollView(

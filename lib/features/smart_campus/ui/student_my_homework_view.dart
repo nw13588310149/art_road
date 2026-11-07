@@ -47,7 +47,6 @@ import 'widgets/smart_campus_stripe_bar_chart.dart';
 import 'widgets/homework_voice_comment.dart';
 
 const Color _kCardBg = AppColors.surface;
-const Color _kPageBg = AppColors.page;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kBorderHair = AppColors.line;
@@ -383,11 +382,9 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
     final ui = DashboardScaleScope.of(context).ui;
     final pageLoading = _initialLoad && _loadingList;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       bodyScrollable: false,
       header: AppPageHeader(
-        centerTitle: true,
         title: '我的作业',
         subtitle: '老师布置的作业在这里提交照片、视频或文档，批阅结果和点评也在这里查看',
         onBack: widget.onBack,

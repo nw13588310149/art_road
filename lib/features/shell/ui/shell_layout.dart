@@ -134,6 +134,7 @@ class ShellPageSurface extends StatelessWidget {
     this.borderRadius,
     this.boxShadow,
     this.alignment,
+    this.clipBehavior = Clip.none,
     super.key,
   });
 
@@ -147,6 +148,7 @@ class ShellPageSurface extends StatelessWidget {
   final BorderRadius? borderRadius;
   final List<BoxShadow>? boxShadow;
   final AlignmentGeometry? alignment;
+  final Clip clipBehavior;
 
   @override
   Widget build(BuildContext context) {
@@ -156,6 +158,7 @@ class ShellPageSurface extends StatelessWidget {
       height: height,
       padding: padding,
       alignment: alignment,
+      clipBehavior: clipBehavior,
       decoration: BoxDecoration(
         color: gradient == null ? color : null,
         gradient: gradient,

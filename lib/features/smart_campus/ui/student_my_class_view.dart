@@ -39,7 +39,6 @@ import '../data/student_repository.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPageBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kTextDark = AppColors.ink;
@@ -137,9 +136,7 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
 
     final info = _classInfo;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       header: AppPageHeader(
-        centerTitle: true,
         title: '我的班级',
         subtitle: info == null
             ? '班级信息、班级通知、师资与同学'

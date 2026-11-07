@@ -33,7 +33,6 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kBoardBg = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kBorderHair = AppColors.line;
@@ -250,10 +249,8 @@ class _TeacherMyLeaveViewState extends ConsumerState<TeacherMyLeaveView> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
-        centerTitle: true,
         title: widget.title,
         subtitle: '提交后由教务老师审批，审批结果会同步到这里',
         onBack: widget.onBack,

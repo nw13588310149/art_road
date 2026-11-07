@@ -194,7 +194,12 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         onUpdateProvince: controller.updateProvince,
         onOpenNotice: (item) => openShellNotice(context, ref, item),
       ),
-      child: RepaintBoundary(child: widget.child),
+      child: RepaintBoundary(
+        child: ShellPageSurface(
+          clipBehavior: Clip.antiAlias,
+          child: widget.child,
+        ),
+      ),
     );
   }
 

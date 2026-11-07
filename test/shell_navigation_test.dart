@@ -155,7 +155,9 @@ void main() {
 
     Color? tileColorOf(WidgetTester tester, String label) {
       final container = tester.widget<Container>(
-        find.ancestor(of: find.text(label), matching: find.byType(Container)).first,
+        find
+            .ancestor(of: find.text(label), matching: find.byType(Container))
+            .first,
       );
       return (container.decoration as BoxDecoration?)?.color;
     }
@@ -281,7 +283,7 @@ void main() {
       tester,
     ) async {
       await pumpBar(tester, unread: 1);
-      await tester.tap(find.byIcon(Icons.notifications_none_rounded));
+      await tester.tap(find.byTooltip('通知'));
       await tester.pumpAndSettle();
       expect(find.byType(AppDrawer), findsOneWidget);
       expect(find.text('1 条未读 · 学情、作品点评与系统消息'), findsOneWidget);

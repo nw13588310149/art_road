@@ -267,7 +267,6 @@ class _VideoTutorialV2PageState extends ConsumerState<VideoTutorialV2Page> {
     });
     _preloadImages(state);
     final navigator = Navigator.of(context);
-    final schoolMode = _pageArgs.schoolMode;
     final menus = state.menus;
     final selectedMenu = state.selectedMenu;
     final searching = state.searchKeyword.trim().isNotEmpty;
@@ -291,36 +290,27 @@ class _VideoTutorialV2PageState extends ConsumerState<VideoTutorialV2Page> {
             child: Row(
               children: [
                 if (navigator.canPop()) ...[
-                  AppIconButton(
-                    icon: Icons.chevron_left_rounded,
-                    semanticLabel: '返回',
-                    size: AppButtonSize.sm,
-                    onTap: navigator.pop,
-                  ),
+                  AppIconButton.back(onTap: navigator.pop),
                   const SizedBox(width: AppSpace.s8),
                 ],
                 Expanded(
-                  child: menus.isEmpty
-                      ? Text(
-                          schoolMode ? '课程视频' : '视频中心',
-                          style: AppText.title16,
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: AppTabs<String>(
-                            tabs: [
-                              for (final menu in menus)
-                                AppTab(value: menu.id ?? '', label: menu.name),
-                            ],
-                            value: state.selectedMenuId ?? '',
-                            onChanged: (id) =>
-                                _selectMenu(id.isEmpty ? null : id),
-                          ),
-                        ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: AppTabs<String>(
+                      textOnly: true,
+                      gap: 20,
+                      tabs: [
+                        for (final menu in menus)
+                          AppTab(value: menu.id ?? '', label: menu.name),
+                      ],
+                      value: state.selectedMenuId ?? '',
+                      onChanged: (id) => _selectMenu(id.isEmpty ? null : id),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: AppSpace.s12),
                 SizedBox(
-                  width: 240,
+                  width: 254,
                   child: AppSearchField(
                     controller: _searchController,
                     hint:

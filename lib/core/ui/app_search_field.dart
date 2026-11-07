@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_assets.dart';
+import '../widgets/app_asset_graphic.dart';
 import '../widgets/app_text_field.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
 import 'app_spacing.dart';
 import 'app_text.dart';
 
-/// 搜索框：34 高浅灰底，左侧放大镜，有内容时右侧出现清空按钮。
+/// 搜索框：白底圆角 12，左侧放大镜，有内容时右侧出现清空按钮。
 ///
 /// 聚焦时描边立即转为品牌紫，没有过渡动画。
 class AppSearchField extends StatefulWidget {
@@ -94,7 +96,6 @@ class _AppSearchFieldState extends State<AppSearchField> {
   @override
   Widget build(BuildContext context) {
     final md = widget.size == AppControlSize.md;
-    final fill = widget.toolbar ? AppColors.surface : AppColors.surfaceSubtle;
     final showClear = widget.enabled && _controller.text.isNotEmpty;
     final textStyle = (md ? AppText.body14 : AppText.body13).copyWith(
       color: AppColors.ink,
@@ -102,19 +103,24 @@ class _AppSearchFieldState extends State<AppSearchField> {
     final field = Container(
       height: widget.toolbar
           ? AppSize.iconButton
-          : (md ? AppSize.control : AppSize.controlSm),
-      padding: EdgeInsets.only(left: 10, right: showClear ? 2 : 10),
+          : (md ? 36 : AppSize.controlSm),
+      padding: EdgeInsets.only(left: md ? 14 : 10, right: showClear ? 2 : 12),
       decoration: BoxDecoration(
-        color: fill,
-        borderRadius: widget.toolbar ? AppRadius.br12 : AppRadius.br8,
-        border: Border.all(color: _focusNode.hasFocus ? AppColors.brand : fill),
+        color: AppColors.surface,
+        borderRadius: AppRadius.br12,
+        border: Border.all(
+          color: _focusNode.hasFocus
+              ? AppColors.brand
+              : (widget.toolbar ? AppColors.surface : AppColors.lineSoft),
+        ),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.search_rounded,
-            size: md ? 18 : 16,
-            color: AppColors.textTertiary,
+          const AppAssetGraphic(
+            AppAssets.shellV2Search,
+            width: 16,
+            height: 16,
+            fit: BoxFit.contain,
           ),
           const SizedBox(width: 6),
           Expanded(

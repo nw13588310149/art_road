@@ -10,6 +10,7 @@ import 'study_score_ring.dart';
 class StudyHeroCard extends StatelessWidget {
   const StudyHeroCard({
     required this.exam,
+    this.studentLabel = '',
     this.scoreChange,
     this.rankingChange,
     this.surpassedPercent,
@@ -19,6 +20,7 @@ class StudyHeroCard extends StatelessWidget {
   });
 
   final StudyExamRecord exam;
+  final String studentLabel;
   final double? scoreChange;
 
   /// 正数表示名次上升。
@@ -66,6 +68,10 @@ class StudyHeroCard extends StatelessWidget {
               );
             },
           ),
+          if (studentLabel.isNotEmpty) ...[
+            const SizedBox(height: AppSpace.s12),
+            Text(studentLabel, style: AppText.caption12),
+          ],
           if (stats != null) ...[
             const SizedBox(height: AppSpace.s20),
             _HeroStats(statistics: stats),
@@ -199,10 +205,7 @@ class _HeroInfo extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (percent != null)
-                AppTag(
-                  label: '超过全画室 $percent% 的考生',
-                  tone: AppTone.brand,
-                ),
+                AppTag(label: '超过全画室 $percent% 的考生', tone: AppTone.brand),
               if (openReport != null)
                 AppButton(
                   label: '查看完整报告',
@@ -233,7 +236,10 @@ class _HeroMetric extends StatelessWidget {
       children: [
         Text(label, style: AppText.caption12),
         const SizedBox(height: AppSpace.s4),
-        SizedBox(height: 26, child: Align(alignment: Alignment.centerLeft, child: child)),
+        SizedBox(
+          height: 26,
+          child: Align(alignment: Alignment.centerLeft, child: child),
+        ),
       ],
     );
   }

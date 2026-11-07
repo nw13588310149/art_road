@@ -105,7 +105,6 @@ class CirclePage extends ConsumerWidget {
                 padding: EdgeInsets.zero,
                 bordered: false,
                 child: AppPageHeader(
-                  centerTitle: true,
                   title: governance ? '校圈治理' : '校圈',
                   subtitle: governance
                       ? '处理同学和老师举报的动态，删除时需写明原因'

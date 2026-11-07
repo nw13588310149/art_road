@@ -65,7 +65,6 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kHairline = AppColors.lineSoft;
@@ -509,10 +508,8 @@ class _AdminNotificationManagementViewState
     final ui = DashboardScaleScope.of(context).ui;
     final list = _filtered;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
-        centerTitle: true,
         title: '通知管理',
         subtitle: '发布、定时与撤回校级通知',
         onBack: widget.onBack,

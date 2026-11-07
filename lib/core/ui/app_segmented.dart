@@ -24,7 +24,7 @@ class AppSegment<T> {
   final String? badge;
 }
 
-/// iOS 风格分段控件：浅灰轨道 + 白色选中块，选中立即切换，没有滑动动画。
+/// 浅灰轨道 + 实底选中块，选中立即切换。
 ///
 /// 用于卡片内或页头的 2–5 个互斥视图切换；页面级主导航用 [AppTabs]。
 class AppSegmented<T> extends StatelessWidget {
@@ -35,6 +35,9 @@ class AppSegmented<T> extends StatelessWidget {
     this.size = AppControlSize.md,
     this.expand = false,
     this.enabled = true,
+    this.trackColor = AppColors.segmentTrack,
+    this.selectedColor = AppColors.brand,
+    this.neutral = false,
     super.key,
   });
 
@@ -46,6 +49,9 @@ class AppSegmented<T> extends StatelessWidget {
   /// 各段等分父级宽度（父级宽度必须有界）。
   final bool expand;
   final bool enabled;
+  final Color trackColor;
+  final Color selectedColor;
+  final bool neutral;
 
   @override
   Widget build(BuildContext context) {
@@ -60,17 +66,16 @@ class AppSegmented<T> extends StatelessWidget {
         segment: segment,
         selected: segment.value == value,
         md: md,
+        neutral: neutral,
+        selectedColor: selectedColor,
         onTap: enabled ? () => onChanged(segment.value) : null,
       );
       children.add(expand ? Expanded(child: item) : item);
     }
     final track = Container(
-      height: md ? AppSize.control : AppSize.controlSm,
-      padding: const EdgeInsets.all(3),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceSubtle,
-        borderRadius: AppRadius.br8,
-      ),
+      height: md ? 32 : AppSize.controlSm,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(color: trackColor, borderRadius: AppRadius.br8),
       child: Row(
         mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -88,12 +93,16 @@ class _SegmentItem<T> extends StatelessWidget {
     required this.segment,
     required this.selected,
     required this.md,
+    required this.neutral,
+    required this.selectedColor,
     required this.onTap,
   });
 
   final AppSegment<T> segment;
   final bool selected;
   final bool md;
+  final bool neutral;
+  final Color selectedColor;
   final VoidCallback? onTap;
 
   @override
@@ -105,13 +114,13 @@ class _SegmentItem<T> extends StatelessWidget {
       selected: selected,
       child: Container(
         constraints: BoxConstraints(minWidth: md ? 44 : 36),
-        padding: EdgeInsets.symmetric(horizontal: md ? 12 : 10),
+        padding: EdgeInsets.symmetric(horizontal: md ? 14 : 10),
         alignment: Alignment.center,
         decoration: selected
-            ? const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-                boxShadow: AppShadow.thumb,
+            ? BoxDecoration(
+                color: neutral ? AppColors.surface : selectedColor,
+                borderRadius: const BorderRadius.all(Radius.circular(6)),
+                boxShadow: neutral ? AppShadow.thumb : null,
               )
             : null,
         child: Row(
@@ -123,10 +132,12 @@ class _SegmentItem<T> extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: md ? 14 : 13,
+                  fontSize: 13,
                   height: 1.2,
                   fontWeight: selected ? AppFont.w500 : AppFont.w400,
-                  color: selected ? AppColors.ink : AppColors.textSecondary,
+                  color: selected && !neutral
+                      ? AppColors.onBrand
+                      : AppColors.ink,
                   leadingDistribution: TextLeadingDistribution.even,
                 ),
               ),

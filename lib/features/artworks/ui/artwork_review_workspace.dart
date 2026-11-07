@@ -773,6 +773,7 @@ class _StudentCard extends StatelessWidget {
     final myId = detail.myReview?.teacherId;
     final finalScore = work.finalScore;
     return AppCard(
+      title: work.title,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

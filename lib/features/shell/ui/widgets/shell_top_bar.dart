@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/router/app_navigator.dart';
 import '../../../../app/router/route_paths.dart';
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/demo/demo_config.dart';
 import '../../../../core/ui/ui.dart';
 import '../../../ebooks/data/ebook_repository.dart';
@@ -67,17 +68,15 @@ class ShellTopBar extends StatelessWidget {
                 ),
               ),
               if (demoMode) ...[const ShellDemoModeTag(), SizedBox(width: gap)],
-              AppIconButton(
-                icon: Icons.help_outline_rounded,
+              AppIconButton.asset(
+                asset: AppAssets.shellV2Help,
                 semanticLabel: '帮助',
-                background: AppColors.surface,
                 onTap: () => onNavigate(RoutePaths.helpGuide),
               ),
               SizedBox(width: gap),
-              AppIconButton(
-                icon: Icons.notifications_none_rounded,
+              AppIconButton.asset(
+                asset: AppAssets.shellV2Notice,
                 semanticLabel: '通知',
-                background: AppColors.surface,
                 badgeCount: state.unreadCount,
                 onTap: () => showShellNoticeDrawer(
                   context,
@@ -88,10 +87,9 @@ class ShellTopBar extends StatelessWidget {
                 ),
               ),
               SizedBox(width: gap),
-              AppIconButton(
-                icon: Icons.settings_outlined,
+              AppIconButton.asset(
+                asset: AppAssets.shellV2Setting,
                 semanticLabel: '设置',
-                background: AppColors.surface,
                 onTap: () => onNavigate(RoutePaths.info),
               ),
               SizedBox(width: gap),

@@ -111,6 +111,7 @@ class MyCollectionPage extends ConsumerWidget {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: AppSegmented<int>(
+                  neutral: true,
                   segments: [
                     for (final tab in tabs)
                       AppSegment(value: tab.type, label: tab.label),

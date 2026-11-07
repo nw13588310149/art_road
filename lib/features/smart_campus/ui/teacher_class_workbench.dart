@@ -300,7 +300,6 @@ class _TeacherClassWorkbenchViewState
   @override
   Widget build(BuildContext context) {
     final header = AppPageHeader(
-      centerTitle: true,
       title: '班级工作台',
       subtitle: '本班学生、班级通知、请假与成绩',
       onBack: widget.onBack,

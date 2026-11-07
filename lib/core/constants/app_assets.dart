@@ -21,6 +21,9 @@ abstract final class AppAssets {
   static const leftNavShukan = 'assets/images/shell/leftNav/shukan.png';
 
   static const shellV2Search = 'assets/images/shell/topbar_v2/search.png';
+  static const shellV2Help = 'assets/images/shell/topbar_v2/help.png';
+  static const shellV2Notice = 'assets/images/shell/topbar_v2/notice.png';
+  static const shellV2Setting = 'assets/images/shell/topbar_v2/setting.png';
 
   /// 全局页面 loading / 下拉刷新动画。
   static const homeLoading = 'assets/images/home/loading.gif';
@@ -96,6 +99,9 @@ abstract final class AppAssets {
   /// 我的云盘 / 课件中心 2.0 资产
   /// 1.png 上传弹窗顶部装饰图（含纸张、结构素描）
   static const coursewareUploadHeader = 'assets/images/courseware/1.png';
+  static const coursewareUploadFab = 'assets/images/courseware/6.png';
+  static const coursewareNewFolder = 'assets/images/courseware/13.png';
+  static const noteCreate = 'assets/images/note/3.png';
   static const coursewareFileTypePdf = 'assets/images/courseware/7.png';
   static const coursewareFileTypeImage = 'assets/images/courseware/8.png';
   static const coursewareFileTypeDoc = 'assets/images/courseware/9.png';

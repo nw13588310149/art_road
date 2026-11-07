@@ -742,6 +742,7 @@ class _NotesContentArea extends StatelessWidget {
         Align(
           alignment: Alignment.center,
           child: AppSegmented<MyNotesFilter>(
+            neutral: true,
             segments: [
               for (final filter in _visibleFilters)
                 AppSegment(value: filter, label: filter.label),
@@ -756,9 +757,8 @@ class _NotesContentArea extends StatelessWidget {
           alignment: Alignment.centerRight,
           child: AppButton(
             label: '新建笔记',
-            icon: Icons.add_rounded,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
+            iconAsset: AppAssets.noteCreate,
+            variant: AppButtonVariant.floating,
             onTap: onCreate,
           ),
         ),

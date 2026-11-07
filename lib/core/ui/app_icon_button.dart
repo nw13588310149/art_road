@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_asset_graphic.dart';
 import 'app_badge.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
@@ -22,9 +23,41 @@ class AppIconButton extends StatelessWidget {
     this.enabled = true,
     this.showTooltip = true,
     super.key,
-  });
+  }) : _asset = null,
+       _isBack = false;
 
-  final IconData icon;
+  const AppIconButton.asset({
+    required String asset,
+    required this.semanticLabel,
+    required this.onTap,
+    this.badgeCount = 0,
+    super.key,
+  }) : _asset = asset,
+       icon = null,
+       size = AppButtonSize.md,
+       filled = true,
+       background = AppColors.surface,
+       color = AppColors.ink,
+       enabled = true,
+       showTooltip = true,
+       _isBack = false;
+
+  const AppIconButton.back({required this.onTap, super.key})
+    : icon = Icons.chevron_left,
+      _asset = null,
+      semanticLabel = '返回',
+      size = AppButtonSize.sm,
+      filled = true,
+      background = AppColors.surface,
+      color = AppColors.ink,
+      badgeCount = 0,
+      enabled = true,
+      showTooltip = true,
+      _isBack = true;
+
+  final IconData? icon;
+  final String? _asset;
+  final bool _isBack;
   final String semanticLabel;
   final VoidCallback? onTap;
   final AppButtonSize size;
@@ -40,7 +73,10 @@ class AppIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final md = size == AppButtonSize.md;
-    final extent = md ? AppSize.iconButton : AppSize.iconButtonSm;
+    final extent = _isBack
+        ? 32.0
+        : (md ? AppSize.iconButton : AppSize.iconButtonSm);
+    final image = _asset;
     Widget box = Container(
       width: extent,
       height: extent,
@@ -48,8 +84,16 @@ class AppIconButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: filled ? background : null,
         borderRadius: md ? AppRadius.br12 : AppRadius.br8,
+        border: _isBack ? Border.all(color: AppColors.lineSoft) : null,
       ),
-      child: Icon(icon, size: md ? 20 : 18, color: color),
+      child: image == null
+          ? Icon(icon, size: md || _isBack ? 20 : 18, color: color)
+          : AppAssetGraphic(
+              image,
+              width: extent,
+              height: extent,
+              fit: BoxFit.contain,
+            ),
     );
     if (badgeCount > 0) {
       box = Stack(

@@ -74,13 +74,13 @@ void main() {
 }
 
 void _pageTests() {
-  testWidgets('我的学情总览：页头学号、超过百分比与各科卡片', (tester) async {
+  testWidgets('我的学情总览：成绩卡学号、超过百分比与各科卡片', (tester) async {
     await _pump(
       tester,
       const StudentStudyView(args: StudyCenterArgs()),
       account: DemoAccounts.student,
     );
-    expect(find.text('我的学情'), findsOneWidget);
+    expect(find.text('我的学情'), findsNothing);
     expect(find.textContaining('学号 2027001'), findsOneWidget);
     expect(find.text('超过全画室 82% 的考生'), findsOneWidget);
     expect(find.text('各科表现'), findsOneWidget);
@@ -120,7 +120,7 @@ void _pageTests() {
       const StaffStudyView(args: StudyCenterArgs()),
       account: DemoAccounts.teacher,
     );
-    expect(find.text('班级学情'), findsOneWidget);
+    expect(find.text('班级学情'), findsNothing);
     expect(find.text('参考人数'), findsOneWidget);
     expect(find.textContaining('更多考试'), findsOneWidget);
     await tester.drag(
@@ -168,7 +168,7 @@ void _pageTests() {
       const TeacherArtworksView(),
       account: DemoAccounts.teacher,
     );
-    expect(find.text('作品点评'), findsOneWidget);
+    expect(find.text('作品点评'), findsNothing);
     expect(find.text('待点评'), findsWidgets);
 
     await tester.tap(find.text('点评标签'));
@@ -179,7 +179,7 @@ void _pageTests() {
 
     await tester.tap(find.text('秋日静物色彩写生').first);
     await _settle(tester);
-    expect(find.textContaining('点评 · '), findsOneWidget);
+    expect(find.text('秋日静物色彩写生'), findsOneWidget);
     expect(find.textContaining('学号 '), findsOneWidget);
     expect(find.textContaining('已选 0 个'), findsOneWidget);
     await _unmount(tester);
@@ -187,7 +187,7 @@ void _pageTests() {
 
   testWidgets('范画库列表与详情', (tester) async {
     await _pump(tester, const GalleryPage(), account: DemoAccounts.student);
-    expect(find.text('范画库'), findsOneWidget);
+    expect(find.text('范画库'), findsNothing);
     expect(find.byTooltip('返回'), findsNothing);
     expect(find.text('全部科目'), findsOneWidget);
     await tester.tap(find.text('素描').first);

@@ -40,7 +40,6 @@ class InfoPage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppPageHeader(
-            centerTitle: true,
             title: '个人信息',
             subtitle: '头像、资料与登录密码',
             onBack: () => _backToPrev(context),

@@ -27,7 +27,6 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kPanelBg = AppColors.surfaceSubtle;
 const Color _kBorderHair = AppColors.line;
 const Color _kTextDark = AppColors.ink;
@@ -972,19 +971,23 @@ class _AdminFaceLibraryViewState extends ConsumerState<AdminFaceLibraryView> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       bodyScrollable: false,
-      header: _Banner(
+      header: AppPageHeader(
+        title: '人脸库',
         onBack: widget.onBack,
-        currentTab: _tab,
-        onSelectTab: (t) {
-          setState(() => _tab = t);
-          if (t == _FaceTab.library) {
-            unawaited(_loadFaceSum());
-            unawaited(_loadFaceList());
-          }
-        },
+        actions: [
+          _BannerSegment(
+            currentTab: _tab,
+            onSelectTab: (t) {
+              setState(() => _tab = t);
+              if (t == _FaceTab.library) {
+                unawaited(_loadFaceSum());
+                unawaited(_loadFaceList());
+              }
+            },
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1121,115 +1124,6 @@ class _AdminFaceLibraryViewState extends ConsumerState<AdminFaceLibraryView> {
 }
 
 // —— Banner（含右上角分段）————————————————————————————————————————————
-
-class _Banner extends StatelessWidget {
-  const _Banner({
-    required this.onBack,
-    required this.currentTab,
-    required this.onSelectTab,
-  });
-
-  final VoidCallback onBack;
-  final _FaceTab currentTab;
-  final ValueChanged<_FaceTab> onSelectTab;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: const DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // 标题区占满整条 banner，相对整栏居中；左右按钮不参与占位。
-          Positioned.fill(
-            child: Center(
-              child: Padding(
-                // 对称留白仅用于副标题省略，不影响相对整栏的水平居中。
-                padding: EdgeInsets.symmetric(horizontal: ui(180)),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '人脸库',
-                      style: TextStyle(
-                        fontSize: ui(16),
-                        color: _kTextDark,
-                        fontWeight: AppFont.w600,
-                        height: 1.2,
-                      ),
-                    ),
-                    SizedBox(height: ui(2)),
-                    Text(
-                      '智慧校园人脸信息档案库，联动校园门禁安全通行管控。',
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        color: _kTextHint,
-                        fontWeight: AppFont.w400,
-                        height: 1.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: ui(12),
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: InkWell(
-                onTap: onBack,
-                borderRadius: BorderRadius.circular(ui(8)),
-                child: Container(
-                  width: ui(32),
-                  height: ui(32),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(ui(8)),
-                    border: Border.all(color: _kBorderSoft, width: 1),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.chevron_left_rounded,
-                    size: ui(20),
-                    color: AppColors.ink,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: _BannerSegment(
-                currentTab: currentTab,
-                onSelectTab: onSelectTab,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _BannerSegment extends StatelessWidget {
   const _BannerSegment({required this.currentTab, required this.onSelectTab});

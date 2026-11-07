@@ -226,7 +226,6 @@ class _TeacherLeaveApprovalViewState
     final displayRecords = _filterSearch(_requests);
     return SmartCampusSecondaryPageShell(
       header: AppPageHeader(
-        centerTitle: true,
         title: '请假审批',
         subtitle: '本班学生的请假申请：家长确认后由你审批，已和家长沟通好的也可直接审批',
         onBack: widget.onBack,

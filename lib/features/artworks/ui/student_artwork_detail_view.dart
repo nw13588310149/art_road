@@ -95,10 +95,7 @@ class _StudentArtworkDetailViewState
               children: [
                 Expanded(child: imagePanel),
                 const SizedBox(width: AppSpace.s16),
-                SizedBox(
-                  width: 340,
-                  child: SingleChildScrollView(child: info),
-                ),
+                SizedBox(width: 340, child: SingleChildScrollView(child: info)),
               ],
             ),
           );
@@ -326,6 +323,7 @@ class _WorkInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
+      title: work.title,
       color: AppColors.surfaceSubtle,
       bordered: false,
       padding: const EdgeInsets.all(AppSpace.s12),

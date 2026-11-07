@@ -63,7 +63,7 @@ class SmartCampusScheduleTopBar extends StatelessWidget {
 
 /// 学生端二级页通用壳层：
 ///
-/// 顶部 [header]（标题 + 返回栏）固定浮在灰底上，**不随内容滚动**；与下方
+/// 顶部 [header] 工具栏固定在白色内容容器内，**不随内容滚动**；与下方
 /// 主内容容器之间留 [headerGap] 间距（即「容器到顶部标题栏有间距」）。
 /// 主内容容器填满剩余高度并以 16 圆角裁切滚动内容；容器内部 **不再叠加**
 /// 任何底部 padding —— 滚动到底时由外层 dashboard 的 16px contentPadding
@@ -77,8 +77,7 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
     super.key,
     required this.header,
     required this.body,
-    this.backgroundColor = AppColors.page,
-    this.headerGap = 16,
+    this.headerGap = 4,
     this.bodyBorderRadius = 16,
     this.bodyTopClipRadius,
     this.bodyScrollable = true,
@@ -86,7 +85,6 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
 
   final Widget header;
   final Widget body;
-  final Color backgroundColor;
 
   /// banner 与主内容容器之间的固定间距。
   final double headerGap;
@@ -112,10 +110,7 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DecoratedBox(
-          decoration: smartCampusPageBannerDecoration(ui),
-          child: header,
-        ),
+        header,
         SizedBox(height: ui(headerGap)),
         Expanded(
           child: ClipRRect(
@@ -123,10 +118,7 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
               top: topRadius,
               bottom: bottomRadius,
             ),
-            child: ColoredBox(
-              color: backgroundColor,
-              child: bodyScrollable ? SingleChildScrollView(child: body) : body,
-            ),
+            child: bodyScrollable ? SingleChildScrollView(child: body) : body,
           ),
         ),
       ],

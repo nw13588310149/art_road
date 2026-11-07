@@ -111,7 +111,6 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppPageHeader(
-            centerTitle: true,
             title: '操作指南',
             subtitle: '各功能的操作说明',
             onBack: _back,

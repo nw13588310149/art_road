@@ -21,10 +21,9 @@ class SegmentToggleOption {
 }
 
 /// 按下标选择的分段开关，外观与选中逻辑完全交给 [AppSegmented]：浅灰轨道 +
-/// 白色选中块，选中立即切换。
+/// 实底选中块，选中立即切换。
 ///
-/// [height] 不小于 34 时用 md（34 高），否则用 sm（30 高）。[fontSize]、
-/// [trackColor]、[thumbColor] 仅为兼容旧调用保留，不再影响外观。
+/// [height] 不小于 32 时用 md，否则用 sm。[fontSize] 保留旧调用兼容。
 class SegmentToggle extends StatelessWidget {
   const SegmentToggle({
     super.key,
@@ -61,7 +60,9 @@ class SegmentToggle extends StatelessWidget {
       ],
       value: safeIndex,
       onChanged: onChanged,
-      size: height >= AppSize.control ? AppControlSize.md : AppControlSize.sm,
+      size: height >= 32 ? AppControlSize.md : AppControlSize.sm,
+      trackColor: trackColor,
+      selectedColor: thumbColor,
     );
   }
 }

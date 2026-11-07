@@ -92,7 +92,6 @@ class _QuizSessionPageState extends ConsumerState<QuizSessionPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppPageHeader(
-            centerTitle: true,
             title: state.args.practiceType.label,
             subtitle: total == 0
                 ? null

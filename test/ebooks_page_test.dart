@@ -180,8 +180,8 @@ void main() {
     final repository = _FakeRepository();
     await _pumpInShell(tester, const EbooksPage(args: <String, dynamic>{}), repository);
 
-    expect(find.text('美术书刊'), findsOneWidget);
-    expect(find.text('精选美术教辅与期刊（示例内容）'), findsOneWidget);
+    expect(find.text('美术书刊'), findsNothing);
+    expect(find.text('精选美术教辅与期刊（示例内容）'), findsNothing);
     expect(find.text('编辑推荐'), findsOneWidget);
     expect(find.text('编辑推荐二'), findsOneWidget);
     expect(find.text('读到第 4 / 10 页'), findsWidgets);
@@ -200,7 +200,7 @@ void main() {
     expect(find.text('已在书架'), findsOneWidget);
     expect(repository.books['b4']!['favorite'], isTrue);
 
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+    await tester.tap(find.byTooltip('返回'));
     await tester.pump();
     expect(find.text('内容简介'), findsNothing);
 

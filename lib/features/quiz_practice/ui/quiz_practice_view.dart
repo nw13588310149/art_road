@@ -63,7 +63,6 @@ class QuizPracticeView extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppPageHeader(
-            centerTitle: true,
             title: title,
             subtitle: subtitle,
             onBack: navigator.canPop() ? navigator.pop : null,

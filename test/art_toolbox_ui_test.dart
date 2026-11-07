@@ -74,7 +74,9 @@ Future<void> _pumpToolbox(
   );
   await tester.pump();
   // 让后台处理（compute）跑完，再把结果渲染出来。
-  await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 300)),
+  );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
 }
@@ -106,7 +108,11 @@ void main() {
       ) async {
         final image = tool.usesImage ? await _sampleImage(tester) : null;
         await _pumpToolbox(tester, size: size, tool: tool.key, image: image);
-        expect(find.text(tool.label), findsWidgets);
+        expect(find.byTooltip('返回'), findsOneWidget);
+        expect(find.text(tool.help), findsNothing);
+        await tester.tap(find.byTooltip('工具用法'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
         expect(find.text(tool.help), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
@@ -134,7 +140,10 @@ void main() {
     expect(find.text('500 × 50% = 250.00'), findsOneWidget);
     expect(find.textContaining('各省以当年省教育考试院公布为准'), findsOneWidget);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('art_toolbox_score_form_v1'), contains('"culture":"500"'));
+    expect(
+      prefs.getString('art_toolbox_score_form_v1'),
+      contains('"culture":"500"'),
+    );
   });
 
   testWidgets('checklist ticks persist the progress', (tester) async {
@@ -144,7 +153,10 @@ void main() {
     await tester.pump();
     expect(find.text('1'), findsWidgets);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('art_toolbox_exam_checklist_v1'), contains('doc-admission'));
+    expect(
+      prefs.getString('art_toolbox_exam_checklist_v1'),
+      contains('doc-admission'),
+    );
   });
 
   testWidgets('value order check marks misplaced swatches', (tester) async {
@@ -184,11 +196,26 @@ void main() {
       tool: 'measure',
       image: image,
     );
-    final rect = tester.getRect(find.byType(RawImage).first);
+    final stage = tester.getRect(
+      find.byWidgetPredicate(
+        (widget) => widget is RawImage && identical(widget.image, image.image),
+      ),
+    );
+    final fit = applyBoxFit(
+      BoxFit.contain,
+      Size(image.width.toDouble(), image.height.toDouble()),
+      stage.size,
+    );
+    final rect = Alignment.center.inscribe(fit.destination, stage);
     Offset at(double x, double y) =>
         rect.topLeft + Offset(rect.width * x, rect.height * y);
-    // 图片按 contain 居中，80×60 的图在舞台里宽度撑满，取点都落在图内。
-    for (final point in [at(0.2, 0.5), at(0.4, 0.5), at(0.2, 0.3), at(0.6, 0.3)]) {
+    // 按实际 contain 结果取点，横向或纵向留白都不会影响测量比例。
+    for (final point in [
+      at(0.2, 0.5),
+      at(0.4, 0.5),
+      at(0.2, 0.3),
+      at(0.6, 0.3),
+    ]) {
       await tester.tapAt(point);
       await tester.pump(const Duration(milliseconds: 400));
     }

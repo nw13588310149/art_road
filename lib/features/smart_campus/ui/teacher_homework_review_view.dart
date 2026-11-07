@@ -216,7 +216,6 @@ Map<dynamic, dynamic> _flattenHomeworkPayload(Map<dynamic, dynamic> m) {
 }
 
 // ---- 配色 -------------------------------------------------------------------
-const Color _kPageBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kPageGrey = AppColors.surfaceSubtle;
 const Color _kPickGrey = AppColors.brandWash;
@@ -827,11 +826,9 @@ class _TeacherHomeworkReviewViewState
     ];
 
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       bodyScrollable: false,
       header: AppPageHeader(
-        centerTitle: true,
         title: '作业批改',
         subtitle: '布置作业、查看提交情况并逐份批改',
         onBack: widget.onBack,

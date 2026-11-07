@@ -394,6 +394,7 @@ class _AuthorCard extends StatelessWidget {
           ].where((s) => s.isNotEmpty).join(' · ')
         : (work.authorTitle.isEmpty ? work.source : work.authorTitle);
     return AppCard(
+      title: work.title,
       padding: const EdgeInsets.all(AppSpace.s12),
       child: Row(
         children: [

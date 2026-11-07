@@ -98,7 +98,6 @@ class _ConsultationPageState extends ConsumerState<ConsultationPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppPageHeader(
-            centerTitle: true,
             title: args.schoolMode ? '校园资讯' : '资讯',
             subtitle: args.schoolMode
                 ? '${args.sourceName ?? '画室'}发布的通知与动态'

@@ -24,6 +24,7 @@ abstract final class AppColors {
   static const page = Color(0xFFEFF3FC);
   static const surface = Color(0xFFFFFFFF);
   static const surfaceSubtle = Color(0xFFF5F6FA);
+  static const segmentTrack = Color(0xFFEFEFEF);
 
   /// 输入框、次按钮描边与分隔线。
   static const line = Color(0xFFEAEAEA);

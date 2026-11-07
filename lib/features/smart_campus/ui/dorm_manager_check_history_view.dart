@@ -282,7 +282,6 @@ class _DormManagerCheckHistoryViewState
     final loadError = managerState.error;
     return SmartCampusSecondaryPageShell(
       header: AppPageHeader(
-        centerTitle: true,
         title: '查寝历史',
         subtitle: '按日期查看管辖楼栋的查寝记录，异常记录可在这里处理',
         onBack: widget.onBack,

@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_font.dart';
+import '../widgets/app_asset_graphic.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
 import 'app_spacing.dart';
 
-/// 按钮变体（与机构端 Button 同名同义）。
+/// 按钮变体。
 enum AppButtonVariant {
   /// 品牌紫渐变：每个区域只放一个主操作。
   primary,
 
   /// 白底描边：取消、返回等中性操作。
   secondary,
+
+  /// 云盘、笔记等内容区右下角的浮动操作。
+  floating,
 
   /// 浅紫底深紫字：工具条、卡片内的次要操作。
   quiet,
@@ -33,17 +37,19 @@ class AppButton extends StatelessWidget {
     this.variant = AppButtonVariant.primary,
     this.size = AppButtonSize.md,
     this.icon,
+    this.iconAsset,
     this.loading = false,
     this.enabled = true,
     this.expand = false,
     super.key,
-  });
+  }) : assert(icon == null || iconAsset == null);
 
   final String label;
   final VoidCallback? onTap;
   final AppButtonVariant variant;
   final AppButtonSize size;
   final IconData? icon;
+  final String? iconAsset;
   final bool loading;
   final bool enabled;
 
@@ -53,12 +59,13 @@ class AppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final md = size == AppButtonSize.md;
+    final floating = variant == AppButtonVariant.floating;
     final (background, foreground, border) = switch (variant) {
       AppButtonVariant.primary => (AppColors.brand, AppColors.onBrand, null),
-      AppButtonVariant.secondary => (
+      AppButtonVariant.secondary || AppButtonVariant.floating => (
         AppColors.surface,
         AppColors.ink,
-        AppColors.line,
+        AppColors.lineSoft,
       ),
       AppButtonVariant.quiet => (
         AppColors.brandWash,
@@ -68,20 +75,25 @@ class AppButton extends StatelessWidget {
       AppButtonVariant.danger => (AppColors.danger, AppColors.onBrand, null),
       AppButtonVariant.text => (null, AppColors.brand, null),
     };
-    final horizontal = variant == AppButtonVariant.text
-        ? AppSpace.s4
-        : (md ? AppSpace.s20 : 14.0);
-    final iconSize = md ? 18.0 : 16.0;
+    final horizontal = switch (variant) {
+      AppButtonVariant.text => AppSpace.s4,
+      AppButtonVariant.floating => 13.0,
+      _ => md ? AppSpace.s20 : 14.0,
+    };
+    final iconSize = floating ? 20.0 : (md ? 18.0 : 16.0);
+    final asset = iconAsset;
     final Widget? leading = loading
         ? SizedBox(
             width: iconSize,
             height: iconSize,
             child: CircularProgressIndicator(strokeWidth: 2, color: foreground),
           )
+        : asset != null
+        ? AppAssetGraphic(asset, width: iconSize, height: iconSize)
         : (icon == null ? null : Icon(icon, size: iconSize, color: foreground));
 
     final content = Container(
-      height: md ? AppSize.buttonMd : AppSize.buttonSm,
+      height: floating ? 40 : (md ? AppSize.buttonMd : AppSize.buttonSm),
       width: expand ? double.infinity : null,
       padding: EdgeInsets.symmetric(horizontal: horizontal),
       decoration: BoxDecoration(
@@ -91,21 +103,33 @@ class AppButton extends StatelessWidget {
                 colors: [AppColors.brandDeep, AppColors.brand],
               )
             : null,
-        borderRadius: AppRadius.br12,
+        borderRadius: floating ? AppRadius.br8 : AppRadius.br12,
         border: border == null ? null : Border.all(color: border),
+        boxShadow: floating
+            ? const [
+                BoxShadow(
+                  color: Color(0x59B5B5B5),
+                  blurRadius: 20,
+                  offset: Offset(0, 16),
+                ),
+              ]
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (leading != null) ...[leading, const SizedBox(width: 6)],
+          if (leading != null) ...[
+            leading,
+            SizedBox(width: floating ? AppSpace.s8 : 6),
+          ],
           Flexible(
             child: Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: md ? 16 : 14,
+                fontSize: md || floating ? 16 : 14,
                 height: 1.25,
                 fontWeight: AppFont.w500,
                 color: foreground,

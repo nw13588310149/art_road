@@ -52,7 +52,6 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kBoardBg = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
@@ -253,11 +252,9 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
         : state.stat.pendingMakeupCount;
     final displayName = widget.studentName.isEmpty ? '我' : widget.studentName;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       headerGap: _kStatsBlockGap,
       header: AppPageHeader(
-        centerTitle: true,
         title: '我的查寝',
         subtitle: '只显示$displayName的查寝记录；漏打卡可申请补卡，由宿管或班主任审核',
         onBack: widget.onBack,

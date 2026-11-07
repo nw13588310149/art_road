@@ -26,7 +26,6 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 // 颜色常量
 // ============================================================================
 
-const Color _kBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kSubBg = AppColors.surfaceSubtle;
 const Color _kPanelHeaderBg = AppColors.brandWash;
@@ -1384,10 +1383,8 @@ class _AdminClassManagementViewState
     final ui = DashboardScaleScope.of(context).ui;
 
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
-        centerTitle: true,
         title: '班级管理',
         subtitle: '管理行政班、小班与学生分班',
         onBack: widget.onBack,

@@ -208,7 +208,6 @@ class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
   Widget build(BuildContext context) {
     return SmartCampusSecondaryPageShell(
       header: AppPageHeader(
-        centerTitle: true,
         title: '到岗打卡',
         subtitle: '在指定区域内打卡，下方可查看本人记录',
         onBack: widget.onBack,

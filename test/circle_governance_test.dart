@@ -420,10 +420,10 @@ void main() {
     ) async {
       final expected = _workbenchCount();
       await _withCirclePage(tester, DemoAccounts.admin, governance: true, () async {
-        expect(find.text('校圈治理'), findsOneWidget);
+        expect(find.text('校圈治理'), findsNothing);
         expect(find.text('发布动态'), findsNothing);
         expect(_tab('待处理'), findsOneWidget);
-        expect(_tab('$expected'), findsOneWidget);
+        expect(_tab('($expected)'), findsOneWidget);
         expect(_tab('已处理'), findsOneWidget);
         expect(_tab('全部动态'), findsOneWidget);
         expect(find.byType(AppSegmented<CircleMode>), findsNothing);
@@ -495,7 +495,7 @@ void main() {
         await tester.tap(confirm);
         await _settle(tester, steps: 4);
         expect(_workbenchCount(), before - 1);
-        expect(_tab('${before - 1}'), findsOneWidget);
+        expect(_tab('(${before - 1})'), findsOneWidget);
         expect(find.textContaining(_ghostDrawing), findsNothing);
 
         await tester.tap(_tab('已处理'));
@@ -537,7 +537,7 @@ void main() {
         await tester.tap(confirm);
         await _settle(tester, steps: 4);
         expect(_workbenchCount(), before - 1);
-        expect(_tab('${before - 1}'), findsOneWidget);
+        expect(_tab('(${before - 1})'), findsOneWidget);
         expect(find.textContaining(_examRumor), findsNothing);
 
         await tester.tap(_tab('已处理'));
@@ -565,7 +565,7 @@ void main() {
     ) async {
       final before = _workbenchCount();
       await _withCirclePage(tester, DemoAccounts.student, () async {
-        expect(find.text('校圈'), findsOneWidget);
+        expect(find.text('校圈'), findsNothing);
         expect(find.text('发布动态'), findsOneWidget);
         expect(find.text('校圈治理'), findsNothing);
         expect(_governanceTabs, findsNothing);

@@ -35,7 +35,6 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
-const Color _kPageBg = AppColors.page;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
 const Color _kTextPrimary = AppColors.ink;
@@ -504,9 +503,7 @@ class _TeacherStudentRosterViewState
     final totalForStats = _listTotal > 0 ? _listTotal : list.length;
 
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       header: AppPageHeader(
-        centerTitle: true,
         title: '学生名册',
         subtitle: '任教班级学生的学籍、宿舍与家长联系方式',
         onBack: widget.onBack,

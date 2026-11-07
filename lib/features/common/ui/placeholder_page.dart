@@ -17,7 +17,7 @@ class PlaceholderPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final navigator = Navigator.of(context);
     return Scaffold(
-      backgroundColor: AppColors.page,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

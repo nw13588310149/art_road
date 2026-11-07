@@ -121,7 +121,6 @@ class _AppFeedbackPageState extends ConsumerState<AppFeedbackPage> {
         children: [
           AppPageHeader(
             title: '意见反馈',
-            centerTitle: true,
             subtitle: '想要的范画资料、功能建议都可以告诉我们',
             onBack: navigator.canPop() ? navigator.pop : null,
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
@@ -28,7 +29,7 @@ class ToolboxImagePending extends InheritedWidget {
       oldWidget.pending != pending;
 }
 
-/// 所有工具页统一的外框：页头（返回 + 工具名 + 一句话用法提示 + 右侧操作）+ 内容。
+/// 所有工具页共用返回、用法说明与操作按钮，绘画和控制区域由工具提供。
 class ToolPageScaffold extends StatelessWidget {
   const ToolPageScaffold({
     required this.tool,
@@ -50,9 +51,19 @@ class ToolPageScaffold extends StatelessWidget {
       children: [
         AppPageHeader(
           title: tool.label,
-          subtitle: tool.help,
           onBack: onBack,
-          actions: actions,
+          actions: [
+            ...actions,
+            AppIconButton.asset(
+              asset: AppAssets.shellV2Help,
+              semanticLabel: '工具用法',
+              onTap: () => showAppDialog<void>(
+                context: context,
+                builder: (_) =>
+                    AppDialog(title: tool.label, message: tool.help),
+              ),
+            ),
+          ],
         ),
         Expanded(child: body),
       ],
