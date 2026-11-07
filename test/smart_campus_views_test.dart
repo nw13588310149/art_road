@@ -15,6 +15,7 @@ import 'package:the_road_of_art_flutter/core/theme/app_theme.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/state/smart_campus_controller.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/ui/smart_campus_page.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/ui/widgets/smart_campus_notice_card.dart';
 
 bool _ignorable(FlutterErrorDetails details) {
   final text = details.exceptionAsString();
@@ -38,6 +39,7 @@ Future<void> _visitAll(
   DemoAccount account,
   Map<String, _Open> views, {
   required Size viewport,
+  Map<String, Future<void> Function(WidgetTester)> interactions = const {},
 }) async {
   final errors = <String>[];
   final original = FlutterError.onError;
@@ -91,6 +93,7 @@ Future<void> _visitAll(
       final before = errors.length;
       entry.value(controller);
       await _settle(tester);
+      await interactions[entry.key]?.call(tester);
       if (errors.length > before) {
         errors.insert(before, '[${account.role.name} ${entry.key}]');
       }
@@ -108,6 +111,54 @@ Future<void> _visitAll(
   expect(errors, isEmpty, reason: errors.join('\n'));
 }
 
+Future<void> _checkRosterMenu(WidgetTester tester) async {
+  await tester.tap(find.text('全部班级'));
+  await _settle(tester, steps: 4);
+  final option = find.descendant(
+    of: find.byWidgetPredicate((widget) => widget is PopupMenuItem),
+    matching: find.text('联考冲刺1班'),
+  );
+  expect(option, findsOneWidget);
+  await tester.tap(option);
+  await _settle(tester);
+  expect(option, findsNothing);
+  expect(find.text('全部班级'), findsNothing);
+  expect(find.text('联考冲刺1班'), findsWidgets);
+}
+
+Future<void> _checkClassNotices(WidgetTester tester) async {
+  final notices = find.byType(SmartCampusNoticeCard);
+  expect(notices, findsNWidgets(3));
+  expect(
+    tester.getTopLeft(notices.at(0)).dy,
+    tester.getTopLeft(notices.at(1)).dy,
+  );
+}
+
+Future<void> _checkExamContentCard(WidgetTester tester) async {
+  final ratio = find.text('/14');
+  expect(ratio, findsOneWidget);
+  final card = find
+      .ancestor(of: ratio, matching: find.byType(AppPressable))
+      .first;
+  final title = find.descendant(of: card, matching: find.text('2026 年 10 月月考'));
+  expect(title, findsOneWidget);
+  expect(tester.getTopLeft(ratio).dy, lessThan(tester.getTopLeft(title).dy));
+  expect(
+    find.descendant(of: card, matching: find.textContaining('待评 ')),
+    findsOneWidget,
+  );
+}
+
+Future<void> _checkMailboxPrivacy(WidgetTester tester) async {
+  final anonymous = find.byType(AppSwitch);
+  expect(tester.widget<AppSwitch>(anonymous).value, isFalse);
+  await tester.tap(find.text('举报'));
+  await _settle(tester, steps: 3);
+  expect(tester.widget<AppSwitch>(anonymous).value, isTrue);
+  expect(find.text('举报内容只有校长能看到，默认匿名提交'), findsOneWidget);
+}
+
 void main() {
   setUpAll(() {
     registerPlatformCoreFixtures(DemoBackend.platform);
@@ -119,16 +170,25 @@ void main() {
     testWidgets(
       'teacher campus pages render without overflow at ${viewport.width}',
       (tester) async {
-        await _visitAll(tester, DemoAccounts.teacher, {
-          '授课课表': (c) => c.openMySchedule(),
-          '签课管理': (c) => c.openClassAttendance(),
-          '学生名册': (c) => c.openStudentRoster(),
-          '作业批改': (c) => c.openHomeworkReview(),
-          '考评管理': (c) => c.openExamReview(),
-          '我的请假': (c) => c.openMyTeacherLeave(),
-          '群聊': (c) => c.openGroupChat(),
-          '校长信箱': (c) => c.openPrincipalMailbox(),
-        }, viewport: viewport);
+        await _visitAll(
+          tester,
+          DemoAccounts.teacher,
+          {
+            '授课课表': (c) => c.openMySchedule(),
+            '签课管理': (c) => c.openClassAttendance(),
+            '学生名册': (c) => c.openStudentRoster(),
+            '作业批改': (c) => c.openHomeworkReview(),
+            '考评管理': (c) => c.openExamReview(),
+            '我的请假': (c) => c.openMyTeacherLeave(),
+            '群聊': (c) => c.openGroupChat(),
+            '校长信箱': (c) => c.openPrincipalMailbox(),
+          },
+          viewport: viewport,
+          interactions: {
+            '学生名册': _checkRosterMenu,
+            '考评管理': _checkExamContentCard,
+          },
+        );
       },
     );
 
@@ -147,17 +207,26 @@ void main() {
     testWidgets(
       'student campus pages render without overflow at ${viewport.width}',
       (tester) async {
-        await _visitAll(tester, DemoAccounts.student, {
-          '我的课表': (c) => c.openMySchedule(),
-          '我的班级': (c) => c.openMyClass(),
-          '课堂签到': (c) => c.openCheckIn(),
-          '我的作业': (c) => c.openMyHomework(),
-          '我的考试': (c) => c.openMyGrades(),
-          '我的请假': (c) => c.openLeaveManagement(),
-          '我的查寝': (c) => c.openDormCheck(),
-          '校长信箱': (c) => c.openPrincipalMailbox(),
-          '群聊': (c) => c.openGroupChat(),
-        }, viewport: viewport);
+        await _visitAll(
+          tester,
+          DemoAccounts.student,
+          {
+            '我的课表': (c) => c.openMySchedule(),
+            '我的班级': (c) => c.openMyClass(),
+            '课堂签到': (c) => c.openCheckIn(),
+            '我的作业': (c) => c.openMyHomework(),
+            '我的考试': (c) => c.openMyGrades(),
+            '我的请假': (c) => c.openLeaveManagement(),
+            '我的查寝': (c) => c.openDormCheck(),
+            '校长信箱': (c) => c.openPrincipalMailbox(),
+            '群聊': (c) => c.openGroupChat(),
+          },
+          viewport: viewport,
+          interactions: {
+            '我的班级': _checkClassNotices,
+            '校长信箱': _checkMailboxPrivacy,
+          },
+        );
       },
     );
 

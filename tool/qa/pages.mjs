@@ -19,7 +19,27 @@ const noticeStep = {
 const campusAction = (id, label) => ({
   id: `campus-${id}`,
   route: '/smart-campus',
-  actions: [{ wait: 1200 }, { click: label, after: 2200 }],
+  actions: [
+    { wait: 1200 }, { click: label, after: 2200 },
+    ...(['schedule', 'my-schedule'].includes(id) ? [
+      { check: '教学周' }, { check: /^节次$/ },
+    ] : []),
+    ...(id === 'exam-review' ? [
+      { click: '2026 年 10 月月考', after: 500 },
+      { check: '已提交 14 人，共 14 人' },
+      { check: /^评分$/, role: 'button' },
+    ] : []),
+  ],
+});
+
+const scheduleNextWeek = (label) => ({
+  id: 'campus-schedule-next-week',
+  route: '/smart-campus',
+  actions: [
+    { wait: 1200 }, label, { check: '教学周' },
+    { click: /^下一周$/, after: 900 }, { check: /教学周第\s*13\s*周/ },
+    { check: /^节次$/ },
+  ],
 });
 
 // 第三项是看画分析工具用的示例画作（选图区里的缩略图名称）。
@@ -35,23 +55,61 @@ const toolSteps = [
   ['tool-grid', '构图网格', '秋日风景'],
   ['tool-perspective', '透视辅助', '石膏几何体'],
   ['tool-portrait', '头像比例', '大卫石膏像'],
-  ['tool-sketch', '速写计时'],
-  ['tool-figure', '人体比例参考'],
-  ['tool-value-order', '明度排序训练'],
-  ['tool-countdown', '考试倒计时'],
-  ['tool-score', '综合分计算器'],
-  ['tool-checklist', '考场物品清单'],
-].map(([id, label, sample]) => ({
+  ['tool-sketch', '速写计时', null, '练习训练'],
+  ['tool-figure', '人体比例参考', null, '练习训练'],
+  ['tool-value-order', '明度排序训练', null, '练习训练'],
+  ['tool-countdown', '考试倒计时', null, '备考助手'],
+  ['tool-score', '综合分计算器', null, '备考助手'],
+  ['tool-checklist', '考场物品清单', null, '备考助手'],
+].map(([id, label, sample, group]) => ({
   id,
   route: '/toolbox',
   actions: [
+    ...(group ? [{ click: group, after: 250 }] : []),
     { click: label, after: 2000 },
     ...(sample ? [{ click: sample, after: 2500 }] : []),
   ],
 }));
 
 const sharedContent = [
-  { id: 'ai', route: '/', actions: [nav(/小[艺美]同学/)] },
+  {
+    id: 'ai', route: '/', actions: [
+      nav(/^小美同学$/), { check: '我是小美同学，很高兴见到你！' },
+      { check: /切换模型，当前 DeepSeek/, role: 'button' },
+    ],
+  },
+  {
+    id: 'ai-model', route: '/personal-Ai', actions: [
+      { click: /切换模型，当前 DeepSeek/, after: 300 }, /^Doubao$/,
+      { check: /切换模型，当前 Doubao/, role: 'button' },
+      { click: /^联网搜索$/, after: 400 },
+    ],
+  },
+  {
+    id: 'ai-send', route: '/personal-Ai', actions: [
+      { click: /明暗五大调子分别是什么？/, after: 350 },
+      { click: /^发送$/, after: 2400 }, { check: /受光最直接/ },
+    ],
+  },
+  {
+    id: 'ai-history', route: '/personal-Ai', actions: [
+      { click: /^色彩画面发灰怎么调整？$/, after: 650 },
+      { check: /^复制$/, role: 'button' },
+      { click: /^对话操作$/, after: 350 }, { click: /^删除$/, after: 350 },
+      { check: /^删除对话$/ },
+    ],
+  },
+  {
+    id: 'ai-attachment', route: '/personal-Ai', actions: [
+      {
+        uploadText: { name: '构图练习.txt', content: '观察静物之间的疏密关系。' },
+        into: /^添加附件$/,
+      },
+      { click: /预览附件 构图练习\.txt/, after: 500 },
+      { check: '当前文件类型暂不支持在线预览' },
+      { check: '复制文件地址', role: 'button' },
+    ],
+  },
   { id: 'courseware', route: '/', actions: [nav('校园课件')] },
   { id: 'cloud', route: '/', actions: [nav('我的云盘')] },
   { id: 'video', route: '/', actions: [nav('视频中心')] },
@@ -179,6 +237,7 @@ export const ROLES = [
       { id: 'campus', route: '/smart-campus' },
       campusAction('my-class', '我的班级'),
       campusAction('my-schedule', '我的课表'),
+      scheduleNextWeek('我的课表'),
       campusAction('check-in', '课堂签到'),
       campusAction('homework', '我的作业'),
       campusAction('grades', '我的考试'),
@@ -211,9 +270,19 @@ export const ROLES = [
       { id: 'gallery', route: '/gallery' },
       { id: 'campus', route: '/smart-campus' },
       campusAction('schedule', '授课课表'),
+      scheduleNextWeek('授课课表'),
       campusAction('sign', '签课管理'),
       campusAction('homework-review', '作业批改'),
       campusAction('exam-review', '考评管理'),
+      {
+        id: 'campus-exam-score',
+        route: '/smart-campus',
+        actions: [
+          { wait: 1200 }, { click: /^考评管理$/, after: 2200 },
+          { click: /^评分$/, after: 800 }, { check: '评分与点评' },
+          { check: /^提交评分$/, role: 'button' },
+        ],
+      },
       campusAction('roster', '学生名册'),
       campusAction('school-circle', '校圈'),
       campusAction('group-chat', '群聊'),
@@ -263,6 +332,7 @@ export const ROLES = [
       campusAction('teachers', '教师管理'),
       campusAction('classes', '班级管理'),
       campusAction('schedule', '排课与课表'),
+      scheduleNextWeek('排课与课表'),
       campusAction('sign', '签课管理'),
       campusAction('teacher-leave', '教师请'),
       campusAction('face', '人脸库'),

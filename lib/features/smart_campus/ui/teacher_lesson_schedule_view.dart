@@ -818,18 +818,19 @@ class _TeacherLessonScheduleViewState
     int slotIdx,
     List<List<List<_ScheduleCardData>>> cells,
   ) {
-    var maxCards = 1;
+    var maxHeight = ScheduleIdleSlot.designSlotHeight;
     for (var d = 0; d < cells.length; d++) {
       if (slotIdx < cells[d].length) {
-        final n = cells[d][slotIdx].length;
-        if (n > maxCards) maxCards = n;
+        final height = scheduleCourseCellHeight(
+          cells[d][slotIdx].map((card) => card.display),
+        );
+        if (height > maxHeight) maxHeight = height;
       }
     }
-    // N 张课卡：上下各 6 留白，卡片之间 6。
-    final base = maxCards * (kScheduleCourseCardHeight + 6) + 6;
-    // 编辑模式下在卡片下方挂「申请小课」按钮（34 高 + 6 间距）。
-    if (_mode == _ScheduleMode.edit) return base + 40;
-    return base;
+    if (_mode == _ScheduleMode.edit) {
+      return maxHeight + AppSpace.s8 + ScheduleCourseCellAction.height;
+    }
+    return maxHeight;
   }
 
   /// 把后端返回的日期字符串归一化到当前周内的 [0..6]，否则返回 -1。
@@ -1118,6 +1119,7 @@ class _TeacherLessonScheduleViewState
           title: '授课课表',
           subtitle: _subtitle,
           onBack: widget.onBack,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s20),
           actions: [
             AppButton(
               label: '申请记录',
@@ -1141,7 +1143,7 @@ class _TeacherLessonScheduleViewState
       body: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpace.page,
-          AppSpace.s4,
+          0,
           AppSpace.page,
           AppSpace.page,
         ),
@@ -1151,7 +1153,10 @@ class _TeacherLessonScheduleViewState
             AppCard(
               color: AppColors.surfaceSubtle,
               bordered: false,
-              padding: const EdgeInsets.all(AppSpace.s12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpace.s12,
+                vertical: AppSpace.s8,
+              ),
               child: _TeacherScheduleControlBar(
                 weekStart: _weekStart,
                 week: _currentWeek,
@@ -1215,46 +1220,41 @@ class _TeacherScheduleControlBar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('教学周第 $week 周', style: AppText.body14Strong),
-              const SizedBox(height: AppSpace.s4),
-              const Wrap(
+              Text.rich(
+                TextSpan(
+                  text: '教学周第 ',
+                  children: [
+                    TextSpan(
+                      text: '$week',
+                      style: const TextStyle(color: AppColors.brand),
+                    ),
+                    const TextSpan(text: ' 周'),
+                  ],
+                ),
+                style: AppText.title16.copyWith(height: 1),
+              ),
+              const SizedBox(height: AppSpace.s8),
+              Wrap(
                 spacing: AppSpace.s8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  AppTag(label: '大课', dotColor: _kStatusPurple),
-                  AppTag(label: '小课', dotColor: _kStatusGreen),
+                  const AppTag(label: '大课', dotColor: _kStatusPurple),
+                  Text('不可编辑', style: AppText.caption12),
+                  const AppTag(label: '小课', dotColor: _kStatusGreen),
+                  Text('编辑模式下可申请', style: AppText.caption12),
                 ],
               ),
             ],
           ),
         ),
-        AppIconButton(
-          icon: Icons.chevron_left_rounded,
-          semanticLabel: '上一周',
-          size: AppButtonSize.sm,
-          onTap: onPrev,
+        ScheduleGridWeekSwitcher(
+          onPrev: onPrev,
+          onCurrent: isCurrentWeek ? null : onCurrent,
+          onNext: onNext,
+          grouped: false,
         ),
         const SizedBox(width: AppSpace.s8),
-        AppButton(
-          label: '本周',
-          variant: AppButtonVariant.secondary,
-          size: AppButtonSize.sm,
-          onTap: isCurrentWeek ? null : onCurrent,
-        ),
-        const SizedBox(width: AppSpace.s8),
-        AppIconButton(
-          icon: Icons.chevron_right_rounded,
-          semanticLabel: '下一周',
-          size: AppButtonSize.sm,
-          onTap: onNext,
-        ),
-        const SizedBox(width: AppSpace.s8),
-        AppButton(
-          label: campusDate(weekStart),
-          icon: Icons.calendar_today_outlined,
-          variant: AppButtonVariant.secondary,
-          size: AppButtonSize.sm,
-          onTap: onPickDate,
-        ),
+        ScheduleGridDateButton(label: campusDate(weekStart), onTap: onPickDate),
       ],
     );
   }
@@ -1391,16 +1391,17 @@ class _CellContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     final isEditing = mode == _ScheduleMode.edit;
     if (cards.isEmpty) {
-      // 查看模式空格留白；编辑模式放「申请小课」按钮。
       if (isEditing) {
         return Padding(
-          padding: EdgeInsets.all(ui(6)),
+          padding: const EdgeInsets.all(kScheduleCourseCellInset),
           child: Align(
             alignment: Alignment.topCenter,
-            child: _ApplySmallLessonButton(onTap: onApplySmallLesson),
+            child: ScheduleCourseCellAction(
+              label: '申请小课',
+              onTap: onApplySmallLesson,
+            ),
           ),
         );
       }
@@ -1408,27 +1409,33 @@ class _CellContent extends StatelessWidget {
     }
     // 编辑模式：无论本格当前是大课还是小课，都允许在卡片下方继续申请小课。
     final isPast = isScheduleSlotPast(slotDate: slotDate, endHm: slotEnd);
-    return Padding(
-      padding: EdgeInsets.all(ui(6)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < cards.length; i++) ...[
-            if (i > 0) SizedBox(height: ui(6)),
-            ScheduleCourseCard(
-              data: cards[i].display,
-              editable: isEditing && _isSmall(cards[i].kind),
-              isPast: isPast,
-              topRightBadge: cards[i].applyStatus != null
-                  ? _ApplyStatusBadge(status: cards[i].applyStatus!)
-                  : null,
-            ),
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: const EdgeInsets.all(kScheduleCourseCellInset),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < cards.length; i++) ...[
+              if (i > 0) const SizedBox(height: kScheduleCourseCardGap),
+              ScheduleCourseCard(
+                data: cards[i].display,
+                editable: isEditing && _isSmall(cards[i].kind),
+                isPast: isPast,
+                topRightBadge: cards[i].applyStatus != null
+                    ? _ApplyStatusBadge(status: cards[i].applyStatus!)
+                    : null,
+              ),
+            ],
+            if (isEditing) ...[
+              const SizedBox(height: AppSpace.s8),
+              ScheduleCourseCellAction(
+                label: '申请小课',
+                onTap: onApplySmallLesson,
+              ),
+            ],
           ],
-          if (isEditing) ...[
-            SizedBox(height: ui(6)),
-            _ApplySmallLessonButton(onTap: onApplySmallLesson),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -1436,24 +1443,6 @@ class _CellContent extends StatelessWidget {
   bool _isSmall(ScheduleCourseCardKind k) =>
       k == ScheduleCourseCardKind.smallOrange ||
       k == ScheduleCourseCardKind.smallBlue;
-}
-
-class _ApplySmallLessonButton extends StatelessWidget {
-  const _ApplySmallLessonButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppButton(
-      label: '申请小课',
-      icon: Icons.add_rounded,
-      variant: AppButtonVariant.quiet,
-      size: AppButtonSize.sm,
-      expand: true,
-      onTap: onTap,
-    );
-  }
 }
 
 // =============================================================================

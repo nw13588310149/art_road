@@ -115,6 +115,16 @@ async function runAction(page, action) {
     }
   } else if (action.tap) {
     await page.mouse.click(action.tap[0], action.tap[1]);
+  } else if (action.uploadText) {
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser', { timeout: 5000 }),
+      clickByName(page, action.into),
+    ]);
+    await chooser.setFiles({
+      name: action.uploadText.name,
+      mimeType: 'text/plain',
+      buffer: Buffer.from(action.uploadText.content),
+    });
   } else if (action.type) {
     if (action.into) await clickByName(page, action.into, { role: 'textbox' });
     await page.waitForFunction(() => {
@@ -197,6 +207,8 @@ async function runRole(browser, role, report) {
       for (const action of step.actions || []) {
         await runAction(page, action);
       }
+      // Flutter 的字体和图标在首帧后加载。先等待资源，长连接仍使用常规截图等待。
+      await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {});
       await sleep(step.settle ?? 700);
       await page.screenshot({ path: file });
       report.ok.push(`${role.id}/${path.basename(file)}`);

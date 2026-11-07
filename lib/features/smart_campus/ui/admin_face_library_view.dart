@@ -1264,8 +1264,8 @@ class _EnrollCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSteps(
-            labels: const ['选择人员', '上传照片', '确认提交'],
+          _EnrollmentSteps(
+            personType: personType,
             current: selectedPerson == null
                 ? 0
                 : photoBytes == null
@@ -1323,6 +1323,91 @@ class _EnrollCard extends StatelessWidget {
 // —— 步骤进度条 ————————————————————————————————————————————————————
 
 // —— 行政班 + 录入对象（学生 / 老师）——————————————————————————————————
+
+class _EnrollmentSteps extends StatelessWidget {
+  const _EnrollmentSteps({required this.personType, required this.current});
+
+  final _EnrollPersonType personType;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = ['选择班级和${personType.label}', '上传照片或使用摄像头截取正脸', '确认录入规范后提交'];
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 60),
+      child: Stack(
+        children: [
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 9,
+            height: 12,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.brandWash,
+                borderRadius: AppRadius.br12,
+              ),
+            ),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var index = 0; index < labels.length; index++)
+                Expanded(
+                  child: Semantics(
+                    selected: index == current,
+                    label:
+                        '第 ${index + 1} 步：${labels[index]}'
+                        '${index < current ? '，已完成' : ''}',
+                    excludeSemantics: true,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 3, 4, 0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.brand,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.surface,
+                                width: 2,
+                              ),
+                            ),
+                            child: Image.asset(
+                              'assets/images/face/${index + 1}.png',
+                              width: 16,
+                              height: 16,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpace.s4),
+                          Text(
+                            labels[index],
+                            textAlign: TextAlign.center,
+                            style:
+                                (index == current
+                                        ? AppText.caption12Strong
+                                        : AppText.caption12)
+                                    .copyWith(
+                                      color: AppColors.textSecondary,
+                                      height: 1.2,
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _PickerRow extends StatelessWidget {
   const _PickerRow({
@@ -2035,42 +2120,49 @@ class _StandardPanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(ui(8)),
               border: Border.all(color: _kPanelBg, width: 1),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SampleThumb(
-                        asset: AppAssets.adminFaceLibraryStandardSample1,
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SampleThumb(
+                              asset: AppAssets.adminFaceLibraryStandardSample1,
+                            ),
+                          ),
+                          SizedBox(width: ui(10)),
+                          Expanded(
+                            child: _SampleThumb(
+                              asset: AppAssets.adminFaceLibraryStandardSample2,
+                            ),
+                          ),
+                          SizedBox(width: ui(10)),
+                          Expanded(
+                            child: _SampleThumb(
+                              asset: AppAssets.adminFaceLibraryStandardSample3,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(width: ui(10)),
-                    Expanded(
-                      child: _SampleThumb(
-                        asset: AppAssets.adminFaceLibraryStandardSample2,
+                      SizedBox(height: ui(10)),
+                      Text(
+                        '背景尽量简洁，避免强逆光或过暗。\n双眼平视镜头，双耳可见为宜。\n手机拍摄建议与他人协助，保持手臂稳定。',
+                        style: TextStyle(
+                          fontSize: ui(14),
+                          color: _kTextDark,
+                          fontWeight: AppFont.w400,
+                          height: 32 / 14,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: ui(10)),
-                    Expanded(
-                      child: _SampleThumb(
-                        asset: AppAssets.adminFaceLibraryStandardSample3,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: ui(10)),
-                Text(
-                  '背景尽量简洁，避免强逆光或过暗。\n双眼平视镜头，双耳可见为宜。\n手机拍摄建议与他人协助，保持手臂稳定。',
-                  style: TextStyle(
-                    fontSize: ui(14),
-                    color: _kTextDark,
-                    fontWeight: AppFont.w400,
-                    height: 32 / 14,
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

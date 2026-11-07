@@ -27,57 +27,18 @@ class _FigureToolState extends State<FigureTool> {
     return ToolPageScaffold(
       tool: ArtTool.figure,
       onBack: widget.onBack,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 760;
-          final diagram = AppCard(
+      bodyTopInset: 0,
+      body: ImageToolLayout(
+        stage: (_) => ToolStage(
+          child: Padding(
             padding: const EdgeInsets.all(AppSpace.s12),
             child: _FigureDiagram(
               selected: _pose,
               onSelect: (pose) => setState(() => _pose = pose),
             ),
-          );
-          final panel = AppCard(
-            padding: EdgeInsets.zero,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpace.card),
-              child: _buildPanel(),
-            ),
-          );
-          const padding = EdgeInsets.fromLTRB(
-            AppSpace.page,
-            0,
-            AppSpace.page,
-            AppSpace.page,
-          );
-          if (wide) {
-            return Padding(
-              padding: padding,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: diagram),
-                  const SizedBox(width: AppSpace.s16),
-                  SizedBox(width: 320, child: panel),
-                ],
-              ),
-            );
-          }
-          return Padding(
-            padding: padding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: diagram),
-                const SizedBox(height: AppSpace.s12),
-                SizedBox(
-                  height: (constraints.maxHeight * 0.4).clamp(0.0, 320.0),
-                  child: panel,
-                ),
-              ],
-            ),
-          );
-        },
+          ),
+        ),
+        panel: (_) => _buildPanel(),
       ),
     );
   }
@@ -124,8 +85,9 @@ class _FigureToolState extends State<FigureTool> {
   }
 }
 
-String _formatHeads(double heads) =>
-    heads == heads.roundToDouble() ? '${heads.round()}' : heads.toStringAsFixed(1);
+String _formatHeads(double heads) => heads == heads.roundToDouble()
+    ? '${heads.round()}'
+    : heads.toStringAsFixed(1);
 
 class _Bullet extends StatelessWidget {
   const _Bullet(this.text);
@@ -168,7 +130,8 @@ class _FigureLayout {
       for (final pose in FigurePose.values) pose.skeleton.bounds.width + 0.4,
     ];
     final totalUnits =
-        widths.fold<double>(0, (a, b) => a + b) + gapUnits * (widths.length - 1);
+        widths.fold<double>(0, (a, b) => a + b) +
+        gapUnits * (widths.length - 1);
     unit = math.max(
       4,
       math.min(
@@ -278,13 +241,25 @@ class _FigurePainter extends CustomPainter {
     for (var k = 1; k <= 7; k++) {
       final y = ground - k * unit;
       canvas.drawLine(Offset(layout.rulerX, y), Offset(size.width, y), guide);
-      _text(canvas, '$k', Offset(layout.rulerX - 6, y), number: true, alignRight: true);
+      _text(
+        canvas,
+        '$k',
+        Offset(layout.rulerX - 6, y),
+        number: true,
+        alignRight: true,
+      );
     }
     final y35 = ground - 3.5 * unit;
     for (var x = layout.rulerX; x < size.width; x += 8) {
       canvas.drawLine(Offset(x, y35), Offset(x + 4, y35), half);
     }
-    _text(canvas, '3.5', Offset(layout.rulerX - 6, y35), number: true, alignRight: true);
+    _text(
+      canvas,
+      '3.5',
+      Offset(layout.rulerX - 6, y35),
+      number: true,
+      alignRight: true,
+    );
     final ruler = Paint()
       ..color = AppColors.textTertiary
       ..strokeWidth = 1.5;
@@ -303,9 +278,18 @@ class _FigurePainter extends CustomPainter {
       );
     for (var k = 0; k <= 7; k++) {
       final y = ground - k * unit;
-      canvas.drawLine(Offset(layout.rulerX, y), Offset(layout.rulerX + 6, y), ruler);
+      canvas.drawLine(
+        Offset(layout.rulerX, y),
+        Offset(layout.rulerX + 6, y),
+        ruler,
+      );
     }
-    _text(canvas, '头长', Offset(layout.rulerX - 6, ground + 14), alignRight: true);
+    _text(
+      canvas,
+      '头长',
+      Offset(layout.rulerX - 6, ground + 14),
+      alignRight: true,
+    );
   }
 
   void _paintFigure(Canvas canvas, FigurePose pose, bool active) {
@@ -398,16 +382,28 @@ class _FigurePainter extends CustomPainter {
     if (!active) {
       return;
     }
-    final top = at(Offset(skeleton.headCenter.dx, skeleton.headCenter.dy - 0.5));
-    final chin = at(Offset(skeleton.headCenter.dx, skeleton.headCenter.dy + 0.5));
+    final top = at(
+      Offset(skeleton.headCenter.dx, skeleton.headCenter.dy - 0.5),
+    );
+    final chin = at(
+      Offset(skeleton.headCenter.dx, skeleton.headCenter.dy + 0.5),
+    );
     final bracketX = at(skeleton.bounds.topLeft).dx - 10;
     final bracket = Paint()
       ..color = AppColors.brand
       ..strokeWidth = 1.5;
     canvas
       ..drawLine(Offset(bracketX, top.dy), Offset(bracketX, chin.dy), bracket)
-      ..drawLine(Offset(bracketX, top.dy), Offset(bracketX + 5, top.dy), bracket)
-      ..drawLine(Offset(bracketX, chin.dy), Offset(bracketX + 5, chin.dy), bracket);
+      ..drawLine(
+        Offset(bracketX, top.dy),
+        Offset(bracketX + 5, top.dy),
+        bracket,
+      )
+      ..drawLine(
+        Offset(bracketX, chin.dy),
+        Offset(bracketX + 5, chin.dy),
+        bracket,
+      );
     _text(
       canvas,
       '1 头长',

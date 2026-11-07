@@ -6,6 +6,7 @@ import '../../../../core/ui/ui.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../state/toolbox_image_controller.dart';
+import 'tool_panel.dart';
 
 /// 页面带 `imageUrl` 参数进入、但下载尚未发起的那一帧，让工具直接显示处理中，
 /// 避免选图引导一闪而过。
@@ -36,6 +37,7 @@ class ToolPageScaffold extends StatelessWidget {
     required this.onBack,
     required this.body,
     this.subtitle,
+    this.bodyTopInset = AppSpace.s16,
     this.actions = const <Widget>[],
     super.key,
   });
@@ -44,6 +46,7 @@ class ToolPageScaffold extends StatelessWidget {
   final VoidCallback onBack;
   final Widget body;
   final String? subtitle;
+  final double bodyTopInset;
   final List<Widget> actions;
 
   @override
@@ -69,8 +72,12 @@ class ToolPageScaffold extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpace.s12),
-        Expanded(child: body),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(top: bodyTopInset),
+            child: body,
+          ),
+        ),
       ],
     );
   }
@@ -176,13 +183,12 @@ class ImageToolScaffold extends ConsumerWidget {
 
     Widget body;
     if (image == null) {
-      body = state.loading || ToolboxImagePending.of(context)
-          ? const _ProcessingHint()
-          : ImageSourcePanel(
-              tool: tool,
-              onUpload: controller.pickFromAlbum,
-              onSample: controller.loadSample,
-            );
+      body = ImageSourcePanel(
+        tool: tool,
+        loading: state.loading || ToolboxImagePending.of(context),
+        onUpload: controller.pickFromAlbum,
+        onSample: controller.loadSample,
+      );
     } else {
       body = Stack(
         children: [
@@ -202,21 +208,18 @@ class ImageToolScaffold extends ConsumerWidget {
       tool: tool,
       onBack: onBack,
       subtitle: image?.label,
+      bodyTopInset: 0,
       actions: image == null
           ? const <Widget>[]
           : [
-              AppButton(
+              _PreviewAction(
                 label: '上传图片',
                 icon: Icons.upload_rounded,
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.sm,
                 onTap: state.loading ? null : controller.pickFromAlbum,
               ),
-              AppButton(
+              _PreviewAction(
                 label: '使用示例画作',
                 icon: Icons.collections_outlined,
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.sm,
                 onTap: state.loading ? null : pickSample,
               ),
             ],
@@ -225,7 +228,50 @@ class ImageToolScaffold extends ConsumerWidget {
   }
 }
 
-/// 画面 + 控制面板：宽屏左右排列（面板 320 宽），窄屏上下排列；面板内容可滚动。
+class _PreviewAction extends StatelessWidget {
+  const _PreviewAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.lineSoft),
+          borderRadius: AppRadius.br8,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: AppColors.ink),
+            const SizedBox(width: AppSpace.s4),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.body14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 预览主体沿用 16px 内嵌画布和白底侧栏。窄屏时将侧栏放到画布下。
 class ImageToolLayout extends StatelessWidget {
   const ImageToolLayout({
     required this.stage,
@@ -245,53 +291,42 @@ class ImageToolLayout extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= wideBreakpoint;
+        final canvas = Padding(
+          padding: const EdgeInsets.all(AppSpace.s16),
+          child: stage(context),
+        );
+        const divider = BorderSide(color: AppColors.lineSoft);
         final panelBox = DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: AppRadius.br12,
-            border: Border.all(color: AppColors.lineSoft),
+            border: wide
+                ? const Border(left: divider)
+                : const Border(top: divider),
           ),
           child: SingleChildScrollView(
+            primary: false,
             padding: const EdgeInsets.all(AppSpace.card),
             child: panel(context),
           ),
         );
         if (wide) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              0,
-              AppSpace.page,
-              AppSpace.page,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: stage(context)),
-                const SizedBox(width: AppSpace.s16),
-                SizedBox(width: panelWidth, child: panelBox),
-              ],
-            ),
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: canvas),
+              SizedBox(width: panelWidth, child: panelBox),
+            ],
           );
         }
         final panelHeight = (constraints.maxHeight * 0.42)
             .clamp(0.0, 320.0)
             .toDouble();
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpace.page,
-            0,
-            AppSpace.page,
-            AppSpace.s16,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: stage(context)),
-              const SizedBox(height: AppSpace.s12),
-              SizedBox(height: panelHeight, child: panelBox),
-            ],
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: canvas),
+            SizedBox(height: panelHeight, child: panelBox),
+          ],
         );
       },
     );
@@ -302,73 +337,53 @@ class ImageToolLayout extends StatelessWidget {
 class ImageSourcePanel extends StatelessWidget {
   const ImageSourcePanel({
     required this.tool,
+    required this.loading,
     required this.onUpload,
     required this.onSample,
     super.key,
   });
 
   final ArtTool tool;
+  final bool loading;
   final VoidCallback onUpload;
   final ValueChanged<ToolboxSample> onSample;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.s24,
-          0,
-          AppSpace.s24,
-          AppSpace.s24,
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.tint(tool.accent),
-                  borderRadius: AppRadius.br12,
+    return ImageToolLayout(
+      stage: (context) => ToolStage(
+        child: loading
+            ? const _ProcessingHint()
+            : AppEmptyState(
+                title: '选一张画作，开始使用「${tool.label}」',
+                description: '从相册选图，或使用示例画作。图片只在本机处理。',
+                icon: Icons.image_outlined,
+                action: AppButton(
+                  label: '上传图片',
+                  icon: Icons.upload_rounded,
+                  onTap: onUpload,
                 ),
-                child: Icon(tool.icon, color: tool.accent, size: 28),
               ),
-              const SizedBox(height: AppSpace.s12),
-              Text('选一张画作，开始使用「${tool.label}」', style: AppText.title16),
-              const SizedBox(height: AppSpace.s4),
-              Text(
-                '可以上传自己作业的照片，也可以先用示例画作体验；图片只在本机处理，不会上传到服务器',
-                textAlign: TextAlign.center,
-                style: AppText.body13,
-              ),
-              const SizedBox(height: AppSpace.s20),
-              AppButton(
-                label: '上传图片',
-                icon: Icons.upload_rounded,
-                onTap: onUpload,
-              ),
-              const SizedBox(height: AppSpace.s24),
-              Text('或直接选一张示例画作', style: AppText.caption12),
-              const SizedBox(height: AppSpace.s12),
-              Wrap(
-                spacing: AppSpace.s12,
-                runSpacing: AppSpace.s12,
-                alignment: WrapAlignment.center,
-                children: [
-                  for (final sample in toolboxSamples)
-                    SampleThumb(
-                      sample: sample,
-                      size: 88,
-                      showLabel: true,
-                      onTap: () => onSample(sample),
-                    ),
-                ],
-              ),
+      ),
+      panel: (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('示例画作', style: AppText.title16),
+          const SizedBox(height: AppSpace.s12),
+          Wrap(
+            spacing: AppSpace.s12,
+            runSpacing: AppSpace.s12,
+            children: [
+              for (final sample in toolboxSamples)
+                SampleThumb(
+                  sample: sample,
+                  size: 128,
+                  showLabel: true,
+                  onTap: loading ? null : () => onSample(sample),
+                ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -385,7 +400,7 @@ class SampleThumb extends StatelessWidget {
 
   final ToolboxSample sample;
   final double size;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool showLabel;
 
   @override

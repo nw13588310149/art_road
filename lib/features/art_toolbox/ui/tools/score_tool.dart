@@ -68,6 +68,7 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
     return ToolPageScaffold(
       tool: ArtTool.score,
       onBack: widget.onBack,
+      bodyTopInset: 0,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= 760;
@@ -77,30 +78,22 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
           final result = state.loading
               ? const AppCard(child: AppSkeletonText(lines: 6, lineHeight: 20))
               : _ResultCard(data: state.data);
-          const padding = EdgeInsets.fromLTRB(
-            AppSpace.page,
-            0,
-            AppSpace.page,
-            AppSpace.s24,
-          );
           if (wide) {
-            return SingleChildScrollView(
-              padding: padding,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: form),
-                  const SizedBox(width: AppSpace.s16),
-                  SizedBox(width: 380, child: result),
-                ],
-              ),
+            return ImageToolLayout(
+              panelWidth: 380,
+              stage: (_) => SingleChildScrollView(primary: false, child: form),
+              panel: (_) => result,
             );
           }
           return SingleChildScrollView(
-            padding: padding,
+            padding: const EdgeInsets.all(AppSpace.s16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [form, const SizedBox(height: AppSpace.s16), result],
+              children: [
+                form,
+                const SizedBox(height: AppSpace.s16),
+                result,
+              ],
             ),
           );
         },
@@ -115,6 +108,8 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
     return AppCard(
       title: '输入成绩',
       subtitle: '修改后自动保存在本机',
+      bordered: false,
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -226,7 +221,8 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
         divisions: 20,
         valueLabel: '${custom.culturePercent}%',
         onChanged: (v) => _update(
-          (d) => d.copyWith(custom: d.custom.copyWith(culturePercent: v.round())),
+          (d) =>
+              d.copyWith(custom: d.custom.copyWith(culturePercent: v.round())),
         ),
       ),
       const SizedBox(height: AppSpace.s4),
@@ -369,6 +365,8 @@ class _ResultCard extends StatelessWidget {
     return AppCard(
       title: '计算结果',
       subtitle: _provinceLabel(data.province),
+      bordered: false,
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

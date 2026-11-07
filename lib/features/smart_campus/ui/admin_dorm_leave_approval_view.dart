@@ -171,6 +171,7 @@ class _AdminDormLeaveApprovalViewState
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
+    final error = _loadError;
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
       header: AppPageHeader(
@@ -185,6 +186,10 @@ class _AdminDormLeaveApprovalViewState
             pendingCount: _pendingCount,
             approvedCount: _approvedCount,
             rejectedCount: _rejectedCount,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: AppSpace.s8, top: AppSpace.s8),
+            child: Text('审批结果将同步至教师端。', style: AppText.caption12),
           ),
           SizedBox(height: ui(16)),
           SmartCampusStatusTabs<_StatusTab>(
@@ -214,12 +219,17 @@ class _AdminDormLeaveApprovalViewState
           MainContentLoadingShell(
             loading: _loading && _requests.isEmpty,
             minHeight: ui(200),
-            child: _CardsGrid(
-              records: _requests,
-              emptyMessage: _loadError ?? '暂无相关申请',
-              onApprove: _onApprove,
-              onReject: _onReject,
-            ),
+            child: error != null
+                ? AppErrorState(
+                    title: '请假申请加载失败',
+                    description: error,
+                    onRetry: _reloadAll,
+                  )
+                : _CardsGrid(
+                    records: _requests,
+                    onApprove: _onApprove,
+                    onReject: _onReject,
+                  ),
           ),
         ],
       ),
@@ -314,13 +324,11 @@ class _StatsRow extends StatelessWidget {
 class _CardsGrid extends StatelessWidget {
   const _CardsGrid({
     required this.records,
-    required this.emptyMessage,
     required this.onApprove,
     required this.onReject,
   });
 
   final List<TeacherLeaveRecord> records;
-  final String emptyMessage;
   final ValueChanged<TeacherLeaveRecord> onApprove;
   final ValueChanged<TeacherLeaveRecord> onReject;
 
@@ -328,11 +336,8 @@ class _CardsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     if (records.isEmpty) {
-      return AppCard(
-        child: AppEmptyState(
-          icon: Icons.event_note_outlined,
-          title: emptyMessage,
-        ),
+      return const AppCard(
+        child: AppEmptyState(icon: Icons.event_note_outlined, title: '暂无相关申请'),
       );
     }
     return LayoutBuilder(

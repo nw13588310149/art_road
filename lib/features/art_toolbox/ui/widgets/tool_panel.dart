@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/ui/ui.dart';
 
-/// 画面区域：浅灰底，便于看清白底画作的边缘。
+/// 画面区域：使用资料预览画布的浅色底与小圆角。
 class ToolStage extends StatelessWidget {
   const ToolStage({required this.child, super.key});
 
@@ -14,8 +14,8 @@ class ToolStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: AppRadius.br12,
-      child: ColoredBox(color: AppColors.surfaceSubtle, child: child),
+      borderRadius: AppRadius.br8,
+      child: ColoredBox(color: const Color(0xFFFAFAFD), child: child),
     );
   }
 }
@@ -186,7 +186,7 @@ class ToolPanelSection extends StatelessWidget {
   }
 }
 
-/// 面板里的分段选择，各段等分宽度。
+/// 工具参数的独立选项块，沿用原版工具的灰底与墨色选中态。
 class ToolSegmented<T> extends StatelessWidget {
   const ToolSegmented({
     required this.values,
@@ -205,14 +205,53 @@ class ToolSegmented<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSegmented<T>(
-      segments: [
-        for (final v in values) AppSegment<T>(value: v, label: labelOf(v)),
-      ],
-      value: value,
-      onChanged: onChanged,
-      enabled: enabled,
-      expand: true,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = AppSpace.s8;
+        final columns = (constraints.maxWidth / 68).floor().clamp(
+          1,
+          values.length,
+        );
+        final width = (constraints.maxWidth - (columns - 1) * gap) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final option in values)
+              AppPressable(
+                enabled: enabled,
+                selected: value == option,
+                onTap: () => onChanged(option),
+                child: Container(
+                  width: width,
+                  constraints: const BoxConstraints(minHeight: 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpace.s4,
+                    vertical: AppSpace.s8,
+                  ),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: value == option
+                        ? AppColors.ink
+                        : AppColors.surfaceSubtle,
+                    borderRadius: AppRadius.br8,
+                  ),
+                  child: Text(
+                    labelOf(option),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body14.copyWith(
+                      color: value == option
+                          ? AppColors.onBrand
+                          : AppColors.ink,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -335,20 +374,19 @@ class ToolSlider extends StatelessWidget {
     final fraction = max > min ? (current - min) / (max - min) : 0.0;
     final increased = _snap(current + _step);
     final decreased = _snap(current - _step);
-    return Semantics(
+    void commit(double next) {
+      _emit(next);
+      onChangeEnd?.call(next);
+    }
+
+    final track = Semantics(
       slider: true,
       label: semanticLabel,
       value: _spoken(current),
       increasedValue: _spoken(increased),
       decreasedValue: _spoken(decreased),
-      onIncrease: () {
-        _emit(increased);
-        onChangeEnd?.call(increased);
-      },
-      onDecrease: () {
-        _emit(decreased);
-        onChangeEnd?.call(decreased);
-      },
+      onIncrease: increased > current ? () => commit(increased) : null,
+      onDecrease: decreased < current ? () => commit(decreased) : null,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
@@ -377,6 +415,37 @@ class ToolSlider extends StatelessWidget {
         },
       ),
     );
+    final label = semanticLabel ?? '数值';
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.brandWash,
+        borderRadius: AppRadius.br8,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpace.s4),
+        child: Row(
+          children: [
+            AppIconButton(
+              icon: Icons.remove_rounded,
+              semanticLabel: '减小$label',
+              background: AppColors.surface,
+              size: AppButtonSize.sm,
+              onTap: decreased < current ? () => commit(decreased) : null,
+            ),
+            const SizedBox(width: AppSpace.s8),
+            Expanded(child: track),
+            const SizedBox(width: AppSpace.s8),
+            AppIconButton(
+              icon: Icons.add_rounded,
+              semanticLabel: '增大$label',
+              background: AppColors.surface,
+              size: AppButtonSize.sm,
+              onTap: increased > current ? () => commit(increased) : null,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -401,7 +470,11 @@ class _SliderPainter extends CustomPainter {
         Offset(right, cy),
         track..color = AppColors.line,
       )
-      ..drawLine(Offset(left, cy), Offset(x, cy), track..color = AppColors.brand);
+      ..drawLine(
+        Offset(left, cy),
+        Offset(x, cy),
+        track..color = AppColors.brand,
+      );
     final center = Offset(x, cy);
     for (final shadow in AppShadow.knob) {
       canvas.drawCircle(

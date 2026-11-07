@@ -16,8 +16,7 @@
 //    · 提交按钮：618-670 居中（240×52 紫渐变 + 阴影 + 发送图标）
 //    · 卡底 731；提交按钮距底 61
 //
-// chips 强制 Row（mainAxisSize.min）保持单行；开关使用本文件自定义
-// _AnonymousSwitch（44×24，紫底 #715EFE）以匹配 Figma 视觉。
+// 类型选项与匿名开关保留各自独立的操作行；窄屏时表单可滚动。
 //
 // 文件上传：复用 courseware 的 `pickCoursewareFiles` + `cloudDriveControllerProvider`
 // 提供的 `uploadFilePathRaw`（native 路径）/`uploadFileRaw`（web 字节）双通道
@@ -446,91 +445,153 @@ class _ComposeForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(ui(16), ui(14), ui(16), ui(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _SectionTitle('留言类型'),
-          SizedBox(height: ui(8)),
-          AppSegmented<_MsgKind>(
-            segments: const [
-              AppSegment(value: _MsgKind.suggestion, label: '建议'),
-              AppSegment(value: _MsgKind.report, label: '举报'),
-              AppSegment(value: _MsgKind.other, label: '其他'),
-            ],
-            value: kind,
-            onChanged: onKindChanged,
-          ),
-          SizedBox(height: ui(16)),
-          Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bottomInset = constraints.maxHeight >= ui(590) ? ui(61) : ui(16);
+        return Padding(
+          padding: EdgeInsets.fromLTRB(ui(16), ui(14), ui(16), bottomInset),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _SectionTitle('匿名'),
-              SizedBox(width: ui(12)),
-              AppSwitch(
-                value: anonymous,
-                onChanged: onAnonymousChanged,
-                semanticLabel: '匿名提交',
-              ),
-              SizedBox(width: ui(8)),
               Expanded(
-                child: Text(
-                  anonymous
-                      ? '校长看到的发信人显示为「匿名」，回复在「已提交」里查看'
-                      : '校长能看到你的姓名，方便当面跟进',
-                  style: AppText.caption12.copyWith(
-                    color: AppColors.textTertiary,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionTitle('留言类型'),
+                      SizedBox(height: ui(12)),
+                      Wrap(
+                        spacing: ui(12),
+                        runSpacing: ui(8),
+                        children: [
+                          for (final option in _MsgKind.values)
+                            _MailboxChoice(
+                              label: option.apiLabel,
+                              selected: kind == option,
+                              selectedColor: AppColors.ink,
+                              onTap: () => onKindChanged(option),
+                            ),
+                        ],
+                      ),
+                      SizedBox(height: ui(20)),
+                      const _SectionTitle('匿名'),
+                      SizedBox(height: ui(12)),
+                      Row(
+                        children: [
+                          AppSwitch(
+                            value: anonymous,
+                            onChanged: onAnonymousChanged,
+                            semanticLabel: '匿名提交',
+                          ),
+                          SizedBox(width: ui(8)),
+                          Expanded(
+                            child: Text(
+                              anonymous
+                                  ? '校长看到的发信人显示为「匿名」，回复在「已提交」里查看'
+                                  : '校长能看到你的姓名，方便当面跟进',
+                              style: AppText.body13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (kind == _MsgKind.report) ...[
+                        SizedBox(height: ui(8)),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.lock_outline_rounded,
+                              size: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                            SizedBox(width: ui(4)),
+                            Expanded(
+                              child: Text(
+                                '举报内容只有校长能看到，默认匿名提交',
+                                style: AppText.caption12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      SizedBox(height: ui(20)),
+                      const _SectionTitle('正文'),
+                      SizedBox(height: ui(12)),
+                      _BodyField(controller: bodyCtrl, hint: '请写下你想反映的问题或建议'),
+                      SizedBox(height: ui(16)),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _UploadTile(
+                          slot: attachment,
+                          onTap: onUploadTap,
+                          onRemove: onRemoveAttachment,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: ui(12)),
+              Align(
+                alignment: Alignment.center,
+                child: SizedBox(
+                  width: ui(240),
+                  height: ui(52),
+                  child: AppButton(
+                    label: '提交给校长',
+                    icon: Icons.send_rounded,
+                    loading: submitting,
+                    onTap: submitting ? null : onSubmit,
                   ),
                 ),
               ),
             ],
           ),
-          if (kind == _MsgKind.report) ...[
-            SizedBox(height: ui(8)),
-            Row(
-              children: [
-                const Icon(
-                  Icons.lock_outline_rounded,
-                  size: 14,
-                  color: AppColors.textSecondary,
-                ),
-                SizedBox(width: ui(4)),
-                Text(
-                  '举报内容只有校长能看到，默认匿名提交',
-                  style: AppText.caption12.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          SizedBox(height: ui(16)),
-          const _SectionTitle('正文'),
-          SizedBox(height: ui(8)),
-          _BodyField(controller: bodyCtrl, hint: '请写下你想反映的问题或建议'),
-          SizedBox(height: ui(12)),
-          Align(
-            alignment: Alignment.centerRight,
-            child: _UploadTile(
-              slot: attachment,
-              onTap: onUploadTap,
-              onRemove: onRemoveAttachment,
+        );
+      },
+    );
+  }
+}
+
+class _MailboxChoice extends StatelessWidget {
+  const _MailboxChoice({
+    required this.label,
+    required this.selected,
+    required this.selectedColor,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  final String label;
+  final bool selected;
+  final Color selectedColor;
+  final VoidCallback onTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      selected: selected,
+      onTap: onTap,
+      child: Container(
+        height: 32,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? AppSpace.s20 : AppSpace.s24,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? selectedColor : AppColors.surfaceSubtle,
+          borderRadius: AppRadius.br8,
+        ),
+        child: Align(
+          widthFactor: 1,
+          child: Text(
+            label,
+            style: (compact ? AppText.body13 : AppText.body14).copyWith(
+              color: selected ? AppColors.onBrand : AppColors.ink,
+              fontWeight: compact ? AppFont.w500 : AppFont.w400,
+              height: 1,
             ),
           ),
-          const Spacer(),
-          Align(
-            alignment: Alignment.center,
-            child: SizedBox(
-              width: 240,
-              child: AppButton(
-                label: '提交给校长',
-                icon: Icons.send_rounded,
-                loading: submitting,
-                onTap: submitting ? null : onSubmit,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -873,17 +934,23 @@ class _StatusFilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: AppSegmented<_MailboxStatus>(
-        size: AppControlSize.sm,
-        segments: [
-          for (final s in _MailboxStatus.values)
-            AppSegment(value: s, label: s.label),
-        ],
-        value: current,
-        onChanged: onChanged,
-      ),
+    return Wrap(
+      spacing: AppSpace.s12,
+      runSpacing: AppSpace.s8,
+      children: [
+        for (final status in _MailboxStatus.values)
+          _MailboxChoice(
+            label: status.label,
+            selected: status == current,
+            selectedColor: switch (status) {
+              _MailboxStatus.sent => AppColors.brand,
+              _MailboxStatus.replied => AppColors.success,
+              _MailboxStatus.closed => AppColors.textSecondary,
+            },
+            compact: true,
+            onTap: () => onChanged(status),
+          ),
+      ],
     );
   }
 }

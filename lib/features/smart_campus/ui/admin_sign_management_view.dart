@@ -116,14 +116,30 @@ class _AdminSignManagementViewState extends State<AdminSignManagementView> {
               setState(() => _tab = t);
             },
           ),
-          AppButton(
-            label: _pendingMakeupCount > 0
-                ? '补签审核（$_pendingMakeupCount）'
-                : '补签审核',
-            icon: Icons.fact_check_outlined,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
-            onTap: _openMakeupAuditDrawer,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              AppButton(
+                label: '补签审核',
+                iconAsset:
+                    'assets/images/smartCampus/admin/sign_management/icon_lishi.png',
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.sm,
+                onTap: _openMakeupAuditDrawer,
+              ),
+              if (_pendingMakeupCount > 0)
+                Positioned(
+                  top: -6,
+                  right: -6,
+                  child: IgnorePointer(
+                    child: Semantics(
+                      label: '待审核 $_pendingMakeupCount 条',
+                      excludeSemantics: true,
+                      child: AppBadge(count: _pendingMakeupCount),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),

@@ -274,12 +274,11 @@ class _PunchPanel extends StatelessWidget {
     final statusColor = _statusColor(locationStatusKind);
     final failed = locationStatusKind == _LocationStatusKind.error;
     return Container(
-      height: 440,
+      height: 439,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
-        borderRadius: AppRadius.br12,
-        border: Border.all(color: AppColors.lineSoft),
+        borderRadius: AppRadius.br16,
       ),
       child: Stack(
         children: [
@@ -298,13 +297,21 @@ class _PunchPanel extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.fromLTRB(
                 AppSpace.s16,
-                AppSpace.s12,
+                14,
                 AppSpace.s16,
                 AppSpace.s12,
               ),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.surface.withValues(alpha: 0.94),
+                    AppColors.surface.withValues(alpha: 0.72),
+                    AppColors.surface.withValues(alpha: 0),
+                  ],
+                  stops: const [0, 0.55, 1],
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,7 +322,7 @@ class _PunchPanel extends StatelessWidget {
                       failed
                           ? Icons.location_off_outlined
                           : Icons.location_on_outlined,
-                      size: 20,
+                      size: 22,
                       color: statusColor,
                     ),
                   ),
@@ -328,27 +335,25 @@ class _PunchPanel extends StatelessWidget {
                           locationAddress,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppText.body14Strong.copyWith(
-                            color: AppColors.ink,
-                          ),
+                          style: AppText.body14Strong.copyWith(height: 1.35),
                         ),
+                        if (coordinateLine case final coordinates?) ...[
+                          const SizedBox(height: AppSpace.s4),
+                          Text(coordinates, style: AppText.caption12),
+                        ],
                         const SizedBox(height: AppSpace.s4),
                         Text(
-                          [locationStatus, ?coordinateLine].join(' · '),
+                          locationStatus,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppText.caption12.copyWith(
-                            color: failed
-                                ? AppColors.danger
-                                : AppColors.textTertiary,
-                          ),
+                          style: AppText.caption12.copyWith(color: statusColor),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: AppSpace.s12),
                   AppButton(
-                    label: failed ? '重新获取' : '刷新定位',
+                    label: failed ? '重新获取定位' : '获取当前定位',
                     icon: Icons.my_location_rounded,
                     variant: AppButtonVariant.secondary,
                     size: AppButtonSize.sm,
@@ -359,8 +364,27 @@ class _PunchPanel extends StatelessWidget {
               ),
             ),
           ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 48,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      AppColors.surface.withValues(alpha: 0.85),
+                      AppColors.surface.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           Positioned.fill(
-            top: 72,
             child: Center(
               child: _PunchButton(
                 label: punchLabel,
@@ -396,8 +420,9 @@ class _PunchButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     final fg = enabled ? AppColors.surface : AppColors.textSecondary;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
       children: [
         AppPressable(
           onTap: onTap,
@@ -407,44 +432,83 @@ class _PunchButton extends StatelessWidget {
             width: 160,
             height: 160,
             alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: enabled
-                    ? const [AppColors.brandDeep, AppColors.brand]
-                    : const [AppColors.brandTint, AppColors.brandWash],
-              ),
-              border: Border.all(color: AppColors.brandTint, width: 3),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                Text(label, style: AppText.title16.copyWith(color: fg)),
-                const SizedBox(height: AppSpace.s4),
-                Text(clock, style: AppText.number(size: 20, color: fg)),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: enabled
+                          ? const [AppColors.brandDeep, AppColors.brandSoft]
+                          : const [AppColors.brandTint, AppColors.brandWash],
+                      stops: const [0.14, 1],
+                    ),
+                  ),
+                ),
+                if (enabled)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.brandTint.withValues(alpha: 0),
+                          AppColors.brandTint.withValues(alpha: 0.55),
+                        ],
+                        stops: const [0.6, 1],
+                      ),
+                    ),
+                  ),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: AppText.title16.copyWith(color: fg, height: 1),
+                      ),
+                      const SizedBox(height: 11),
+                      Text(
+                        clock,
+                        style: AppText.number(
+                          size: 20,
+                          color: fg,
+                        ).copyWith(height: 1),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         ),
-        if (hint != null) ...[
-          const SizedBox(height: AppSpace.s8),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpace.s12,
-              vertical: AppSpace.s4,
-            ),
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.br8,
-            ),
-            child: Text(
-              hint!,
-              style: AppText.caption12.copyWith(color: AppColors.textSecondary),
+        if (hint != null)
+          Positioned(
+            top: 168,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpace.s8,
+                  vertical: AppSpace.s4,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppRadius.br8,
+                ),
+                child: Text(
+                  hint!,
+                  textAlign: TextAlign.center,
+                  style: AppText.caption12.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
             ),
           ),
-        ],
       ],
     );
   }
@@ -500,7 +564,15 @@ class _RecordCard extends StatelessWidget {
     final lng = record.lng;
     final accuracy = record.accuracyMeters;
     return AppCard(
-      padding: const EdgeInsets.all(AppSpace.s16),
+      padding: const EdgeInsets.all(AppSpace.s12),
+      bordered: false,
+      radius: 12,
+      backgroundImage: const DecorationImage(
+        image: AssetImage(
+          'assets/images/smartCampus/dorm_check/punch_record_card_bg.png',
+        ),
+        fit: BoxFit.fill,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -510,25 +582,40 @@ class _RecordCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   record.kind.label,
-                  style: AppText.title16.copyWith(color: AppColors.ink),
+                  style: AppText.body16.copyWith(fontWeight: FontWeight.w500),
                 ),
               ),
               const AppStatusTag(label: '正常', tone: AppTone.success),
             ],
           ),
-          const SizedBox(height: AppSpace.s12),
-          _RecordKeyValue(label: '打卡时间', value: campusDateTime(record.time)),
-          const SizedBox(height: AppSpace.s4),
-          _RecordKeyValue(label: '打卡位置', value: record.location),
-          if (lat != null && lng != null) ...[
-            const SizedBox(height: AppSpace.s4),
-            _RecordKeyValue(
-              label: '定位坐标',
-              value:
-                  '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}'
-                  '${accuracy != null ? '（误差约 ${accuracy.toStringAsFixed(0)} 米）' : ''}',
+          const SizedBox(height: AppSpace.s8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpace.s16),
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceSubtle,
+              borderRadius: AppRadius.br12,
             ),
-          ],
+            child: Column(
+              children: [
+                _RecordKeyValue(
+                  label: '打卡时间',
+                  value: campusDateTime(record.time),
+                ),
+                const SizedBox(height: 6),
+                _RecordKeyValue(label: '打卡位置', value: record.location),
+                if (lat != null && lng != null) ...[
+                  const SizedBox(height: 6),
+                  _RecordKeyValue(
+                    label: '定位坐标',
+                    value:
+                        '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}'
+                        '${accuracy != null ? '（误差约 ${accuracy.toStringAsFixed(0)} 米）' : ''}',
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -546,17 +633,11 @@ class _RecordKeyValue extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 64,
-          child: Text(
-            label,
-            style: AppText.body13.copyWith(color: AppColors.textTertiary),
-          ),
-        ),
+        SizedBox(width: 64, child: Text(label, style: AppText.caption12)),
         Expanded(
           child: Text(
             value,
-            style: AppText.body13.copyWith(color: AppColors.ink),
+            style: AppText.caption12.copyWith(color: AppColors.ink),
           ),
         ),
       ],

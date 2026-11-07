@@ -87,22 +87,28 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
   for (final size in const [Size(950, 740), Size(720, 400)]) {
-    testWidgets('home lists every group and tool at ${size.width.round()}', (
-      tester,
-    ) async {
-      await _pumpToolbox(tester, size: size);
-      for (final group in ArtToolGroup.values) {
-        expect(find.text(group.label), findsOneWidget);
-      }
-      for (final tool in ArtTool.values) {
-        await tester.scrollUntilVisible(
-          find.text(tool.label),
-          120,
-          scrollable: find.byType(Scrollable).first,
-        );
-        expect(find.text(tool.label), findsOneWidget);
-      }
-    });
+    testWidgets(
+      'home switches groups and lists their tools at ${size.width.round()}',
+      (tester) async {
+        await _pumpToolbox(tester, size: size);
+        for (final group in ArtToolGroup.values) {
+          expect(find.text(group.label), findsOneWidget);
+          await tester.tap(find.text(group.label));
+          await tester.pump();
+          for (final tool in ArtTool.values) {
+            final item = find.text(tool.label);
+            expect(item, tool.group == group ? findsOneWidget : findsNothing);
+            if (tool.group == group) await tester.ensureVisible(item);
+          }
+        }
+        await tester.tap(find.text(ArtTool.countdown.label));
+        await tester.pump();
+        await tester.tap(find.byTooltip('返回'));
+        await tester.pump();
+        expect(find.text(ArtTool.countdown.label), findsOneWidget);
+        expect(find.text(ArtTool.value.label), findsNothing);
+      },
+    );
 
     for (final tool in ArtTool.values) {
       testWidgets('${tool.key} renders at ${size.width.round()}', (
@@ -167,6 +173,10 @@ void main() {
     await tester.tap(start);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      tester.getBottomRight(find.byType(Image).last).dy,
+      lessThan(tester.getTopLeft(find.text('暂停')).dy),
+    );
     await tester.tap(find.text('暂停'));
     await tester.pump();
     expect(find.text('已暂停，点击继续'), findsOneWidget);
@@ -178,6 +188,28 @@ void main() {
     await tester.pump();
     expect(find.text('练习回顾'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the grid slider supports single steps in either direction', (
+    tester,
+  ) async {
+    final image = await _sampleImage(tester);
+    await _pumpToolbox(
+      tester,
+      size: const Size(950, 740),
+      tool: ArtTool.grid.key,
+      image: image,
+    );
+    final decrease = find.byTooltip('减小不透明度');
+    final increase = find.byTooltip('增大不透明度');
+    await tester.ensureVisible(decrease);
+    expect(find.text('85%'), findsOneWidget);
+    await tester.tap(decrease);
+    await tester.pump();
+    expect(find.text('81%'), findsOneWidget);
+    await tester.tap(increase);
+    await tester.pump();
+    expect(find.text('85%'), findsOneWidget);
   });
 
   testWidgets('image tools show the upload prompt without an image', (

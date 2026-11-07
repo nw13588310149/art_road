@@ -179,9 +179,10 @@ class SmartCampusStatCard extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: valueIsText
-          ? smartCampusHomeStatValueTextStyle(
-              ui,
-              value: display,
+          ? AppText.body16.copyWith(
+              fontSize: ui(18),
+              fontWeight: AppFont.w500,
+              height: 1,
               color: valueColor,
             )
           : smartCampusStatValueTextStyle(ui, color: valueColor),
@@ -204,39 +205,52 @@ class SmartCampusStatCard extends StatelessWidget {
             else
               Row(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Flexible(child: valueText),
-                  const SizedBox(width: AppSpace.s4),
-                  Text(suffix, style: AppText.caption12),
+                  const SizedBox(width: AppSpace.s8),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(suffix, style: AppText.caption12),
+                  ),
                 ],
               ),
           ],
         );
-    final card = Container(
-      height: 100,
+    final card = SizedBox(
+      height: ui(100),
       width: double.infinity,
-      padding:
-          contentPadding ??
-          EdgeInsets.fromLTRB(
-            AppSpace.s16,
-            AppSpace.s12,
-            rightPadding,
-            AppSpace.s12,
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.br12,
+          border: Border.all(color: AppColors.surface),
+        ),
+        child: ClipRRect(
+          borderRadius: AppRadius.br12,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const ColoredBox(color: AppColors.surface),
+              Align(
+                alignment: Alignment.topRight,
+                child: Image.asset(
+                  backgroundAsset,
+                  height: double.infinity,
+                  fit: BoxFit.fitHeight,
+                  filterQuality: FilterQuality.low,
+                ),
+              ),
+              Padding(
+                padding:
+                    contentPadding ??
+                    EdgeInsets.fromLTRB(16, 14, rightPadding, 14),
+                child: Align(alignment: Alignment.centerLeft, child: content),
+              ),
+            ],
           ),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.br12,
-        border: Border.all(color: AppColors.surface),
-        image: DecorationImage(
-          image: AssetImage(backgroundAsset),
-          fit: BoxFit.fitHeight,
-          alignment: Alignment.centerRight,
         ),
       ),
-      child: content,
     );
     return onTap == null ? card : AppPressable(onTap: onTap, child: card);
   }

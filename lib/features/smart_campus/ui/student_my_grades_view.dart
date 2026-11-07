@@ -2443,8 +2443,7 @@ class _ExamFilterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSegmented<_ExamFilter>(
-      size: AppControlSize.sm,
+    return SmartCampusStatusTabs<_ExamFilter>(
       segments: const [
         AppSegment(value: _ExamFilter.all, label: '全部'),
         AppSegment(value: _ExamFilter.pending, label: '待考'),

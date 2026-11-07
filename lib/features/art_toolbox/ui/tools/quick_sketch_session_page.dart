@@ -198,37 +198,24 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
   }
 
   Widget _buildSession() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final landscape =
-            constraints.maxWidth >= constraints.maxHeight &&
-            constraints.maxWidth >= 700 &&
-            constraints.maxHeight >= 440;
-        final reference = _buildReference();
-        if (landscape) {
-          return Padding(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ToolDetailHeader(
+          title: ArtTool.quickSketch.label,
+          subtitle:
+              '${widget.setLabel} · 每张 ${sketchIntervalLabel(widget.interval.inSeconds)}',
+          onBack: _stop,
+          actions: const [],
+        ),
+        Expanded(
+          child: Padding(
             padding: const EdgeInsets.all(AppSpace.s16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: reference),
-                const SizedBox(width: AppSpace.s16),
-                SizedBox(width: 300, child: _buildSidePanel()),
-              ],
-            ),
-          );
-        }
-        return Padding(
-          padding: const EdgeInsets.all(AppSpace.s16),
-          child: Column(
-            children: [
-              Expanded(child: reference),
-              const SizedBox(height: AppSpace.s12),
-              _buildBottomBar(),
-            ],
+            child: _buildReference(),
           ),
-        );
-      },
+        ),
+        _buildBottomBar(),
+      ],
     );
   }
 
@@ -238,20 +225,16 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
       valueListenable: _remaining,
       builder: (context, left, child) {
         final warn = !_paused && left <= _warnSeconds;
-        return Container(
+        return DecoratedBox(
+          position: DecorationPosition.foreground,
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: AppRadius.br16,
-            border: Border.all(
-              color: warn ? AppColors.danger : AppColors.lineSoft,
-              width: warn ? 3 : 1,
-            ),
+            borderRadius: AppRadius.br8,
+            border: warn ? Border.all(color: AppColors.danger, width: 3) : null,
           ),
           child: child,
         );
       },
-      child: ClipRRect(
-        borderRadius: AppRadius.br16,
+      child: ToolStage(
         child: Stack(
           children: [
             Positioned.fill(
@@ -264,23 +247,6 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
                   filterQuality: FilterQuality.medium,
                   gaplessPlayback: true,
                 ),
-              ),
-            ),
-            Positioned(
-              left: AppSpace.s12,
-              top: AppSpace.s12,
-              child: StageLabel(
-                '第 ${_index + 1} / ${_sequence.length} 张 · ${widget.setLabel}',
-              ),
-            ),
-            Positioned(
-              right: AppSpace.s12,
-              top: AppSpace.s12,
-              child: AppIconButton(
-                icon: Icons.close_rounded,
-                semanticLabel: '结束练习',
-                size: AppButtonSize.sm,
-                onTap: _stop,
               ),
             ),
             if (_paused)
@@ -317,114 +283,75 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
     );
   }
 
-  Widget _buildSidePanel() {
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpace.s20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(ArtTool.quickSketch.label, style: AppText.title16),
-          const SizedBox(height: 2),
-          Text(
-            '每张 ${sketchIntervalLabel(widget.interval.inSeconds)} · 共 ${_sequence.length} 张',
-            style: AppText.caption12,
-          ),
-          const Spacer(),
-          Center(
-            child: _CountdownRing(
-              clock: _clock,
-              remaining: _remaining,
-              interval: widget.interval,
-              paused: _paused,
-              size: 176,
-            ),
-          ),
-          const SizedBox(height: AppSpace.s20),
-          _ProgressDots(total: _sequence.length, current: _index),
-          const Spacer(),
-          AppButton(
-            label: _paused ? '继续' : '暂停',
-            icon: _paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-            expand: true,
-            onTap: _togglePause,
-          ),
-          const SizedBox(height: AppSpace.s12),
-          Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  label: '跳过',
-                  icon: Icons.skip_next_rounded,
-                  variant: AppButtonVariant.secondary,
-                  expand: true,
-                  onTap: () => _next(SketchOutcome.skipped),
-                ),
-              ),
-              const SizedBox(width: AppSpace.s12),
-              Expanded(
-                child: AppButton(
-                  label: '结束',
-                  icon: Icons.stop_rounded,
-                  variant: AppButtonVariant.secondary,
-                  expand: true,
-                  onTap: _stop,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomBar() {
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpace.s12),
-      child: Row(
-        children: [
-          _CountdownRing(
-            clock: _clock,
-            remaining: _remaining,
-            interval: widget.interval,
-            paused: _paused,
-            size: 84,
-          ),
-          const SizedBox(width: AppSpace.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '第 ${_index + 1} / ${_sequence.length} 张',
-                  style: AppText.body14Strong,
-                ),
-                const SizedBox(height: AppSpace.s8),
-                _ProgressDots(total: _sequence.length, current: _index),
-              ],
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.lineSoft)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s16,
+          vertical: AppSpace.s8,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  _CountdownRing(
+                    clock: _clock,
+                    remaining: _remaining,
+                    interval: widget.interval,
+                    paused: _paused,
+                    size: 84,
+                  ),
+                  const SizedBox(width: AppSpace.s12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '第 ${_index + 1} / ${_sequence.length} 张',
+                          style: AppText.body14Strong,
+                        ),
+                        const SizedBox(height: AppSpace.s8),
+                        _ProgressDots(total: _sequence.length, current: _index),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpace.s8),
-          AppButton(
-            label: _paused ? '继续' : '暂停',
-            size: AppButtonSize.sm,
-            onTap: _togglePause,
-          ),
-          const SizedBox(width: AppSpace.s8),
-          AppIconButton(
-            icon: Icons.skip_next_rounded,
-            semanticLabel: '跳过',
-            size: AppButtonSize.sm,
-            onTap: () => _next(SketchOutcome.skipped),
-          ),
-          const SizedBox(width: AppSpace.s8),
-          AppIconButton(
-            icon: Icons.stop_rounded,
-            semanticLabel: '结束',
-            size: AppButtonSize.sm,
-            onTap: _stop,
-          ),
-        ],
+            const SizedBox(width: AppSpace.s12),
+            AppButton(
+              label: _paused ? '继续' : '暂停',
+              icon: _paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+              onTap: _togglePause,
+            ),
+            const SizedBox(width: AppSpace.s12),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  AppIconButton(
+                    icon: Icons.skip_next_rounded,
+                    semanticLabel: '跳过',
+                    size: AppButtonSize.sm,
+                    onTap: () => _next(SketchOutcome.skipped),
+                  ),
+                  const SizedBox(width: AppSpace.s8),
+                  AppIconButton(
+                    icon: Icons.stop_rounded,
+                    semanticLabel: '结束',
+                    size: AppButtonSize.sm,
+                    onTap: _stop,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -447,7 +374,6 @@ class _CountdownRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final large = size >= 120;
     return SizedBox(
       width: size,
       height: size,
@@ -472,21 +398,16 @@ class _CountdownRing extends StatelessWidget {
                     Text(
                       _clockText(left),
                       style: AppText.displayNumber(
-                        size: large ? 32 : 20,
+                        size: 20,
                         color: warn ? AppColors.danger : AppColors.ink,
                       ),
                     ),
-                    if (large) ...[
-                      const SizedBox(height: AppSpace.s4),
-                      Text(
-                        paused ? '已暂停' : (warn ? '准备换下一张' : '剩余时间'),
-                        style: AppText.caption12.copyWith(
-                          color: warn
-                              ? AppColors.danger
-                              : AppColors.textTertiary,
-                        ),
+                    Text(
+                      paused ? '已暂停' : (warn ? '即将换图' : '剩余时间'),
+                      style: AppText.caption12.copyWith(
+                        color: warn ? AppColors.danger : AppColors.textTertiary,
                       ),
-                    ],
+                    ),
                   ],
                 );
               },

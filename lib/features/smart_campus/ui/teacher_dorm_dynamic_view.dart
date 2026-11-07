@@ -723,8 +723,7 @@ class _FilterToolbar extends StatelessWidget {
           ),
         ),
         SizedBox(width: ui(12)),
-        AppSegmented<_FilterTab>(
-          size: AppControlSize.sm,
+        SmartCampusStatusTabs<_FilterTab>(
           segments: [
             for (final t in _FilterTab.values)
               AppSegment(value: t, label: t.label),

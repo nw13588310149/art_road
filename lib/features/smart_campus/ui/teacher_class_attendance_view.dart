@@ -56,6 +56,7 @@ import 'widgets/teacher_today_course_card.dart';
 import '../data/campus_format.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
@@ -452,9 +453,10 @@ class _TeacherClassAttendanceViewState
         title: '签课管理',
         subtitle: '查看授课签到统计，给今日课程签到、签退并登记学生出勤',
         onBack: widget.onBack,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
         actions: [
           AppButton(
-            label: '签到历史',
+            label: '历史记录',
             icon: Icons.history_rounded,
             variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
@@ -608,14 +610,24 @@ class _StatsHeaderRow extends StatelessWidget {
             ),
           ),
         ),
-        AppSegmented<int>(
-          size: AppControlSize.sm,
-          segments: [
-            for (var i = 0; i < labels.length; i++)
-              AppSegment(value: i, label: labels[i]),
-          ],
-          value: tabIdx,
-          onChanged: onTab,
+        AppCard(
+          radius: 8,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpace.s4,
+            vertical: 3,
+          ),
+          child: Row(
+            children: [
+              for (var i = 0; i < labels.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpace.s4),
+                _SegmentChip(
+                  label: labels[i],
+                  selected: i == tabIdx,
+                  onTap: () => onTab(i),
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     );
@@ -636,9 +648,9 @@ class _SegmentChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
+      selected: selected,
       child: Container(
         height: ui(36),
         padding: EdgeInsets.symmetric(horizontal: ui(16)),
@@ -691,18 +703,30 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRate = item.value.endsWith('%');
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpace.s16),
-      child: SizedBox(
-        width: double.infinity,
-        child: AppStatTile(
-          label: item.label,
-          value: isRate
-              ? item.value.substring(0, item.value.length - 1)
-              : item.value,
-          unit: isRate ? '%' : null,
-          valueColor: item.valueColor,
+    final ui = DashboardScaleScope.of(context).ui;
+    return SizedBox(
+      height: 100,
+      child: AppCard(
+        radius: 12,
+        bordered: false,
+        padding: const EdgeInsets.all(AppSpace.s16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              item.label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body14Strong.copyWith(height: 1.2),
+            ),
+            Text(
+              item.value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: smartCampusStatValueTextStyle(ui, color: item.valueColor),
+            ),
+          ],
         ),
       ),
     );

@@ -41,6 +41,7 @@ class ArtToolboxPage extends ConsumerStatefulWidget {
 class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
   ArtTool? _tool;
   ArtTool? _entryTool;
+  ArtToolGroup _group = ArtToolGroup.analysis;
   bool _argsApplied = false;
   bool _imagePending = false;
 
@@ -58,6 +59,7 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
     final tool = ArtTool.tryParse(args['tool']?.toString());
     _tool = tool;
     _entryTool = tool;
+    _group = tool?.group ?? _group;
     final imageUrl = args['imageUrl']?.toString().trim() ?? '';
     final title = args['title']?.toString().trim() ?? '';
     if (imageUrl.isEmpty) {
@@ -142,6 +144,8 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
             key: ValueKey<ArtTool?>(tool),
             child: tool == null
                 ? _ToolboxHome(
+                    group: _group,
+                    onGroupChanged: (group) => setState(() => _group = group),
                     onOpen: _open,
                     onBack: canPop ? () => Navigator.of(context).pop() : null,
                   )
@@ -154,8 +158,15 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
 }
 
 class _ToolboxHome extends ConsumerWidget {
-  const _ToolboxHome({required this.onOpen, required this.onBack});
+  const _ToolboxHome({
+    required this.group,
+    required this.onGroupChanged,
+    required this.onOpen,
+    required this.onBack,
+  });
 
+  final ArtToolGroup group;
+  final ValueChanged<ArtToolGroup> onGroupChanged;
   final ValueChanged<ArtTool> onOpen;
   final VoidCallback? onBack;
 
@@ -166,7 +177,6 @@ class _ToolboxHome extends ConsumerWidget {
     String descriptionOf(ArtTool tool) {
       if (tool == ArtTool.countdown && next != null) {
         final days = next.daysLeftFrom(now);
-        // 卡片描述只有一行，天数放在最前，考试名过长时只截断名称。
         return days == 0 ? '今天 · ${next.name}' : '还有 $days 天 · ${next.name}';
       }
       return tool.description;
@@ -179,49 +189,66 @@ class _ToolboxHome extends ConsumerWidget {
           title: '画室工具箱',
           subtitle: '离线可用 · 图片只在本机处理，不会上传',
           onBack: onBack,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.s16,
+            AppSpace.s16,
+            AppSpace.s16,
+            0,
+          ),
+          actions: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                primary: false,
+                child: AppSegmented<ArtToolGroup>(
+                  segments: [
+                    for (final category in ArtToolGroup.values)
+                      AppSegment(value: category, label: category.label),
+                  ],
+                  value: group,
+                  onChanged: onGroupChanged,
+                  neutral: true,
+                ),
+              ),
+            ),
+          ],
         ),
         Expanded(
           child: SingleChildScrollView(
+            key: PageStorageKey(group),
             padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              AppSpace.s24,
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s16,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final group in ArtToolGroup.values) ...[
-                  AppSectionHeader(
-                    title: group.label,
-                    subtitle: group.description,
-                  ),
-                  const SizedBox(height: AppSpace.s12),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      const gap = AppSpace.s12;
-                      final width = constraints.maxWidth;
-                      final columns = width >= 840 ? 3 : (width >= 520 ? 2 : 1);
-                      final itemWidth = (width - gap * (columns - 1)) / columns;
-                      return Wrap(
-                        spacing: gap,
-                        runSpacing: gap,
-                        children: [
-                          for (final tool in group.tools)
-                            SizedBox(
-                              width: itemWidth,
-                              child: _ToolCard(
-                                tool: tool,
-                                description: descriptionOf(tool),
-                                onTap: () => onOpen(tool),
-                              ),
+                Text(group.description, style: AppText.body13),
+                const SizedBox(height: AppSpace.s8),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    const gap = AppSpace.s24;
+                    final width = constraints.maxWidth;
+                    final itemWidth = width >= 660 ? (width - gap) / 2 : width;
+                    return Wrap(
+                      spacing: gap,
+                      children: [
+                        for (final tool in group.tools)
+                          SizedBox(
+                            width: itemWidth,
+                            child: _ToolRow(
+                              tool: tool,
+                              description: descriptionOf(tool),
+                              onTap: () => onOpen(tool),
                             ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppSpace.s24),
-                ],
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -231,8 +258,8 @@ class _ToolboxHome extends ConsumerWidget {
   }
 }
 
-class _ToolCard extends StatelessWidget {
-  const _ToolCard({
+class _ToolRow extends StatelessWidget {
+  const _ToolRow({
     required this.tool,
     required this.description,
     required this.onTap,
@@ -244,51 +271,44 @@ class _ToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return AppPressable(
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpace.s16,
-        vertical: AppSpace.s12,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.tint(tool.accent),
-              borderRadius: AppRadius.br8,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 60),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s12,
+          vertical: AppSpace.s8,
+        ),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
+        ),
+        child: Row(
+          children: [
+            Icon(tool.icon, color: tool.accent, size: 20),
+            const SizedBox(width: AppSpace.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(tool.label, style: AppText.body14Strong),
+                  Text(
+                    description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body13,
+                  ),
+                ],
+              ),
             ),
-            child: Icon(tool.icon, color: tool.accent, size: 22),
-          ),
-          const SizedBox(width: AppSpace.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tool.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.title16,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.caption12,
-                ),
-              ],
+            const SizedBox(width: AppSpace.s8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 16,
+              color: AppColors.textTertiary,
             ),
-          ),
-          const SizedBox(width: AppSpace.s8),
-          const Icon(
-            Icons.chevron_right_rounded,
-            size: 20,
-            color: AppColors.textPlaceholder,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -3,14 +3,133 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../shell/ui/shell_layout.dart';
 
-/// 节次列宽：「上午」+ 起止时间两行。
-const double kScheduleGridTimeColWidth = 76;
+/// 原版冻结节次列与日期列尺寸。
+const double kScheduleGridTimeColWidth = 120;
 
 /// 日期列最小宽度；可用宽度足够时 7 列等分，一屏放下整周。
-const double kScheduleGridDayColWidth = 104;
-const double kScheduleGridHeaderHeight = 56;
+const double kScheduleGridDayColWidth = 200;
+const double kScheduleGridHeaderHeight = 60;
+
+/// 学生课表使用合并控件，教务课表使用独立白底箭头。
+class ScheduleGridWeekSwitcher extends StatelessWidget {
+  const ScheduleGridWeekSwitcher({
+    required this.onPrev,
+    required this.onCurrent,
+    required this.onNext,
+    this.grouped = true,
+    super.key,
+  });
+
+  final VoidCallback onPrev;
+  final VoidCallback? onCurrent;
+  final VoidCallback onNext;
+  final bool grouped;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.all(AppSpace.s4),
+      decoration: grouped
+          ? BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: AppRadius.br8,
+              border: Border.all(color: AppColors.lineSoft),
+            )
+          : null,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _weekArrow(
+            icon: Icons.chevron_left_rounded,
+            label: '上一周',
+            onTap: onPrev,
+          ),
+          AppPressable(
+            onTap: onCurrent,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
+              child: Center(
+                child: Text(
+                  '本周',
+                  style: AppText.body14Strong.copyWith(color: AppColors.ink),
+                ),
+              ),
+            ),
+          ),
+          _weekArrow(
+            icon: Icons.chevron_right_rounded,
+            label: '下一周',
+            onTap: onNext,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _weekArrow({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return AppPressable(
+      semanticLabel: label,
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: grouped ? null : AppColors.surface,
+          borderRadius: AppRadius.br8,
+        ),
+        child: Icon(icon, size: 18, color: AppColors.ink),
+      ),
+    );
+  }
+}
+
+class ScheduleGridDateButton extends StatelessWidget {
+  const ScheduleGridDateButton({
+    required this.label,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.br8,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label.replaceAll('-', '/'), style: AppText.body14Strong),
+            const SizedBox(width: AppSpace.s8),
+            Image.asset(
+              AppAssets.iconScheduleCalendar,
+              width: 18,
+              height: 18,
+              excludeFromSemantics: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class ScheduleGridTimeSlot {
   const ScheduleGridTimeSlot({
@@ -231,7 +350,6 @@ class ScheduleGridTimeColumn extends StatelessWidget {
               width: double.infinity,
               height: ui(slot.height),
               decoration: const BoxDecoration(
-                color: AppColors.surfaceSubtle,
                 border: Border(
                   right: BorderSide(color: AppColors.lineSoft),
                   bottom: BorderSide(color: AppColors.lineSoft),
@@ -263,8 +381,23 @@ class ScheduleGridTimeHeader extends StatelessWidget {
           bottom: BorderSide(color: AppColors.lineSoft),
         ),
       ),
-      alignment: Alignment.center,
-      child: Text('节次', style: AppText.caption12Strong),
+      child: Stack(
+        children: [
+          const Positioned.fill(
+            child: CustomPaint(painter: _ScheduleGridDiagonalLinePainter()),
+          ),
+          Positioned(
+            right: 20,
+            top: 10,
+            child: Text('日期', style: AppText.caption12Strong),
+          ),
+          Positioned(
+            left: 20,
+            bottom: 12,
+            child: Text('节次', style: AppText.caption12Strong),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -283,7 +416,9 @@ class ScheduleGridDaysHeaderRow extends StatelessWidget {
           Container(
             width: width,
             decoration: BoxDecoration(
-              color: days[i].today ? AppColors.brandWash : AppColors.surface,
+              color: days[i].today
+                  ? AppColors.brandWash
+                  : AppColors.surfaceSubtle,
               border: Border(
                 bottom: const BorderSide(color: AppColors.lineSoft),
                 left: i == 0
@@ -302,10 +437,9 @@ class ScheduleGridDaysHeaderRow extends StatelessWidget {
                     color: days[i].today ? AppColors.brand : AppColors.ink,
                   ),
                 ),
+                const SizedBox(height: AppSpace.s4),
                 Text(
-                  days[i].today
-                      ? '${days[i].dateLabel} 今天'
-                      : days[i].dateLabel,
+                  days[i].today ? '${days[i].dateLabel} 今天' : days[i].dateLabel,
                   maxLines: 1,
                   style: AppText.caption12.copyWith(
                     color: days[i].today
@@ -338,17 +472,36 @@ class ScheduleGridTimeRange extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (label.isNotEmpty)
-          Text(label, style: AppText.body14Strong, maxLines: 1),
-        Text(
-          start,
-          style: AppText.number(size: 12, color: AppColors.textSecondary),
+        if (label.isNotEmpty) ...[
+          Text(label, style: AppText.caption12Strong, maxLines: 1),
+          const SizedBox(height: AppSpace.s4),
+        ],
+        Text(start, style: AppText.body14),
+        const SizedBox(height: AppSpace.s8),
+        const SizedBox(
+          width: AppSpace.s12,
+          height: 1,
+          child: ColoredBox(color: AppColors.line),
         ),
-        Text(
-          end,
-          style: AppText.number(size: 12, color: AppColors.textSecondary),
-        ),
+        const SizedBox(height: AppSpace.s8),
+        Text(end, style: AppText.body14),
       ],
     );
   }
+}
+
+class _ScheduleGridDiagonalLinePainter extends CustomPainter {
+  const _ScheduleGridDiagonalLinePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawLine(
+      Offset.zero,
+      Offset(size.width, size.height),
+      Paint()..color = AppColors.line,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ScheduleGridDiagonalLinePainter oldDelegate) => false;
 }

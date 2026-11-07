@@ -639,7 +639,7 @@ class _AverageBarChartCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSegmented<_ChartGroup>(
-            size: AppControlSize.sm,
+            neutral: true,
             segments: const [
               AppSegment(value: _ChartGroup.bySubject, label: '按科目'),
               AppSegment(value: _ChartGroup.byTeacher, label: '按老师'),

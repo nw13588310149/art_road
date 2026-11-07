@@ -138,50 +138,20 @@ class _ValueOrderToolState extends ConsumerState<ValueOrderTool> {
     return ToolPageScaffold(
       tool: ArtTool.valueOrder,
       onBack: widget.onBack,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 760;
-          final game = _buildGame();
-          final panel = AppCard(
-            padding: EdgeInsets.zero,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpace.card),
-              child: _buildPanel(),
-            ),
-          );
-          const padding = EdgeInsets.fromLTRB(
-            AppSpace.page,
-            0,
-            AppSpace.page,
-            AppSpace.page,
-          );
-          if (wide) {
-            return Padding(
-              padding: padding,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: SingleChildScrollView(child: game)),
-                  const SizedBox(width: AppSpace.s16),
-                  SizedBox(width: 320, child: panel),
-                ],
-              ),
-            );
-          }
-          return SingleChildScrollView(
-            padding: padding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [game, const SizedBox(height: AppSpace.s16), panel],
-            ),
-          );
-        },
+      bodyTopInset: 0,
+      body: ImageToolLayout(
+        stage: (_) => ToolStage(
+          child: SingleChildScrollView(primary: false, child: _buildGame()),
+        ),
+        panel: (_) => _buildPanel(),
       ),
     );
   }
 
   Widget _buildGame() {
     return AppCard(
+      bordered: false,
+      color: Colors.transparent,
       title: '从暗到亮排列',
       subtitle: '${_game.length} 块 · ${_level.label}',
       trailing: ValueListenableBuilder<int>(
@@ -197,10 +167,7 @@ class _ValueOrderToolState extends ConsumerState<ValueOrderTool> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            '点两个色块交换位置，或按住一个色块拖到目标位置；左边放深的，右边放浅的。',
-            style: AppText.body13,
-          ),
+          Text('点两个色块交换位置，或按住一个色块拖到目标位置；左边放深的，右边放浅的。', style: AppText.body13),
           const SizedBox(height: AppSpace.s16),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -284,7 +251,8 @@ class _ValueOrderToolState extends ConsumerState<ValueOrderTool> {
     return Column(
       children: [
         DragTarget<int>(
-          onWillAcceptWithDetails: (details) => !_solved && details.data != index,
+          onWillAcceptWithDetails: (details) =>
+              !_solved && details.data != index,
           onAcceptWithDetails: (details) => _drop(details.data, index),
           builder: (context, candidates, _) => Draggable<int>(
             data: index,

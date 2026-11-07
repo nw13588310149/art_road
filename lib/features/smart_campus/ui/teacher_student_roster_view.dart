@@ -513,6 +513,7 @@ class _TeacherStudentRosterViewState
         children: [
           _FilterRow(
             classOptions: _classOptions,
+            selectedId: _selectedClassId,
             selectedLabel: _selectedClassLabel,
             onClassPicked: _onClassPicked,
             query: _query,
@@ -552,6 +553,7 @@ class _TeacherStudentRosterViewState
 class _FilterRow extends StatelessWidget {
   const _FilterRow({
     required this.classOptions,
+    required this.selectedId,
     required this.selectedLabel,
     required this.onClassPicked,
     required this.query,
@@ -559,6 +561,7 @@ class _FilterRow extends StatelessWidget {
   });
 
   final List<_RosterClassOption> classOptions;
+  final String selectedId;
   final String selectedLabel;
   final ValueChanged<_RosterClassOption> onClassPicked;
   final String query;
@@ -566,34 +569,27 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selected = classOptions
-        .where((o) => o.label == selectedLabel)
-        .map((o) => o.id)
-        .firstOrNull;
     return Row(
       children: [
-        SizedBox(
-          width: 140,
-          height: 44,
-          child: AppSelect<String>(
-            options: [
-              for (final o in classOptions)
-                AppSelectOption(value: o.id, label: o.label),
-            ],
-            value: selected,
-            hint: selectedLabel,
-            onChanged: (id) {
-              for (final o in classOptions) {
-                if (o.id == id) onClassPicked(o);
-              }
-            },
-          ),
+        _ClassFilterButton(
+          selectedId: selectedId,
+          value: selectedLabel,
+          options: classOptions,
+          onChanged: onClassPicked,
         ),
-        const Spacer(),
-        SizedBox(
-          width: 324,
-          height: 44,
-          child: _RosterSearchField(value: query, onChanged: onQueryChanged),
+        const SizedBox(width: AppSpace.s12),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: 324,
+              height: 44,
+              child: _RosterSearchField(
+                value: query,
+                onChanged: onQueryChanged,
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -602,12 +598,14 @@ class _FilterRow extends StatelessWidget {
 
 class _ClassFilterButton extends StatefulWidget {
   const _ClassFilterButton({
+    required this.selectedId,
     required this.value,
     required this.options,
     required this.onChanged,
   });
 
   final String value;
+  final String selectedId;
   final List<_RosterClassOption> options;
   final ValueChanged<_RosterClassOption> onChanged;
 
@@ -638,6 +636,10 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
       color: Colors.transparent,
       shadowColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
+      popUpAnimationStyle: const AnimationStyle(
+        duration: AppMotion.overlay,
+        reverseDuration: AppMotion.overlay,
+      ),
       // 班级名称比按钮长，菜单宽度放到 180，避免长 label 截断。
       constraints: BoxConstraints.tightFor(width: ui(180)),
       position: RelativeRect.fromLTRB(
@@ -654,7 +656,7 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
             data: scale,
             child: _ClassFilterMenuPanel(
               options: widget.options,
-              value: widget.value,
+              selectedId: widget.selectedId,
               onPick: (opt) =>
                   Navigator.of(context).pop<_RosterClassOption>(opt),
             ),
@@ -662,8 +664,9 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
         ),
       ],
     );
-    if (mounted) setState(() => _open = false);
-    if (selected != null && selected.label != widget.value) {
+    if (!mounted) return;
+    setState(() => _open = false);
+    if (selected != null && selected.id != widget.selectedId) {
       widget.onChanged(selected);
     }
   }
@@ -671,9 +674,8 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    return AppPressable(
       onTap: _openMenu,
-      borderRadius: BorderRadius.circular(ui(12)),
       child: Container(
         key: _fieldKey,
         width: ui(120),
@@ -699,14 +701,12 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
                 ),
               ),
             ),
-            AnimatedRotation(
-              turns: _open ? 0.5 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: ui(22),
-                color: _kTextDark,
-              ),
+            Icon(
+              _open
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              size: ui(22),
+              color: _kTextDark,
             ),
           ],
         ),
@@ -718,12 +718,12 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
 class _ClassFilterMenuPanel extends StatelessWidget {
   const _ClassFilterMenuPanel({
     required this.options,
-    required this.value,
+    required this.selectedId,
     required this.onPick,
   });
 
   final List<_RosterClassOption> options;
-  final String value;
+  final String selectedId;
   final ValueChanged<_RosterClassOption> onPick;
 
   @override
@@ -749,7 +749,7 @@ class _ClassFilterMenuPanel extends StatelessWidget {
           for (var i = 0; i < options.length; i++) ...[
             _ClassFilterMenuRow(
               label: options[i].label,
-              selected: options[i].label == value,
+              selected: options[i].id == selectedId,
               onTap: () => onPick(options[i]),
             ),
             if (i < options.length - 1)
@@ -781,8 +781,9 @@ class _ClassFilterMenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
+      selected: selected,
       child: Container(
         height: ui(40),
         padding: EdgeInsets.symmetric(horizontal: ui(14)),

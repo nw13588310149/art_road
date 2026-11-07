@@ -39,6 +39,7 @@ import '../data/student_leave_data.dart';
 import '../data/teacher_repository.dart';
 import 'student_homework_submission_preview.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_notice_card.dart';
 import 'widgets/smart_campus_stripe_bar_chart.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
@@ -892,90 +893,17 @@ class _NoticeCardEditable extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.all(ui(8)),
-      decoration: BoxDecoration(
-        color: _kAnnounceBg,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: ui(12),
-                height: ui(20),
-                child: Center(
-                  child: Container(
-                    width: ui(8),
-                    height: ui(8),
-                    decoration: BoxDecoration(
-                      color: _kPurple,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: ui(6)),
-              Expanded(
-                child: Text(
-                  notice.title.isNotEmpty ? notice.title : notice.content,
-                  style: TextStyle(
-                    fontSize: ui(13),
-                    color: _kTextDark,
-                    fontWeight: AppFont.w500,
-                    height: 20 / 13,
-                  ),
-                ),
-              ),
-              SizedBox(width: ui(4)),
-              AppButton(
-                label: '撤回',
-                variant: AppButtonVariant.text,
-                size: AppButtonSize.sm,
-                onTap: onDelete,
-              ),
-            ],
-          ),
-          if (notice.title.isNotEmpty && notice.content.isNotEmpty) ...[
-            SizedBox(height: ui(4)),
-            Padding(
-              padding: EdgeInsets.only(left: ui(18)),
-              child: Text(
-                notice.content,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: ui(12),
-                  color: _kTextSecondary,
-                  fontWeight: AppFont.w400,
-                  height: 16 / 12,
-                ),
-              ),
-            ),
-          ],
-          SizedBox(height: ui(4)),
-          Padding(
-            padding: EdgeInsets.only(left: ui(18)),
-            child: Text(
-              notice.date,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kTextSecondary,
-                fontWeight: AppFont.w400,
-                height: 12 / 11,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SmartCampusNoticeCard(
+    title: notice.title,
+    content: notice.content,
+    date: notice.date,
+    action: AppButton(
+      label: '撤回',
+      variant: AppButtonVariant.text,
+      size: AppButtonSize.sm,
+      onTap: onDelete,
+    ),
+  );
 }
 
 // —— 发布通知弹窗 ——————————————————————————————————————————————————

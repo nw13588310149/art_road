@@ -261,7 +261,8 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
         actions: [
           AppButton(
             label: '申请补卡',
-            icon: Icons.event_available_outlined,
+            iconAsset:
+                'assets/images/smartCampus/dorm_check/apply_makeup_icon.png',
             size: AppButtonSize.sm,
             variant: AppButtonVariant.secondary,
             onTap: state.submittingMakeup ? null : _openApplyDialog,
@@ -440,8 +441,7 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        AppSegmented<_DormTab>(
-          size: AppControlSize.sm,
+        SmartCampusStatusTabs<_DormTab>(
           segments: const [
             AppSegment(value: _DormTab.all, label: '全部'),
             AppSegment(value: _DormTab.abnormal, label: '异常'),

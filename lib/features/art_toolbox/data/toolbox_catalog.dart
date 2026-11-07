@@ -155,7 +155,7 @@ enum ArtTool {
     '考试倒计时',
     ArtToolGroup.exam,
     '联考、校考日程一目了然',
-    '点卡片修改名称和日期，默认日期仅为示例',
+    '点考试修改名称和日期，默认日期仅为示例',
     Icons.event_available_rounded,
     null,
   ),
@@ -192,7 +192,7 @@ enum ArtTool {
   final String label;
   final ArtToolGroup group;
 
-  /// 首页卡片上的一句话介绍。
+  /// 首页工具列表的一句话介绍。
   final String description;
 
   /// 工具页页头的一句话用法提示。

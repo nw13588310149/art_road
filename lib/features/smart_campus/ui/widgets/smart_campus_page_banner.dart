@@ -48,6 +48,8 @@ BoxDecoration smartCampusPageBannerDecoration(
   return BoxDecoration(
     borderRadius: BorderRadius.circular(ui(borderRadius)),
     gradient: const LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
       colors: [AppColors.surface, AppColors.brandWash],
     ),
     image: const DecorationImage(
@@ -84,6 +86,8 @@ class SmartCampusScheduleTopBar extends StatelessWidget {
           topRight: Radius.circular(ui(borderRadius)),
         ),
         gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
           colors: [AppColors.surface, AppColors.brandWash],
         ),
         image: const DecorationImage(
@@ -92,7 +96,7 @@ class SmartCampusScheduleTopBar extends StatelessWidget {
           alignment: Alignment.centerRight,
         ),
       ),
-      child: child,
+      child: Center(child: child),
     );
   }
 }
@@ -113,6 +117,8 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
     super.key,
     required this.header,
     required this.body,
+    this.backgroundColor = AppColors.page,
+    this.headerMinHeight = 62,
     this.headerGap = 16,
     this.bodyBorderRadius = 16,
     this.bodyTopClipRadius,
@@ -121,6 +127,8 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
 
   final Widget header;
   final Widget body;
+  final Color backgroundColor;
+  final double headerMinHeight;
 
   /// banner 与主内容容器之间的固定间距。
   final double headerGap;
@@ -146,7 +154,9 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DecoratedBox(
+        Container(
+          constraints: BoxConstraints(minHeight: ui(headerMinHeight)),
+          alignment: Alignment.center,
           decoration: smartCampusPageBannerDecoration(ui),
           child: header,
         ),
@@ -157,7 +167,10 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
               top: topRadius,
               bottom: bottomRadius,
             ),
-            child: bodyScrollable ? SingleChildScrollView(child: body) : body,
+            child: ColoredBox(
+              color: backgroundColor,
+              child: bodyScrollable ? SingleChildScrollView(child: body) : body,
+            ),
           ),
         ),
       ],

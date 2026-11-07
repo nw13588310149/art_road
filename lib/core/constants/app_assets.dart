@@ -27,7 +27,8 @@ abstract final class AppAssets {
   static const shellV2Help = 'assets/images/shell/topbar_v2/help.png';
   static const shellV2Notice = 'assets/images/shell/topbar_v2/notice.png';
   static const shellV2Setting = 'assets/images/shell/topbar_v2/setting.png';
-  static const shellV2MoreArrow = 'assets/images/shell/topbar_v2/more_arrow.png';
+  static const shellV2MoreArrow =
+      'assets/images/shell/topbar_v2/more_arrow.png';
 
   /// 全局页面 loading / 下拉刷新动画。
   static const homeLoading = 'assets/images/home/loading.gif';
@@ -107,11 +108,23 @@ abstract final class AppAssets {
   static const homeTodayBg = 'assets/images/home/bgc.png';
   static const aiChatNew = 'assets/images/aichat/v2/ai_new_chat_plus.svg';
   static const aiChatMore = 'assets/images/aichat/v2/ai_history_more.svg';
+  static const aiChatHistoryFilter =
+      'assets/images/aichat/v2/ai_history_filter.svg';
   static const aiChatAttach = 'assets/images/aichat/v2/ai_attach.svg';
+  static const aiChatSendArrow = 'assets/images/aichat/v2/ai_send.svg';
+  static const aiChatSendDisabled = 'assets/images/aichat/Button1.png';
+  static const aiChatSearch = 'assets/images/aichat/aichat2.png';
+  static const aiChatSearchSelected = 'assets/images/aichat/aichat2_active.png';
+  static const aiChatCopy = 'assets/images/aichat/copy.png';
+  static const aiChatEdit = 'assets/images/aichat/remove.png';
   static const aiChatThink = 'assets/images/aichat/v2/ai_chip_think_idle.svg';
   static const aiChatThinkSelected =
       'assets/images/aichat/v2/ai_chip_think_active.svg';
   static const aiChatSuggest = 'assets/images/aichat/v2/ai_tool_suggest.svg';
+  static const aiChatPlanBook =
+      'assets/images/aichat/ai_v2_tool_plan_vector_1.svg';
+  static const aiChatPlanMark =
+      'assets/images/aichat/ai_v2_tool_plan_vector_2.svg';
   // 效率工具卡背景图（与原渐变同色调，直接平铺即可）
 
   static const videoV2CardViews = 'assets/images/video/1.png';

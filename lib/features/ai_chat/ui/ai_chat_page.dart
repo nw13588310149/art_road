@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
@@ -17,20 +18,20 @@ import '../state/ai_chat_controller.dart';
 import '../state/ai_chat_state.dart';
 
 const _border = AppColors.lineSoft;
-const _panelFill = AppColors.brandWash;
+const _panelFill = Color(0xFFF4F4FF);
 const _textPrimary = AppColors.ink;
-const _textSecondary = AppColors.textSecondary;
-const _textHint = AppColors.textTertiary;
+const _textSecondary = Color(0xFF707790);
+const _textHint = AppColors.textPlaceholder;
 const _purple = AppColors.brand;
 
 const _historyPaneWidth = 200.0;
 const _historyItemHorizontalPadding = 12.0;
 const _historyPaneBottomPadding = 12.0;
-const _conversationHeaderHeight = 52.0;
-const _mainHorizontalPadding = 48.0;
+const _conversationHeaderHeight = 56.0;
+const _mainHorizontalPadding = 64.0;
 const _mainBottomPadding = 12.0;
-const _landingBottomPadding = 16.0;
-const _conversationBottomInset = 12.0;
+const _landingBottomPadding = 41.0;
+const _conversationBottomInset = 8.0;
 
 const _theoryPrompts = <_AiPromptQuestion>[
   _AiPromptQuestion('1', '素描起形总是不准怎么办？'),
@@ -46,19 +47,19 @@ const _toolShortcuts = <_AiToolShortcut>[
     title: '报考院校梳理',
     subtitle: '按成绩梳理可报院校',
     prompt: '请根据我的成绩帮我梳理适合我的报考院校',
-    asset: AppAssets.homeQuickSchoolCircle,
+    kind: _AiToolKind.school,
   ),
   _AiToolShortcut(
     title: '练习建议',
     subtitle: '按薄弱科目安排练习',
     prompt: '请结合我的成绩，帮我安排一份素描、色彩、速写的练习建议。',
-    asset: AppAssets.aiChatSuggest,
+    kind: _AiToolKind.practice,
   ),
   _AiToolShortcut(
     title: '备考计划',
     subtitle: '生成分阶段备考计划',
     prompt: '请帮我制定一份美术联考备考计划，分阶段说明每日练习重点。',
-    asset: AppAssets.homeQuickNews,
+    kind: _AiToolKind.plan,
   ),
 ];
 
@@ -118,16 +119,23 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     final controller = ref.read(aiChatControllerProvider.notifier);
     _scheduleScrollIfNeeded(state);
 
-    final panel = DecoratedBox(
+    return DecoratedBox(
       decoration: BoxDecoration(
         border: Border.all(color: _border),
         borderRadius: AppRadius.br16,
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [AppColors.brandWash, AppColors.surface],
-          stops: [0, 0.72],
-        ),
+        color: state.isNewConversation ? null : AppColors.surface,
+        gradient: state.isNewConversation
+            ? const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFEFEEFD),
+                  AppColors.surface,
+                  AppColors.surface,
+                ],
+                stops: [0, 0.34, 1],
+              )
+            : null,
       ),
       child: ClipRRect(
         borderRadius: AppRadius.br16,
@@ -173,7 +181,6 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         ),
       ),
     );
-    return panel;
   }
 
   Widget _buildHistoryPane(AiChatState state, AiChatController controller) {
@@ -190,66 +197,84 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         color: AppColors.surface,
         border: Border(right: BorderSide(color: _border)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.s12,
-              AppSpace.s16,
-              AppSpace.s12,
-              AppSpace.s12,
-            ),
-            child: AppButton(
-              label: '开启新对话',
-              iconAsset: AppAssets.aiChatNew,
-              variant: AppButtonVariant.quiet,
-              size: AppButtonSize.sm,
-              expand: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          16,
+          24,
+          16,
+          _historyPaneBottomPadding,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppPressable(
               onTap: startNew,
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: _historyItemHorizontalPadding,
-                  ),
-                  child: Text('历史对话', style: AppText.caption12Strong),
+              child: Container(
+                height: 36,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: _panelFill,
+                  borderRadius: AppRadius.brPill,
                 ),
-                const SizedBox(height: AppSpace.s8),
-                if (state.sessionsLoading && state.sessions.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: _historyItemHorizontalPadding,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const AppAssetGraphic(
+                      AppAssets.aiChatNew,
+                      width: 16,
+                      height: 16,
                     ),
-                    child: AppSkeletonText(lines: 4, lineHeight: 16),
-                  )
-                else ...[
-                  if (state.isNewConversation) ...[
-                    _historyTile(title: '新对话', active: true, onTap: startNew),
-                    const SizedBox(height: 2),
+                    const SizedBox(width: 8),
+                    Text(
+                      '开启新对话',
+                      style: AppText.body14Strong.copyWith(color: _purple),
+                    ),
                   ],
-                  if (groups.every((group) => group.items.isEmpty) &&
-                      !state.isNewConversation)
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text('全部', style: AppText.body14Strong),
+                const Spacer(),
+                const AppAssetGraphic(
+                  AppAssets.aiChatHistoryFilter,
+                  width: 16,
+                  height: 16,
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  Text(
+                    '历史对话',
+                    style: AppText.caption12Strong.copyWith(color: _textHint),
+                  ),
+                  const SizedBox(height: 6),
+                  if (state.sessionsLoading && state.sessions.isEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: _historyItemHorizontalPadding,
-                      ),
-                      child: Text('还没有对话记录', style: AppText.caption12),
-                    ),
-                  for (final group in groups)
-                    if (group.items.isNotEmpty) ...[
-                      const SizedBox(height: AppSpace.s8),
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text('加载中…', style: AppText.caption12),
+                    )
+                  else ...[
+                    if (state.isNewConversation)
+                      _historyTile(title: '新对话', active: true, onTap: startNew),
+                    for (final group in groups) ...[
+                      const SizedBox(height: 6),
                       Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: _historyItemHorizontalPadding,
                         ),
-                        child: Text(group.label, style: AppText.caption12),
+                        child: Text(
+                          group.label,
+                          style: AppText.caption12Strong,
+                        ),
                       ),
-                      const SizedBox(height: AppSpace.s4),
+                      const SizedBox(height: 6),
                       for (var i = 0; i < group.items.length; i++) ...[
                         if (i > 0) const SizedBox(height: 2),
                         _historyTile(
@@ -261,9 +286,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                             final error = await controller.selectSession(
                               group.items[i].id,
                             );
-                            if (error != null && mounted) {
-                              _showInfo(error);
-                            }
+                            if (error != null && mounted) _showInfo(error);
                           },
                           onMoreTap: (anchor) => _showSessionMoreMenu(
                             anchor,
@@ -273,12 +296,12 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                         ),
                       ],
                     ],
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: _historyPaneBottomPadding),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -289,15 +312,24 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     required VoidCallback onTap,
     ValueChanged<BuildContext>? onMoreTap,
   }) {
+    const more = SizedBox(
+      width: 28,
+      height: 32,
+      child: Center(
+        child: AppAssetGraphic(AppAssets.aiChatMore, width: 14, height: 4),
+      ),
+    );
     return AppPressable(
       onTap: onTap,
       selected: active,
       child: Container(
         height: 40,
-        padding: const EdgeInsets.only(left: _historyItemHorizontalPadding),
+        padding: const EdgeInsets.symmetric(
+          horizontal: _historyItemHorizontalPadding,
+        ),
         decoration: BoxDecoration(
           color: active ? _panelFill : null,
-          borderRadius: AppRadius.br8,
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           children: [
@@ -306,31 +338,26 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.body14.copyWith(
-                  color: active ? AppColors.brandDeep : _textPrimary,
-                ),
+                style: AppText.body14.copyWith(height: 20 / 14),
               ),
             ),
-            if (active && onMoreTap != null)
-              Builder(
-                builder: (anchor) => AppIconButton.asset(
-                  asset: AppAssets.aiChatMore,
-                  assetSize: 18,
-                  semanticLabel: '对话操作',
-                  size: AppButtonSize.sm,
-                  filled: false,
-                  onTap: () => onMoreTap(anchor),
+            if (active)
+              if (onMoreTap == null)
+                more
+              else
+                Builder(
+                  builder: (anchor) => AppPressable(
+                    semanticLabel: '对话操作',
+                    onTap: () => onMoreTap(anchor),
+                    child: more,
+                  ),
                 ),
-              )
-            else
-              const SizedBox(width: _historyItemHorizontalPadding),
           ],
         ),
       ),
     );
   }
 
-  /// composer 外框高度：无附件 124 / 有附件 154。
   double _composerHeight(AiChatState state) =>
       state.pendingAttachments.isEmpty ? 124.0 : 154.0;
 
@@ -339,113 +366,155 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     required AiChatController controller,
     required double composerWidth,
   }) {
-    // 上半区放进 Expanded + SingleChildScrollView：软键盘收缩页面时优先保留底部输入框。
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        _mainHorizontalPadding,
-        AppSpace.s32,
-        _mainHorizontalPadding,
-        _landingBottomPadding,
-      ),
-      child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 600;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            _mainHorizontalPadding,
+            compact ? 16 : 94,
+            _mainHorizontalPadding,
+            compact ? 12 : _landingBottomPadding,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildWelcomeSection(),
+                      const SizedBox(height: 11),
+                      SizedBox(
+                        height: 265,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: _buildTheoryCard()),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildToolCard()),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              _buildComposer(state, controller, composerWidth),
+              const SizedBox(height: 13),
+              _buildDisclaimer(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWelcomeSection() {
+    return SizedBox(
+      height: 76,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildWelcomeSection(),
-                  const SizedBox(height: AppSpace.s20),
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(child: _buildTheoryCard()),
-                        const SizedBox(width: AppSpace.s16),
-                        Expanded(child: _buildToolCard()),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+          SizedBox.square(
+            dimension: 52,
+            child: OverflowBox(
+              maxWidth: 90,
+              maxHeight: 90,
+              child: Image.asset(AppAssets.aiChatMascot, width: 90, height: 90),
             ),
           ),
-          const SizedBox(height: AppSpace.s12),
-          _buildComposer(state, controller, composerWidth),
-          const SizedBox(height: AppSpace.s8),
-          _buildDisclaimer(),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 2),
+                Text(
+                  '我是小美同学，很高兴见到你！',
+                  style: AppText.title20.copyWith(fontWeight: AppFont.w500),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '可以和我聊素描、色彩、速写和备考安排，回答仅供参考。',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body13.copyWith(
+                    color: _textSecondary,
+                    height: 22 / 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildWelcomeSection() {
-    return Row(
-      children: [
-        SizedBox.square(
-          dimension: 56,
-          child: Image.asset(AppAssets.aiChatMascot, fit: BoxFit.contain),
-        ),
-        const SizedBox(width: AppSpace.s16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('你好，我是小美同学', style: AppText.title20),
-              const SizedBox(height: AppSpace.s4),
-              Text('可以和我聊素描、色彩、速写和备考安排，回答仅供参考。', style: AppText.body13),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildTheoryCard() {
     return AppCard(
-      color: AppColors.brandWash,
+      color: _panelFill,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
       bordered: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('常见问题', style: AppText.title16),
-          Text('点一下直接提问', style: AppText.caption12),
-          const SizedBox(height: AppSpace.s8),
-          for (final item in _theoryPrompts)
-            AppPressable(
-              onTap: () => _handlePromptTap(item.text),
-              child: SizedBox(
-                height: 36,
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 20,
-                      child: Text(
+          Text(
+            '常见问题',
+            style: AppText.title16.copyWith(
+              fontWeight: AppFont.w500,
+              height: 22 / 16,
+            ),
+          ),
+          Text('点一下直接提问', style: AppText.caption12.copyWith(height: 22 / 12)),
+          const SizedBox(height: 19),
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: _theoryPrompts.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final item = _theoryPrompts[index];
+                final numberColor = switch (index) {
+                  0 || 1 => const Color(0xFFEB2F2F),
+                  2 => const Color(0xFFFE7B3F),
+                  _ => const Color(0xFFCECED1),
+                };
+                return AppPressable(
+                  onTap: () => _handlePromptTap(item.text),
+                  child: Row(
+                    children: [
+                      Text(
                         item.indexLabel,
-                        style: AppText.number(
-                          size: 14,
-                          color: AppColors.textTertiary,
+                        style:
+                            AppText.displayNumber(
+                              size: 16,
+                              color: numberColor,
+                            ).copyWith(
+                              fontStyle: FontStyle.italic,
+                              height: 22 / 16,
+                            ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item.text,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption12.copyWith(
+                            color: _textPrimary,
+                            height: 22 / 12,
+                          ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        item.text,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.body14,
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: AppColors.textPlaceholder,
-                    ),
-                  ],
-                ),
-              ),
+                    ],
+                  ),
+                );
+              },
             ),
+          ),
         ],
       ),
     );
@@ -453,61 +522,112 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
 
   Widget _buildToolCard() {
     return AppCard(
-      color: AppColors.brandWash,
+      color: _panelFill,
       backgroundImage: const DecorationImage(
         image: AssetImage(AppAssets.aiChatToolBg),
         fit: BoxFit.cover,
       ),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
       bordered: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('备考助手', style: AppText.title16),
-          Text('点一下直接提问', style: AppText.caption12),
-          const SizedBox(height: AppSpace.s12),
-          for (var i = 0; i < _toolShortcuts.length; i++) ...[
-            if (i > 0) const SizedBox(height: AppSpace.s8),
-            AppPressable(
-              onTap: () => _handlePromptTap(_toolShortcuts[i].prompt),
-              child: Container(
-                padding: const EdgeInsets.all(AppSpace.s12),
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: AppRadius.br8,
-                ),
-                child: Row(
-                  children: [
-                    AppAssetGraphic(
-                      _toolShortcuts[i].asset,
-                      width: 36,
-                      height: 36,
-                    ),
-                    const SizedBox(width: AppSpace.s12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _toolShortcuts[i].title,
-                            style: AppText.body14Strong,
-                          ),
-                          Text(
-                            _toolShortcuts[i].subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppText.caption12,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          Text(
+            '备考助手',
+            style: AppText.title16.copyWith(
+              fontWeight: AppFont.w500,
+              height: 22 / 16,
             ),
-          ],
+          ),
+          Text('点一下直接提问', style: AppText.caption12.copyWith(height: 22 / 12)),
+          const SizedBox(height: 19),
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: _toolShortcuts.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final tool = _toolShortcuts[index];
+                return AppPressable(
+                  onTap: () => _handlePromptTap(tool.prompt),
+                  child: Container(
+                    height: 50,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppRadius.br8,
+                    ),
+                    child: Row(
+                      children: [
+                        _buildToolIcon(tool.kind),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                tool.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.caption12Strong.copyWith(
+                                  color: _textPrimary,
+                                ),
+                              ),
+                              Text(
+                                tool.subtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.caption12,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildToolIcon(_AiToolKind kind) {
+    return switch (kind) {
+      _AiToolKind.practice => const AppAssetGraphic(
+        AppAssets.aiChatSuggest,
+        width: 30,
+        height: 30,
+      ),
+      _AiToolKind.school => const _AiToolBadge(
+        colors: [AppColors.brandSoft, AppColors.brandDeep],
+        child: Icon(
+          Icons.insights_outlined,
+          color: AppColors.onBrand,
+          size: 19,
+        ),
+      ),
+      _AiToolKind.plan => const _AiToolBadge(
+        colors: [Color(0xFFFFBEE9), Color(0xFFFF73D0)],
+        child: Stack(
+          children: [
+            AppAssetGraphic(AppAssets.aiChatPlanBook, width: 14, height: 14),
+            Positioned(
+              right: 1,
+              top: 1,
+              child: AppAssetGraphic(
+                AppAssets.aiChatPlanMark,
+                width: 10,
+                height: 10,
+              ),
+            ),
+          ],
+        ),
+      ),
+    };
   }
 
   Widget _buildConversation({
@@ -538,7 +658,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
               _activeTitle(state),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppText.title16,
+              style: AppText.title16.copyWith(fontWeight: AppFont.w500),
             ),
           ),
           Expanded(
@@ -656,12 +776,12 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _actionIcon(
-                  icon: Icons.copy_rounded,
+                  asset: AppAssets.aiChatCopy,
                   label: '复制',
                   onTap: () => _copyText(message.text),
                 ),
                 _actionIcon(
-                  icon: Icons.edit_outlined,
+                  asset: AppAssets.aiChatEdit,
                   label: '重新编辑',
                   onTap: () => _reuseText(message.text),
                 ),
@@ -708,12 +828,10 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.psychology_outlined,
-                        size: 18,
-                        color: message.reasoningStreaming
-                            ? _purple
-                            : _textSecondary,
+                      const AppAssetGraphic(
+                        AppAssets.aiChatThinkSelected,
+                        width: 25,
+                        height: 25,
                       ),
                       const SizedBox(width: AppSpace.s4),
                       Text(
@@ -776,7 +894,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
             const SizedBox(height: AppSpace.s4),
             if (message.text.isNotEmpty && !message.streaming)
               _actionIcon(
-                icon: Icons.copy_rounded,
+                asset: AppAssets.aiChatCopy,
                 label: '复制',
                 onTap: () => _copyText(message.text),
               ),
@@ -787,18 +905,24 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   }
 
   Widget _actionIcon({
-    required IconData icon,
+    IconData? icon,
+    String? asset,
     required String label,
     required VoidCallback onTap,
     Color color = AppColors.textTertiary,
   }) {
-    return AppIconButton(
-      icon: icon,
+    return AppPressable(
       semanticLabel: label,
-      size: AppButtonSize.sm,
-      filled: false,
-      color: color,
       onTap: onTap,
+      child: SizedBox(
+        width: 28,
+        height: 28,
+        child: Center(
+          child: asset == null
+              ? Icon(icon, size: 16, color: color)
+              : AppAssetGraphic(asset, width: 16, height: 16),
+        ),
+      ),
     );
   }
 
@@ -813,98 +937,203 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         (_inputCtrl.text.trim().isNotEmpty ||
             state.pendingAttachments.isNotEmpty);
     final hasAttachments = state.pendingAttachments.isNotEmpty;
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: width),
-      child: Container(
-        width: double.infinity,
-        height: _composerHeight(state),
-        clipBehavior: Clip.antiAlias,
+    final inputInset = hasAttachments ? 4.0 : 8.0;
+    return SizedBox(
+      width: width,
+      height: _composerHeight(state),
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: AppRadius.br12,
-          border: Border.all(color: AppColors.line),
-        ),
-        child: Column(
-          children: [
-            if (hasAttachments)
-              SizedBox(
-                height: 50,
-                child: ClipRect(child: _buildAttachmentTray(state, controller)),
-              ),
-            // 多行输入：占满剩余高度，超出时内部滚动；Enter 换行，右下角按钮发送。
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppSpace.s16,
-                  hasAttachments ? AppSpace.s4 : AppSpace.s12,
-                  AppSpace.s16,
-                  AppSpace.s4,
-                ),
-                child: AppTextField(
-                  controller: _inputCtrl,
-                  maxLines: null,
-                  minLines: null,
-                  expands: true,
-                  keyboardType: TextInputType.multiline,
-                  textAlignVertical: TextAlignVertical.top,
-                  cursorColor: _purple,
-                  style: AppText.body14,
-                  decoration: InputDecoration(
-                    isCollapsed: true,
-                    border: InputBorder.none,
-                    hintText: '石膏头像的明暗交界线怎么画才有体积感？',
-                    hintStyle: AppText.body14.copyWith(
-                      color: AppColors.textPlaceholder,
-                    ),
-                  ),
-                  textInputAction: TextInputAction.newline,
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
+          border: Border.all(color: _border),
+          boxShadow: const [
+            BoxShadow(color: Color(0x050B081A), blurRadius: 1),
+            BoxShadow(
+              color: Color(0x0F0B081A),
+              blurRadius: 40,
+              offset: Offset(0, 12),
             ),
-            SizedBox(
-              height: 48,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpace.s8),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: AppRadius.br12,
+          child: Column(
+            children: [
+              if (hasAttachments)
+                SizedBox(
+                  height: 50,
+                  child: _buildAttachmentTray(state, controller),
+                ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: inputInset,
+                  ),
+                  child: AppTextField(
+                    controller: _inputCtrl,
+                    maxLines: null,
+                    expands: true,
+                    keyboardType: TextInputType.multiline,
+                    textAlignVertical: TextAlignVertical.top,
+                    cursorColor: _purple,
+                    cursorWidth: 1.5,
+                    cursorHeight: 16,
+                    style: AppText.body14.copyWith(height: 1.6),
+                    decoration: InputDecoration.collapsed(
+                      hintText: '石膏头像的明暗交界线怎么画才有体积感？',
+                      hintStyle: AppText.body14.copyWith(
+                        color: _textHint,
+                        height: 1.6,
+                      ),
+                    ),
+                    textInputAction: TextInputAction.newline,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
                 child: Row(
                   children: [
-                    AppChip(
-                      label: '深度思考',
-                      iconAsset: state.isDeepThinking
-                          ? AppAssets.aiChatThinkSelected
-                          : AppAssets.aiChatThink,
-                      selected: state.isDeepThinking,
-                      onTap: state.selectedModel.supportsDeepThinking
-                          ? controller.toggleDeepThinking
-                          : null,
-                    ),
-                    const Spacer(),
-                    if (state.uploadingAttachment)
-                      const SizedBox.square(
-                        dimension: AppSize.iconButtonSm,
-                        child: Center(child: AppLoadingIndicator(size: 18)),
-                      )
-                    else
-                      AppIconButton.asset(
-                        asset: AppAssets.aiChatAttach,
-                        assetSize: 20,
-                        semanticLabel: '添加附件',
-                        size: AppButtonSize.sm,
-                        filled: false,
-                        onTap: () => _pickAndUploadAttachment(controller),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildModelSelector(state, controller),
+                            const SizedBox(width: 8),
+                            _AiFeatureButton(
+                              label: '深度思考',
+                              asset: state.isDeepThinking
+                                  ? AppAssets.aiChatThinkSelected
+                                  : AppAssets.aiChatThink,
+                              selected: state.isDeepThinking,
+                              onTap: state.selectedModel.supportsDeepThinking
+                                  ? controller.toggleDeepThinking
+                                  : null,
+                            ),
+                            const SizedBox(width: 8),
+                            _AiFeatureButton(
+                              label: '联网搜索',
+                              asset: state.isWebSearching
+                                  ? AppAssets.aiChatSearchSelected
+                                  : AppAssets.aiChatSearch,
+                              iconSize: 15,
+                              selected: state.isWebSearching,
+                              onTap: state.selectedModel.supportsWebSearch
+                                  ? controller.toggleWebSearching
+                                  : null,
+                            ),
+                          ],
+                        ),
                       ),
-                    const SizedBox(width: AppSpace.s8),
-                    AppButton(
-                      label: '发送',
-                      icon: Icons.arrow_upward_rounded,
-                      size: AppButtonSize.sm,
+                    ),
+                    const SizedBox(width: 8),
+                    AppPressable(
+                      semanticLabel: '添加附件',
+                      onTap: state.uploadingAttachment
+                          ? null
+                          : () => _pickAndUploadAttachment(controller),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: _border),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        alignment: Alignment.center,
+                        child: state.uploadingAttachment
+                            ? const AppLoadingIndicator(size: 18)
+                            : const AppAssetGraphic(
+                                AppAssets.aiChatAttach,
+                                width: 20,
+                                height: 20,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    AppPressable(
+                      semanticLabel: '发送',
                       onTap: canSend ? () => _handleSend(controller) : null,
+                      child: canSend
+                          ? Container(
+                              width: 32,
+                              height: 32,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: AppColors.brand,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const AppAssetGraphic(
+                                AppAssets.aiChatSendArrow,
+                                width: 12,
+                                height: 12,
+                              ),
+                            )
+                          : const AppAssetGraphic(
+                              AppAssets.aiChatSendDisabled,
+                              width: 32,
+                              height: 32,
+                            ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModelSelector(AiChatState state, AiChatController controller) {
+    return Builder(
+      builder: (anchor) => AppPressable(
+        semanticLabel: '切换模型，当前 ${state.selectedModel.label}',
+        onTap: state.sending
+            ? null
+            : () async {
+                final model = await showAppMenu<AiChatModel>(
+                  context: anchor,
+                  width: 132,
+                  items: [
+                    for (final model in AiChatModel.values)
+                      AppMenuItem(
+                        value: model,
+                        label: model.label,
+                        icon: model == state.selectedModel
+                            ? Icons.check_rounded
+                            : null,
+                      ),
+                  ],
+                );
+                if (!mounted || model == null) return;
+                final error = await controller.selectModel(model);
+                if (error != null && mounted) _showInfo(error);
+              },
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          decoration: BoxDecoration(
+            border: Border.all(color: _border),
+            borderRadius: AppRadius.br8,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                state.selectedModel.label,
+                style: AppText.caption12Strong.copyWith(color: _textPrimary),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 17,
+                color: _textSecondary,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1062,11 +1291,11 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   ) async {
     final action = await showAppMenu<String>(
       context: anchor,
-      width: 132,
+      width: 142,
       items: const [
         AppMenuItem(
           value: 'delete',
-          label: '删除对话',
+          label: '删除',
           iconAsset: AppAssets.coursewareActionDelete,
           danger: true,
         ),
@@ -1177,19 +1406,23 @@ class _AttachmentChip extends StatelessWidget {
       semanticLabel: '预览附件 ${attachment.name}',
       child: Container(
         constraints: BoxConstraints(maxWidth: compact ? 220 : 260),
-        padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+        padding: const EdgeInsets.fromLTRB(10, 5, 8, 5),
         decoration: BoxDecoration(
-          color: compact ? AppColors.surface : AppColors.surfaceSubtle,
-          borderRadius: AppRadius.br8,
-          border: Border.all(color: AppColors.line),
+          color: compact ? AppColors.surface : const Color(0xFFF8F7FF),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.brandTint),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.insert_drive_file_outlined,
-              size: 16,
-              color: _purple,
+            const CircleAvatar(
+              radius: 11,
+              backgroundColor: AppColors.brandTint,
+              child: Icon(
+                Icons.insert_drive_file_outlined,
+                size: 14,
+                color: _purple,
+              ),
             ),
             const SizedBox(width: AppSpace.s8),
             Flexible(
@@ -1215,13 +1448,13 @@ class _AttachmentChip extends StatelessWidget {
               ),
             ),
             if (remove != null)
-              AppIconButton(
-                icon: Icons.close_rounded,
+              AppPressable(
                 semanticLabel: '移除附件',
-                size: AppButtonSize.sm,
-                filled: false,
-                color: _textHint,
                 onTap: remove,
+                child: const SizedBox.square(
+                  dimension: 26,
+                  child: Icon(Icons.close_rounded, size: 14, color: _textHint),
+                ),
               )
             else
               const SizedBox(width: AppSpace.s4),
@@ -1271,23 +1504,27 @@ class _AttachmentPreviewDialog extends StatelessWidget {
             child: DecoratedBox(
               decoration: const BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: AppRadius.br12,
+                borderRadius: BorderRadius.all(Radius.circular(14)),
                 boxShadow: AppShadow.overlay,
               ),
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
+                    padding: const EdgeInsets.fromLTRB(18, 14, 12, 12),
                     child: Row(
                       children: [
-                        Icon(
-                          canPreviewPdf
-                              ? Icons.picture_as_pdf_outlined
-                              : Icons.insert_drive_file_outlined,
-                          color: _purple,
-                          size: 20,
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.brandTint,
+                          child: Icon(
+                            canPreviewPdf
+                                ? Icons.picture_as_pdf_outlined
+                                : Icons.insert_drive_file_outlined,
+                            color: _purple,
+                            size: 18,
+                          ),
                         ),
-                        const SizedBox(width: AppSpace.s12),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1297,7 +1534,9 @@ class _AttachmentPreviewDialog extends StatelessWidget {
                                 attachment.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppText.title16,
+                                style: AppText.body14.copyWith(
+                                  fontWeight: AppFont.w600,
+                                ),
                               ),
                               if (attachment.size > 0)
                                 Text(
@@ -1325,7 +1564,7 @@ class _AttachmentPreviewDialog extends StatelessWidget {
                     child: canPreviewPdf
                         ? ClipRRect(
                             borderRadius: const BorderRadius.vertical(
-                              bottom: Radius.circular(AppRadius.card),
+                              bottom: Radius.circular(14),
                             ),
                             child: AppPdfView(
                               url: attachment.url,
@@ -1363,33 +1602,147 @@ class _UnsupportedAttachmentPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppEmptyState(
-      icon: Icons.insert_drive_file_outlined,
-      title: '该文件暂不支持在线预览',
-      description: attachment.name,
-      actionLabel: '复制文件地址',
-      onAction: () async {
-        await Clipboard.setData(ClipboardData(text: attachment.url));
-        if (context.mounted) {
-          AppToast.showSuccess(context, '已复制文件地址');
-        }
-      },
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 68,
+              height: 68,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F7FF),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.brandTint),
+              ),
+              child: const Icon(
+                Icons.insert_drive_file_outlined,
+                color: _purple,
+                size: 34,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              attachment.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: AppText.body14Strong,
+            ),
+            const SizedBox(height: 8),
+            Text('当前文件类型暂不支持在线预览', style: AppText.body13),
+            const SizedBox(height: 14),
+            SelectableText(
+              attachment.url,
+              textAlign: TextAlign.center,
+              style: AppText.caption12.copyWith(color: _purple),
+            ),
+            const SizedBox(height: 16),
+            AppButton(
+              label: '复制文件地址',
+              icon: Icons.content_copy_outlined,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: attachment.url));
+                if (context.mounted) AppToast.showSuccess(context, '已复制文件地址');
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
+
+enum _AiToolKind { school, practice, plan }
 
 class _AiToolShortcut {
   const _AiToolShortcut({
     required this.title,
     required this.subtitle,
     required this.prompt,
-    required this.asset,
+    required this.kind,
   });
 
   final String title;
   final String subtitle;
   final String prompt;
+  final _AiToolKind kind;
+}
+
+class _AiToolBadge extends StatelessWidget {
+  const _AiToolBadge({required this.colors, required this.child});
+
+  final List<Color> colors;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 30,
+      height: 30,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: colors,
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _AiFeatureButton extends StatelessWidget {
+  const _AiFeatureButton({
+    required this.label,
+    required this.asset,
+    required this.selected,
+    required this.onTap,
+    this.iconSize = 20,
+  });
+
+  final String label;
   final String asset;
+  final bool selected;
+  final VoidCallback? onTap;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: onTap,
+      enabled: onTap != null,
+      selected: selected,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 11),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.brandWash : AppColors.surface,
+          border: Border.all(color: _border),
+          borderRadius: AppRadius.br8,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppAssetGraphic(asset, width: iconSize, height: iconSize),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: AppText.caption12Strong.copyWith(
+                color: selected ? _purple : _textHint,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 enum _MessageBlockKind { paragraph, heading, list, quote }
