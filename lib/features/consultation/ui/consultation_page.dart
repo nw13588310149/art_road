@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
 import '../state/consultation_controller.dart';
 import '../state/consultation_detail_state.dart';
@@ -398,11 +399,7 @@ class ViewCountLabel extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(
-          Icons.visibility_outlined,
-          size: 14,
-          color: AppColors.textTertiary,
-        ),
+        Image.asset(AppAssets.newsViews, width: 14, height: 14),
         const SizedBox(width: AppSpace.s4),
         Text(
           '$count',

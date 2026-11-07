@@ -60,7 +60,7 @@ class AppSegmented<T> extends StatelessWidget {
     for (var i = 0; i < segments.length; i++) {
       final segment = segments[i];
       if (i > 0) {
-        children.add(const SizedBox(width: 2));
+        children.add(SizedBox(width: neutral ? AppSpace.s16 : 2));
       }
       final item = _SegmentItem<T>(
         segment: segment,
@@ -73,9 +73,13 @@ class AppSegmented<T> extends StatelessWidget {
       children.add(expand ? Expanded(child: item) : item);
     }
     final track = Container(
-      height: md ? 32 : AppSize.controlSm,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(color: trackColor, borderRadius: AppRadius.br8),
+      height: neutral ? 46 : (md ? 32 : AppSize.controlSm),
+      padding: EdgeInsets.all(neutral ? 5 : 2),
+      decoration: BoxDecoration(
+        color: neutral ? AppColors.surfaceSubtle : trackColor,
+        borderRadius: AppRadius.br8,
+        border: neutral ? Border.all(color: AppColors.lineSoft) : null,
+      ),
       child: Row(
         mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -114,7 +118,9 @@ class _SegmentItem<T> extends StatelessWidget {
       selected: selected,
       child: Container(
         constraints: BoxConstraints(minWidth: md ? 44 : 36),
-        padding: EdgeInsets.symmetric(horizontal: md ? 14 : 10),
+        padding: EdgeInsets.symmetric(
+          horizontal: neutral ? 16 : (md ? 14 : 10),
+        ),
         alignment: Alignment.center,
         decoration: selected
             ? BoxDecoration(
@@ -132,12 +138,12 @@ class _SegmentItem<T> extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: neutral ? 14 : 13,
                   height: 1.2,
                   fontWeight: selected ? AppFont.w500 : AppFont.w400,
-                  color: selected && !neutral
-                      ? AppColors.onBrand
-                      : AppColors.ink,
+                  color: selected
+                      ? (neutral ? AppColors.ink : AppColors.onBrand)
+                      : (neutral ? AppColors.textSecondary : AppColors.ink),
                   leadingDistribution: TextLeadingDistribution.even,
                 ),
               ),

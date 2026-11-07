@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_loading_indicator.dart'
     show AppLoadingOverlay;
 import '../state/my_notes_controller.dart';
@@ -539,9 +540,15 @@ class _NotesSidebar extends StatelessWidget {
               padding: EdgeInsets.all(AppSpace.s8),
               child: AppSkeletonText(lines: 4, lineHeight: 36),
             )
-          : Padding(
-              padding: const EdgeInsets.all(AppSpace.s8),
-              child: Text('还没有分类，点击下方「新建分类」', style: AppText.caption12),
+          : Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpace.s8),
+                child: Text(
+                  '还没有分类\n点击下方「新建分类」',
+                  style: AppText.caption12,
+                  textAlign: TextAlign.center,
+                ),
+              ),
             );
     } else {
       list = ListView.separated(
@@ -564,25 +571,9 @@ class _NotesSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.s8,
-              AppSpace.s8,
-              AppSpace.s8,
-              AppSpace.s8,
-            ),
-            child: Text('笔记分类', style: AppText.title16),
-          ),
           Expanded(child: list),
           const SizedBox(height: AppSpace.s8),
-          AppButton(
-            label: '新建分类',
-            icon: Icons.create_new_folder_outlined,
-            variant: AppButtonVariant.quiet,
-            size: AppButtonSize.sm,
-            expand: true,
-            onTap: onAddCategory,
-          ),
+          AppAddCategoryButton(onTap: onAddCategory),
         ],
       ),
     );
@@ -608,22 +599,20 @@ class _NoteCategoryRow extends StatelessWidget {
       onTap: onTap,
       selected: selected,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.s8,
-          AppSpace.s8,
-          AppSpace.s4,
-          AppSpace.s8,
-        ),
+        height: 60,
+        padding: const EdgeInsets.only(left: AppSpace.s8, right: AppSpace.s4),
         decoration: BoxDecoration(
           color: selected ? AppColors.brandWash : null,
           borderRadius: AppRadius.br8,
         ),
         child: Row(
           children: [
-            Icon(
-              selected ? Icons.folder_rounded : Icons.folder_outlined,
-              size: 22,
-              color: selected ? AppColors.brand : AppColors.textSecondary,
+            AppAssetGraphic(
+              selected
+                  ? AppAssets.cloudCategorySelected
+                  : AppAssets.cloudCategoryIdle,
+              width: 36,
+              height: 36,
             ),
             const SizedBox(width: AppSpace.s8),
             Expanded(
@@ -646,12 +635,12 @@ class _NoteCategoryRow extends StatelessWidget {
             // 默认分类（id <= 0）不允许重命名 / 删除。
             if (item.id > 0)
               Builder(
-                builder: (anchor) => AppIconButton(
-                  icon: Icons.more_horiz_rounded,
+                builder: (anchor) => AppIconButton.asset(
+                  asset: AppAssets.cloudActionMore,
+                  assetSize: 20,
                   semanticLabel: '分类操作',
                   size: AppButtonSize.sm,
                   filled: false,
-                  color: AppColors.textTertiary,
                   onTap: () async {
                     final action = await _showNoteMenu(anchor);
                     if (action != null) {
@@ -697,7 +686,7 @@ class _NotesContentArea extends StatelessWidget {
       body = const _NotesGridSkeleton();
     } else if (notes.isEmpty && state.activeFilter == MyNotesFilter.favorite) {
       body = const AppEmptyState(
-        icon: Icons.star_border_rounded,
+        illustration: AppAssets.emptyNotesPlaceholder,
         title: '还没有收藏的笔记',
         description: '收藏的笔记会集中显示在这里，方便考前复习',
       );
@@ -712,7 +701,7 @@ class _NotesContentArea extends StatelessWidget {
     } else {
       body = LayoutBuilder(
         builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 760
+          final columns = constraints.maxWidth >= 700
               ? 4
               : (constraints.maxWidth >= 520 ? 3 : 2);
           return GridView.builder(
@@ -721,7 +710,7 @@ class _NotesContentArea extends StatelessWidget {
               crossAxisCount: columns,
               mainAxisSpacing: AppSpace.s16,
               crossAxisSpacing: AppSpace.s16,
-              childAspectRatio: 0.8,
+              childAspectRatio: 1,
             ),
             itemCount: notes.length,
             itemBuilder: (context, index) {
@@ -739,8 +728,8 @@ class _NotesContentArea extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(
-          alignment: Alignment.center,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           child: AppSegmented<MyNotesFilter>(
             neutral: true,
             segments: [
@@ -780,94 +769,77 @@ class _NoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preview =
-        _resolveRemoteUrl(item.imageUrl) ??
-        _resolveRemoteUrl(item.baseImageUrl);
-    return AppCard(
-      padding: EdgeInsets.zero,
-      onTap: onOpen,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppRadius.card),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AppPressable(
+          onTap: onOpen,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const AppAssetGraphic(AppAssets.noteCard, fit: BoxFit.fill),
+              Positioned(
+                top: AppSpace.s16,
+                left: AppSpace.s16,
+                right: 48,
+                child: Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body14Strong,
+                ),
               ),
-              child: ColoredBox(
-                color: AppColors.surfaceSubtle,
-                child: preview == null
-                    ? CustomPaint(
-                        painter: NotePaperPainter(type: item.paperType),
-                      )
-                    : AppImage(src: preview, fit: BoxFit.contain),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.s12,
-              AppSpace.s8,
-              AppSpace.s4,
-              AppSpace.s8,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.body14Strong,
+              Positioned(
+                left: AppSpace.s16,
+                right: AppSpace.s16,
+                bottom: AppSpace.s24,
+                child: Row(
+                  children: [
+                    if (item.isFavorite) ...[
+                      Semantics(
+                        label: '已收藏',
+                        child: const AppAssetGraphic(
+                          AppAssets.noteStar,
+                          width: 18,
+                          height: 18,
+                        ),
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Text(
-                            item.dateLabel,
-                            style: AppText.number(
-                              size: 12,
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                          if (item.isFavorite) ...[
-                            const SizedBox(width: AppSpace.s4),
-                            const Icon(
-                              Icons.star_rounded,
-                              size: 14,
-                              color: AppColors.warning,
-                              semanticLabel: '已收藏',
-                            ),
-                          ],
-                        ],
-                      ),
+                      const SizedBox(width: AppSpace.s8),
                     ],
-                  ),
+                    Flexible(
+                      child: Text(
+                        item.dateLabel.replaceAll('-', '.'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption12,
+                      ),
+                    ),
+                  ],
                 ),
-                Builder(
-                  builder: (anchor) => AppIconButton(
-                    icon: Icons.more_horiz_rounded,
-                    semanticLabel: '笔记操作',
-                    size: AppButtonSize.sm,
-                    filled: false,
-                    color: AppColors.textTertiary,
-                    onTap: () async {
-                      final action = await _showNoteMenu(anchor);
-                      if (action != null) {
-                        onAction(action);
-                      }
-                    },
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          top: AppSpace.s4,
+          right: AppSpace.s4,
+          child: Builder(
+            builder: (anchor) => AppIconButton.asset(
+              asset: AppAssets.noteMore,
+              assetSize: 20,
+              semanticLabel: '笔记操作',
+              size: AppButtonSize.sm,
+              filled: false,
+              onTap: () async {
+                final action = await _showNoteMenu(anchor);
+                if (action != null) {
+                  onAction(action);
+                }
+              },
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -883,7 +855,7 @@ class _NotesGridSkeleton extends StatelessWidget {
         crossAxisCount: 4,
         mainAxisSpacing: AppSpace.s16,
         crossAxisSpacing: AppSpace.s16,
-        childAspectRatio: 0.8,
+        childAspectRatio: 1,
       ),
       itemCount: 4,
       itemBuilder: (_, _) => const AppCard(
@@ -910,12 +882,12 @@ Future<_NoteMenuAction?> _showNoteMenu(BuildContext anchor) {
       AppMenuItem(
         value: _NoteMenuAction.rename,
         label: '重命名',
-        icon: Icons.drive_file_rename_outline_rounded,
+        iconAsset: AppAssets.coursewareActionRename,
       ),
       AppMenuItem(
         value: _NoteMenuAction.delete,
         label: '删除',
-        icon: Icons.delete_outline_rounded,
+        iconAsset: AppAssets.coursewareActionDelete,
         danger: true,
       ),
     ],
@@ -963,13 +935,6 @@ class _NoteTemplateViewState extends State<_NoteTemplateView> {
           title: '选择笔记样式',
           subtitle: '网格纸适合推敲比例与构图，笔记本适合文字要点',
           onBack: widget.onBack,
-          actions: [
-            AppButton(
-              label: '下一步',
-              size: AppButtonSize.sm,
-              onTap: () => widget.onSelected(_pending),
-            ),
-          ],
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -995,6 +960,24 @@ class _NoteTemplateViewState extends State<_NoteTemplateView> {
                     onTap: () => setState(() => _pending = type),
                   ),
               ],
+            ),
+          ),
+        ),
+        Align(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s12,
+              AppSpace.page,
+              AppSpace.s24,
+            ),
+            child: SizedBox(
+              width: 350,
+              child: AppButton(
+                label: '下一步',
+                expand: true,
+                onTap: () => widget.onSelected(_pending),
+              ),
             ),
           ),
         ),
@@ -1024,25 +1007,19 @@ class _TemplatePreviewCard extends StatelessWidget {
         width: 260,
         padding: const EdgeInsets.all(AppSpace.s12),
         decoration: BoxDecoration(
-          color: selected ? AppColors.brandWash : AppColors.surface,
           borderRadius: AppRadius.br12,
-          border: Border.all(
-            color: selected ? AppColors.brand : AppColors.lineSoft,
+          image: DecorationImage(
+            image: AssetImage(
+              selected
+                  ? AppAssets.noteTemplateSelected
+                  : AppAssets.noteTemplateIdle,
+            ),
+            fit: BoxFit.fill,
           ),
         ),
         child: Column(
           children: [
-            Row(
-              children: [
-                Expanded(child: Text(type.label, style: AppText.title16)),
-                if (selected)
-                  const Icon(
-                    Icons.check_circle_rounded,
-                    size: 20,
-                    color: AppColors.brand,
-                  ),
-              ],
-            ),
+            Text(type.label, style: AppText.title16),
             const SizedBox(height: AppSpace.s12),
             SizedBox(
               height: 300,
@@ -1146,12 +1123,7 @@ class _NoteEditorView extends StatelessWidget {
           ),
           child: Row(
             children: [
-              AppIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
-                semanticLabel: '返回',
-                size: AppButtonSize.sm,
-                onTap: onBack,
-              ),
+              AppIconButton.back(onTap: onBack),
               const SizedBox(width: AppSpace.s12),
               Flexible(
                 child: AppPressable(
@@ -1169,10 +1141,10 @@ class _NoteEditorView extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpace.s4),
-                      const Icon(
-                        Icons.edit_outlined,
-                        size: 16,
-                        color: AppColors.textTertiary,
+                      const AppAssetGraphic(
+                        AppAssets.homeRename,
+                        width: 16,
+                        height: 16,
                       ),
                     ],
                   ),

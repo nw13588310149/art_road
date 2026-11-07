@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/art/art_tokens.dart';
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
 import '../../data/gallery_models.dart';
 import '../../state/gallery_state.dart';
@@ -248,10 +249,10 @@ class _CardMeta extends StatelessWidget {
               ),
             ),
           const SizedBox(width: AppSpace.s8),
-          const Icon(
-            Icons.visibility_outlined,
-            size: 14,
-            color: AppColors.textTertiary,
+          Image.asset(
+            AppAssets.newsViews,
+            width: 14,
+            height: 14,
           ),
           const SizedBox(width: 2),
           Text(formatViewCount(work.views), style: AppText.caption12),

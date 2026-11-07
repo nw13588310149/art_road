@@ -5,6 +5,7 @@ library;
 
 export '../widgets/app_loading_indicator.dart'
     show AppLoadingIndicator, PageInitLoadingShell;
+export 'app_add_category_button.dart';
 export 'app_avatar.dart';
 export 'app_badge.dart';
 export 'app_button.dart';

@@ -156,6 +156,7 @@ flutter:
     - assets/images/face/
     - assets/images/sound/
     - assets/images/note/
+    - assets/images/circle/
     - assets/images/groupChat/
     - assets/images/xiaoquan/
     - assets/images/smartCampus/

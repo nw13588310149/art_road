@@ -1,11 +1,12 @@
 // 校圈与校圈治理：举报数据与管理员工作台同源、处理结果落盘、治理页签与操作、
-// 普通校圈不出现治理入口、操作图标颜色。
+// 普通校圈不出现治理入口、操作图标。
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:the_road_of_art_flutter/core/constants/app_assets.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_accounts.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_backend.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_store.dart';
@@ -15,6 +16,7 @@ import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
 import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_theme.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_asset_graphic.dart';
 import 'package:the_road_of_art_flutter/features/circle/state/circle_governance_state.dart';
 import 'package:the_road_of_art_flutter/features/circle/state/circle_permissions_provider.dart';
 import 'package:the_road_of_art_flutter/features/circle/state/circle_state.dart';
@@ -626,7 +628,12 @@ void main() {
   group('action icons', () {
     CirclePost post({bool liked = false, bool favorited = false}) => CirclePost(
       id: 'p1',
-      author: const CircleAuthor(id: 'u1', name: '林小雨', role: '', avatarUrl: ''),
+      author: const CircleAuthor(
+        id: 'u1',
+        name: '林小雨',
+        role: '',
+        avatarUrl: '',
+      ),
       badges: const [],
       text: '作品分享',
       timeLabel: '今天 10:20',
@@ -640,55 +647,39 @@ void main() {
       comments: const [],
     );
 
-    Color iconColor(WidgetTester tester, IconData icon) =>
-        tester.widget<Icon>(find.byIcon(icon)).color!;
+    Finder graphic(String asset) => find.byWidgetPredicate(
+      (widget) => widget is AppAssetGraphic && widget.asset == asset,
+    );
 
-    testWidgets('idle icons are tertiary grey, 已点赞 / 已收藏 are brand purple', (
-      tester,
-    ) async {
-      Future<void> pumpRow(CirclePost value) => tester.pumpWidget(
-        MaterialApp(
-          home: Material(
-            child: CircleActionRow(
-              post: value,
-              onLike: () {},
-              onComment: () {},
-              onFavorite: () {},
+    testWidgets(
+      'list actions switch between original inactive and active icons',
+      (tester) async {
+        Future<void> pumpRow(CirclePost value) => tester.pumpWidget(
+          MaterialApp(
+            home: Material(
+              child: CircleActionRow(
+                post: value,
+                onLike: () {},
+                onComment: () {},
+                onFavorite: () {},
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await pumpRow(post());
-      expect(
-        iconColor(tester, Icons.favorite_border_rounded),
-        AppColors.textTertiary,
-      );
-      expect(
-        iconColor(tester, Icons.chat_bubble_outline_rounded),
-        AppColors.textTertiary,
-      );
-      expect(
-        iconColor(tester, Icons.bookmark_border_rounded),
-        AppColors.textTertiary,
-      );
-      expect(
-        iconColor(tester, Icons.favorite_border_rounded),
-        isNot(const Color(0xFFE6E9F1)),
-      );
+        await pumpRow(post());
+        expect(graphic(AppAssets.circleLike), findsOneWidget);
+        expect(graphic(AppAssets.circleComment), findsOneWidget);
+        expect(graphic(AppAssets.circleSave), findsOneWidget);
 
-      await pumpRow(post(liked: true, favorited: true));
-      expect(iconColor(tester, Icons.favorite_rounded), AppColors.brand);
-      expect(iconColor(tester, Icons.bookmark_rounded), AppColors.brand);
-      expect(
-        iconColor(tester, Icons.chat_bubble_outline_rounded),
-        AppColors.textTertiary,
-      );
-    });
+        await pumpRow(post(liked: true, favorited: true));
+        expect(graphic(AppAssets.circleLiked), findsOneWidget);
+        expect(graphic(AppAssets.circleSaved), findsOneWidget);
+        expect(graphic(AppAssets.circleComment), findsOneWidget);
+      },
+    );
 
-    testWidgets('大图模式 icons are white with a shadow, active stays purple', (
-      tester,
-    ) async {
+    testWidgets('大图模式 uses image icons and shadowed counts', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Material(
@@ -696,15 +687,14 @@ void main() {
             child: Column(
               children: [
                 CircleActionButton(
-                  icon: Icons.chat_bubble_outline_rounded,
+                  iconAsset: AppAssets.circleCommentOnImage,
                   label: '评论',
                   count: 3,
                   onTap: () {},
                   dark: true,
                 ),
                 CircleActionButton(
-                  icon: Icons.favorite_border_rounded,
-                  activeIcon: Icons.favorite_rounded,
+                  iconAsset: AppAssets.circleLiked,
                   label: '取消点赞',
                   count: 12,
                   active: true,
@@ -716,12 +706,10 @@ void main() {
           ),
         ),
       );
-      final idle = tester.widget<Icon>(
-        find.byIcon(Icons.chat_bubble_outline_rounded),
-      );
-      expect(idle.color, AppColors.onBrand);
-      expect(idle.shadows, isNotEmpty);
-      expect(iconColor(tester, Icons.favorite_rounded), AppColors.brand);
+      expect(graphic(AppAssets.circleCommentOnImage), findsOneWidget);
+      expect(graphic(AppAssets.circleLiked), findsOneWidget);
+      final count = tester.widget<Text>(find.text('3'));
+      expect(count.style?.shadows, isNotEmpty);
     });
   });
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_assets.dart';
+import '../widgets/app_asset_graphic.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
 import 'app_spacing.dart';
@@ -77,11 +79,7 @@ class AppListRow extends StatelessWidget {
           ],
           if (chevron) ...[
             const SizedBox(width: AppSpace.s4),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: AppColors.textPlaceholder,
-            ),
+            const AppAssetGraphic(AppAssets.listChevron, width: 20, height: 20),
           ],
         ],
       ),

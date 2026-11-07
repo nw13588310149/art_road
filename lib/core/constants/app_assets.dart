@@ -57,6 +57,7 @@ abstract final class AppAssets {
   static const homeQuickQuestionBank = 'assets/images/home/home5.png';
   static const homeQuickGroupChat = 'assets/images/home/home7.png';
   static const homeQuickSchoolCircle = 'assets/images/home/home9.png';
+  static const schoolQuickVideo = 'assets/images/home/schoolVideo.png';
   static const campusHomeActions = 'assets/images/smartCampus/home_actions';
 
   /// 左侧导航选中态背景图：深色（≈ #202020）圆角矩形 PNG，替代原本写死的纯色。
@@ -66,6 +67,13 @@ abstract final class AppAssets {
   /// 顶到底的紫渐变，自带 12 圆角）。替代 [_WeekCard] 中写死的 LinearGradient。
   /// 侧栏底部「需求反馈」入口图标。
   static const homeFeedbackIcon = 'assets/images/home/yj.png';
+  static const newsViews = 'assets/images/home/eye.png';
+  static const profileQr = 'assets/images/info/icon1.png';
+  static const profileRecommend = 'assets/images/info/icon2.png';
+  static const profileFeedback = 'assets/images/info/icon3.png';
+  static const profileService = 'assets/images/info/icon4.png';
+  static const profileRedeem = 'assets/images/info/icon5.png';
+  static const listChevron = 'assets/images/info/y.png';
   static const emptyCoursePlaceholder = 'assets/images/404/kc.png';
   static const emptyCollectionPlaceholder = 'assets/images/404/sc.png';
   static const emptyCloudPlaceholder = 'assets/images/404/wx.png';
@@ -80,9 +88,17 @@ abstract final class AppAssets {
   /// 联网搜索 chip——开启态：紫色描边的地球 PNG，与深度思考激活态色系
   /// （#715EFE）保持一致。
   // 小美同学欢迎区头像：单图自带渐变背景与阴影，直接铺成 52×52
-  static const aiChatXiaoYiIcon = 'assets/images/aichat/qiu.gif';
+  static const aiChatMascot = 'assets/images/aichat/qiu.gif';
+  static const aiChatNew = 'assets/images/aichat/v2/ai_new_chat_plus.svg';
+  static const aiChatMore = 'assets/images/aichat/v2/ai_history_more.svg';
+  static const aiChatAttach = 'assets/images/aichat/v2/ai_attach.svg';
+  static const aiChatThink = 'assets/images/aichat/v2/ai_chip_think_idle.svg';
+  static const aiChatThinkSelected =
+      'assets/images/aichat/v2/ai_chip_think_active.svg';
+  static const aiChatSuggest = 'assets/images/aichat/v2/ai_tool_suggest.svg';
   // 效率工具卡背景图（与原渐变同色调，直接平铺即可）
 
+  static const videoV2CardViews = 'assets/images/video/1.png';
   static const videoV2Back = 'assets/images/video/2.png';
   static const videoV2CenterPlay = 'assets/images/video/3.png';
   static const videoV2CenterPause = 'assets/images/video/4.png';
@@ -94,6 +110,9 @@ abstract final class AppAssets {
   static const videoV2Setting = 'assets/images/video/10.png';
   static const videoV2FullscreenExit = 'assets/images/video/11.png';
   static const videoV2Fullscreen = 'assets/images/video/12.png';
+  static const videoV2Share = 'assets/images/video/13.png';
+  static const videoV2Star = 'assets/images/video/14.png';
+  static const videoV2StarFilled = 'assets/images/video/15.png';
   static const videoV2SeekForward15 = 'assets/images/video/16.png';
 
   static const cloudCategorySelected = 'assets/images/home/nav4.png';
@@ -102,14 +121,22 @@ abstract final class AppAssets {
   static const cloudActionMore = 'assets/images/yunpan/yp2.png';
   static const cloudFolderFilledBg = 'assets/images/yunpan/yp8.png';
   static const cloudFolderEmptyBg = 'assets/images/yunpan/yp9.png';
+  static const addCategory = 'assets/images/yunpan/yp6.png';
 
   /// 我的云盘 / 课件中心 2.0 资产
   /// 1.png 上传弹窗顶部装饰图（含纸张、结构素描）
   static const coursewareUploadHeader = 'assets/images/courseware/1.png';
   static const coursewareSort = 'assets/images/courseware/4.png';
+  static const coursewareRefresh = 'assets/images/courseware/5.png';
   static const coursewareUploadFab = 'assets/images/courseware/6.png';
   static const coursewareNewFolder = 'assets/images/courseware/13.png';
+  static const noteCard = 'assets/images/sound/bg.png';
+  static const noteMore = 'assets/images/note/1.png';
+  static const noteStar = 'assets/images/note/2.png';
   static const noteCreate = 'assets/images/note/3.png';
+  static const noteBack = 'assets/images/note/5.png';
+  static const noteTemplateSelected = 'assets/images/note/6.png';
+  static const noteTemplateIdle = 'assets/images/note/7.png';
   static const coursewareFileTypePdf = 'assets/images/courseware/7.png';
   static const coursewareFileTypeImage = 'assets/images/courseware/8.png';
   static const coursewareFileTypeDoc = 'assets/images/courseware/9.png';
@@ -125,6 +152,14 @@ abstract final class AppAssets {
 
   /// 校圈（社区动态）
   static const xiaoquanHeaderBg = 'assets/images/xiaoquan/bg.png';
+  static const circleLike = 'assets/images/circle/fav2.png';
+  static const circleLiked = 'assets/images/circle/fav1.png';
+  static const circleComment = 'assets/images/circle/msg1.png';
+  static const circleSave = 'assets/images/circle/sc2.png';
+  static const circleSaved = 'assets/images/circle/sc1.png';
+  static const circleLikeOnImage = 'assets/images/circle/fav.png';
+  static const circleCommentOnImage = 'assets/images/circle/msg.png';
+  static const circleSaveOnImage = 'assets/images/circle/sc.png';
 
   /// 课表页顶栏背景（auth 模块 bgtop，白→淡紫渐变 + 顶圆角）
   static const authBgTop = 'assets/images/auth/bgtop.png';

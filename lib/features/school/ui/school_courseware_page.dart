@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
 import '../../consultation/state/consultation_state.dart';
 import '../state/school_page_controller.dart';
@@ -327,41 +328,40 @@ class _QuickEntriesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = state.quickActions;
     return AppCard(
-      padding: const EdgeInsets.only(bottom: AppSpace.s4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.symmetric(vertical: AppSpace.s16),
+      child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.s16,
-              AppSpace.s16,
-              AppSpace.s16,
-              AppSpace.s4,
-            ),
-            child: Text('校园资源', style: AppText.title16),
-          ),
-          for (var i = 0; i < actions.length; i++)
-            AppListRow(
-              title: actions[i].name,
-              leading: AppIconTile(icon: actions[i].icon, size: 36),
-              chevron: true,
-              divider: i < actions.length - 1,
-              onTap: () {
-                final action = actions[i];
-                if (action.comingSoon) {
-                  AppToast.showInfo(context, '「${action.name}」即将开放');
-                  return;
-                }
-                Navigator.pushNamed(
-                  context,
-                  action.route,
-                  arguments: <String, dynamic>{
-                    ..._schoolArgs(state),
-                    if (action.firstMenu != null)
-                      'firstMenu': action.firstMenu.toString(),
-                  },
-                );
-              },
+          for (final action in actions)
+            Expanded(
+              child: AppPressable(
+                onTap: () {
+                  if (action.comingSoon) {
+                    AppToast.showInfo(context, '「${action.name}」即将开放');
+                    return;
+                  }
+                  Navigator.pushNamed(
+                    context,
+                    action.route,
+                    arguments: <String, dynamic>{
+                      ..._schoolArgs(state),
+                      if (action.firstMenu != null)
+                        'firstMenu': action.firstMenu.toString(),
+                    },
+                  );
+                },
+                child: Column(
+                  children: [
+                    AppAssetGraphic(action.iconAsset, width: 44, height: 44),
+                    const SizedBox(height: AppSpace.s8),
+                    Text(
+                      action.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.body14,
+                    ),
+                  ],
+                ),
+              ),
             ),
         ],
       ),

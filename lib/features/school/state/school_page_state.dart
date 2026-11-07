@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 
 class SchoolQuickAction {
   const SchoolQuickAction({
     required this.name,
-    required this.icon,
+    required this.iconAsset,
     required this.route,
     this.firstMenu,
     this.comingSoon = false,
   });
 
   final String name;
-  final IconData icon;
+  final String iconAsset;
   final String route;
 
   /// 1.0 中通过 storage 写入的 firstMenu 初值；2.0 改为路由参数透传给二级页面。
@@ -145,22 +146,22 @@ List<SchoolQuickAction> buildSchoolQuickActions() {
   return const <SchoolQuickAction>[
     SchoolQuickAction(
       name: '课程视频',
-      icon: Icons.play_circle_outline_rounded,
+      iconAsset: AppAssets.schoolQuickVideo,
       route: RoutePaths.schoolVideo,
     ),
     SchoolQuickAction(
       name: '题库',
-      icon: Icons.quiz_outlined,
+      iconAsset: AppAssets.homeQuickQuestionBank,
       route: RoutePaths.schoolCamp,
     ),
     SchoolQuickAction(
       name: '画室官网',
-      icon: Icons.account_balance_outlined,
+      iconAsset: AppAssets.homeQuickSchoolCircle,
       route: RoutePaths.schoolWebsite,
     ),
     SchoolQuickAction(
       name: '校园资讯',
-      icon: Icons.feed_outlined,
+      iconAsset: AppAssets.homeQuickNews,
       route: RoutePaths.consultation,
     ),
   ];

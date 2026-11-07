@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/app_date_time_pickers.dart';
 import '../../data/countdown_repository.dart';
@@ -245,20 +246,20 @@ class _CountdownCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                AppIconButton(
-                  icon: Icons.edit_outlined,
+                AppIconButton.asset(
+                  asset: AppAssets.homeRename,
+                  assetSize: 18,
                   semanticLabel: '编辑',
                   size: AppButtonSize.sm,
                   filled: false,
-                  color: AppColors.textSecondary,
                   onTap: onEdit,
                 ),
-                AppIconButton(
-                  icon: Icons.delete_outline_rounded,
+                AppIconButton.asset(
+                  asset: AppAssets.coursewareActionDelete,
+                  assetSize: 18,
                   semanticLabel: '删除',
                   size: AppButtonSize.sm,
                   filled: false,
-                  color: AppColors.textSecondary,
                   onTap: onDelete,
                 ),
               ],

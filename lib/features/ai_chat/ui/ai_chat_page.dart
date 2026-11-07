@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../../core/widgets/pdf/app_pdf_view.dart';
 import '../data/ai_chat_attachment_picker.dart';
@@ -45,19 +46,19 @@ const _toolShortcuts = <_AiToolShortcut>[
     title: '报考院校梳理',
     subtitle: '按成绩梳理可报院校',
     prompt: '请根据我的成绩帮我梳理适合我的报考院校',
-    icon: Icons.account_balance_outlined,
+    asset: AppAssets.homeQuickSchoolCircle,
   ),
   _AiToolShortcut(
     title: '练习建议',
     subtitle: '按薄弱科目安排练习',
     prompt: '请结合我的成绩，帮我安排一份素描、色彩、速写的练习建议。',
-    icon: Icons.brush_outlined,
+    asset: AppAssets.aiChatSuggest,
   ),
   _AiToolShortcut(
     title: '备考计划',
     subtitle: '生成分阶段备考计划',
     prompt: '请帮我制定一份美术联考备考计划，分阶段说明每日练习重点。',
-    icon: Icons.event_note_outlined,
+    asset: AppAssets.homeQuickNews,
   ),
 ];
 
@@ -201,7 +202,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
             ),
             child: AppButton(
               label: '开启新对话',
-              icon: Icons.add_rounded,
+              iconAsset: AppAssets.aiChatNew,
               variant: AppButtonVariant.quiet,
               size: AppButtonSize.sm,
               expand: true,
@@ -312,12 +313,12 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
             ),
             if (active && onMoreTap != null)
               Builder(
-                builder: (anchor) => AppIconButton(
-                  icon: Icons.more_horiz_rounded,
+                builder: (anchor) => AppIconButton.asset(
+                  asset: AppAssets.aiChatMore,
+                  assetSize: 18,
                   semanticLabel: '对话操作',
                   size: AppButtonSize.sm,
                   filled: false,
-                  color: AppColors.textTertiary,
                   onTap: () => onMoreTap(anchor),
                 ),
               )
@@ -384,7 +385,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
       children: [
         SizedBox.square(
           dimension: 56,
-          child: Image.asset(AppAssets.aiChatXiaoYiIcon, fit: BoxFit.contain),
+          child: Image.asset(AppAssets.aiChatMascot, fit: BoxFit.contain),
         ),
         const SizedBox(width: AppSpace.s16),
         Expanded(
@@ -472,7 +473,11 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                 ),
                 child: Row(
                   children: [
-                    AppIconTile(icon: _toolShortcuts[i].icon, size: 36),
+                    AppAssetGraphic(
+                      _toolShortcuts[i].asset,
+                      width: 36,
+                      height: 36,
+                    ),
                     const SizedBox(width: AppSpace.s12),
                     Expanded(
                       child: Column(
@@ -861,7 +866,9 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                   children: [
                     AppChip(
                       label: '深度思考',
-                      icon: Icons.psychology_outlined,
+                      iconAsset: state.isDeepThinking
+                          ? AppAssets.aiChatThinkSelected
+                          : AppAssets.aiChatThink,
                       selected: state.isDeepThinking,
                       onTap: state.selectedModel.supportsDeepThinking
                           ? controller.toggleDeepThinking
@@ -874,12 +881,12 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                         child: Center(child: AppLoadingIndicator(size: 18)),
                       )
                     else
-                      AppIconButton(
-                        icon: Icons.attach_file_rounded,
+                      AppIconButton.asset(
+                        asset: AppAssets.aiChatAttach,
+                        assetSize: 20,
                         semanticLabel: '添加附件',
                         size: AppButtonSize.sm,
                         filled: false,
-                        color: _textSecondary,
                         onTap: () => _pickAndUploadAttachment(controller),
                       ),
                     const SizedBox(width: AppSpace.s8),
@@ -1056,7 +1063,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         AppMenuItem(
           value: 'delete',
           label: '删除对话',
-          icon: Icons.delete_outline_rounded,
+          iconAsset: AppAssets.coursewareActionDelete,
           danger: true,
         ),
       ],
@@ -1372,13 +1379,13 @@ class _AiToolShortcut {
     required this.title,
     required this.subtitle,
     required this.prompt,
-    required this.icon,
+    required this.asset,
   });
 
   final String title;
   final String subtitle;
   final String prompt;
-  final IconData icon;
+  final String asset;
 }
 
 enum _MessageBlockKind { paragraph, heading, list, quote }

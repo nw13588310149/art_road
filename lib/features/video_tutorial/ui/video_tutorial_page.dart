@@ -3374,16 +3374,18 @@ class _DetailActionBar extends StatelessWidget {
           ),
           AppButton(
             label: '分享',
-            icon: Icons.share_outlined,
-            variant: AppButtonVariant.quiet,
+            iconAsset: AppAssets.videoV2Share,
+            variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
             onTap: onShare,
           ),
           const SizedBox(width: AppSpace.s8),
           AppButton(
             label: isFavorite ? '已收藏' : '收藏',
-            icon: isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-            variant: AppButtonVariant.quiet,
+            iconAsset: isFavorite
+                ? AppAssets.videoV2StarFilled
+                : AppAssets.videoV2Star,
+            variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
             onTap: onFavorite,
           ),
@@ -3637,11 +3639,7 @@ class _ViewCount extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(
-          Icons.visibility_outlined,
-          size: 14,
-          color: AppColors.textTertiary,
-        ),
+        Image.asset(AppAssets.videoV2CardViews, width: 14, height: 14),
         const SizedBox(width: AppSpace.s4),
         Text(
           '$count',

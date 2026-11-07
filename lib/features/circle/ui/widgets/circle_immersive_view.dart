@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
 import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_controller.dart';
@@ -482,8 +483,9 @@ class _ImmersiveActions extends StatelessWidget {
         ),
         SizedBox(height: gapAfterAvatar),
         CircleActionButton(
-          icon: Icons.favorite_border_rounded,
-          activeIcon: Icons.favorite_rounded,
+          iconAsset: post.liked
+              ? AppAssets.circleLiked
+              : AppAssets.circleLikeOnImage,
           label: post.liked ? '取消点赞' : '点赞',
           active: post.liked,
           count: post.likeCount,
@@ -492,7 +494,7 @@ class _ImmersiveActions extends StatelessWidget {
         ),
         SizedBox(height: gapBetween),
         CircleActionButton(
-          icon: Icons.chat_bubble_outline_rounded,
+          iconAsset: AppAssets.circleCommentOnImage,
           label: '评论',
           count: post.commentCount,
           onTap: onComment,
@@ -500,8 +502,9 @@ class _ImmersiveActions extends StatelessWidget {
         ),
         SizedBox(height: gapBetween),
         CircleActionButton(
-          icon: Icons.bookmark_border_rounded,
-          activeIcon: Icons.bookmark_rounded,
+          iconAsset: post.favorited
+              ? AppAssets.circleSaved
+              : AppAssets.circleSaveOnImage,
           label: post.favorited ? '取消收藏' : '收藏',
           active: post.favorited,
           count: post.favoriteCount,

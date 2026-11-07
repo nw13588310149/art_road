@@ -597,14 +597,7 @@ class _CloudSidebar extends StatelessWidget {
           const SizedBox(height: AppSpace.s8),
           _StorageUsage(state: state),
           const SizedBox(height: AppSpace.s8),
-          AppButton(
-            label: '新建分类',
-            iconAsset: AppAssets.coursewareNewFolder,
-            variant: AppButtonVariant.quiet,
-            size: AppButtonSize.sm,
-            expand: true,
-            onTap: onAddCategory,
-          ),
+          AppAddCategoryButton(onTap: onAddCategory),
         ],
       ),
     );
@@ -816,10 +809,8 @@ class _CloudContentArea extends StatelessWidget {
         Row(
           children: [
             if (state.isFolderView) ...[
-              AppIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
+              AppIconButton.back(
                 semanticLabel: '返回文件夹列表',
-                size: AppButtonSize.sm,
                 onTap: onBackToOverview,
               ),
               const SizedBox(width: AppSpace.s8),
@@ -868,6 +859,14 @@ class _CloudContentArea extends StatelessWidget {
               variant: AppButtonVariant.secondary,
               size: AppButtonSize.sm,
               onTap: () => onSortChanged(state.sortType),
+            ),
+            const SizedBox(width: AppSpace.s8),
+            AppIconButton.asset(
+              asset: AppAssets.coursewareRefresh,
+              assetSize: 18,
+              semanticLabel: '刷新',
+              size: AppButtonSize.sm,
+              onTap: onRefresh,
             ),
           ],
         ),

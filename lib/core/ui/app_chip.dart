@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_font.dart';
+import '../widgets/app_asset_graphic.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
 import 'app_spacing.dart';
@@ -14,14 +15,16 @@ class AppChip extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.icon,
+    this.iconAsset,
     this.enabled = true,
     super.key,
-  });
+  }) : assert(icon == null || iconAsset == null);
 
   final String label;
   final bool selected;
   final VoidCallback? onTap;
   final IconData? icon;
+  final String? iconAsset;
   final bool enabled;
 
   @override
@@ -44,8 +47,11 @@ class AppChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
-              Icon(icon, size: 14, color: foreground),
+            if (iconAsset != null || icon != null) ...[
+              if (iconAsset case final asset?)
+                AppAssetGraphic(asset, width: 14, height: 14)
+              else
+                Icon(icon, size: 14, color: foreground),
               const SizedBox(width: AppSpace.s4),
             ],
             Text(

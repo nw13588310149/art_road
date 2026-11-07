@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../../shell/state/shell_controller.dart';
 import '../state/personal_center_controller.dart';
 import '../state/personal_center_state.dart';
@@ -295,7 +297,7 @@ class _ProfileCard extends StatelessWidget {
                 const SizedBox(width: AppSpace.s12),
                 AppButton(
                   label: '编辑资料',
-                  icon: Icons.edit_outlined,
+                  iconAsset: AppAssets.homeRename,
                   variant: AppButtonVariant.quiet,
                   size: AppButtonSize.sm,
                   onTap: onEdit,
@@ -504,15 +506,23 @@ class _ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final common = <_MenuEntry>[
-      _MenuEntry(Icons.qr_code_2_rounded, '我的二维码', actions.showMyQr),
+      _MenuEntry.asset(AppAssets.profileQr, '我的二维码', actions.showMyQr),
       if (checkStatusEnabled) ...[
-        _MenuEntry(Icons.share_outlined, '推荐美术之路给好友', actions.recommend),
-        _MenuEntry(Icons.card_giftcard_outlined, '兑换中心', actions.redeem),
+        _MenuEntry.asset(
+          AppAssets.profileRecommend,
+          '推荐美术之路给好友',
+          actions.recommend,
+        ),
+        _MenuEntry.asset(AppAssets.profileRedeem, '兑换中心', actions.redeem),
       ],
     ];
     final support = <_MenuEntry>[
-      _MenuEntry(Icons.feedback_outlined, '意见反馈', actions.feedback),
-      _MenuEntry(Icons.support_agent_outlined, '联系客服', actions.contactService),
+      _MenuEntry.asset(AppAssets.profileFeedback, '意见反馈', actions.feedback),
+      _MenuEntry.asset(
+        AppAssets.profileService,
+        '联系客服',
+        actions.contactService,
+      ),
       _MenuEntry(Icons.menu_book_outlined, '操作指南', actions.openGuide),
       _MenuEntry(Icons.description_outlined, '服务协议与隐私政策', actions.openTerms),
     ];
@@ -528,9 +538,11 @@ class _ServiceCard extends StatelessWidget {
 }
 
 class _MenuEntry {
-  const _MenuEntry(this.icon, this.label, this.onTap);
+  const _MenuEntry(this.icon, this.label, this.onTap) : iconAsset = null;
+  const _MenuEntry.asset(this.iconAsset, this.label, this.onTap) : icon = null;
 
-  final IconData icon;
+  final IconData? icon;
+  final String? iconAsset;
   final String label;
   final VoidCallback onTap;
 }
@@ -560,14 +572,12 @@ class _MenuGroup extends StatelessWidget {
           for (var i = 0; i < entries.length; i++)
             AppListRow(
               title: entries[i].label,
-              leading: Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: AppColors.surfaceSubtle,
-                  borderRadius: AppRadius.br8,
-                ),
-                child: Icon(entries[i].icon, size: 18, color: AppColors.ink),
+              leading: SizedBox.square(
+                dimension: 24,
+                child: switch (entries[i].iconAsset) {
+                  final String asset => AppAssetGraphic(asset),
+                  null => Icon(entries[i].icon, size: 20, color: AppColors.ink),
+                },
               ),
               chevron: true,
               divider: i < entries.length - 1,

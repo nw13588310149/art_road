@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_assets.dart';
 import '../widgets/app_asset_graphic.dart';
 import 'app_badge.dart';
 import 'app_colors.dart';
@@ -45,19 +46,21 @@ class AppIconButton extends StatelessWidget {
        showTooltip = true,
        _isBack = false;
 
-  const AppIconButton.back({required this.onTap, super.key})
-    : icon = Icons.chevron_left,
-      _asset = null,
-      _assetSize = null,
-      semanticLabel = '返回',
-      size = AppButtonSize.sm,
-      filled = true,
-      background = AppColors.surface,
-      color = AppColors.ink,
-      badgeCount = 0,
-      enabled = true,
-      showTooltip = true,
-      _isBack = true;
+  const AppIconButton.back({
+    required this.onTap,
+    this.semanticLabel = '返回',
+    super.key,
+  }) : icon = null,
+       _asset = AppAssets.noteBack,
+       _assetSize = null,
+       size = AppButtonSize.sm,
+       filled = false,
+       background = AppColors.surface,
+       color = AppColors.ink,
+       badgeCount = 0,
+       enabled = true,
+       showTooltip = true,
+       _isBack = true;
 
   final IconData? icon;
   final String? _asset;
@@ -89,10 +92,9 @@ class AppIconButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: filled ? background : null,
         borderRadius: md ? AppRadius.br12 : AppRadius.br8,
-        border: _isBack ? Border.all(color: AppColors.lineSoft) : null,
       ),
       child: image == null
-          ? Icon(icon, size: md || _isBack ? 20 : 18, color: color)
+          ? Icon(icon, size: md ? 20 : 18, color: color)
           : AppAssetGraphic(
               image,
               width: _assetSize ?? extent,
