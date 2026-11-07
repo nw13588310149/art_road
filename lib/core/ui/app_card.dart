@@ -17,6 +17,7 @@ class AppCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(AppSpace.card),
     this.onTap,
     this.color = AppColors.surface,
+    this.backgroundImage,
     this.radius = AppRadius.card,
     this.bordered = true,
     super.key,
@@ -29,6 +30,7 @@ class AppCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
   final Color color;
+  final DecorationImage? backgroundImage;
   final double radius;
 
   /// 放在白色面板里的浅灰子卡片可关掉描边。
@@ -74,6 +76,7 @@ class AppCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color,
+        image: backgroundImage,
         borderRadius: BorderRadius.circular(radius),
         border: bordered ? Border.all(color: AppColors.lineSoft) : null,
       ),

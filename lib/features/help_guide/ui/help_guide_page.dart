@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/demo/demo_accounts.dart';
 import '../../../core/demo/demo_config.dart';
 import '../../../core/providers/app_providers.dart';
@@ -104,13 +105,19 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
         ? state.items.length
         : state.items.where((item) => item.categoryId == categoryId).length;
 
-    return AppCard(
-      padding: EdgeInsets.zero,
-      bordered: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppPageHeader(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DecoratedBox(
+          decoration: const BoxDecoration(
+            borderRadius: AppRadius.br12,
+            color: AppColors.surface,
+            image: DecorationImage(
+              image: AssetImage(AppAssets.profileFeedbackBg),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: AppPageHeader(
             title: '操作指南',
             subtitle: '各功能的操作说明',
             onBack: _back,
@@ -141,55 +148,63 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
                       Navigator.of(context).pushNamed(RoutePaths.designSystem),
                 ),
             ],
-            bottom: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: AppTabs<String>(
-                tabs: [
-                  for (final category in state.categories)
-                    AppTab(
-                      value: category.id,
-                      label: category.label,
-                      count: countOf(category.id),
-                    ),
-                ],
-                value: state.selectedCategoryId,
-                onChanged: controller.selectCategory,
+          ),
+        ),
+        const SizedBox(height: AppSpace.s12),
+        AppCard(
+          padding: const EdgeInsets.all(AppSpace.s4),
+          bordered: false,
+          radius: 8,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: AppSegmented<String>(
+              trackColor: AppColors.surface,
+              selectedColor: AppColors.ink,
+              segments: [
+                for (final category in state.categories)
+                  AppSegment(
+                    value: category.id,
+                    label: '${category.label} (${countOf(category.id)})',
+                  ),
+              ],
+              value: state.selectedCategoryId,
+              onChanged: controller.selectCategory,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpace.s12),
+        if (widget.demoMode)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s4,
+              AppSpace.page,
+              AppSpace.s12,
+            ),
+            child: AppNotice(
+              message: _guidesSkipped == true
+                  ? '演示版：新手引导已跳过，各身份进入首页时不再弹出。'
+                  : '演示版：各身份第一次进入首页时会弹出新手引导。',
+              action: AppButton(
+                label: _guidesSkipped == true ? '恢复新手引导' : '跳过新手引导',
+                variant: AppButtonVariant.text,
+                size: AppButtonSize.sm,
+                onTap: _guidesSkipped == null ? null : _toggleGuides,
               ),
             ),
           ),
-          if (widget.demoMode)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpace.page,
-                AppSpace.s4,
-                AppSpace.page,
-                AppSpace.s12,
-              ),
-              child: AppNotice(
-                message: _guidesSkipped == true
-                    ? '演示版：新手引导已跳过，各身份进入首页时不再弹出。'
-                    : '演示版：各身份第一次进入首页时会弹出新手引导。',
-                action: AppButton(
-                  label: _guidesSkipped == true ? '恢复新手引导' : '跳过新手引导',
-                  variant: AppButtonVariant.text,
-                  size: AppButtonSize.sm,
-                  onTap: _guidesSkipped == null ? null : _toggleGuides,
-                ),
-              ),
-            ),
-          Expanded(
-            child: items.isEmpty
-                ? AppEmptyState(
-                    icon: Icons.search_off_rounded,
-                    title: '没有找到相关指南',
-                    description: '换个关键词试试，或切换到「全部」分类',
-                    actionLabel: '清除搜索',
-                    onAction: _clearSearch,
-                  )
-                : _GuideGrid(items: items),
-          ),
-        ],
-      ),
+        Expanded(
+          child: items.isEmpty
+              ? AppEmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: '没有找到相关指南',
+                  description: '换个关键词试试，或切换到「全部」分类',
+                  actionLabel: '清除搜索',
+                  onAction: _clearSearch,
+                )
+              : _GuideGrid(items: items),
+        ),
+      ],
     );
   }
 }

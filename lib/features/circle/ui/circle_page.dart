@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
 import '../state/circle_controller.dart';
 import '../state/circle_governance_controller.dart';
@@ -104,6 +105,11 @@ class CirclePage extends ConsumerWidget {
               AppCard(
                 padding: EdgeInsets.zero,
                 bordered: false,
+                backgroundImage: const DecorationImage(
+                  image: AssetImage(AppAssets.xiaoquanHeaderBg),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.centerRight,
+                ),
                 child: AppPageHeader(
                   title: governance ? '校圈治理' : '校圈',
                   subtitle: governance

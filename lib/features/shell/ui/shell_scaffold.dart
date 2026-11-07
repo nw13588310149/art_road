@@ -21,6 +21,16 @@ import 'widgets/school_binding_overlay.dart';
 import 'widgets/shell_left_nav.dart';
 import 'widgets/shell_top_bar.dart';
 
+const _routesWithOwnSurface = {
+  RoutePaths.home,
+  RoutePaths.school,
+  RoutePaths.smartCampus,
+  RoutePaths.circle,
+  RoutePaths.helpGuide,
+  RoutePaths.personalCenter,
+  RoutePaths.mock,
+};
+
 class ShellScaffold extends ConsumerStatefulWidget {
   const ShellScaffold({
     required this.currentRoute,
@@ -195,10 +205,12 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         onOpenNotice: (item) => openShellNotice(context, ref, item),
       ),
       child: RepaintBoundary(
-        child: ShellPageSurface(
-          clipBehavior: Clip.antiAlias,
-          child: widget.child,
-        ),
+        child: _routesWithOwnSurface.contains(widget.currentRoute)
+            ? widget.child
+            : ShellPageSurface(
+                clipBehavior: Clip.antiAlias,
+                child: widget.child,
+              ),
       ),
     );
   }

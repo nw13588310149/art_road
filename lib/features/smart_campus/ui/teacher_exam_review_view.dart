@@ -160,7 +160,7 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
         actions: [
           AppButton(
             label: '历史月考',
-            icon: Icons.history_rounded,
+            iconAsset: AppAssets.teacherExamHistoryIcon,
             variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
             onTap: _openHistoryDrawer,

@@ -898,10 +898,16 @@ class _StatusTabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppTabs<_StatusTab>(
-      tabs: [
+    return SmartCampusStatusTabs<_StatusTab>(
+      segments: [
         for (final o in _options)
-          AppTab(value: o.$1, label: o.$2, count: _countOf(o.$1)),
+          AppSegment(
+            value: o.$1,
+            label: switch (_countOf(o.$1)) {
+              final int count => '${o.$2} ($count)',
+              null => o.$2,
+            },
+          ),
       ],
       value: selected,
       onChanged: onSelected,

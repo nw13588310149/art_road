@@ -835,14 +835,15 @@ class _TeacherHomeworkReviewViewState
         actions: [
           AppButton(
             label: '历史作业',
-            icon: Icons.history_rounded,
+            iconAsset: AppAssets.homeworkHistoryIcon,
             variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
             onTap: _openHistoryDrawer,
           ),
           AppButton(
             label: '发布作业',
-            icon: Icons.add_rounded,
+            iconAsset: AppAssets.homeworkPublishIcon,
+            variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
             onTap: _openPublishDrawer,
           ),
@@ -1050,9 +1051,10 @@ class _StatusTabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppTabs<int>(
-      tabs: [
-        for (var i = 0; i < tabs.length; i++) AppTab(value: i, label: tabs[i]),
+    return SmartCampusStatusTabs<int>(
+      segments: [
+        for (var i = 0; i < tabs.length; i++)
+          AppSegment(value: i, label: tabs[i]),
       ],
       value: activeIdx,
       onChanged: onTap,

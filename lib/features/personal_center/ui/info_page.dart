@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
 import '../../../core/widgets/app_wheel_picker_sheet.dart';
@@ -150,7 +151,7 @@ class _InfoBody extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpace.s16),
+              const SizedBox(height: AppSpace.s8),
               _FieldGroup(
                 title: isTeacher ? '任教信息' : '学籍信息',
                 rows: [
@@ -212,7 +213,7 @@ class _InfoBody extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: AppSpace.s16),
+              const SizedBox(height: AppSpace.s8),
               _FieldGroup(
                 title: '账号安全',
                 rows: [
@@ -272,21 +273,12 @@ class _FieldGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      bordered: false,
-      padding: const EdgeInsets.only(bottom: AppSpace.s4),
+    return Semantics(
+      container: true,
+      label: title,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.s16,
-              AppSpace.s16,
-              AppSpace.s16,
-              AppSpace.s4,
-            ),
-            child: Text(title, style: AppText.title16),
-          ),
           for (var i = 0; i < rows.length; i++)
             if (i < rows.length - 1)
               DecoratedBox(
@@ -664,6 +656,7 @@ class _GenderDialogState extends State<_GenderDialog> {
   Widget build(BuildContext context) {
     return AppDialog(
       title: '选择性别',
+      headerAsset: AppAssets.profileGenderBg,
       actions: [
         AppButton(
           label: '取消',
@@ -675,14 +668,57 @@ class _GenderDialogState extends State<_GenderDialog> {
           onTap: () => Navigator.of(context).pop(_selected),
         ),
       ],
-      child: AppSegmented<String>(
-        segments: const [
-          AppSegment(value: '男', label: '男'),
-          AppSegment(value: '女', label: '女'),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (final (value, label, icon, selectedIcon) in const [
+            (
+              '男',
+              '男生',
+              AppAssets.profileGenderMale,
+              AppAssets.profileGenderMaleSelected,
+            ),
+            (
+              '女',
+              '女生',
+              AppAssets.profileGenderFemale,
+              AppAssets.profileGenderFemaleSelected,
+            ),
+          ]) ...[
+            if (value == '女') const SizedBox(width: AppSpace.s24),
+            Flexible(
+              child: AppPressable(
+                selected: _selected == value,
+                onTap: () => setState(() => _selected = value),
+                child: Container(
+                  width: 134,
+                  height: 134,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: AppRadius.br16,
+                    border: Border.all(
+                      color: _selected == value
+                          ? AppColors.brand
+                          : AppColors.lineSoft,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        _selected == value ? selectedIcon : icon,
+                        width: 54,
+                        height: 54,
+                      ),
+                      const SizedBox(height: AppSpace.s12),
+                      Text(label, style: AppText.title16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
-        value: _selected,
-        expand: true,
-        onChanged: (value) => setState(() => _selected = value),
       ),
     );
   }

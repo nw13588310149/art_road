@@ -454,6 +454,10 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   Widget _buildToolCard() {
     return AppCard(
       color: AppColors.brandWash,
+      backgroundImage: const DecorationImage(
+        image: AssetImage(AppAssets.aiChatToolBg),
+        fit: BoxFit.cover,
+      ),
       bordered: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

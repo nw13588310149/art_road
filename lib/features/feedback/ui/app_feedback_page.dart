@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
 import '../../smart_campus/data/principal_mailbox_repository.dart';
 
@@ -119,10 +121,25 @@ class _AppFeedbackPageState extends ConsumerState<AppFeedbackPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppPageHeader(
-            title: '意见反馈',
-            subtitle: '想要的范画资料、功能建议都可以告诉我们',
-            onBack: navigator.canPop() ? navigator.pop : null,
+          DecoratedBox(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage(AppAssets.profileFeedbackBg),
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+              ),
+            ),
+            child: AppPageHeader(
+              title: '意见反馈',
+              subtitle: '想要的范画资料、功能建议都可以告诉我们',
+              onBack: () {
+                if (navigator.canPop()) {
+                  navigator.pop();
+                } else {
+                  navigator.pushReplacementNamed(RoutePaths.home);
+                }
+              },
+            ),
           ),
           Expanded(
             child: Padding(
@@ -184,8 +201,9 @@ class _FeedbackForm extends StatelessWidget {
             controller: controller,
             hint: '请描述你的意见或建议，如想要的范画资源、作品点评或画室工具的使用体验',
             multiline: true,
-            minLines: 4,
-            maxLines: 4,
+            minLines: 6,
+            maxLines: 6,
+            backgroundColor: AppColors.surfaceSubtle,
             maxLength: _kMaxLength,
             errorText: errorText,
             onChanged: (_) => onChanged(),
@@ -195,7 +213,7 @@ class _FeedbackForm extends StatelessWidget {
           const SizedBox(height: AppSpace.s16),
           Center(
             child: SizedBox(
-              width: 240,
+              width: 350,
               child: AppButton(
                 label: '提交反馈',
                 loading: submitting,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/art/art_subject.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/ui/ui.dart';
@@ -158,9 +159,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    if (!state.loading &&
-        !state.hasContent &&
-        state.errorMessage.isNotEmpty) {
+    if (!state.loading && !state.hasContent && state.errorMessage.isNotEmpty) {
       return AppErrorState(
         title: '首页加载失败',
         description: state.errorMessage,
@@ -432,8 +431,7 @@ class _QuickActionBoard extends StatelessWidget {
                       child: row * columns + col < actions.length
                           ? _QuickActionItem(
                               action: actions[row * columns + col],
-                              onTap: () =>
-                                  onTap(actions[row * columns + col]),
+                              onTap: () => onTap(actions[row * columns + col]),
                             )
                           : const SizedBox.shrink(),
                     ),
@@ -555,9 +553,7 @@ class _CoursePanelState extends State<_CoursePanel> {
   static String _weekdayOf(String date) {
     final parsed = DateTime.tryParse(date);
     if (parsed == null) return '';
-    return const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][parsed
-            .weekday -
-        1];
+    return const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][parsed.weekday - 1];
   }
 
   @override
@@ -633,8 +629,7 @@ class _CoursePanelState extends State<_CoursePanel> {
                   itemCount: courses.length,
                   separatorBuilder: (_, _) =>
                       const SizedBox(height: AppSpace.s8),
-                  itemBuilder: (context, index) =>
-                      _courseCard(courses[index]),
+                  itemBuilder: (context, index) => _courseCard(courses[index]),
                 ),
               ),
           ],
@@ -688,7 +683,13 @@ class _WeekDayChip extends StatelessWidget {
         width: width,
         padding: const EdgeInsets.symmetric(vertical: AppSpace.s8),
         decoration: BoxDecoration(
-          color: today ? AppColors.brand : AppColors.surfaceSubtle,
+          color: today ? AppColors.brand : AppColors.surface,
+          image: today
+              ? const DecorationImage(
+                  image: AssetImage(AppAssets.homeTodayBg),
+                  fit: BoxFit.cover,
+                )
+              : null,
           borderRadius: AppRadius.br12,
         ),
         child: Column(
@@ -711,7 +712,7 @@ class _WeekDayChip extends StatelessWidget {
             AppTag(
               label: '${item.courseCount} 节',
               color: today ? AppColors.brandDeep : AppColors.textSecondary,
-              background: AppColors.surface,
+              background: today ? AppColors.surface : AppColors.surfaceSubtle,
             ),
           ],
         ),

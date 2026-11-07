@@ -21,6 +21,7 @@ class AppDialog extends StatelessWidget {
     this.fillActions = true,
     this.width = AppSize.dialog,
     this.showClose,
+    this.headerAsset,
     super.key,
   });
 
@@ -39,6 +40,7 @@ class AppDialog extends StatelessWidget {
 
   /// 右上角关闭按钮；默认没有底部按钮时才显示。
   final bool? showClose;
+  final String? headerAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -61,8 +63,8 @@ class AppDialog extends StatelessWidget {
           child: Material(
             type: MaterialType.transparency,
             child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
@@ -72,6 +74,13 @@ class AppDialog extends StatelessWidget {
                   ],
                   stops: [0, 0.21, 1],
                 ),
+                image: headerAsset == null
+                    ? null
+                    : DecorationImage(
+                        image: AssetImage(headerAsset!),
+                        fit: BoxFit.fitWidth,
+                        alignment: Alignment.topCenter,
+                      ),
                 borderRadius: AppRadius.br24,
                 boxShadow: AppShadow.overlay,
               ),

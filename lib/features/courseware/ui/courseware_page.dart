@@ -14,6 +14,7 @@ import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
 import '../../../core/widgets/class_share_drawer.dart';
+import '../../../core/widgets/cloud_folder_card_artwork.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -841,13 +842,22 @@ class _CloudContentArea extends StatelessWidget {
                   ],
                 ),
               ),
-            const Spacer(),
-            SizedBox(
-              width: 240,
-              child: AppSearchField(
-                controller: searchController,
-                hint: state.isFolderView ? '搜索资料名称' : '搜索文件夹',
-                onCleared: onClearSearch,
+          ],
+        ),
+        const SizedBox(height: AppSpace.s16),
+        Row(
+          children: [
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: 324,
+                  child: AppSearchField(
+                    controller: searchController,
+                    hint: state.isFolderView ? '搜索资料名称' : '搜索文件夹',
+                    onCleared: onClearSearch,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: AppSpace.s8),
@@ -861,10 +871,10 @@ class _CloudContentArea extends StatelessWidget {
               onTap: () => onSortChanged(state.sortType),
             ),
             const SizedBox(width: AppSpace.s8),
-            AppIconButton.asset(
-              asset: AppAssets.coursewareRefresh,
-              assetSize: 18,
-              semanticLabel: '刷新',
+            AppButton(
+              label: '刷新',
+              iconAsset: AppAssets.coursewareRefresh,
+              variant: AppButtonVariant.secondary,
               size: AppButtonSize.sm,
               onTap: onRefresh,
             ),
@@ -911,10 +921,12 @@ class _CloudFoldersGrid extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: AppSpace.s8),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: _cloudColumnsFor(constraints.maxWidth),
+          crossAxisCount: constraints.maxWidth >= 700
+              ? 4
+              : (constraints.maxWidth >= 500 ? 3 : 2),
           mainAxisSpacing: AppSpace.s16,
           crossAxisSpacing: AppSpace.s16,
-          mainAxisExtent: 124,
+          childAspectRatio: CloudFolderCardArtwork.gridChildAspectRatio,
         ),
         itemCount: items.length,
         itemBuilder: (context, index) {
@@ -930,7 +942,7 @@ class _CloudFoldersGrid extends StatelessWidget {
   }
 }
 
-class _FolderCard extends StatelessWidget {
+class _FolderCard extends StatefulWidget {
   const _FolderCard({
     required this.item,
     required this.onTap,
@@ -942,57 +954,81 @@ class _FolderCard extends StatelessWidget {
   final ValueChanged<_CloudMenuAction> onAction;
 
   @override
+  State<_FolderCard> createState() => _FolderCardState();
+}
+
+class _FolderCardState extends State<_FolderCard> {
+  final _menuKey = GlobalKey();
+
+  Future<void> _openMenu() async {
+    final anchor = _menuKey.currentContext;
+    if (anchor == null) return;
+    final action = await _showCloudMenu(anchor);
+    if (mounted && action != null) widget.onAction(action);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final meta = <String>[
+    final item = widget.item;
+    final meta = [
       '${item.fileCount} 个文件',
-      if (item.dateLabel.isNotEmpty) item.dateLabel,
+      if (item.sizeLabel.isNotEmpty) item.sizeLabel,
     ].join(' · ');
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s16,
-        AppSpace.s12,
-        AppSpace.s4,
-        AppSpace.s12,
-      ),
-      onTap: onTap,
+    return AppPressable(
+      onTap: widget.onTap,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              AppAssetGraphic(
-                item.hasContent
-                    ? AppAssets.cloudFolderFilledBg
-                    : AppAssets.cloudFolderEmptyBg,
-                width: 44,
-                height: 36,
+          Expanded(
+            child: AspectRatio(
+              aspectRatio: CloudFolderCardArtwork.artworkAspectRatio,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CloudFolderCardArtwork(
+                    hasContent: item.hasContent,
+                    menuTriggerKey: _menuKey,
+                    onMenuTap: _openMenu,
+                  ),
+                  Positioned(
+                    left: CloudFolderCardArtwork.metaLeftInset,
+                    right: AppSpace.s12,
+                    bottom: CloudFolderCardArtwork.metaSizeBottomInset,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (item.dateLabel.isNotEmpty)
+                          Text(
+                            item.dateLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.caption12,
+                          ),
+                        Text(
+                          meta,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption12.copyWith(
+                            color: AppColors.brandDeep,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const Spacer(),
-              Builder(
-                builder: (anchor) => AppIconButton.asset(
-                  asset: AppAssets.cloudActionMore,
-                  assetSize: 20,
-                  semanticLabel: '文件夹操作',
-                  size: AppButtonSize.sm,
-                  filled: false,
-                  onTap: () async {
-                    final action = await _showCloudMenu(anchor);
-                    if (action != null) {
-                      onAction(action);
-                    }
-                  },
-                ),
-              ),
-            ],
+            ),
           ),
-          const Spacer(),
-          Text(
-            item.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.body14Strong,
+          const SizedBox(height: CloudFolderCardArtwork.titleGap),
+          SizedBox(
+            height: CloudFolderCardArtwork.titleAreaHeight,
+            child: Text(
+              item.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: AppText.body13,
+            ),
           ),
-          Text(meta, style: AppText.caption12),
         ],
       ),
     );

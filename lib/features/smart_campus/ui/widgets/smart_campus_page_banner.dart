@@ -4,6 +4,42 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../shell/ui/shell_layout.dart';
 
+/// 作业等页面独立的白色筛选条，选中项使用深色底。
+class SmartCampusStatusTabs<T> extends StatelessWidget {
+  const SmartCampusStatusTabs({
+    required this.segments,
+    required this.value,
+    required this.onChanged,
+    super.key,
+  });
+
+  final List<AppSegment<T>> segments;
+  final T value;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: AppCard(
+        padding: const EdgeInsets.all(AppSpace.s4),
+        bordered: false,
+        radius: 8,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: AppSegmented<T>(
+            segments: segments,
+            value: value,
+            onChanged: onChanged,
+            trackColor: AppColors.surface,
+            selectedColor: AppColors.ink,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// 智慧校园二级页统一顶栏背景（与请假审批页 [AppAssets.xiaoquanHeaderBg] 一致）。
 BoxDecoration smartCampusPageBannerDecoration(
   double Function(double) ui, {
@@ -63,7 +99,7 @@ class SmartCampusScheduleTopBar extends StatelessWidget {
 
 /// 学生端二级页通用壳层：
 ///
-/// 顶部 [header] 工具栏固定在白色内容容器内，**不随内容滚动**；与下方
+/// 顶部 [header] 使用独立背景，**不随内容滚动**；与下方
 /// 主内容容器之间留 [headerGap] 间距（即「容器到顶部标题栏有间距」）。
 /// 主内容容器填满剩余高度并以 16 圆角裁切滚动内容；容器内部 **不再叠加**
 /// 任何底部 padding —— 滚动到底时由外层 dashboard 的 16px contentPadding
@@ -77,7 +113,7 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
     super.key,
     required this.header,
     required this.body,
-    this.headerGap = 4,
+    this.headerGap = 16,
     this.bodyBorderRadius = 16,
     this.bodyTopClipRadius,
     this.bodyScrollable = true,
@@ -110,7 +146,10 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        header,
+        DecoratedBox(
+          decoration: smartCampusPageBannerDecoration(ui),
+          child: header,
+        ),
         SizedBox(height: ui(headerGap)),
         Expanded(
           child: ClipRRect(

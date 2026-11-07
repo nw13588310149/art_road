@@ -30,6 +30,7 @@ class AppInputField extends StatefulWidget {
     this.required = false,
     this.enabled = true,
     this.readOnly = false,
+    this.backgroundColor = AppColors.surface,
     this.autofocus = false,
     this.focusNode,
     this.size = AppControlSize.md,
@@ -59,6 +60,7 @@ class AppInputField extends StatefulWidget {
   final bool required;
   final bool enabled;
   final bool readOnly;
+  final Color backgroundColor;
   final bool autofocus;
   final FocusNode? focusNode;
   final AppControlSize size;
@@ -173,7 +175,9 @@ class _AppInputFieldState extends State<AppInputField> {
       ),
       alignment: widget.multiline ? Alignment.topLeft : Alignment.centerLeft,
       decoration: BoxDecoration(
-        color: widget.readOnly ? AppColors.surfaceSubtle : AppColors.surface,
+        color: widget.readOnly
+            ? AppColors.surfaceSubtle
+            : widget.backgroundColor,
         borderRadius: AppRadius.br8,
         border: Border.all(color: borderColor),
       ),

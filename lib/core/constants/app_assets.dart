@@ -73,6 +73,16 @@ abstract final class AppAssets {
   static const profileFeedback = 'assets/images/info/icon3.png';
   static const profileService = 'assets/images/info/icon4.png';
   static const profileRedeem = 'assets/images/info/icon5.png';
+  static const profileHeroBg = 'assets/images/info/bg.png';
+  static const profilePlanBg = 'assets/images/info/card.png';
+  static const profileVipMark = 'assets/images/info/vip.png';
+  static const profileVipActivated = 'assets/images/info/2.png';
+  static const profileFeedbackBg = 'assets/images/info/topBg.png';
+  static const profileGenderBg = 'assets/images/info/g.png';
+  static const profileGenderMale = 'assets/images/info/man.png';
+  static const profileGenderMaleSelected = 'assets/images/info/man1.png';
+  static const profileGenderFemale = 'assets/images/info/women.png';
+  static const profileGenderFemaleSelected = 'assets/images/info/women1.png';
   static const listChevron = 'assets/images/info/y.png';
   static const emptyCoursePlaceholder = 'assets/images/404/kc.png';
   static const emptyCollectionPlaceholder = 'assets/images/404/sc.png';
@@ -89,6 +99,8 @@ abstract final class AppAssets {
   /// （#715EFE）保持一致。
   // 小美同学欢迎区头像：单图自带渐变背景与阴影，直接铺成 52×52
   static const aiChatMascot = 'assets/images/aichat/qiu.gif';
+  static const aiChatToolBg = 'assets/images/home/aibg.png';
+  static const homeTodayBg = 'assets/images/home/bgc.png';
   static const aiChatNew = 'assets/images/aichat/v2/ai_new_chat_plus.svg';
   static const aiChatMore = 'assets/images/aichat/v2/ai_history_more.svg';
   static const aiChatAttach = 'assets/images/aichat/v2/ai_attach.svg';
@@ -327,6 +339,12 @@ abstract final class AppAssets {
   /// 作业与批改 · 发布作业截止时间 / 学生我的作业截止时间。
   static const homeworkDeadlineIcon =
       'assets/images/smartCampus/teacher/homework/deadline_icon.png';
+  static const homeworkHistoryIcon =
+      'assets/images/smartCampus/teacher/homework/history_icon.png';
+  static const homeworkPublishIcon =
+      'assets/images/smartCampus/teacher/homework/publish_icon.png';
+  static const teacherExamHistoryIcon =
+      'assets/images/smartCampus/teacher/exam/history_icon.png';
 
   /// 作业点评抽屉 · 附件下载 / 在线预览 / 语音点评 / 删除语音。
   static const homeworkReviewDownloadIcon =
