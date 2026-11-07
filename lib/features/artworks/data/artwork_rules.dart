@@ -6,13 +6,22 @@ abstract final class ArtworkRules {
   static const maxImageBytes = 20 * 1024 * 1024;
   static const titleLimit = 100;
   static const subjectLimit = 50;
-  static const descriptionLimit = 2000;
+
+  /// 作品说明写练习重点即可，比接口上限（2000）收紧。
+  static const descriptionLimit = 200;
   static const commentLimit = 2000;
   static const tagsPerReview = 8;
   static const tagLimit = 50;
   static const tagNameLimit = 50;
   static const tagExplanationLimit = 500;
   static const defaultFullScore = 100.0;
+
+  /// 点评标签分「问题」「亮点」两类，接口仍以颜色字段保存：亮点固定绿色，其余都按问题处理。
+  static const problemTagColor = '#B9770F';
+  static const highlightTagColor = '#3B9A6E';
+
+  static bool isHighlightTag(String color, {bool positive = false}) =>
+      positive || color.trim().toUpperCase() == highlightTagColor;
 
   static final _hexColor = RegExp(r'^#[0-9A-Fa-f]{6}$');
 
@@ -182,7 +191,18 @@ abstract final class ArtworkRules {
     return null;
   }
 
-  /// 分数文本：最多两位小数并去掉末尾的 0（88 / 87.5 / 86.33）；空值显示「—」。
+  /// 展示用分数：最多一位小数（88 / 87.5 / 84.7）；空值显示「—」。
+  static String displayScore(num? value) {
+    if (value == null) {
+      return '—';
+    }
+    final rounded = (value * 10).round() / 10;
+    return rounded == rounded.roundToDouble()
+        ? rounded.toStringAsFixed(0)
+        : rounded.toStringAsFixed(1);
+  }
+
+  /// 输入框里的分数：最多两位小数并去掉末尾的 0（88 / 87.5 / 86.33）；空值显示「—」。
   static String formatScore(num? value) {
     if (value == null) {
       return '—';
@@ -213,8 +233,11 @@ abstract final class ArtworkRules {
         : '${ymd(parsed)} $time';
   }
 
-  /// `yyyy-MM-dd` → `yyyy.MM.dd`。
-  static String dotDate(String raw) => raw.trim().replaceAll('-', '.');
+  /// `yyyy-MM-dd HH:mm:ss` / `yyyy-MM-dd` → `yyyy-MM-dd`。
+  static String dateText(String raw) {
+    final text = raw.trim();
+    return text.length >= 10 ? text.substring(0, 10) : text;
+  }
 
   /// 按绘画日期的月份分组（保持原有顺序）：`[('2026-10', [...]), ...]`。
   static List<(String, List<T>)> groupByMonth<T>(
@@ -234,14 +257,14 @@ abstract final class ArtworkRules {
     return groups;
   }
 
-  /// `2026-10` → `【2026 年 10 月】`。
+  /// `2026-10` → `2026 年 10 月`。
   static String monthLabel(String key) {
     final parts = key.split('-');
     final month = parts.length == 2 ? int.tryParse(parts[1]) : null;
     if (month == null) {
-      return '【更早】';
+      return '更早';
     }
-    return '【${parts[0]} 年 $month 月】';
+    return '${parts[0]} 年 $month 月';
   }
 
   static String _two(int value) => value.toString().padLeft(2, '0');

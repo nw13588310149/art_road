@@ -31,7 +31,9 @@ class PersonalCenterController extends StateNotifier<PersonalCenterState> {
   }) : _repository = repository,
        _storage = storage,
        _ref = ref,
-       super(PersonalCenterState(checkStatusEnabled: storage.showMemberContent)) {
+       super(
+         PersonalCenterState(checkStatusEnabled: storage.showMemberContent),
+       ) {
     refresh();
   }
 
@@ -99,11 +101,15 @@ class PersonalCenterController extends StateNotifier<PersonalCenterState> {
         continue;
       }
       final m = Map<String, dynamic>.from(item);
+      final benefits = m['benefits'];
       out.add(
         VipPackageRow(
           name: m['name']?.toString() ?? '',
           description: m['description']?.toString() ?? '',
-          price: m['price']?.toString() ?? '',
+          days: int.tryParse('${m['days'] ?? ''}'),
+          benefits: benefits is List
+              ? benefits.map((e) => e.toString()).toList(growable: false)
+              : const <String>[],
         ),
       );
     }
@@ -194,9 +200,7 @@ class PersonalCenterController extends StateNotifier<PersonalCenterState> {
     if (!_ref.exists(shellControllerProvider)) {
       return;
     }
-    _ref
-        .read(shellControllerProvider.notifier)
-        .applyUserProfile(state.user);
+    _ref.read(shellControllerProvider.notifier).applyUserProfile(state.user);
   }
 
   /// 上传头像图片。成功时同时返回：

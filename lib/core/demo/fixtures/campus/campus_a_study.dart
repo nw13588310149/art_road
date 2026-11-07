@@ -23,10 +23,11 @@ abstract final class CampusAStudy {
     'SCORED': '已出成绩',
   };
 
+  /// 月考一天考完，三科时间与校级通知一致（见 `cbMonthlyExamTimes`）。
   static const _subjectTimes = <String, (String, String)>{
     '素描': ('08:30', '11:30'),
-    '色彩': ('13:30', '16:30'),
-    '速写': ('17:00', '18:00'),
+    '色彩': ('14:00', '17:00'),
+    '速写': ('19:00', '20:00'),
   };
 
   static double _round1(double v) => (v * 10).round() / 10;
@@ -183,12 +184,12 @@ abstract final class CampusAStudy {
     final done = subjects.where((s) => (s['submitCount'] as int) > 0).length;
     return <String, dynamic>{
       'examId': onlineExamId,
-      'examName': '速写·色彩线上阶段测评',
+      'examName': '速写 · 色彩线上阶段测评',
       'examDate': date,
       'examStatus': 'ONGOING',
       'examStatusText': _statusText['ONGOING'],
-      'uploadProgress': '$done/${subjects.length}科目上传',
-      'remark': '在线自录上传：速写拍摄完整画面（可附过程视频），色彩小稿拍照上传；每科最多提交 2 次，以最后一次为准。',
+      'uploadProgress': '已上传 $done/${subjects.length} 科',
+      'remark': '拍照提交作品：速写拍摄完整画面（可附过程视频），色彩小稿拍照上传；每科最多提交 2 次，以最后一次为准。',
       'totalScore': null,
       'publishStatus': 0,
       'subjects': subjects,

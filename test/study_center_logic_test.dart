@@ -115,12 +115,19 @@ void main() {
     });
   });
 
-  test('surpassedPercentOf follows (N - rank) / (N - 1)', () {
-    expect(surpassedPercentOf(7, 38), 84);
-    expect(surpassedPercentOf(1, 38), 100);
+  test('surpassedPercentOf follows (N - rank) / N so it matches 第 7 名 / 38 人', () {
+    expect(surpassedPercentOf(7, 38), 82);
+    expect(surpassedPercentOf(1, 38), 97);
     expect(surpassedPercentOf(38, 38), 0);
     expect(surpassedPercentOf(1, 1), isNull);
     expect(surpassedPercentOf(null, 38), isNull);
+  });
+
+  test('dates are YYYY-MM-DD and score deltas keep one decimal', () {
+    expect(studyDateText('2026-09-20 08:30:00'), '2026-09-20');
+    expect(studyShortDate('2026-09-20 08:30:00'), '09-20');
+    expect(formatScoreDelta(5), '5.0');
+    expect(formatScoreDelta(-1.66), '1.7');
   });
 
   test('summarizeScores computes average, median and extremes', () {

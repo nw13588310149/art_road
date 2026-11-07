@@ -1,10 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/art/art_subject.dart';
 import '../../../core/network/api_response.dart';
+import '../../../core/network/media_url.dart';
 import '../../../core/network/snowflake_id.dart';
+import '../../video_tutorial/data/video_tutorial_repository.dart';
 import '../data/school_repository.dart';
 import 'school_page_state.dart';
 
@@ -13,17 +15,22 @@ final schoolPageControllerProvider =
       ref,
     ) {
       final repository = ref.watch(schoolRepositoryProvider);
-      return SchoolPageController(repository: repository);
+      final videos = ref.watch(videoTutorialRepositoryProvider);
+      return SchoolPageController(repository: repository, videos: videos);
     });
 
 class SchoolPageController extends StateNotifier<SchoolPageState> {
-  SchoolPageController({required SchoolRepository repository})
-    : _repository = repository,
-      super(SchoolPageState(quickActions: buildSchoolQuickActions())) {
+  SchoolPageController({
+    required SchoolRepository repository,
+    required VideoTutorialRepository videos,
+  }) : _repository = repository,
+       _videos = videos,
+       super(SchoolPageState(quickActions: buildSchoolQuickActions())) {
     unawaited(refresh());
   }
 
   final SchoolRepository _repository;
+  final VideoTutorialRepository _videos;
 
   Future<void> refresh() async {
     if (!mounted) return;
@@ -42,6 +49,7 @@ class SchoolPageController extends StateNotifier<SchoolPageState> {
       _repository.getBannerList(schoolId: schoolId),
       _repository.getLearningProgress(),
       _repository.getSchoolHomeLatestInfo(),
+      _videos.getSchoolVideoList(current: 1, size: 6),
     ]);
 
     if (!mounted) return;
@@ -49,10 +57,12 @@ class SchoolPageController extends StateNotifier<SchoolPageState> {
     final bannerResponse = responses[0];
     final progressResponse = responses[1];
     final latestResponse = responses[2];
+    final videoResponse = responses[3];
 
     var bannerItems = _parseBanners(bannerResponse.data);
     final learningItems = _parseLearning(progressResponse.data);
     var newsItems = _parseNews(latestResponse.data);
+    final courseVideos = _parseVideos(videoResponse.data);
 
     if (bannerItems.isEmpty && schoolId != '0') {
       final fallbackBanner = await _repository.getBannerList(schoolId: '0');
@@ -70,7 +80,8 @@ class SchoolPageController extends StateNotifier<SchoolPageState> {
         schoolName.isNotEmpty ||
         bannerItems.isNotEmpty ||
         learningItems.isNotEmpty ||
-        newsItems.isNotEmpty;
+        newsItems.isNotEmpty ||
+        courseVideos.isNotEmpty;
 
     state = state.copyWith(
       loading: false,
@@ -79,6 +90,7 @@ class SchoolPageController extends StateNotifier<SchoolPageState> {
       bannerItems: bannerItems,
       learningItems: learningItems,
       newsItems: newsItems,
+      courseVideos: courseVideos,
       errorMessage: hasAnyData
           ? ''
           : _firstApiError([
@@ -118,37 +130,48 @@ class SchoolPageController extends StateNotifier<SchoolPageState> {
     }
 
     return [
-      _buildLearningItem(
-        '素描',
-        _parseProgressEntry(map['sketch']),
-        const Color(0xFFB184FF),
-      ),
-      _buildLearningItem(
-        '色彩',
-        _parseProgressEntry(map['color']),
-        const Color(0xFFFF5681),
-      ),
-      _buildLearningItem(
-        '速写',
-        _parseProgressEntry(map['speed']),
-        const Color(0xFF13E8BE),
-      ),
+      _buildLearningItem(ArtSubject.sketch, _parseProgressEntry(map['sketch'])),
+      _buildLearningItem(ArtSubject.color, _parseProgressEntry(map['color'])),
+      _buildLearningItem(ArtSubject.speed, _parseProgressEntry(map['speed'])),
     ];
   }
 
   SchoolLearningItem _buildLearningItem(
-    String text,
+    ArtSubject subject,
     ({int completeCount, int allCount, int progress}) entry,
-    Color color,
   ) {
     return SchoolLearningItem(
-      text: text,
+      text: subject.label,
       completeCount: entry.completeCount,
       allCount: entry.allCount,
       progress: entry.progress,
-      color: color,
-      background: const Color(0xFFF0EBFA),
+      color: subject.accent,
+      background: subject.accentSoft,
     );
+  }
+
+  List<SchoolCourseVideo> _parseVideos(dynamic data) {
+    final list = _asNewsList(data);
+    final result = <SchoolCourseVideo>[];
+    for (final item in list) {
+      final map = _asMap(item);
+      final id = map['id']?.toString() ?? '';
+      final title = (map['name'] ?? map['title'])?.toString().trim() ?? '';
+      if (id.isEmpty || title.isEmpty) {
+        continue;
+      }
+      result.add(
+        SchoolCourseVideo(
+          id: id,
+          title: title,
+          coverUrl: MediaUrl.resolve(map['coverImg']?.toString() ?? ''),
+          duration: map['duration']?.toString() ?? '',
+          teacherName: map['teacherName']?.toString() ?? '',
+          category: map['category']?.toString() ?? '',
+        ),
+      );
+    }
+    return result;
   }
 
   ({int completeCount, int allCount, int progress}) _parseProgressEntry(

@@ -27,6 +27,7 @@
 //      信息 + 老师/家长气泡 + 输入栏 + 退出链接。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -38,8 +39,6 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
-import '../../../core/widgets/app_loading_indicator.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../../core/providers/app_providers.dart';
@@ -54,17 +53,17 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardGreyBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextHintLight = Color(0xFFCECED1);
-const Color _kTextPlaceholder = Color(0xFFD1D1D1);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleSoftBg = Color(0xFFD7D5FF);
-const Color _kBadgeRed = Color(0xFFF04545);
+const Color _kPageBg = AppColors.page;
+const Color _kCardGreyBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextHintLight = AppColors.textTertiary;
+const Color _kTextPlaceholder = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSoftBg = AppColors.brandTint;
+const Color _kBadgeRed = AppColors.danger;
 
 // —— 顶部 tab 枚举 ——————————————————————————————————————————————
 enum _TopTab {
@@ -128,7 +127,9 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
     setState(() {
       _loadError = null;
     });
-    final resp = await ref.read(teacherRepositoryProvider).chatConversationList(
+    final resp = await ref
+        .read(teacherRepositoryProvider)
+        .chatConversationList(
           current: 1,
           size: 100,
           tab: _tab.apiTab,
@@ -173,11 +174,9 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
   void _openConversation(HomeSchoolConversation conv) {
     showScaledDialog<void>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.80),
-      builder: (dialogContext) => _ChatDetailDialog(
-        conversation: conv,
-        onSent: _reloadAll,
-      ),
+      barrierColor: AppColors.ink.withValues(alpha: 0.80),
+      builder: (dialogContext) =>
+          _ChatDetailDialog(conversation: conv, onSent: _reloadAll),
     ).then((_) {
       if (!mounted) return;
       unawaited(_reloadAll());
@@ -262,7 +261,7 @@ class _Banner extends StatelessWidget {
                 width: ui(32),
                 height: ui(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(8)),
                   border: Border.all(color: _kBorderSoft, width: 1),
                 ),
@@ -270,7 +269,7 @@ class _Banner extends StatelessWidget {
                 child: Icon(
                   Icons.chevron_left_rounded,
                   size: ui(20),
-                  color: const Color(0xFF1C274C),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -286,7 +285,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -300,7 +298,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -389,7 +386,7 @@ class _TabsAndSearchRow extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(ui(4)),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorderSoft, width: 1),
           ),
@@ -445,8 +442,7 @@ class _TabPill extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: active ? Colors.white : _kTextSecondary,
-            fontFamily: 'PingFang SC',
+            color: active ? AppColors.surface : _kTextSecondary,
             fontWeight: AppFont.w500,
             height: 1.2,
           ),
@@ -499,7 +495,7 @@ class _SearchBoxState extends State<_SearchBox> {
       height: ui(44),
       padding: EdgeInsets.symmetric(horizontal: ui(16)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Row(
@@ -521,7 +517,6 @@ class _SearchBoxState extends State<_SearchBox> {
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.2,
               ),
@@ -530,7 +525,6 @@ class _SearchBoxState extends State<_SearchBox> {
                 hintStyle: TextStyle(
                   fontSize: ui(14),
                   color: _kTextPlaceholder,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -549,7 +543,7 @@ class _SearchBoxState extends State<_SearchBox> {
                 child: Icon(
                   Icons.cancel,
                   size: ui(16),
-                  color: const Color(0xFFC6C6C6),
+                  color: AppColors.textPlaceholder,
                 ),
               ),
             ),
@@ -574,7 +568,7 @@ class _ErrorHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(32), horizontal: ui(16)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -585,7 +579,6 @@ class _ErrorHint extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -595,13 +588,15 @@ class _ErrorHint extends StatelessWidget {
             onTap: onRetry,
             borderRadius: BorderRadius.circular(ui(6)),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(6)),
+              padding: EdgeInsets.symmetric(
+                horizontal: ui(12),
+                vertical: ui(6),
+              ),
               child: Text(
                 '重试',
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kPurple,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                 ),
               ),
@@ -628,7 +623,7 @@ class _EmptyHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(40)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Center(
@@ -637,7 +632,6 @@ class _EmptyHint extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(13),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.4,
           ),
@@ -694,7 +688,7 @@ class _ConversationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(ui(12)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -725,7 +719,6 @@ class _ConversationCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(14),
                             color: _kTextDark,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w500,
                             height: 1.2,
                           ),
@@ -738,7 +731,6 @@ class _ConversationCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextDark,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.2,
                           ),
@@ -753,7 +745,6 @@ class _ConversationCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: ui(12),
                               color: _kTextHint,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w400,
                               height: 1.2,
                             ),
@@ -764,7 +755,8 @@ class _ConversationCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (conversation.tags.isNotEmpty || conversation.replyPending) ...[
+              if (conversation.tags.isNotEmpty ||
+                  conversation.replyPending) ...[
                 SizedBox(height: ui(8)),
                 _TagsRow(
                   tags: conversation.tags,
@@ -789,7 +781,6 @@ class _ConversationCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kTextHint,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                           height: 1.4,
                         ),
@@ -834,7 +825,6 @@ class _ConversationCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.2,
                       ),
@@ -864,8 +854,9 @@ class _AvatarWithBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final initial =
-        fallbackInitial.isNotEmpty ? fallbackInitial.characters.first : '?';
+    final initial = fallbackInitial.isNotEmpty
+        ? fallbackInitial.characters.first
+        : '?';
     return SizedBox(
       width: ui(46),
       height: ui(40),
@@ -894,8 +885,8 @@ class _AvatarWithBadge extends StatelessWidget {
                 child: Text(
                   smartCampusCountBadgeLabel(unreadCount)!,
                   style: TextStyle(
-                    fontSize: ui(10),
-                    color: Colors.white,
+                    fontSize: ui(12),
+                    color: AppColors.surface,
                     fontFamily: 'Manrope',
                     fontWeight: FontWeight.w800,
                     height: 1.0,
@@ -931,7 +922,7 @@ class _HomeSchoolAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFFEFE5FF),
+        color: AppColors.brandWash,
         shape: circular ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: circular ? null : BorderRadius.circular(radius),
       ),
@@ -941,7 +932,6 @@ class _HomeSchoolAvatar extends StatelessWidget {
         style: TextStyle(
           fontSize: size * 0.4,
           color: _kPurple,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w600,
           height: 1.0,
         ),
@@ -959,10 +949,7 @@ class _HomeSchoolAvatar extends StatelessWidget {
           imageBuilder: (_, imageProvider) => DecoratedBox(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              image: DecorationImage(
-                image: imageProvider,
-                fit: BoxFit.cover,
-              ),
+              image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
             ),
           ),
           placeholder: (_, _) => placeholder,
@@ -1029,7 +1016,6 @@ class _TagPill extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: fg,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1.2,
         ),
@@ -1044,10 +1030,7 @@ class _TagPill extends StatelessWidget {
 // =============================================================================
 
 class _ChatDetailDialog extends ConsumerStatefulWidget {
-  const _ChatDetailDialog({
-    required this.conversation,
-    required this.onSent,
-  });
+  const _ChatDetailDialog({required this.conversation, required this.onSent});
 
   final HomeSchoolConversation conversation;
   final Future<void> Function() onSent;
@@ -1098,7 +1081,9 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
 
   Future<void> _loadMessages() async {
     setState(() => _loading = true);
-    final resp = await ref.read(teacherRepositoryProvider).chatMessageList(
+    final resp = await ref
+        .read(teacherRepositoryProvider)
+        .chatMessageList(
           conversationId: widget.conversation.id,
           current: 1,
           size: 200,
@@ -1121,7 +1106,9 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
     final text = _inputController.text.trim();
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
-    final resp = await ref.read(teacherRepositoryProvider).chatSend(
+    final resp = await ref
+        .read(teacherRepositoryProvider)
+        .chatSend(
           studentId: widget.conversation.studentId,
           parentId: widget.conversation.parentId,
           content: text,
@@ -1141,22 +1128,20 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final shellUser = ref.watch(shellControllerProvider).user;
-    final teacherName =
-        widget.conversation.displayTeacherName(shellUser.displayName);
+    final teacherName = widget.conversation.displayTeacherName(
+      shellUser.displayName,
+    );
     final teacherHeadUrl = MediaUrl.resolve(shellUser.avatarUrl);
     final maxH = MediaQuery.sizeOf(context).height * 0.82;
     return Center(
       child: Material(
         color: Colors.transparent,
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: ui(428),
-            maxHeight: maxH,
-          ),
+          constraints: BoxConstraints(maxWidth: ui(428), maxHeight: maxH),
           child: Container(
             width: ui(428),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(ui(24)),
             ),
             clipBehavior: Clip.antiAlias,
@@ -1179,7 +1164,6 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
                               style: TextStyle(
                                 fontSize: ui(13),
                                 color: _kTextHint,
-                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w400,
                               ),
                             ),
@@ -1198,7 +1182,8 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
                                 itemCount: _messages.length,
                                 itemBuilder: (context, index) {
                                   final message = _messages[index];
-                                  final galleryIndex = message.isImage &&
+                                  final galleryIndex =
+                                      message.isImage &&
                                           message.imageUrl != null
                                       ? galleryImages.indexOf(message.imageUrl!)
                                       : -1;
@@ -1239,10 +1224,7 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
 }
 
 class _DialogHeader extends StatelessWidget {
-  const _DialogHeader({
-    required this.conversation,
-    required this.onClose,
-  });
+  const _DialogHeader({required this.conversation, required this.onClose});
 
   final HomeSchoolConversation conversation;
   final VoidCallback onClose;
@@ -1259,7 +1241,7 @@ class _DialogHeader extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFD8CCFF), Colors.white],
+          colors: [Color(0xFFD8CCFF), AppColors.surface],
         ),
       ),
       padding: EdgeInsets.fromLTRB(ui(24), ui(20), ui(16), ui(16)),
@@ -1277,11 +1259,11 @@ class _DialogHeader extends StatelessWidget {
                       width: ui(56),
                       height: ui(56),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(ui(12)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
+                            color: AppColors.ink.withValues(alpha: 0.05),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),
@@ -1304,8 +1286,7 @@ class _DialogHeader extends StatelessWidget {
                             conversation.displayStudentName,
                             style: TextStyle(
                               fontSize: ui(16),
-                              color: Colors.black,
-                              fontFamily: 'PingFang SC',
+                              color: AppColors.ink,
                               fontWeight: AppFont.w600,
                               height: 1.2,
                             ),
@@ -1318,7 +1299,6 @@ class _DialogHeader extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: ui(12),
                                 color: _kTextHint,
-                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w400,
                                 height: 1.2,
                               ),
@@ -1337,7 +1317,7 @@ class _DialogHeader extends StatelessWidget {
                   width: ui(32),
                   height: ui(32),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: AppColors.surface.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(ui(8)),
                   ),
                   alignment: Alignment.center,
@@ -1378,7 +1358,6 @@ class _DialogHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(16),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 20 / 16,
                   ),
@@ -1397,14 +1376,10 @@ class _DialogHeader extends StatelessWidget {
 // 保证「老师：」前缀、正文与 emoji 同一条水平中线对齐。
 // =============================================================================
 
-TextStyle _homeSchoolChatLineStyle(
-  double Function(double) ui, {
-  Color? color,
-}) {
+TextStyle _homeSchoolChatLineStyle(double Function(double) ui, {Color? color}) {
   return TextStyle(
     fontSize: ui(12),
     color: color,
-    fontFamily: 'PingFang SC',
     fontWeight: AppFont.w400,
     height: 1.4,
     leadingDistribution: TextLeadingDistribution.even,
@@ -1460,8 +1435,9 @@ class _ChatBubble extends StatelessWidget {
     final senderName = fromTeacher
         ? teacherName
         : conversation.displayParentName;
-    final senderHeadUrl =
-        fromTeacher ? teacherHeadUrl : conversation.parentHeadUrl;
+    final senderHeadUrl = fromTeacher
+        ? teacherHeadUrl
+        : conversation.parentHeadUrl;
     final fallbackInitial = senderName.isNotEmpty
         ? senderName.characters.first
         : (fromTeacher ? '师' : '家');
@@ -1477,7 +1453,10 @@ class _ChatBubble extends StatelessWidget {
             galleryImages: galleryImages,
             galleryIndex: galleryIndex,
           )
-        : _HomeSchoolTextBubble(content: message.content, fromTeacher: fromTeacher);
+        : _HomeSchoolTextBubble(
+            content: message.content,
+            fromTeacher: fromTeacher,
+          );
     final nameMeta = Padding(
       padding: EdgeInsets.only(bottom: ui(4)),
       child: Align(
@@ -1489,7 +1468,6 @@ class _ChatBubble extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.0,
           ),
@@ -1501,7 +1479,6 @@ class _ChatBubble extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(12),
         color: _kTextHintLight,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 1.0,
       ),
@@ -1528,14 +1505,16 @@ class _ChatBubble extends StatelessWidget {
             ],
     );
     final textColumn = Column(
-      crossAxisAlignment:
-          fromTeacher ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: fromTeacher
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [nameMeta, bubbleWithTime],
     );
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment:
-          fromTeacher ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: fromTeacher
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       children: fromTeacher
           ? [Flexible(child: textColumn), SizedBox(width: ui(10)), avatar]
           : [avatar, SizedBox(width: ui(10)), Flexible(child: textColumn)],
@@ -1557,17 +1536,13 @@ class _HomeSchoolTextBubble extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final baseStyle = TextStyle(
       fontSize: ui(13),
-      color: fromTeacher ? Colors.white : _kTextDark,
-      fontFamily: 'PingFang SC',
+      color: fromTeacher ? AppColors.surface : _kTextDark,
       fontWeight: AppFont.w400,
       height: 1.7,
       leadingDistribution: TextLeadingDistribution.even,
     );
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: ui(12),
-        vertical: ui(8),
-      ),
+      padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
       decoration: BoxDecoration(
         color: fromTeacher ? _kPurple : _kCardGreyBg,
         borderRadius: BorderRadius.circular(ui(8)),
@@ -1575,11 +1550,7 @@ class _HomeSchoolTextBubble extends StatelessWidget {
       child: Text.rich(
         TextSpan(
           style: baseStyle,
-          children: _homeSchoolChatTextSpans(
-            content,
-            baseStyle,
-            ui,
-          ),
+          children: _homeSchoolChatTextSpans(content, baseStyle, ui),
         ),
         strutStyle: _homeSchoolChatStrutStyle(baseStyle),
         textHeightBehavior: const TextHeightBehavior(
@@ -1623,12 +1594,10 @@ class _HomeSchoolImageBubble extends ConsumerWidget {
         width: size,
         height: size,
         child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: _kCardGreyBg,
-            borderRadius: radius,
-          ),
+          decoration: BoxDecoration(color: _kCardGreyBg, borderRadius: radius),
           child: Center(
-            child: child ??
+            child:
+                child ??
                 Icon(
                   Icons.broken_image_outlined,
                   color: _kTextSecondary,
@@ -1725,7 +1694,6 @@ class _InputBar extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(13),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 24 / 13,
               ),
@@ -1734,7 +1702,6 @@ class _InputBar extends StatelessWidget {
                 hintStyle: TextStyle(
                   fontSize: ui(13),
                   color: _kTextHintLight,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 24 / 13,
                 ),
@@ -1765,14 +1732,17 @@ class _InputBar extends StatelessWidget {
                     sending ? '发送中' : '发送',
                     style: TextStyle(
                       fontSize: ui(13),
-                      color: Colors.white,
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.surface,
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
                   ),
                   SizedBox(width: ui(4)),
-                  Icon(Icons.send_rounded, size: ui(14), color: Colors.white),
+                  Icon(
+                    Icons.send_rounded,
+                    size: ui(14),
+                    color: AppColors.surface,
+                  ),
                 ],
               ),
             ),

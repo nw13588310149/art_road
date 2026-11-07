@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 /// 课表色板（产品 16 色）。
@@ -23,12 +24,7 @@ const List<Color> scheduleColorPalette = <Color>[
 /// 颜色选择器默认色（色板首色 #8C63FF）。
 const Color scheduleDefaultPickerColor = Color(0xFF8C63FF);
 
-enum ScheduleCardThemeKind {
-  smallOrange,
-  smallBlue,
-  bigStandard,
-  bigExtended,
-}
+enum ScheduleCardThemeKind { smallOrange, smallBlue, bigStandard, bigExtended }
 
 /// 无 API `color` 时，按课卡 kind 取默认背景色。
 Color scheduleDefaultBg(ScheduleCardThemeKind kind) {
@@ -51,9 +47,7 @@ bool scheduleIsSmallKind(ScheduleCardThemeKind kind) {
 
 /// 根据背景亮度选择标题文字色，保证对比度。
 Color scheduleTitleColorForBackground(Color bg) {
-  return bg.computeLuminance() > 0.55
-      ? const Color(0xFF0B081A)
-      : Colors.white;
+  return bg.computeLuminance() > 0.55 ? AppColors.ink : AppColors.surface;
 }
 
 /// 提交 API 用的 `#RRGGBB` 字符串。

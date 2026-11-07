@@ -91,6 +91,7 @@ class ArtworkSummary {
     this.finalScore,
     this.maxScore = 100,
     this.archiveId = '',
+    this.studentNo = '',
     this.studentName = '',
     this.organizationName = '',
     this.avatarUrl = '',
@@ -114,6 +115,7 @@ class ArtworkSummary {
       finalScore: _num(json['finalScore']),
       maxScore: _num(json['maxScore']) ?? 100,
       archiveId: _str(json['archiveId']),
+      studentNo: _str(json['studentNo']),
       studentName: _str(json['studentName']),
       organizationName: _str(json['organizationName']),
       avatarUrl: _str(json['avatarUrl']),
@@ -140,7 +142,12 @@ class ArtworkSummary {
   final String coverUrl;
   final double? finalScore;
   final double maxScore;
+
+  /// 学生档案 id：只用于接口查询，界面上对老师显示 [studentNo]。
   final String archiveId;
+
+  /// 画室学号（与学生名册一致）。
+  final String studentNo;
   final String studentName;
   final String organizationName;
   final String avatarUrl;

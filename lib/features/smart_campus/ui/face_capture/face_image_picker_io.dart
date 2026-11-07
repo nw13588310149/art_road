@@ -84,10 +84,8 @@ Future<FaceCapturedPhoto?> captureFacePhotoFromCameraImpl(
   return Navigator.of(context).push<FaceCapturedPhoto>(
     MaterialPageRoute<FaceCapturedPhoto>(
       fullscreenDialog: true,
-      builder: (ctx) => DashboardScaleScope(
-        data: scale,
-        child: const FaceIdCameraPage(),
-      ),
+      builder: (ctx) =>
+          DashboardScaleScope(data: scale, child: const FaceIdCameraPage()),
     ),
   );
 }

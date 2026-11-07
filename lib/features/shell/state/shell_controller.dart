@@ -187,6 +187,7 @@ class ShellController extends StateNotifier<ShellState> {
         navItems: buildDefaultNavItems(
           schoolCoursewareEnabled: state.schoolCoursewareEnabled,
           isStaff: isStaffRole(role),
+          role: role,
         ),
       );
       // 持久化头像与昵称，供下次启动/重新登录时在 API 回包前立刻渲染。
@@ -218,6 +219,7 @@ class ShellController extends StateNotifier<ShellState> {
           navItems: buildDefaultNavItems(
             schoolCoursewareEnabled: schoolCoursewareEnabled,
             isStaff: isStaffRole(state.user.role),
+            role: state.user.role,
           ),
         );
         _syncCampusBadge(state.unreadCount);

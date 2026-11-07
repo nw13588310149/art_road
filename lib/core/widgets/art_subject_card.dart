@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../art/art_subject.dart';
-import '../theme/app_font.dart';
+import '../ui/app_colors.dart';
+import '../ui/app_pressable.dart';
+import '../ui/app_spacing.dart';
+import '../ui/app_text.dart';
 
-/// 三科入口卡：范画封面 + 科目色渐变 + 科目名称与要点。
+/// 三科入口卡：范画封面 + 科目色遮罩 + 科目名称与要点。
+///
+/// 文字所在的左侧 70% 用接近实色的科目色铺底，要点小字不再压在图像细节上；
+/// 右侧逐渐露出范画。
 class ArtSubjectCard extends StatelessWidget {
   const ArtSubjectCard({
     required this.subject,
     required this.onTap,
-    this.borderRadius = 16,
+    this.borderRadius = AppRadius.panel,
     super.key,
   });
 
@@ -18,8 +24,7 @@ class ArtSubjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return AppPressable(
       onTap: onTap,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
@@ -38,41 +43,35 @@ class ArtSubjectCard extends StatelessWidget {
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   colors: [
-                    subject.accent.withValues(alpha: 0.92),
-                    subject.accent.withValues(alpha: 0.55),
-                    subject.accent.withValues(alpha: 0.05),
+                    subject.accent.withValues(alpha: 0.96),
+                    subject.accent.withValues(alpha: 0.9),
+                    subject.accent.withValues(alpha: 0.3),
                   ],
-                  stops: const [0, 0.45, 1],
+                  stops: const [0, 0.7, 1],
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.s16,
+                AppSpace.s8,
+                AppSpace.s12,
+                AppSpace.s8,
+              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     subject.label,
-                    style: TextStyle(
-                      fontSize: 20,
-                      height: 1.1,
-                      color: Colors.white,
-                      fontWeight: AppFont.w600,
-                      fontFamily: 'PingFang SC',
-                    ),
+                    style: AppText.title20.copyWith(color: AppColors.onBrand),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 2),
                   Text(
                     subject.tagline,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      height: 1.2,
-                      color: Color(0xE6FFFFFF),
-                      fontFamily: 'PingFang SC',
-                    ),
+                    style: AppText.caption12.copyWith(color: AppColors.onBrand),
                   ),
                 ],
               ),

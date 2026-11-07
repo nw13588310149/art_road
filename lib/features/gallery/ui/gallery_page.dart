@@ -3,11 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/art/art_tokens.dart';
-import '../../../core/widgets/app_loading_indicator.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/art_widgets.dart';
-import '../../shell/ui/shell_layout.dart';
+import '../../../core/ui/ui.dart';
 import '../../smart_campus/navigation/group_chat_return.dart';
 import '../data/gallery_models.dart';
 import '../state/gallery_controller.dart';
@@ -20,6 +16,7 @@ import 'widgets/gallery_widgets.dart';
 /// 路由参数（均可选）：`{'subject': '素描'|'色彩'|'速写', 'keyword': String,
 /// 'category': 分类 key 或名称, 'workId': String}`；带 `workId` 时直接打开详情，
 /// 详情返回即关闭本页（回到收藏、群聊等来源页）。
+/// 从侧栏进入（一级页）不显示返回；从其他页面带参数打开时才显示返回。
 class GalleryPage extends ConsumerStatefulWidget {
   const GalleryPage({super.key});
 
@@ -30,6 +27,7 @@ class GalleryPage extends ConsumerStatefulWidget {
 class _GalleryPageState extends ConsumerState<GalleryPage> {
   final ScrollController _scroll = ScrollController();
   GalleryQuery? _query;
+  bool _openedFromPage = false;
 
   GalleryQuery get _currentQuery => _query ?? const GalleryQuery();
 
@@ -45,9 +43,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _query ??= GalleryQuery.fromArgs(
-      ModalRoute.of(context)?.settings.arguments,
-    );
+    if (_query == null) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      _openedFromPage = args is Map && args.isNotEmpty;
+      _query = GalleryQuery.fromArgs(args);
+    }
   }
 
   @override
@@ -75,10 +75,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     if (!mounted) {
       return;
     }
-    AppToast.show(
-      context,
-      ok ? (work.favorite ? '已取消收藏' : '已收藏到「我的收藏」') : '收藏失败，请稍后重试',
-    );
+    if (!ok) {
+      AppToast.showError(context, '收藏失败，请稍后重试');
+      return;
+    }
+    AppToast.showSuccess(context, work.favorite ? '已取消收藏' : '已收藏到「我的收藏」');
   }
 
   /// 通过 `workId` 直达的详情返回时关闭整页，其余情况回到列表 / 上一幅作品。
@@ -129,7 +130,10 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       if (msg.isEmpty || msg == previous?.errorMessage) {
         return;
       }
-      AppToast.show(context, msg);
+      // 没有旧数据时由页面错误状态说明，有旧数据时用轻提示，不替换内容。
+      if (next.works.isNotEmpty) {
+        AppToast.showError(context, msg);
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (controller.mounted) {
           controller.clearError();
@@ -138,56 +142,47 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     });
 
     final openId = state.openWorkId;
-    final canPop = Navigator.of(context).canPop();
-    return ShellPageSurface(
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(ShellLayoutSpec.panelRadius),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Offstage(
-              offstage: openId != null,
-              child: TickerMode(
-                enabled: openId == null,
-                child: _GalleryBrowser(
-                  state: state,
-                  scrollController: _scroll,
-                  onBack: canPop
-                      ? () => GroupChatReturnNavigator.pop(context, ref: ref)
-                      : null,
-                  onSubjectChanged: (s) =>
-                      _applyFilter(() => controller.setSubject(s)),
-                  onCategoryChanged: (c) =>
-                      _applyFilter(() => controller.setCategory(c)),
-                  onSortChanged: (s) =>
-                      _applyFilter(() => controller.setSort(s)),
-                  onKeywordChanged: (k) =>
-                      _applyFilter(() => controller.setKeyword(k)),
-                  onResetFilters: () => _applyFilter(controller.resetFilters),
-                  onOpen: (work) => controller.openDetail(work.id),
-                  onToggleFavorite: _toggleFavorite,
-                ),
-              ),
+    final canPop = _openedFromPage && Navigator.of(context).canPop();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Offstage(
+          offstage: openId != null,
+          child: TickerMode(
+            enabled: openId == null,
+            child: _GalleryBrowser(
+              state: state,
+              scrollController: _scroll,
+              onBack: canPop
+                  ? () => GroupChatReturnNavigator.pop(context, ref: ref)
+                  : null,
+              onSubjectChanged: (s) =>
+                  _applyFilter(() => controller.setSubject(s)),
+              onCategoryChanged: (c) =>
+                  _applyFilter(() => controller.setCategory(c)),
+              onSortChanged: (s) => _applyFilter(() => controller.setSort(s)),
+              onKeywordChanged: (k) =>
+                  _applyFilter(() => controller.setKeyword(k)),
+              onResetFilters: () => _applyFilter(controller.resetFilters),
+              onRetry: () => unawaited(controller.refresh()),
+              onOpen: (work) => controller.openDetail(work.id),
+              onToggleFavorite: _toggleFavorite,
             ),
-            if (openId != null)
-              ColoredBox(
-                color: Colors.white,
-                child: GalleryDetailView(
-                  key: ValueKey(openId),
-                  detail: state.details[openId],
-                  loading: state.detailLoading.contains(openId),
-                  error: state.detailErrors[openId] ?? '',
-                  onBack: () => _closeDetail(state),
-                  onRetry: () => unawaited(controller.retryDetail()),
-                  onToggleFavorite: _toggleFavorite,
-                  onOpenWork: controller.openDetail,
-                  onTagSelected: _searchTag,
-                ),
-              ),
-          ],
+          ),
         ),
-      ),
+        if (openId != null)
+          GalleryDetailView(
+            key: ValueKey(openId),
+            detail: state.details[openId],
+            loading: state.detailLoading.contains(openId),
+            error: state.detailErrors[openId] ?? '',
+            onBack: () => _closeDetail(state),
+            onRetry: () => unawaited(controller.retryDetail()),
+            onToggleFavorite: _toggleFavorite,
+            onOpenWork: controller.openDetail,
+            onTagSelected: _searchTag,
+          ),
+      ],
     );
   }
 }
@@ -202,6 +197,7 @@ class _GalleryBrowser extends StatelessWidget {
     required this.onSortChanged,
     required this.onKeywordChanged,
     required this.onResetFilters,
+    required this.onRetry,
     required this.onOpen,
     required this.onToggleFavorite,
   });
@@ -214,78 +210,78 @@ class _GalleryBrowser extends StatelessWidget {
   final ValueChanged<GallerySort> onSortChanged;
   final ValueChanged<String> onKeywordChanged;
   final VoidCallback onResetFilters;
+  final VoidCallback onRetry;
   final ValueChanged<GalleryWork> onOpen;
   final ValueChanged<GalleryWork> onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 720;
-        final search = GallerySearchField(
-          keyword: state.keyword,
-          onChanged: onKeywordChanged,
-        );
-        final sort = ArtSegmentTabs<GallerySort>(
-          items: GallerySort.values,
-          value: state.sort,
-          labelOf: (s) => s.label,
-          onChanged: onSortChanged,
-        );
-        final filters = GalleryFilterBar(
-          state: state,
-          stacked: !wide,
-          onSubjectChanged: onSubjectChanged,
-          onCategoryChanged: onCategoryChanged,
-        );
-        final subtitle = state.total > 0
-            ? '名师范画 · 联考高分卷 · 学生优秀作品  共 ${state.total} 幅'
-            : '名师范画 · 联考高分卷 · 学生优秀作品';
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ArtPageHeader(
-              title: '范画库',
-              subtitle: subtitle,
-              onBack: onBack,
-              actions: wide
-                  ? [
-                      SizedBox(width: 250, child: search),
-                      const SizedBox(width: 12),
-                      sort,
-                    ]
-                  : [sort],
-              bottom: wide
-                  ? filters
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [search, const SizedBox(height: 12), filters],
-                    ),
-            ),
-            Expanded(
-              child: PageInitLoadingShell(
-                loading: state.loading && state.works.isEmpty,
-                child: _buildBody(),
+    final subtitle = state.total > 0
+        ? '名师范画 · 联考高分卷 · 学生优秀作品 · 共 ${state.total} 幅'
+        : '名师范画 · 联考高分卷 · 学生优秀作品';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: '范画库',
+          subtitle: subtitle,
+          onBack: onBack,
+          actions: [
+            SizedBox(
+              width: 240,
+              child: GallerySearchField(
+                keyword: state.keyword,
+                onChanged: onKeywordChanged,
               ),
             ),
+            AppSegmented<GallerySort>(
+              segments: [
+                for (final sort in GallerySort.values)
+                  AppSegment(value: sort, label: sort.label),
+              ],
+              value: state.sort,
+              onChanged: onSortChanged,
+            ),
           ],
-        );
-      },
+          bottom: GalleryFilterBar(
+            state: state,
+            onSubjectChanged: onSubjectChanged,
+            onCategoryChanged: onCategoryChanged,
+          ),
+        ),
+        Expanded(child: _buildBody()),
+      ],
     );
   }
 
   Widget _buildBody() {
     if (state.works.isEmpty) {
       if (state.loading) {
-        return const SizedBox.shrink();
+        return const SingleChildScrollView(
+          physics: NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            AppSpace.page,
+            AppSpace.s4,
+            AppSpace.page,
+            0,
+          ),
+          child: GalleryMasonrySkeleton(),
+        );
       }
-      return ArtEmptyState(
+      if (state.loadFailed) {
+        return AppErrorState(
+          title: '范画加载失败',
+          description: '请检查网络后重试',
+          onRetry: onRetry,
+        );
+      }
+      return AppEmptyState(
         icon: Icons.collections_outlined,
-        message: state.keyword.isNotEmpty
+        title: state.keyword.isNotEmpty
             ? '没有找到与「${state.keyword}」相关的范画'
             : '这个分类下暂时还没有作品',
-        actionLabel: state.hasFilters ? '查看全部范画' : null,
+        description: state.hasFilters ? '换个科目或分类看看' : '老师上传范画后会出现在这里',
+        actionLabel: state.hasFilters ? '清除筛选' : null,
         onAction: state.hasFilters ? onResetFilters : null,
       );
     }
@@ -296,7 +292,12 @@ class _GalleryBrowser extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.page,
+                AppSpace.s4,
+                AppSpace.page,
+                0,
+              ),
               sliver: SliverToBoxAdapter(
                 child: GalleryMasonryGrid(
                   works: state.works,
@@ -315,8 +316,8 @@ class _GalleryBrowser extends StatelessWidget {
             top: 0,
             child: LinearProgressIndicator(
               minHeight: 2,
-              color: ArtColors.brand,
-              backgroundColor: Colors.transparent,
+              color: AppColors.brand,
+              backgroundColor: AppColors.lineSoft,
             ),
           ),
       ],
@@ -333,19 +334,24 @@ class _ListFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.loadingMore) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
+        padding: EdgeInsets.symmetric(vertical: AppSpace.s16),
         child: Center(child: AppLoadingIndicator(size: 28)),
       );
     }
     if (state.hasMore) {
-      return const SizedBox(height: 24);
+      return const SizedBox(height: AppSpace.s24);
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.page,
+        AppSpace.s4,
+        AppSpace.page,
+        AppSpace.s24,
+      ),
       child: Center(
         child: Text(
           '已显示全部 ${state.works.length} 幅作品',
-          style: ArtText.caption(color: ArtColors.ink4),
+          style: AppText.caption12,
         ),
       ),
     );

@@ -1,77 +1,56 @@
 // =============================================================================
-// 学生端「我的课表」独立页面
+// 学生端「我的课表」
 //
-// 入口：学生 dashboard 快捷区「我的课表」按钮 → controller.openMySchedule()
-//      → mainView == mySchedule + role == student → SmartCampusPage 路由到本视图。
-// 返回：顶部 banner 左上角返回按钮 → onBack（controller.backToDashboard）。
+// 入口：学生工作台「我的课表」→ controller.openMySchedule()；页头返回 → onBack。
 //
-// 视觉（Figma 970 设计宽）：
-//   1. 顶部 banner（68 高）：白→#F9EDFF 渐变；左 32 返回；居中「教学周第 12 周
-//      03/12-03/17」（12 用 #715EFE 紫色）；右侧 [◀ 本周 ▶] 周切换器
-//   2. 网格容器（930×632，1px #F3F2F3 描边，12 圆角）：
-//      - 时间列（120 宽，冻结）：60 高表头（"日期 / 节次" + 27° 斜分割线，
-//        #F5F6FA 底）；下方 5 个时段，每个时段中间显示 `08:00 ── 08:40`
-//      - 日期区（横滚动 7 列 × 200 宽 = 1400，可视约 810）：60 高 7 个日期
-//        表头（周一白底，其余 #F5F6FA）；下方 5 行课卡（高度 120/120/222/
-//        128/128，222 行允许 2 卡纵向堆叠）
-//   3. 课卡（176 宽 × 96/120 高）四种主题：
-//      - 小课·橙：#FFEDD3 底，#774B09 标题，绿色状态点 + "小课" 白标签
-//      - 小课·蓝：#D9EBFF 底，#0D3A6D 标题，绿色状态点 + "小课"
-//      - 大课·紫标准：#E8D4FF 底（96h），#7535BE 标题，紫色点 + "大课"
-//      - 大课·紫加长：#F6EFFE 底（120h），#7535BE 标题，紫色点 + "大课"
-//
-// 颜色：白 / #F5F6FA 灰 / #F3F2F3 边 / #715EFE 主紫 / #6D6B75 副字 /
-//      #B6B5BB 提示
-// 字体：PingFang SC（标题 16/正文 12-14）
+// - 页头：标题「我的课表」，副标题「第 12 周 · 11-02 – 11-08 · 联考冲刺1班 · 城东校区」，
+//   右侧上一周 / 本周 / 下一周。
+// - 网格：左侧上午 / 下午 / 晚上三个固定节次，右侧 7 天等分一屏放下；今天这一列表头
+//   用浅紫底标出。课程卡写课程名、任课老师和教室（校区在页头）。
+// - 课表与首页、课堂签到读同一份 `student/courseList`。
 // =============================================================================
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 
 import '../../../core/network/api_response.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../school/data/school_repository.dart';
 import '../../shell/ui/shell_layout.dart';
-import '../data/student_repository.dart';
+import '../data/campus_format.dart';
 import '../data/schedule_course_card_builder.dart';
 import '../data/schedule_slot_time.dart';
 import '../data/schedule_teaching_week.dart';
+import '../data/student_repository.dart';
 import 'widgets/schedule_course_card.dart';
 import 'widgets/schedule_grid_shell.dart';
 import 'widgets/schedule_idle_slot.dart';
-import 'widgets/smart_campus_page_banner.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
-
-// ---- 通用配色 ---------------------------------------------------------------
-
-const Color _kCardBg = Colors.white;
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
 
 class _TimeConfig {
   const _TimeConfig({
     required this.lineNum,
     required this.start,
     required this.end,
+    this.label = '',
   });
 
   final int lineNum;
   final String start;
   final String end;
+  final String label;
 }
 
+/// 接口未返回节次时的兜底：画室固定的上午 / 下午 / 晚上三段。
 const List<_TimeConfig> _kDefaultTimeConfigs = [
-  _TimeConfig(lineNum: 1, start: '08:00', end: '08:40'),
-  _TimeConfig(lineNum: 2, start: '08:50', end: '09:35'),
-  _TimeConfig(lineNum: 3, start: '09:50', end: '10:30'),
-  _TimeConfig(lineNum: 4, start: '10:30', end: '11:25'),
-  _TimeConfig(lineNum: 5, start: '14:00', end: '14:45'),
+  _TimeConfig(lineNum: 1, start: '08:30', end: '11:30', label: '上午'),
+  _TimeConfig(lineNum: 2, start: '14:00', end: '17:00', label: '下午'),
+  _TimeConfig(lineNum: 3, start: '19:00', end: '21:00', label: '晚上'),
 ];
+
+/// 单元格上下留白与卡片间距。
+const double _kCellPadding = 6;
 
 class StudentMyScheduleView extends ConsumerStatefulWidget {
   const StudentMyScheduleView({super.key, required this.onBack});
@@ -91,21 +70,24 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
   late List<List<List<ScheduleCourseCardData>>> _serverCells;
   int _scheduleLoadGeneration = 0;
   bool _initialLoadDone = false;
+  String _loadError = '';
+
+  /// 「联考冲刺1班 · 城东校区」，来自 `mySchoolClass`。
+  String _classLabel = '';
 
   List<_TimeConfig> get _activeTimeConfigs =>
       _timeConfigs.isNotEmpty ? _timeConfigs : _kDefaultTimeConfigs;
 
-  String get _dateRangeLabel {
-    final start = _weekStart;
-    final end = start.add(const Duration(days: 6));
-    return '${_fmt(start)} - ${_fmt(end)}';
+  String get _subtitle {
+    final end = _weekStart.add(const Duration(days: 6));
+    return [
+      '第 $_currentWeek 周',
+      '${campusMonthDay(_weekStart)} – ${campusMonthDay(end)}',
+      if (_classLabel.isNotEmpty) _classLabel,
+    ].join(' · ');
   }
 
-  String _fmt(DateTime d) =>
-      '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
-
-  String _isoDate(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  String _isoDate(DateTime d) => campusDate(d);
 
   @override
   void initState() {
@@ -130,8 +112,19 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
           .mySchoolClass();
       if (classResp.isSuccess) {
         final map = _asMap(classResp.data);
-        final schoolClass = _asMap(map?['schoolClass']);
-        resolvedClassId = _pickString(schoolClass ?? {}, ['id', 'classId'], '');
+        final schoolClass = _asMap(map?['schoolClass']) ?? const {};
+        resolvedClassId = _pickString(schoolClass, ['id', 'classId'], '');
+        final name = _pickString(schoolClass, ['name', 'groupName'], '');
+        final campus =
+            RegExp(r'\S+校区')
+                .firstMatch(_pickString(schoolClass, ['description'], ''))
+                ?.group(0) ??
+            '';
+        if (mounted) {
+          setState(() {
+            _classLabel = [name, campus].where((s) => s.isNotEmpty).join(' · ');
+          });
+        }
       }
     }
     if (resolvedClassId == null || resolvedClassId.isEmpty) return;
@@ -155,7 +148,14 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
         _pickString(m, ['timeEnd', 'endTime', 'finishTime', 'end'], ''),
       );
       if (start.isEmpty || end.isEmpty) continue;
-      list.add(_TimeConfig(lineNum: lineNum, start: start, end: end));
+      list.add(
+        _TimeConfig(
+          lineNum: lineNum,
+          start: start,
+          end: end,
+          label: _pickString(m, ['name', 'lineName'], ''),
+        ),
+      );
     }
     list.sort((a, b) => a.lineNum.compareTo(b.lineNum));
     if (!mounted || list.isEmpty) return;
@@ -165,10 +165,7 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
     });
   }
 
-  Future<void> _loadSchedule({
-    DateTime? weekStart,
-    int? weekNumber,
-  }) async {
+  Future<void> _loadSchedule({DateTime? weekStart, int? weekNumber}) async {
     final targetWeekStart = weekStart ?? _weekStart;
     final targetWeekNumber = weekNumber ?? _currentWeek;
     final generation = ++_scheduleLoadGeneration;
@@ -181,13 +178,11 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
     if (!mounted || generation != _scheduleLoadGeneration) return;
 
     if (!resp.isSuccess) {
-      if (resp.msg.isNotEmpty) {
-        AppToast.show(context, resp.msg);
-      }
       setState(() {
         _weekStart = targetWeekStart;
         _currentWeek = targetWeekNumber;
         _serverCells = _emptyCells();
+        _loadError = resp.msg.isEmpty ? '课表暂时没有加载出来' : resp.msg;
         _initialLoadDone = true;
       });
       return;
@@ -226,7 +221,11 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
       }
 
       final cellKey = dayIdx * 1000 + slotIdx;
-      final card = buildScheduleCourseCard(flat, smallSeq[cellKey] ?? 0);
+      final card = buildScheduleCourseCard(
+        flat,
+        smallSeq[cellKey] ?? 0,
+        subline: ScheduleCardSubline.teacher,
+      );
       smallSeq[cellKey] = (smallSeq[cellKey] ?? 0) + 1;
       cells[dayIdx][slotIdx].add(card);
     }
@@ -236,6 +235,7 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
       _weekStart = targetWeekStart;
       _currentWeek = targetWeekNumber;
       _serverCells = cells;
+      _loadError = '';
       _initialLoadDone = true;
     });
   }
@@ -260,17 +260,11 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
 
   void _gotoCurrent() {
     final anchor = scheduleCurrentTeachingWeekAnchor();
-    unawaited(
-      _loadSchedule(
-        weekStart: anchor.monday,
-        weekNumber: anchor.week,
-      ),
-    );
+    unawaited(_loadSchedule(weekStart: anchor.monday, weekNumber: anchor.week));
   }
 
   List<ScheduleGridDayHeader> _buildDayHeaders() {
     final today = DateTime.now();
-    const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
     return [
       for (var i = 0; i < 7; i++)
         () {
@@ -280,9 +274,8 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
               d.month == today.month &&
               d.day == today.day;
           return ScheduleGridDayHeader(
-            weekdayLabel: labels[i],
-            dateLabel:
-                '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}',
+            weekdayLabel: campusWeekdayLabels[i],
+            dateLabel: campusMonthDay(d),
             date: DateTime(d.year, d.month, d.day),
             today: isToday,
           );
@@ -299,6 +292,7 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
         ScheduleGridTimeSlot(
           start: configs[i].start,
           end: configs[i].end,
+          label: configs[i].label,
           height: _calcSlotHeight(i, cells),
         ),
     ];
@@ -315,7 +309,8 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
         if (n > maxCards) maxCards = n;
       }
     }
-    return 120.0 + (maxCards - 1) * 102.0;
+    return maxCards * (kScheduleCourseCardHeight + _kCellPadding) +
+        _kCellPadding;
   }
 
   List<List<List<ScheduleCourseCardData>>> _emptyCells() {
@@ -356,46 +351,87 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
     return (diff < 0 || diff > 6) ? -1 : diff;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final cells = _normalizeCells(_serverCells);
+  Widget _buildContent(List<List<List<ScheduleCourseCardData>>> cells) {
+    if (_loadError.isNotEmpty) {
+      return AppCard(
+        child: Center(
+          child: AppErrorState(
+            title: '课表加载失败',
+            description: _loadError,
+            onRetry: () => unawaited(_loadSchedule()),
+          ),
+        ),
+      );
+    }
+    final empty = cells.every((day) => day.every((slot) => slot.isEmpty));
+    if (empty) {
+      return const AppCard(
+        child: Center(
+          child: AppEmptyState(
+            icon: Icons.event_available_outlined,
+            title: '这一周没有课程',
+            description: '画室排课后会显示在这里，可切换到其他周查看',
+          ),
+        ),
+      );
+    }
     final slots = _buildSlots(cells);
     final days = _buildDayHeaders();
+    return ScheduleGridShell(
+      slots: slots,
+      days: days,
+      body: _DaysBodyArea(slots: slots, days: days, cells: cells),
+    );
+  }
 
-    return SmartCampusSchedulePageShell(
-      backgroundColor: _kCardBg,
-      bodyScrollable: false,
-      header: _ScheduleBanner(
-        week: _currentWeek,
-        dateRange: _dateRangeLabel,
-        onBack: widget.onBack,
-        onPrevWeek: _gotoPrev,
-        onNextWeek: _gotoNext,
-        onGotoCurrent: _gotoCurrent,
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(ui(20), ui(11), ui(20), ui(20)),
-              child: PageInitLoadingShell(
-                loading: !_initialLoadDone,
-                child: ScheduleGridShell(
-                  slots: slots,
-                  days: days,
-                  body: _DaysBodyArea(
-                    slots: slots,
-                    days: days,
-                    cells: cells,
-                  ),
-                ),
-              ),
+  @override
+  Widget build(BuildContext context) {
+    final cells = _normalizeCells(_serverCells);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: '我的课表',
+          subtitle: _subtitle,
+          onBack: widget.onBack,
+          actions: [
+            AppIconButton(
+              icon: Icons.chevron_left_rounded,
+              semanticLabel: '上一周',
+              size: AppButtonSize.sm,
+              onTap: _gotoPrev,
+            ),
+            AppButton(
+              label: '本周',
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onTap: _currentWeek == kScheduleCurrentTeachingWeek
+                  ? null
+                  : _gotoCurrent,
+            ),
+            AppIconButton(
+              icon: Icons.chevron_right_rounded,
+              semanticLabel: '下一周',
+              size: AppButtonSize.sm,
+              onTap: _gotoNext,
+            ),
+          ],
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s4,
+              AppSpace.page,
+              AppSpace.page,
+            ),
+            child: PageInitLoadingShell(
+              loading: !_initialLoadDone,
+              child: _buildContent(cells),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -518,185 +554,7 @@ List<({String dateKey, Map<String, dynamic> row})> _extractCourseRows(
 }
 
 // =============================================================================
-// 顶部 banner：68 高，白→紫淡色渐变
-// =============================================================================
-
-class _ScheduleBanner extends StatelessWidget {
-  const _ScheduleBanner({
-    required this.week,
-    required this.dateRange,
-    required this.onBack,
-    required this.onPrevWeek,
-    required this.onNextWeek,
-    required this.onGotoCurrent,
-  });
-
-  final int week;
-  final String dateRange;
-  final VoidCallback onBack;
-  final VoidCallback onPrevWeek;
-  final VoidCallback onNextWeek;
-  final VoidCallback onGotoCurrent;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return SmartCampusScheduleTopBar(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 返回按钮
-          Positioned(
-              left: ui(20),
-              top: ui(20),
-              child: InkWell(
-                onTap: onBack,
-                borderRadius: BorderRadius.circular(ui(8)),
-                child: Container(
-                  width: ui(32),
-                  height: ui(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(ui(8)),
-                    border: Border.all(color: _kBorderSoft),
-                  ),
-                  child: Icon(
-                    Icons.chevron_left_rounded,
-                    size: ui(20),
-                    color: const Color(0xFF1C274C),
-                  ),
-                ),
-              ),
-            ),
-            // 居中标题：教学周第 12 周 / 03/12 - 03/17
-            Positioned.fill(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: ui(16),
-                        color: _kTextDark,
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w600,
-                        height: 1,
-                      ),
-                      children: [
-                        const TextSpan(text: '教学周第 '),
-                        TextSpan(
-                          text: '$week',
-                          style: const TextStyle(color: _kPurple),
-                        ),
-                        const TextSpan(text: ' 周'),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: ui(6)),
-                  Text(
-                    dateRange,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // 右侧周切换器
-            Positioned(
-              right: ui(20),
-              top: ui(14),
-              child: _WeekSwitcher(
-                onPrev: onPrevWeek,
-                onNext: onNextWeek,
-                onCurrent: onGotoCurrent,
-              ),
-            ),
-          ],
-        ),
-    );
-  }
-}
-
-class _WeekSwitcher extends StatelessWidget {
-  const _WeekSwitcher({
-    required this.onPrev,
-    required this.onNext,
-    required this.onCurrent,
-  });
-
-  final VoidCallback onPrev;
-  final VoidCallback onNext;
-  final VoidCallback onCurrent;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(40),
-      padding: EdgeInsets.all(ui(4)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(8)),
-        border: Border.all(color: _kBorderSoft),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ChevronButton(icon: Icons.chevron_left_rounded, onTap: onPrev),
-          SizedBox(width: ui(12)),
-          InkWell(
-            onTap: onCurrent,
-            borderRadius: BorderRadius.circular(ui(4)),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(2)),
-              child: Text(
-                '本周',
-                style: TextStyle(
-                  fontSize: ui(14),
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w500,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: ui(12)),
-          _ChevronButton(icon: Icons.chevron_right_rounded, onTap: onNext),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChevronButton extends StatelessWidget {
-  const _ChevronButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: SizedBox(
-        width: ui(32),
-        height: ui(32),
-        child: Icon(icon, size: ui(18), color: const Color(0xFF1C274C)),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 日期区：多行课卡
+// 日期区：每格纵向排列课程卡
 // =============================================================================
 
 class _DaysBodyArea extends StatelessWidget {
@@ -745,44 +603,27 @@ class _DayBodyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
+    final width = ScheduleGridScope.dayWidthOf(context);
     return SizedBox(
       height: ui(height),
       child: Row(
         children: [
           for (var i = 0; i < rowCells.length; i++)
-            SizedBox(
-              width: ui(kScheduleGridDayColWidth),
+            Container(
+              width: width,
               height: ui(height),
-              // 用 Stack overlay 画底/左边线，避免 BoxDecoration.border 把
-              // 子可用高度从 slot.height 减掉 1px——精确填满（120/222
-              // 等行）时会触发 "BOTTOM OVERFLOWED BY 1.00 PIXELS"。
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: _CellContent(
-                      slotDate: days[i].date,
-                      slotEnd: slotEnd,
-                      cards: rowCells[i],
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: IgnorePointer(
-                      child: Container(height: 1, color: _kBorderSoft),
-                    ),
-                  ),
-                  if (i != 0)
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      child: IgnorePointer(
-                        child: Container(width: 1, color: _kBorderSoft),
-                      ),
-                    ),
-                ],
+              foregroundDecoration: BoxDecoration(
+                border: Border(
+                  bottom: const BorderSide(color: AppColors.lineSoft),
+                  left: i == 0
+                      ? BorderSide.none
+                      : const BorderSide(color: AppColors.lineSoft),
+                ),
+              ),
+              child: _CellContent(
+                slotDate: days[i].date,
+                slotEnd: slotEnd,
+                cards: rowCells[i],
               ),
             ),
         ],
@@ -809,20 +650,16 @@ class _CellContent extends StatelessWidget {
       return const ScheduleIdleSlot();
     }
     final isPast = isScheduleSlotPast(slotDate: slotDate, endHm: slotEnd);
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(12)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var i = 0; i < cards.length; i++) ...[
-              if (i > 0) SizedBox(height: ui(6)),
-              ScheduleCourseCard(data: cards[i], isPast: isPast),
-            ],
+    return Padding(
+      padding: EdgeInsets.all(ui(_kCellPadding)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) SizedBox(height: ui(_kCellPadding)),
+            ScheduleCourseCard(data: cards[i], isPast: isPast),
           ],
-        ),
+        ],
       ),
     );
   }

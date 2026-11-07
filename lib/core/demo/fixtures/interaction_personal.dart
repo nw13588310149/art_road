@@ -11,12 +11,12 @@ const _redeemCodes = <String, ({String plan, int days})>{
   'ARTM30': (plan: '月卡 30 天', days: 30),
 };
 
+/// 会员权益只写已上线的功能；正式价格未定，套餐不下发金额。
 const _vipBenefits = <String>[
-  '范画库高清原图无限浏览与下载',
-  '小美同学 AI 作品分析不限次数',
+  '范画库高清原图浏览与下载',
   '视频中心全部专项课程',
-  '题库考前密卷与错题集',
-  '作品档案云端无限存储',
+  '题库全部题目与错题本',
+  '作品档案云端存储',
 ];
 
 /// 个人中心：会员套餐、我的二维码、会员兑换。
@@ -26,29 +26,23 @@ void registerPersonalCenterFixtures(DemoRouter r) {
       <String, dynamic>{
         'id': 'vip-year',
         'name': '年卡 365 天',
-        'description': '每月仅需99元，范画随心看',
-        'price': '1,188',
-        'originalPrice': '1,588',
+        'description': '覆盖一整个备考周期',
         'days': 365,
         'benefits': _vipBenefits,
       },
       <String, dynamic>{
         'id': 'vip-quarter',
         'name': '季卡 90 天',
-        'description': '每天仅需3.9元，冲刺季必备',
-        'price': '349',
-        'originalPrice': '447',
+        'description': '适合集训阶段使用',
         'days': 90,
         'benefits': _vipBenefits,
       },
       <String, dynamic>{
         'id': 'vip-month',
         'name': '月卡 30 天',
-        'description': '每天仅需4.6元，先体验再决定',
-        'price': '139',
-        'originalPrice': '149',
+        'description': '含高清范画与视频课程',
         'days': 30,
-        'benefits': _vipBenefits.take(3).toList(),
+        'benefits': _vipBenefits.take(2).toList(),
       },
     ];
   });

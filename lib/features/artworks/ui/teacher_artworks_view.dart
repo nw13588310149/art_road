@@ -3,13 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/art/art_tokens.dart';
-import '../../../core/theme/app_font.dart';
-import '../../../core/widgets/app_loading_indicator.dart';
+import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
-import '../../../core/widgets/app_text_field.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/art_widgets.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/teacher_artworks_controller.dart';
@@ -77,6 +72,12 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
     });
   }
 
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _search.clear();
+    unawaited(_controller.setKeyword(''));
+  }
+
   Future<void> _startReview() async {
     if (_starting) {
       return;
@@ -93,7 +94,7 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
     }
     final id = result.id;
     if (id == null) {
-      AppToast.showSuccess(context, '太棒了，暂时没有待点评的作品');
+      AppToast.showInfo(context, '暂无待点评的作品');
       return;
     }
     setState(() => _detailId = id);
@@ -153,124 +154,152 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
   }
 
   Widget _buildList(TeacherArtworksState state) {
-    return PageInitLoadingShell(
-      loading: state.loading && !state.loaded,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ArtPageHeader(
-            title: '作品点评',
-            subtitle: '多位老师独立点评，保存自己的点评后可查看其他老师的意见',
-            actions: [
-              ArtButton(
-                label: '点评标签',
-                primary: false,
-                icon: Icons.sell_outlined,
-                onTap: () => showArtworkTagManager(context),
+    final pending = state.stats.pending;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: '作品点评',
+          subtitle: '多位老师独立点评，保存自己的点评后可查看其他老师的意见',
+          actions: [
+            AppButton(
+              label: '点评标签',
+              icon: Icons.sell_outlined,
+              variant: AppButtonVariant.quiet,
+              size: AppButtonSize.sm,
+              onTap: () => showArtworkTagManager(context),
+            ),
+            AppButton(
+              label: '开始点评',
+              icon: Icons.rate_review_outlined,
+              size: AppButtonSize.sm,
+              loading: _starting,
+              onTap: _startReview,
+            ),
+          ],
+          bottom: Row(
+            children: [
+              AppSegmented<ArtworkStatusFilter>(
+                segments: [
+                  for (final filter in _filters)
+                    AppSegment(
+                      value: filter,
+                      label: filter.label,
+                      badge:
+                          filter == ArtworkStatusFilter.pending && pending > 0
+                          ? '$pending'
+                          : null,
+                    ),
+                ],
+                value: state.filter,
+                onChanged: (f) => unawaited(_controller.setFilter(f)),
               ),
-              const SizedBox(width: 8),
-              ArtButton(
-                label: '开始点评',
-                icon: Icons.play_arrow_rounded,
-                loading: _starting,
-                onTap: _startReview,
+              const SizedBox(width: AppSpace.s12),
+              Text('共 ${state.total} 件', style: AppText.caption12),
+              const Spacer(),
+              SizedBox(
+                width: 280,
+                child: AppSearchField(
+                  controller: _search,
+                  hint: '搜索学生、校区或作品',
+                  onChanged: _onSearchChanged,
+                  onSubmitted: (value) {
+                    _searchDebounce?.cancel();
+                    unawaited(_controller.setKeyword(value));
+                  },
+                ),
               ),
             ],
           ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 760 ? 2 : 1;
-                return AppRefreshIndicator(
-                  onRefresh: _controller.refresh,
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverToBoxAdapter(
-                          child: _StatsRow(
-                            stats: state.stats,
-                            onSelect: (f) =>
-                                unawaited(_controller.setFilter(f)),
-                          ),
-                        ),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-                        sliver: SliverToBoxAdapter(
-                          child: Row(
-                            children: [
-                              ArtSegmentTabs<ArtworkStatusFilter>(
-                                items: _filters,
-                                value: state.filter,
-                                labelOf: (f) => f.label,
-                                onChanged: (f) =>
-                                    unawaited(_controller.setFilter(f)),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 280,
-                                    ),
-                                    child: _SearchField(
-                                      controller: _search,
-                                      onChanged: _onSearchChanged,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      ..._listSlivers(state, columns),
-                      const SliverToBoxAdapter(child: SizedBox(height: 28)),
-                    ],
-                  ),
-                );
-              },
-            ),
+        ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 760 ? 2 : 1;
+              return AppRefreshIndicator(
+                onRefresh: _controller.refresh,
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    ..._listSlivers(state, columns),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: AppSpace.s32),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   List<Widget> _listSlivers(TeacherArtworksState state, int columns) {
+    SliverGridDelegate grid() => SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: columns,
+      mainAxisSpacing: AppSpace.s12,
+      crossAxisSpacing: AppSpace.s12,
+      mainAxisExtent: _TeacherArtworkCard.height,
+    );
+    const padding = EdgeInsets.fromLTRB(
+      AppSpace.page,
+      AppSpace.s4,
+      AppSpace.page,
+      0,
+    );
     if (state.items.isEmpty) {
-      if (state.loadingList) {
-        return const [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: AppLoadingIndicator(size: 36)),
+      if (!state.loaded || state.loadingList) {
+        return [
+          SliverPadding(
+            padding: padding,
+            sliver: SliverGrid(
+              gridDelegate: grid(),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => const AppSkeleton(
+                  height: double.infinity,
+                  radius: AppRadius.card,
+                ),
+                childCount: columns * 2,
+              ),
             ),
           ),
         ];
       }
-      if (!state.loaded) {
-        return const [];
+      if (state.listFailed) {
+        return [
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 280,
+              child: AppErrorState(
+                title: '作品加载失败',
+                description: '请检查网络后重试',
+                onRetry: _controller.refresh,
+              ),
+            ),
+          ),
+        ];
       }
+      final searching = state.keyword.isNotEmpty;
       return [
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 28),
-            child: ArtEmptyState(
+          child: SizedBox(
+            height: 280,
+            child: AppEmptyState(
               icon: Icons.rate_review_outlined,
-              message: state.keyword.isNotEmpty
+              title: searching
                   ? '没有找到「${state.keyword}」相关的作品'
-                  : state.stats.total == 0
-                  ? '暂时没有分配给你的作品'
                   : switch (state.filter) {
-                      ArtworkStatusFilter.pending => '待点评的作品都处理完了，辛苦啦',
+                      ArtworkStatusFilter.pending => '暂无待点评作品',
                       ArtworkStatusFilter.reviewed => '还没有点评过的作品',
                       ArtworkStatusFilter.all => '暂时没有分配给你的作品',
                     },
+              description: searching
+                  ? '换个学生姓名、校区或作品名称试试'
+                  : '学生提交作品后会出现在这里',
+              actionLabel: searching ? '清除搜索' : null,
+              onAction: searching ? _clearSearch : null,
             ),
           ),
         ),
@@ -278,14 +307,9 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
     }
     return [
       SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: padding,
         sliver: SliverGrid(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            mainAxisExtent: _TeacherArtworkCard.height,
-          ),
+          gridDelegate: grid(),
           delegate: SliverChildBuilderDelegate(
             (context, index) => _TeacherArtworkCard(
               item: state.items[index],
@@ -298,7 +322,7 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
       if (state.loadingMore)
         const SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.symmetric(vertical: AppSpace.s16),
             child: Center(child: AppLoadingIndicator(size: 30)),
           ),
         ),
@@ -306,94 +330,19 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
   }
 }
 
-class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.stats, required this.onSelect});
-
-  final ArtworkStats stats;
-  final ValueChanged<ArtworkStatusFilter> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: ArtworkStatCard(
-            label: '待点评',
-            value: stats.pending,
-            icon: Icons.pending_actions_rounded,
-            color: ArtColors.warn,
-            onTap: () => onSelect(ArtworkStatusFilter.pending),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ArtworkStatCard(
-            label: '已点评',
-            value: stats.reviewed,
-            icon: Icons.task_alt_rounded,
-            color: ArtColors.success,
-            onTap: () => onSelect(ArtworkStatusFilter.reviewed),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ArtworkStatCard(
-            label: '全部',
-            value: stats.total,
-            icon: Icons.collections_outlined,
-            onTap: () => onSelect(ArtworkStatusFilter.all),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({required this.controller, required this.onChanged});
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 38,
-      child: AppTextField(
-        controller: controller,
-        onChanged: onChanged,
-        textInputAction: TextInputAction.search,
-        style: ArtText.body(size: 13),
-        decoration: artworkInputDecoration(
-          hint: '搜索学生、校区或作品',
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            size: 18,
-            color: ArtColors.ink3,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 9,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _TeacherArtworkCard extends StatelessWidget {
   const _TeacherArtworkCard({required this.item, required this.onTap});
 
-  static const height = 116.0;
+  static const height = 118.0;
 
   final ArtworkSummary item;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ArtCard(
-      color: ArtColors.subtle,
-      padding: const EdgeInsets.all(12),
+    final score = item.finalScore;
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s12),
       onTap: onTap,
       child: Row(
         children: [
@@ -403,33 +352,17 @@ class _TeacherArtworkCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                ArtNetworkImage(
-                  item.coverUrl,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                AppImage(src: item.coverUrl, borderRadius: AppRadius.br8),
                 if (item.imageCount > 1)
                   Positioned(
-                    right: 4,
-                    bottom: 4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '${item.imageCount} 张',
-                        style: ArtText.caption(size: 10, color: Colors.white),
-                      ),
-                    ),
+                    right: AppSpace.s4,
+                    bottom: AppSpace.s4,
+                    child: ArtworkImageCountTag(count: item.imageCount),
                   ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpace.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,28 +370,28 @@ class _TeacherArtworkCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    ArtAvatar(
+                    AppAvatar(
                       name: item.studentName,
                       url: item.avatarUrl,
-                      size: 22,
+                      size: 24,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: AppSpace.s8),
                     Flexible(
                       child: Text(
                         item.studentName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: ArtText.body(size: 13, weight: AppFont.w500),
+                        style: AppText.body14Strong,
                       ),
                     ),
                     if (item.organizationName.isNotEmpty) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: AppSpace.s8),
                       Flexible(
                         child: Text(
                           item.organizationName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: ArtText.caption(size: 11),
+                          style: AppText.caption12,
                         ),
                       ),
                     ],
@@ -468,18 +401,18 @@ class _TeacherArtworkCard extends StatelessWidget {
                   item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: ArtText.body(size: 15, weight: AppFont.w500),
+                  style: AppText.title16,
                 ),
                 Row(
                   children: [
-                    ArtworkSubjectChip(subject: item.subject),
-                    const SizedBox(width: 8),
+                    ArtworkSubjectTag(subject: item.subject),
+                    const SizedBox(width: AppSpace.s8),
                     Expanded(
                       child: Text(
                         '提交于 ${ArtworkRules.shortTime(item.createTime)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: ArtText.caption(size: 11),
+                        style: AppText.caption12,
                       ),
                     ),
                   ],
@@ -487,28 +420,21 @@ class _TeacherArtworkCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpace.s8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              ArtworkStatusBadge(
-                done: item.myReviewed,
-                label: item.myReviewed ? '我已点评' : '待我点评',
-              ),
-              if (item.myReviewed && item.finalScore != null)
-                ArtworkScore(
-                  score: item.finalScore,
-                  maxScore: item.maxScore,
-                  size: 18,
-                )
+              ArtworkStatusTag(done: item.myReviewed),
+              if (item.myReviewed && score != null)
+                ArtworkScore(score: score, maxScore: item.maxScore, size: 16)
               else if (item.myReviewed && !item.reviewed)
-                Text('等其他老师', style: ArtText.caption(size: 11))
+                Text('等其他老师点评', style: AppText.caption12)
               else
                 const Icon(
                   Icons.chevron_right_rounded,
                   size: 20,
-                  color: ArtColors.ink4,
+                  color: AppColors.textPlaceholder,
                 ),
             ],
           ),

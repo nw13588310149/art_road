@@ -38,12 +38,16 @@ class TeacherExamState {
 
   List<TeacherExamItem> get visibleExams {
     return switch (statusTab) {
-      1 => exams
-          .where((item) => item.cornerKind == TeacherExamCornerKind.unpublished)
-          .toList(growable: false),
-      2 => exams
-          .where((item) => item.cornerKind == TeacherExamCornerKind.published)
-          .toList(growable: false),
+      1 =>
+        exams
+            .where(
+              (item) => item.cornerKind == TeacherExamCornerKind.unpublished,
+            )
+            .toList(growable: false),
+      2 =>
+        exams
+            .where((item) => item.cornerKind == TeacherExamCornerKind.published)
+            .toList(growable: false),
       _ => exams,
     };
   }

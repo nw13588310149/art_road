@@ -34,23 +34,23 @@ class StudentDashboardBadges {
 StudentDashboardBadges parseStudentDashboardBadgesFromIndex(dynamic raw) {
   final map = _coerceIndexMap(raw);
   return StudentDashboardBadges(
-    homeworkPending: _pickInt(
-      map,
-      ['homeworkCount', 'pendingHomeworkCount', 'homeworkPendingCount'],
-    ),
-    examPending: _pickInt(
-      map,
-      ['examCount', 'pendingExamCount', 'myExamCount', 'todoExamCount'],
-    ),
-    leavePending: _pickInt(
-      map,
-      [
-        'leaveCount',
-        'pendingLeaveCount',
-        'studentLeaveCount',
-        'leaveStatus1Count',
-      ],
-    ),
+    homeworkPending: _pickInt(map, [
+      'homeworkCount',
+      'pendingHomeworkCount',
+      'homeworkPendingCount',
+    ]),
+    examPending: _pickInt(map, [
+      'examCount',
+      'pendingExamCount',
+      'myExamCount',
+      'todoExamCount',
+    ]),
+    leavePending: _pickInt(map, [
+      'leaveCount',
+      'pendingLeaveCount',
+      'studentLeaveCount',
+      'leaveStatus1Count',
+    ]),
   );
 }
 

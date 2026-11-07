@@ -83,8 +83,7 @@ class StudentTodayCourse {
   /// 任课老师 id（`teacherId`），用于跨接口回填教师头像。
   final String teacherId;
 
-  String get periodLabel =>
-      lineNum > 0 ? '第$lineNum节' : '今日课程';
+  String get periodLabel => lineNum > 0 ? '第$lineNum节' : '今日课程';
 
   String get timeRange => '$timeStart-$timeEnd';
 
@@ -162,7 +161,6 @@ class StudentTodayCourse {
       teacherId: teacherId,
     );
   }
-
 }
 
 List<StudentTodayCourse> parseStudentTodaySmallCourses({
@@ -171,8 +169,9 @@ List<StudentTodayCourse> parseStudentTodaySmallCourses({
   required DateTime now,
   String todayIso = '',
 }) {
-  final configs =
-      timeConfigs.isNotEmpty ? timeConfigs : kDefaultStudentTimeConfigs;
+  final configs = timeConfigs.isNotEmpty
+      ? timeConfigs
+      : kDefaultStudentTimeConfigs;
   final rows = _extractCourseRows(raw);
   final courses = <StudentTodayCourse>[];
 
@@ -216,7 +215,8 @@ List<StudentTodayCourse> parseStudentTodaySmallCourses({
     final mins = _minutesBetweenHm(times.start, times.end);
     final durationLabel = mins > 0 ? '$mins分钟' : '—';
 
-    final scoreRaw = flat['score'] ?? flat['commentScore'] ?? flat['studentScore'];
+    final scoreRaw =
+        flat['score'] ?? flat['commentScore'] ?? flat['studentScore'];
     final score = scoreRaw == null
         ? null
         : double.tryParse(scoreRaw.toString());
@@ -276,10 +276,7 @@ List<StudentTodayCourse> parseStudentTodaySmallCourses({
           'evaluation',
           'evaluate',
         ]),
-        teacherHeadUrl: _pickString(flat, [
-          'teacherHeadUrl',
-          'headUrl',
-        ], ''),
+        teacherHeadUrl: _pickString(flat, ['teacherHeadUrl', 'headUrl'], ''),
         teacherId: readSnowflakeId(flat['teacherId']) ?? '',
       ),
     );
@@ -622,7 +619,8 @@ class StudentCheckInStat {
 
   factory StudentCheckInStat.fromJson(dynamic raw) {
     final map = _unwrapMap(raw) ?? const <String, dynamic>{};
-    final rateRaw = map['attendanceRate'] ??
+    final rateRaw =
+        map['attendanceRate'] ??
         map['onTimeRate'] ??
         map['punctualityRate'] ??
         map['rate'];
@@ -636,8 +634,16 @@ class StudentCheckInStat {
       }
     }
     return StudentCheckInStat(
-      totalCount: _pickInt(map, ['totalCount', 'shouldCount', 'shouldSignCount']),
-      normalCount: _pickInt(map, ['normalCount', 'presentCount', 'signedCount']),
+      totalCount: _pickInt(map, [
+        'totalCount',
+        'shouldCount',
+        'shouldSignCount',
+      ]),
+      normalCount: _pickInt(map, [
+        'normalCount',
+        'presentCount',
+        'signedCount',
+      ]),
       absentCount: _pickInt(map, ['absentCount', 'absentNum']),
       lateCount: _pickInt(map, ['lateCount', 'lateNum']),
       leaveCount: _pickInt(map, ['leaveCount', 'leaveNum']),
@@ -706,9 +712,8 @@ class StudentSignRecordItem {
     final flat = _flattenSignRecordRow(json);
     final type = _pickInt(flat, ['type', 'courseType', 'classType']);
     final status = _pickInt(flat, ['status', 'signStatus', 'attendanceStatus']);
-    final absentFlag = flat['isAbsent'] == true ||
-        flat['absent'] == true ||
-        status == 1;
+    final absentFlag =
+        flat['isAbsent'] == true || flat['absent'] == true || status == 1;
     final begin = _trimHm(
       _pickString(flat, ['timeBegin', 'startTime', 'beginTime'], ''),
     );
@@ -751,21 +756,9 @@ class StudentSignRecordItem {
         'signOutTime',
         'checkOutTime',
       ]),
-      method: _pickString(flat, [
-        'signMethod',
-        'method',
-        'signTypeName',
-      ], ''),
-      note: _pickString(flat, [
-        'remark',
-        'note',
-        'reason',
-        'description',
-      ], ''),
-      teacherHeadUrl: _pickString(flat, [
-        'teacherHeadUrl',
-        'headUrl',
-      ], ''),
+      method: _pickString(flat, ['signMethod', 'method', 'signTypeName'], ''),
+      note: _pickString(flat, ['remark', 'note', 'reason', 'description'], ''),
+      teacherHeadUrl: _pickString(flat, ['teacherHeadUrl', 'headUrl'], ''),
       lineNum: _pickInt(flat, ['lineNum']),
       className: _pickString(flat, ['className'], ''),
       teacherId: readSnowflakeId(flat['teacherId']) ?? '',
@@ -936,19 +929,13 @@ Map<String, dynamic> _flattenSignRecordRow(Map<String, dynamic> row) {
     MapEntry('date', 'courseDate'),
     MapEntry('type', 'courseType'),
   ]);
-  merge('subject', const [
-    MapEntry('name', 'subjectName'),
-  ]);
+  merge('subject', const [MapEntry('name', 'subjectName')]);
   merge('teacher', const [
     MapEntry('realname', 'teacherRealname'),
     MapEntry('name', 'teacherName'),
   ]);
-  merge('classroom', const [
-    MapEntry('name', 'classroomName'),
-  ]);
-  merge('schoolClassroom', const [
-    MapEntry('name', 'classroomName'),
-  ]);
+  merge('classroom', const [MapEntry('name', 'classroomName')]);
+  merge('schoolClassroom', const [MapEntry('name', 'classroomName')]);
   return flat;
 }
 
@@ -1078,7 +1065,9 @@ class StudentCourseSignMakeupItem {
   }
 }
 
-List<StudentCourseSignMakeupItem> parseStudentCourseSignMakeupList(dynamic raw) {
+List<StudentCourseSignMakeupItem> parseStudentCourseSignMakeupList(
+  dynamic raw,
+) {
   return _extractSignRecordRows(raw)
       .map(StudentCourseSignMakeupItem.fromJson)
       .where((item) => item.id.isNotEmpty)
@@ -1103,7 +1092,10 @@ List<({String label, String value})> parseStudentCourseSignMakeupDetailRows(
   final className = _pickString(flat, ['className'], '');
   final reason = _pickString(flat, ['reason'], '');
   return [
-    (label: '课程名称', value: _pickString(flat, ['subjectName', 'courseName'], '—')),
+    (
+      label: '课程名称',
+      value: _pickString(flat, ['subjectName', 'courseName'], '—'),
+    ),
     if (className.isNotEmpty) (label: '所属班级', value: className),
     (
       label: '补签类型',
@@ -1115,15 +1107,17 @@ List<({String label, String value})> parseStudentCourseSignMakeupDetailRows(
     if (reason.isNotEmpty) (label: '申请原因', value: reason),
     (
       label: '审批状态',
-      value: _pickString(
-        flat,
-        ['statusText'],
-        _courseSignMakeupStatusLabel(_pickInt(flat, ['status'])),
-      ),
+      value: _pickString(flat, [
+        'statusText',
+      ], _courseSignMakeupStatusLabel(_pickInt(flat, ['status']))),
     ),
     (
       label: '审批意见',
-      value: _pickString(flat, ['approveRemark', 'auditReason', 'auditRemark'], '—'),
+      value: _pickString(flat, [
+        'approveRemark',
+        'auditReason',
+        'auditRemark',
+      ], '—'),
     ),
     (label: '申请时间', value: _pickString(flat, ['createTime', 'applyTime'], '—')),
     (

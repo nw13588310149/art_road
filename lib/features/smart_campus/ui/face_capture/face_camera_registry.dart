@@ -8,8 +8,17 @@ abstract final class FaceCameraRegistry {
   static List<CameraDescription>? _cached;
   static Future<List<CameraDescription>>? _loading;
 
+  /// 进入人脸库时预取摄像头列表；没有摄像头或未授权（无头浏览器、桌面浏览器拒绝
+  /// 权限）时只记日志，等用户点「打开摄像头」时再在拍摄页说明原因。
   static void warmUp() {
-    unawaited(getCameras());
+    unawaited(
+      getCameras().then<void>(
+        (_) {},
+        onError: (Object error, StackTrace stack) {
+          debugPrint('FaceCameraRegistry.warmUp: $error');
+        },
+      ),
+    );
   }
 
   static Future<List<CameraDescription>> getCameras() {

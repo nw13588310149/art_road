@@ -82,10 +82,7 @@ Future<GroupChatMediaSaveResult> saveGroupChatMediaBytesImpl({
     }
     return GroupChatMediaSaveResult(ok: true, path: path);
   } on UnimplementedError {
-    return const GroupChatMediaSaveResult(
-      ok: false,
-      error: '当前平台暂不支持保存该文件',
-    );
+    return const GroupChatMediaSaveResult(ok: false, error: '当前平台暂不支持保存该文件');
   } catch (error) {
     return GroupChatMediaSaveResult(ok: false, error: '保存失败：$error');
   }

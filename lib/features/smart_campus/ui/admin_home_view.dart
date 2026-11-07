@@ -1,10 +1,10 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -473,11 +473,10 @@ class _SectionTitle extends StatelessWidget {
     final titleWidget = Text(
       title,
       style: TextStyle(
-        fontSize: ui(18),
+        fontSize: ui(16),
         height: 1.2,
         fontWeight: AppFont.w500,
-        color: const Color(0xFF1A1A1A),
-        fontFamily: 'PingFang SC',
+        color: AppColors.ink,
       ),
     );
     if (trailing == null) {
@@ -492,8 +491,7 @@ class _SectionTitle extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             height: 1.2,
-            color: const Color(0xFF6D6B75),
-            fontFamily: 'PingFang SC',
+            color: AppColors.textSecondary,
           ),
         ),
       ],
@@ -634,9 +632,7 @@ class _StatCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: smartCampusStatValueTextStyle(
                   ui,
-                  color: item.highlight
-                      ? const Color(0xFF715EFE)
-                      : const Color(0xFF0B081A),
+                  color: item.highlight ? AppColors.brand : AppColors.ink,
                 ),
               ),
             ),
@@ -649,8 +645,7 @@ class _StatCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               height: 1.0,
-              color: const Color(0xFF6D6B75),
-              fontFamily: 'PingFang SC',
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -697,15 +692,13 @@ class _DataDashboardCard extends StatelessWidget {
                     yLabelStyle: TextStyle(
                       fontSize: ui(12),
                       height: 1.0,
-                      color: const Color(0xFFB6B5BB),
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.textPlaceholder,
                     ),
                     valueLabelStyle: TextStyle(
-                      fontSize: ui(11),
+                      fontSize: ui(12),
                       height: 1.0,
-                      color: const Color(0xFF715EFE),
+                      color: AppColors.brand,
                       fontWeight: FontWeight.w500,
-                      fontFamily: 'PingFang SC',
                     ),
                   ),
                   child: const SizedBox.expand(),
@@ -726,8 +719,7 @@ class _DataDashboardCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         height: 1.2,
-                        color: const Color(0xFF6D6B75),
-                        fontFamily: 'PingFang SC',
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -773,7 +765,7 @@ class _LineChartPainter extends CustomPainter {
     final maxV = maxY <= 0 ? 10.0 : maxY;
     final tickStep = maxV / 5;
     final gridPaint = Paint()
-      ..color = const Color(0xFFE6E9F1)
+      ..color = AppColors.line
       ..strokeWidth = 1;
 
     for (var i = 5; i >= 0; i--) {
@@ -873,13 +865,13 @@ class _LineChartPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFFE3DFFF), Color(0x00E3DFFF)],
+        colors: [AppColors.brandTint, Color(0x00E3DFFF)],
       ).createShader(Rect.fromLTWH(plotLeft, 0, plotWidth, chartBottom));
     canvas.drawPath(fillPath, fillPaint);
 
     // 3. 描边
     final strokePaint = Paint()
-      ..color = const Color(0xFF715EFE)
+      ..color = AppColors.brand
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
@@ -887,9 +879,9 @@ class _LineChartPainter extends CustomPainter {
     canvas.drawPath(linePath, strokePaint);
 
     // 4. 圆点 + 数值标注
-    final dotFill = Paint()..color = Colors.white;
+    final dotFill = Paint()..color = AppColors.surface;
     final dotStroke = Paint()
-      ..color = const Color(0xFF715EFE)
+      ..color = AppColors.brand
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     for (var i = 0; i < pts.length; i++) {
@@ -966,8 +958,7 @@ class _FourEndsCardState extends State<_FourEndsCard> {
               fontSize: ui(14),
               height: 1.2,
               fontWeight: AppFont.w500,
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
+              color: AppColors.ink,
             ),
           ),
           SizedBox(height: ui(8)),
@@ -976,8 +967,7 @@ class _FourEndsCardState extends State<_FourEndsCard> {
             style: TextStyle(
               fontSize: ui(12),
               height: 1.66,
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
+              color: AppColors.ink,
             ),
           ),
           SizedBox(height: ui(20)),
@@ -987,8 +977,7 @@ class _FourEndsCardState extends State<_FourEndsCard> {
               fontSize: ui(14),
               height: 1.2,
               fontWeight: AppFont.w500,
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
+              color: AppColors.ink,
             ),
           ),
           SizedBox(height: ui(8)),
@@ -997,8 +986,7 @@ class _FourEndsCardState extends State<_FourEndsCard> {
             style: TextStyle(
               fontSize: ui(12),
               height: 1.66,
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
+              color: AppColors.ink,
             ),
           ),
         ],
@@ -1029,7 +1017,7 @@ class _FourEndTab extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFF0B081A) : const Color(0xFFF5F6FA),
+            color: active ? AppColors.ink : AppColors.surfaceSubtle,
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           child: Text(
@@ -1037,8 +1025,7 @@ class _FourEndTab extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               height: 1.2,
-              color: active ? Colors.white : const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
+              color: active ? AppColors.surface : AppColors.ink,
             ),
           ),
         ),
@@ -1082,8 +1069,7 @@ class _WorkRemindersCard extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             height: 1.4,
-            color: const Color(0xFFB6B5BB),
-            fontFamily: 'PingFang SC',
+            color: AppColors.textPlaceholder,
           ),
         ),
       );
@@ -1092,10 +1078,7 @@ class _WorkRemindersCard extends StatelessWidget {
       return Center(
         child: TextButton(
           onPressed: onRefresh,
-          child: Text(
-            '工作提醒加载失败，点击重试',
-            style: TextStyle(fontSize: ui(12), fontFamily: 'PingFang SC'),
-          ),
+          child: Text('工作提醒加载失败，点击重试', style: TextStyle(fontSize: ui(12))),
         ),
       );
     }
@@ -1106,8 +1089,7 @@ class _WorkRemindersCard extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             height: 1.4,
-            color: const Color(0xFFCECED1),
-            fontFamily: 'PingFang SC',
+            color: AppColors.textTertiary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -1138,7 +1120,7 @@ class _WorkReminderCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(ui(12)),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
+        color: AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Column(
@@ -1154,17 +1136,16 @@ class _WorkReminderCard extends StatelessWidget {
                   vertical: ui(2),
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFE5E5),
+                  color: AppColors.dangerSoft,
                   borderRadius: BorderRadius.circular(ui(4)),
                 ),
                 child: Text(
                   item.tag,
                   style: TextStyle(
-                    fontSize: ui(10),
+                    fontSize: ui(12),
                     height: 1.2,
                     fontWeight: AppFont.w500,
-                    color: const Color(0xFFFF323C),
-                    fontFamily: 'PingFang SC',
+                    color: AppColors.danger,
                   ),
                 ),
               ),
@@ -1177,8 +1158,7 @@ class _WorkReminderCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     height: 1.4,
-                    color: const Color(0xFF0B081A),
-                    fontFamily: 'PingFang SC',
+                    color: AppColors.ink,
                   ),
                 ),
               ),
@@ -1193,8 +1173,7 @@ class _WorkReminderCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 height: 1.4,
-                color: const Color(0xFFB6B5BB),
-                fontFamily: 'PingFang SC',
+                color: AppColors.textPlaceholder,
               ),
             ),
           ],
@@ -1267,8 +1246,7 @@ class _AdminSidePanel extends StatelessWidget {
               fontSize: ui(14),
               height: 1.2,
               fontWeight: AppFont.w500,
-              color: const Color(0xFF1A1A1A),
-              fontFamily: 'PingFang SC',
+              color: AppColors.ink,
             ),
           ),
           SizedBox(height: ui(10)),
@@ -1288,8 +1266,7 @@ class _AdminSidePanel extends StatelessWidget {
                   fontSize: ui(16),
                   height: 1.2,
                   fontWeight: AppFont.w500,
-                  color: const Color(0xFF1A1A1A),
-                  fontFamily: 'PingFang SC',
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -1297,7 +1274,7 @@ class _AdminSidePanel extends StatelessWidget {
               TextButton(
                 onPressed: onOpenNotices,
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF6D6B75),
+                  foregroundColor: AppColors.textSecondary,
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1305,9 +1282,8 @@ class _AdminSidePanel extends StatelessWidget {
                 child: Text(
                   '查看全部',
                   style: TextStyle(
-                    fontSize: ui(11),
-                    color: const Color(0xFF6D6B75),
-                    fontFamily: 'PingFang SC',
+                    fontSize: ui(12),
+                    color: AppColors.textSecondary,
                     fontWeight: AppFont.w400,
                   ),
                 ),
@@ -1371,7 +1347,10 @@ class _SchoolNoticeList extends StatelessWidget {
         child: Center(
           child: Text(
             '加载中…',
-            style: TextStyle(fontSize: ui(12), color: const Color(0xFFB6B5BB)),
+            style: TextStyle(
+              fontSize: ui(12),
+              color: AppColors.textPlaceholder,
+            ),
           ),
         ),
       );
@@ -1393,7 +1372,10 @@ class _SchoolNoticeList extends StatelessWidget {
         child: Center(
           child: Text(
             '暂无已发布通知',
-            style: TextStyle(fontSize: ui(12), color: const Color(0xFFB6B5BB)),
+            style: TextStyle(
+              fontSize: ui(12),
+              color: AppColors.textPlaceholder,
+            ),
           ),
         ),
       );
@@ -1443,7 +1425,7 @@ class _ProfileHeader extends StatelessWidget {
               height: ui(72),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFE3DFFF),
+                color: AppColors.brandTint,
                 image: avatarUrl.isNotEmpty
                     ? DecorationImage(
                         image: NetworkImage(avatarUrl),
@@ -1458,10 +1440,9 @@ class _ProfileHeader extends StatelessWidget {
                             ? 'A'
                             : displayName.characters.first,
                         style: TextStyle(
-                          fontSize: ui(28),
+                          fontSize: ui(24),
                           height: 1.0,
-                          color: const Color(0xFF715EFE),
-                          fontFamily: 'PingFang SC',
+                          color: AppColors.brand,
                           fontWeight: AppFont.w500,
                         ),
                       ),
@@ -1485,8 +1466,7 @@ class _ProfileHeader extends StatelessWidget {
                             fontSize: ui(16),
                             height: 1.2,
                             fontWeight: AppFont.w500,
-                            color: const Color(0xFF0B081A),
-                            fontFamily: 'PingFang SC',
+                            color: AppColors.ink,
                           ),
                         ),
                       ),
@@ -1497,10 +1477,10 @@ class _ProfileHeader extends StatelessWidget {
                           vertical: ui(3),
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(ui(4)),
                           border: Border.all(
-                            color: const Color(0xFFF3F2F3),
+                            color: AppColors.lineSoft,
                             width: 0.5,
                           ),
                         ),
@@ -1511,7 +1491,7 @@ class _ProfileHeader extends StatelessWidget {
                               width: ui(6),
                               height: ui(6),
                               decoration: const BoxDecoration(
-                                color: Color(0xFF12C58A),
+                                color: AppColors.success,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -1519,10 +1499,9 @@ class _ProfileHeader extends StatelessWidget {
                             Text(
                               '运行中',
                               style: TextStyle(
-                                fontSize: ui(11),
+                                fontSize: ui(12),
                                 height: 1.0,
-                                color: const Color(0xFF0B081A),
-                                fontFamily: 'PingFang SC',
+                                color: AppColors.ink,
                               ),
                             ),
                           ],
@@ -1539,7 +1518,7 @@ class _ProfileHeader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         height: 1.2,
-                        color: const Color(0xFF6D6B75),
+                        color: AppColors.textSecondary,
                         fontFamily: 'Source Han Sans SC',
                         fontWeight: AppFont.w400,
                       ),
@@ -1590,8 +1569,7 @@ class _InfoLine extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             height: 1.2,
-            color: const Color(0xFFB6B5BB),
-            fontFamily: 'PingFang SC',
+            color: AppColors.textPlaceholder,
           ),
         ),
         Expanded(
@@ -1600,8 +1578,7 @@ class _InfoLine extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               height: 1.2,
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
+              color: AppColors.ink,
             ),
           ),
         ),
@@ -1628,7 +1605,7 @@ class _SchoolNoticeCard extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.fromLTRB(ui(10), ui(10), ui(16), ui(10)),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F6FA),
+            color: AppColors.surfaceSubtle,
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           child: Column(
@@ -1650,11 +1627,10 @@ class _SchoolNoticeCard extends StatelessWidget {
                     child: Text(
                       item.tag,
                       style: TextStyle(
-                        fontSize: ui(10),
+                        fontSize: ui(12),
                         height: 1.2,
                         fontWeight: AppFont.w500,
                         color: tagStyle.foreground,
-                        fontFamily: 'PingFang SC',
                       ),
                     ),
                   ),
@@ -1667,7 +1643,7 @@ class _SchoolNoticeCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         height: 1.4,
-                        color: const Color(0xFF0B081A),
+                        color: AppColors.ink,
                         fontFamily: 'Source Han Sans SC',
                       ),
                     ),
@@ -1685,7 +1661,7 @@ class _SchoolNoticeCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       height: 1.2,
-                      color: const Color(0xFFCECED1),
+                      color: AppColors.textTertiary,
                       fontFamily: 'Source Han Sans SC',
                     ),
                   ),
@@ -1715,9 +1691,8 @@ class _AdminNoticeDetailBody extends StatelessWidget {
         Text(
           notice.title,
           style: TextStyle(
-            fontSize: ui(15),
-            color: const Color(0xFF0B081A),
-            fontFamily: 'PingFang SC',
+            fontSize: ui(16),
+            color: AppColors.ink,
             fontWeight: AppFont.w600,
             height: 1.5,
           ),
@@ -1736,7 +1711,6 @@ class _AdminNoticeDetailBody extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: tagStyle.foreground,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -1751,8 +1725,7 @@ class _AdminNoticeDetailBody extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: ui(12),
-                    color: const Color(0xFF6D6B75),
-                    fontFamily: 'PingFang SC',
+                    color: AppColors.textSecondary,
                     fontWeight: AppFont.w400,
                     height: 1.4,
                   ),
@@ -1777,8 +1750,7 @@ class _AdminNoticeDetailBody extends StatelessWidget {
           '内容：',
           style: TextStyle(
             fontSize: ui(13),
-            color: const Color(0xFF6D6B75),
-            fontFamily: 'PingFang SC',
+            color: AppColors.textSecondary,
             fontWeight: AppFont.w400,
             height: 1.4,
           ),
@@ -1788,15 +1760,14 @@ class _AdminNoticeDetailBody extends StatelessWidget {
           width: double.infinity,
           padding: EdgeInsets.all(ui(12)),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F6FA),
+            color: AppColors.surfaceSubtle,
             borderRadius: BorderRadius.circular(ui(10)),
           ),
           child: Text(
             notice.content.isEmpty ? '（暂无正文）' : notice.content,
             style: TextStyle(
               fontSize: ui(13),
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
+              color: AppColors.ink,
               fontWeight: AppFont.w400,
               height: 22 / 13,
             ),
@@ -1832,8 +1803,7 @@ class _AdminNoticeDetailRow extends StatelessWidget {
               '$label：',
               style: TextStyle(
                 fontSize: ui(12),
-                color: const Color(0xFFB6B5BB),
-                fontFamily: 'PingFang SC',
+                color: AppColors.textPlaceholder,
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),
@@ -1844,8 +1814,7 @@ class _AdminNoticeDetailRow extends StatelessWidget {
               value.isEmpty ? '—' : value,
               style: TextStyle(
                 fontSize: ui(12),
-                color: const Color(0xFF0B081A),
-                fontFamily: 'PingFang SC',
+                color: AppColors.ink,
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),

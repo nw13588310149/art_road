@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -74,9 +75,8 @@ class _CourseSignCountdownBadgeState extends State<CourseSignCountdownBadge> {
           Text(
             _snapshot.label,
             style: TextStyle(
-              fontSize: ui(10),
-              color: const Color(0xFFB6B5BB),
-              fontFamily: 'PingFang SC',
+              fontSize: ui(12),
+              color: AppColors.textPlaceholder,
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -87,7 +87,7 @@ class _CourseSignCountdownBadgeState extends State<CourseSignCountdownBadge> {
           _snapshot.timeText,
           style: TextStyle(
             fontSize: ended ? ui(12) : ui(14),
-            color: ended ? const Color(0xFFB6B5BB) : const Color(0xFF715EFE),
+            color: ended ? AppColors.textPlaceholder : AppColors.brand,
             fontFamily: ended ? 'PingFang SC' : 'Barlow',
             fontWeight: ended ? AppFont.w400 : FontWeight.w600,
             height: 1,

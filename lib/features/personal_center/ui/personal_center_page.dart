@@ -1,21 +1,14 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
-import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/scaled_dialog.dart';
+import '../../../core/ui/ui.dart';
 import '../../shell/state/shell_controller.dart';
-import '../data/qr_image_saver.dart';
 import '../state/personal_center_controller.dart';
 import '../state/personal_center_state.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import '../state/profile_format.dart';
+import 'widgets/my_qr_code_card.dart';
 
 /// 美术之路尚未上架，推广二维码暂指向艺考网官网；上架后替换为 App Store 地址。
 const _kAppPromoUrl = 'https://yyzl0931.com/';
@@ -23,120 +16,152 @@ const _kAppPromoUrl = 'https://yyzl0931.com/';
 /// 客服邮箱占位，上线前替换为美术之路官方客服邮箱。
 const _kSupportEmail = 'service@yyzl0931.com';
 
-class PersonalCenterPage extends ConsumerStatefulWidget {
+const _kPriceNote = '开通方式与价格以正式页面为准；已有兑换码可在「兑换中心」兑换。';
+
+class PersonalCenterPage extends ConsumerWidget {
   const PersonalCenterPage({super.key});
 
   @override
-  ConsumerState<PersonalCenterPage> createState() => _PersonalCenterPageState();
-}
-
-class _PersonalCenterPageState extends ConsumerState<PersonalCenterPage> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(personalCenterControllerProvider);
     final controller = ref.read(personalCenterControllerProvider.notifier);
+    final navigator = Navigator.of(context);
 
-    if (state.loading) {
-      return const Center(child: AppLoadingIndicator());
-    }
-
-    if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(state.errorMessage!, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: controller.refresh,
-              child: const Text('重试'),
-            ),
-          ],
-        ),
+    final Widget body;
+    if (state.loading && state.user.isEmpty) {
+      body = const _PersonalCenterSkeleton();
+    } else if ((state.errorMessage ?? '').isNotEmpty && state.user.isEmpty) {
+      body = AppErrorState(
+        title: '个人资料加载失败',
+        description: state.errorMessage,
+        onRetry: controller.refresh,
+      );
+    } else {
+      body = _PersonalCenterBody(
+        state: state,
+        controller: controller,
+        actions: _PersonalCenterActions(context, ref, state, controller),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _ProfileHero(
-            state: state,
-            controller: controller,
-            onEditProfile: () => Navigator.pushNamed(context, RoutePaths.info),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _ActionListCard(
-              checkStatusEnabled: state.checkStatusEnabled,
-              onQr: () => _onMyQr(context, controller, state),
-              onRecommend: () => _onRecommend(context),
-              onFeedback: () => _onFeedback(context, ref),
-              onService: () => _onContactService(context),
-              onRedeem: state.checkStatusEnabled
-                  ? () => _onRedeem(context, controller)
-                  : null,
-            ),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: '个人中心',
+          subtitle: '账号资料、会员与常用服务',
+          onBack: navigator.canPop() ? navigator.pop : null,
+        ),
+        Expanded(child: body),
+      ],
     );
   }
+}
 
-  Future<void> _onMyQr(
-    BuildContext context,
-    PersonalCenterController controller,
-    PersonalCenterState state,
-  ) async {
+/// 页面上所有入口的处理函数，集中在一处便于两栏 / 单栏布局共用。
+class _PersonalCenterActions {
+  _PersonalCenterActions(this.context, this.ref, this.state, this.controller);
+
+  final BuildContext context;
+  final WidgetRef ref;
+  final PersonalCenterState state;
+  final PersonalCenterController controller;
+
+  void editProfile() => Navigator.pushNamed(context, RoutePaths.info);
+
+  Future<void> showMyQr() async {
     final result = await controller.fetchQrImageUrl();
     if (!context.mounted) {
       return;
     }
-    if (result.error != null) {
-      AppToast.showError(context, result.error!);
+    final url = result.url;
+    if (result.error != null || url == null) {
+      AppToast.showError(context, result.error ?? '二维码加载失败');
       return;
     }
-    await showScaledDialog<void>(
+    await showAppDialog<void>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (ctx) => _MyQrCodeDialog(
-        nickname: state.user['nickname']?.toString() ?? '用户',
+      builder: (_) => _MyQrCodeDialog(
+        nickname: state.user['nickname']?.toString().trim() ?? '',
         mobile: state.user['mobile']?.toString() ?? '',
-        avatarUrl: state.user['headUrl']?.toString(),
-        imageUrl: result.url!,
+        avatarUrl: state.user['headUrl']?.toString() ?? '',
+        imageUrl: url,
       ),
     );
   }
 
-  void _onRecommend(BuildContext context) {
-    showScaledDialog<void>(
+  void recommend() {
+    showAppDialog<void>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (ctx) => const _RecommendDialog(),
+      builder: (dialogContext) => AppDialog(
+        title: '推荐给好友',
+        message: '把美术之路推荐给同学和朋友，一起在这里学画。',
+        actions: [
+          AppButton(
+            label: '关闭',
+            variant: AppButtonVariant.secondary,
+            onTap: () => Navigator.of(dialogContext).pop(),
+          ),
+          AppButton(
+            label: '复制链接',
+            onTap: () async {
+              await Clipboard.setData(const ClipboardData(text: _kAppPromoUrl));
+              if (!dialogContext.mounted) {
+                return;
+              }
+              Navigator.of(dialogContext).pop();
+              AppToast.showSuccess(context, '链接已复制');
+            },
+          ),
+        ],
+        child: const _CopyField(label: '推广链接', value: _kAppPromoUrl),
+      ),
     );
   }
 
-  void _onFeedback(BuildContext context, WidgetRef ref) {
+  void feedback() {
     Navigator.pushReplacementNamed(context, RoutePaths.helpFeedback);
   }
 
-  void _onContactService(BuildContext context) {
-    showScaledDialog<void>(
+  void contactService() {
+    showAppDialog<void>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (ctx) => const _ContactServiceDialog(email: _kSupportEmail),
+      builder: (dialogContext) => AppDialog(
+        title: '联系客服',
+        message: '发送邮件联系我们，请写明登录手机号和遇到的问题。',
+        actions: [
+          AppButton(
+            label: '关闭',
+            variant: AppButtonVariant.secondary,
+            onTap: () => Navigator.of(dialogContext).pop(),
+          ),
+          AppButton(
+            label: '复制邮箱',
+            onTap: () async {
+              await Clipboard.setData(
+                const ClipboardData(text: _kSupportEmail),
+              );
+              if (!dialogContext.mounted) {
+                return;
+              }
+              Navigator.of(dialogContext).pop();
+              AppToast.showSuccess(context, '已复制客服邮箱');
+            },
+          ),
+        ],
+        child: const _CopyField(label: '客服邮箱', value: _kSupportEmail),
+      ),
     );
   }
 
-  Future<void> _onRedeem(
-    BuildContext context,
-    PersonalCenterController controller,
-  ) async {
-    final code = await showScaledDialog<String>(
+  void openGuide() => Navigator.pushNamed(context, RoutePaths.helpGuide);
+
+  void openTerms() => Navigator.pushNamed(context, RoutePaths.xieyi);
+
+  Future<void> redeem() async {
+    final code = await showAppDialog<String>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (ctx) => const _RedeemVipDialog(),
+      builder: (_) => const _RedeemVipDialog(),
     );
     if (!context.mounted || code == null || code.isEmpty) {
       return;
@@ -147,594 +172,350 @@ class _PersonalCenterPageState extends ConsumerState<PersonalCenterPage> {
     }
     if (msg != null) {
       AppToast.showError(context, msg);
-    } else {
-      await ref.read(shellControllerProvider.notifier).refreshUserAndSchool();
-      if (!context.mounted) {
-        return;
-      }
-      AppToast.showSuccess(context, '兑换成功');
+      return;
     }
+    await ref.read(shellControllerProvider.notifier).refreshUserAndSchool();
+    if (!context.mounted) {
+      return;
+    }
+    AppToast.showSuccess(context, '兑换成功，会员有效期已更新');
+  }
+
+  void openPlan(VipPackageRow plan) {
+    showAppDialog<void>(
+      context: context,
+      builder: (dialogContext) => AppDialog(
+        title: '开通「${plan.name}」',
+        message: _kPriceNote,
+        actions: [
+          AppButton(
+            label: '关闭',
+            variant: AppButtonVariant.secondary,
+            onTap: () => Navigator.of(dialogContext).pop(),
+          ),
+          AppButton(
+            label: '去兑换',
+            onTap: () {
+              Navigator.of(dialogContext).pop();
+              redeem();
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 
-/// 头像下方身份徽标文案：按 [role] 映射，未知 role 不展示。
-String? _identityLabelFromRole(String? role) {
-  switch (role?.trim().toLowerCase()) {
-    case 'tourist':
-      return '游客';
-    case 'student':
-      return '学生';
-    case 'teacher':
-      return '老师';
-    default:
-      return null;
-  }
-}
-
-class _ProfileHero extends StatelessWidget {
-  const _ProfileHero({
+class _PersonalCenterBody extends StatelessWidget {
+  const _PersonalCenterBody({
     required this.state,
     required this.controller,
-    required this.onEditProfile,
+    required this.actions,
   });
 
   final PersonalCenterState state;
   final PersonalCenterController controller;
-  final VoidCallback onEditProfile;
+  final _PersonalCenterActions actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final main = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ProfileCard(state: state, onEdit: actions.editProfile),
+        if (state.checkStatusEnabled) ...[
+          const SizedBox(height: AppSpace.s16),
+          _MembershipCard(
+            state: state,
+            daysRemaining: controller.vipDaysRemaining(),
+            onOpenPlan: actions.openPlan,
+          ),
+        ],
+      ],
+    );
+    final services = _ServiceCard(
+      checkStatusEnabled: state.checkStatusEnabled,
+      actions: actions,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 760;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.page,
+            AppSpace.s4,
+            AppSpace.page,
+            AppSpace.s24,
+          ),
+          child: wide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: main),
+                    const SizedBox(width: AppSpace.s16),
+                    SizedBox(width: 320, child: services),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    main,
+                    const SizedBox(height: AppSpace.s16),
+                    services,
+                  ],
+                ),
+        );
+      },
+    );
+  }
+}
+
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.state, required this.onEdit});
+
+  final PersonalCenterState state;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     final user = state.user;
     final nick = user['nickname']?.toString().trim() ?? '';
-    final mobile = user['mobile']?.toString().trim() ?? '';
-    final identityLabel = _identityLabelFromRole(user['role']?.toString());
-    final avatarUrl = user['headUrl']?.toString();
-
-    final days = controller.vipDaysRemaining();
-    final showAnnualBadge =
-        state.checkStatusEnabled && days != null && days >= 1;
-    final pkg0 = state.vipPackages.isNotEmpty ? state.vipPackages[0] : null;
-    final pkg1 = state.vipPackages.length > 1 ? state.vipPackages[1] : null;
-
-    // Figma 设计稿固定高度：970×239。VIP 不可见时收缩高度，仅保留头像+昵称区。
-    final heroHeight = state.checkStatusEnabled ? 239.0 : 132.0;
-
-    return SizedBox(
-      height: heroHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
+    final name = nick.isEmpty ? '未命名' : nick;
+    final role = identityLabelOf(user['role']);
+    final meta = <String>[
+      maskMobile(user['mobile']?.toString() ?? ''),
+      user['school']?.toString().trim() ?? '',
+    ].where((e) => e.isNotEmpty).join(' · ');
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── 背景：渐变 + 装饰皇冠（沿用 info/bg.png）──
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset(
-                    AppAssets.infoBg,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.topCenter,
-                  ),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.white.withValues(alpha: 0),
-                          const Color(0xFFFAF8FD).withValues(alpha: 0.88),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── 昵称 / 手机号 列（左 122，上 45）──
-          Positioned(
-            left: 122,
-            top: 45,
-            child: _NicknameColumn(
-              nickname: nick.isNotEmpty ? nick : '未命名',
-              mobile: mobile,
-              onEdit: onEditProfile,
-              showAnnualBadge: showAnnualBadge,
-            ),
-          ),
-
-          // ── 三张信息卡片（左 16，上 123，每张 303×100，间距 13）。
-          //    注意：卡片需放在头像之前绘制，避免遮挡头像。──
-          if (state.checkStatusEnabled)
-            Positioned(
-              left: 16,
-              top: 123,
-              right: 16,
-              height: 100,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _VipPriceCard(
-                      annualLayout: true,
-                      title: pkg0?.name ?? '年卡 365 天',
-                      subtitle: pkg0?.description ?? '每月仅需99元，范画随心看',
-                      price: pkg0?.price ?? '1,188',
-                      trailingLabel: days != null && days > 3 ? '已开通' : null,
-                      showPrice: days == null || days <= 3,
-                    ),
-                  ),
-                  const SizedBox(width: 13),
-                  Expanded(
-                    child: _VipPriceCard(
-                      annualLayout: false,
-                      title: pkg1?.name ?? '季卡 90 天',
-                      subtitle: pkg1?.description ?? '每天仅需3.9元，冲刺季必备',
-                      price: pkg1?.price ?? '349',
-                      trailingLabel: days != null && days >= 1 ? '已开通' : null,
-                      showPrice: days == null || days < 1,
-                    ),
-                  ),
-                  const SizedBox(width: 13),
-                  Expanded(
-                    child: _WalletPointsCard(
-                      wallet: state.walletText,
-                      points: state.pointsText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // ── 头像（左 16，上 101.5，82×82，2px 白色描边）。
-          //    放在卡片之后，确保浮于卡片上方。──
-          Positioned(
-            left: 16,
-            top: 25,
-            child: _Avatar(url: avatarUrl, size: 82),
-          ),
-
-          // ── 身份徽标（左 57，上 167.5）──
-          if (identityLabel != null)
-            Positioned(
-              left: 64,
-              top: 90,
-              child: _IdentityBadge(label: identityLabel),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.url, this.size = 82});
-
-  final String? url;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final trimmed = url?.trim() ?? '';
-    final network =
-        trimmed.startsWith('http://') || trimmed.startsWith('https://');
-    const ring = 2.0;
-    final inner = size - 2 * ring;
-    final fallback = Container(
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Color(0xFFD9D9D9),
-      ),
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.person_rounded,
-        size: size * 0.55,
-        color: const Color(0xFF7E879C),
-      ),
-    );
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-      ),
-      padding: const EdgeInsets.all(ring),
-      child: ClipOval(
-        clipBehavior: Clip.antiAliasWithSaveLayer,
-        child: SizedBox(
-          width: inner,
-          height: inner,
-          child: network
-              ? Image.network(
-                  trimmed,
-                  fit: BoxFit.cover,
-                  filterQuality: FilterQuality.medium,
-                  errorBuilder: (context, error, stackTrace) => fallback,
-                )
-              : fallback,
-        ),
-      ),
-    );
-  }
-}
-
-/// 头像下方的身份徽标：黄绿底 #DBEE49 + 白色 1px 描边 + 11/400 文案。
-class _IdentityBadge extends StatelessWidget {
-  const _IdentityBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 18,
-      padding: const EdgeInsets.symmetric(horizontal: 7),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFDBEE49),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white, width: 1),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          strutStyle: const StrutStyle(
-            fontSize: 11,
-            height: 1.1,
-            forceStrutHeight: true,
-          ),
-          style: TextStyle(
-            color: const Color(0xFF0B081A),
-            fontSize: 11,
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w400,
-            height: 1.1,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 昵称（16/500）+ 编辑笔，下接手机号（14/400 #6D6B75）。
-class _NicknameColumn extends StatelessWidget {
-  const _NicknameColumn({
-    required this.nickname,
-    required this.mobile,
-    required this.onEdit,
-    this.showAnnualBadge = false,
-  });
-
-  final String nickname;
-  final String mobile;
-  final VoidCallback onEdit;
-  final bool showAnnualBadge;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 160),
-              child: Text(
-                nickname,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: const Color(0xFF0B081A),
-                  fontSize: 16,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w500,
-                  height: 1.25,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            GestureDetector(
-              onTap: onEdit,
-              behavior: HitTestBehavior.opaque,
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: Image.asset(
-                  AppAssets.homeRename,
-                  width: 18,
-                  height: 18,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            if (showAnnualBadge) ...[
-              const SizedBox(width: 12),
-              const _AnnualVipBadge(),
-            ],
-          ],
-        ),
-        const SizedBox(height: 4),
-        if (mobile.isNotEmpty)
-          Text(
-            mobile,
-            style: TextStyle(
-              color: const Color(0xFF6D6B75),
-              fontSize: 14,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1.2,
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// 「年卡会员」角标。
-///
-/// 单张设计图 [AppAssets.infoAnnualVipBadge]；跟在昵称行编辑图标后，间距 12。
-class _AnnualVipBadge extends StatelessWidget {
-  const _AnnualVipBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 82,
-      height: 24,
-      child: Image.asset(
-        AppAssets.infoAnnualVipBadge,
-        fit: BoxFit.contain,
-        alignment: Alignment.centerLeft,
-      ),
-    );
-  }
-}
-
-/// 年卡 / 体验卡标题：Alimama ShuHeiTi Bold 20 / #170333。
-const _kVipCardTitleStyle = TextStyle(
-  fontSize: 20,
-  fontWeight: FontWeight.w700,
-  color: Color(0xFF170333),
-  fontFamily: 'Alimama ShuHeiTi',
-);
-
-TextStyle _vipCardSubtitleStyle() => TextStyle(
-  fontSize: 12,
-  fontWeight: AppFont.w400,
-  color: const Color(0xFF6D6B75),
-  fontFamily: 'PingFang SC',
-);
-
-class _VipPriceCard extends StatelessWidget {
-  const _VipPriceCard({
-    required this.annualLayout,
-    required this.title,
-    required this.subtitle,
-    required this.price,
-    required this.showPrice,
-    this.trailingLabel,
-  });
-
-  final bool annualLayout;
-  final String title;
-  final String subtitle;
-  final String price;
-  final bool showPrice;
-  final String? trailingLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    if (annualLayout) {
-      final priceText = price.startsWith('¥') || price.startsWith('\u00a5')
-          ? price
-          : '¥$price';
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          height: 100,
-          child: Stack(
-            fit: StackFit.expand,
+          Row(
             children: [
-              Image.asset(
-                AppAssets.infoCard,
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
+              AppAvatar(
+                name: name,
+                url: user['headUrl']?.toString() ?? '',
+                size: 64,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 14,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+              const SizedBox(width: AppSpace.s16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: _kVipCardTitleStyle,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: _vipCardSubtitleStyle(),
-                          ),
-                        ],
-                      ),
+                    Wrap(
+                      spacing: AppSpace.s8,
+                      runSpacing: AppSpace.s4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(name, style: AppText.title20),
+                        if (role != null)
+                          AppTag(label: role, tone: AppTone.brand),
+                      ],
                     ),
-                    if (showPrice)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text(
-                          priceText,
-                          textAlign: TextAlign.right,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF170333),
-                            fontFamily: 'Barlow',
-                            height: 1,
-                          ),
-                        ),
-                      ),
-                    if (!showPrice && trailingLabel != null)
-                      const Padding(
-                        padding: EdgeInsets.only(left: 6),
-                        child: _VipActivatedBadge(height: 22),
-                      ),
+                    if (meta.isNotEmpty) ...[
+                      const SizedBox(height: AppSpace.s4),
+                      Text(meta, style: AppText.body13),
+                    ],
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpace.s12),
+              AppButton(
+                label: '编辑资料',
+                icon: Icons.edit_outlined,
+                variant: AppButtonVariant.quiet,
+                size: AppButtonSize.sm,
+                onTap: onEdit,
+              ),
             ],
           ),
-        ),
-      );
-    }
-
-    final priceText = price.startsWith('¥') || price.startsWith('\u00a5')
-        ? price
-        : '¥$price';
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.white.withValues(alpha: 0.72), Colors.white],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _kVipCardTitleStyle,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _vipCardSubtitleStyle(),
-                  ),
-                ],
-              ),
-            ),
-            if (showPrice)
-              Padding(
-                padding: const EdgeInsets.only(left: 6),
-                child: Text(
-                  priceText,
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF170333),
-                    fontFamily: 'Barlow',
-                    height: 1,
+          if (state.checkStatusEnabled) ...[
+            const SizedBox(height: AppSpace.s16),
+            Row(
+              children: [
+                Expanded(
+                  child: AppStatTile(
+                    label: '钱包余额',
+                    value: state.walletText,
+                    unit: '元',
+                    boxed: true,
                   ),
                 ),
-              ),
-            if (!showPrice && trailingLabel != null)
-              const Padding(
-                padding: EdgeInsets.only(left: 6),
-                child: _VipActivatedBadge(height: 22),
-              ),
+                const SizedBox(width: AppSpace.s12),
+                Expanded(
+                  child: AppStatTile(
+                    label: '我的积分',
+                    value: state.pointsText,
+                    boxed: true,
+                  ),
+                ),
+              ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// 「已开通」徽章。
-///
-/// 之前是 `Container` + 紫色 [BoxDecoration] 胶囊 + 白字文本合成；现在直接
-/// 渲染设计图 [AppAssets.infoVipActivated]（紫字、无背景、自带留白）。
-/// - 通过 [height] 控制纵向占位（年卡 / 体验卡均为 22，与卡片内边距对齐）；
-/// - `BoxFit.contain` 让宽度按图片比例自适应，不被父级 [Row] 拉伸。
-class _VipActivatedBadge extends StatelessWidget {
-  const _VipActivatedBadge({required this.height});
+class _MembershipCard extends StatelessWidget {
+  const _MembershipCard({
+    required this.state,
+    required this.daysRemaining,
+    required this.onOpenPlan,
+  });
 
-  final double height;
+  final PersonalCenterState state;
+  final int? daysRemaining;
+  final ValueChanged<VipPackageRow> onOpenPlan;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 30,
-      child: Image.asset(
-        AppAssets.infoVipActivated,
-        fit: BoxFit.contain,
-        alignment: Alignment.center,
+    final days = daysRemaining;
+    final active = days != null && days >= 1;
+    final expire = formatProfileDate(state.user['vipExpireDate']);
+    final plans = state.vipPackages;
+    final benefits = plans.isEmpty
+        ? const <String>[]
+        : plans
+              .reduce((a, b) => a.benefits.length >= b.benefits.length ? a : b)
+              .benefits;
+    return AppCard(
+      title: '会员',
+      trailing: AppTag(
+        label: active ? '生效中' : '未开通',
+        tone: active ? AppTone.success : AppTone.neutral,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (active)
+            Text.rich(
+              TextSpan(
+                style: AppText.body13,
+                children: [
+                  if (expire.isNotEmpty) ...[
+                    const TextSpan(text: '有效期至 '),
+                    TextSpan(
+                      text: expire,
+                      style: AppText.number(size: 13, color: AppColors.ink),
+                    ),
+                    const TextSpan(text: '，'),
+                  ],
+                  const TextSpan(text: '剩余 '),
+                  TextSpan(
+                    text: '$days',
+                    style: AppText.number(size: 13, color: AppColors.brand),
+                  ),
+                  const TextSpan(text: ' 天'),
+                ],
+              ),
+            )
+          else
+            Text('开通会员后可使用以下权益', style: AppText.body13),
+          if (benefits.isNotEmpty) ...[
+            const SizedBox(height: AppSpace.s12),
+            Wrap(
+              spacing: AppSpace.s20,
+              runSpacing: AppSpace.s8,
+              children: [
+                for (final benefit in benefits)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_rounded,
+                        size: 16,
+                        color: AppColors.success,
+                      ),
+                      const SizedBox(width: AppSpace.s4),
+                      Text(benefit, style: AppText.body14),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+          if (plans.isNotEmpty) ...[
+            const SizedBox(height: AppSpace.s16),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const gap = AppSpace.s12;
+                final columns = constraints.maxWidth >= 480
+                    ? plans.length.clamp(1, 3)
+                    : 1;
+                final width =
+                    (constraints.maxWidth - gap * (columns - 1)) / columns;
+                return Wrap(
+                  spacing: gap,
+                  runSpacing: gap,
+                  children: [
+                    for (final plan in plans)
+                      SizedBox(
+                        width: width,
+                        child: _PlanTile(
+                          plan: plan,
+                          actionLabel: active ? '续费' : '开通',
+                          onTap: () => onOpenPlan(plan),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+          const SizedBox(height: AppSpace.s12),
+          Text(_kPriceNote, style: AppText.caption12),
+        ],
       ),
     );
   }
 }
 
-/// 我的钱包 / 我的积分 卡片（设计稿绝对布局）：
-///   · 303×100、半透明白渐变 + 1px 白边 + 12 圆角
-///   · 左右两列居中：上方 22 Barlow 700 数字、下方 14 #6D6B75 标题
-///   · 中央 1×58、#E6E9F1（30% opacity）分隔竖线
-class _WalletPointsCard extends StatelessWidget {
-  const _WalletPointsCard({required this.wallet, required this.points});
+class _PlanTile extends StatelessWidget {
+  const _PlanTile({
+    required this.plan,
+    required this.actionLabel,
+    required this.onTap,
+  });
 
-  final String wallet;
-  final String points;
+  final VipPackageRow plan;
+  final String actionLabel;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white, width: 1),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.white.withValues(alpha: 0.55), Colors.white],
-        ),
-      ),
+    return AppCard(
+      color: AppColors.surfaceSubtle,
+      bordered: false,
+      padding: const EdgeInsets.all(AppSpace.s12),
       child: Row(
         children: [
           Expanded(
-            child: _WalletColumn(value: wallet, label: '我的钱包'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(plan.name, style: AppText.body14Strong),
+                if (plan.description.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    plan.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption12,
+                  ),
+                ],
+              ],
+            ),
           ),
-          const SizedBox(
-            width: 1,
-            height: 58,
-            child: ColoredBox(color: Color(0x4DE6E9F1)),
-          ),
-          Expanded(
-            child: _WalletColumn(value: points, label: '我的积分'),
+          const SizedBox(width: AppSpace.s8),
+          AppButton(
+            label: actionLabel,
+            variant: AppButtonVariant.quiet,
+            size: AppButtonSize.sm,
+            onTap: onTap,
           ),
         ],
       ),
@@ -742,176 +523,83 @@ class _WalletPointsCard extends StatelessWidget {
   }
 }
 
-class _WalletColumn extends StatelessWidget {
-  const _WalletColumn({required this.value, required this.label});
+class _ServiceCard extends StatelessWidget {
+  const _ServiceCard({required this.checkStatusEnabled, required this.actions});
 
-  final String value;
-  final String label;
+  final bool checkStatusEnabled;
+  final _PersonalCenterActions actions;
 
   @override
   Widget build(BuildContext context) {
+    final common = <_MenuEntry>[
+      _MenuEntry(Icons.qr_code_2_rounded, '我的二维码', actions.showMyQr),
+      if (checkStatusEnabled) ...[
+        _MenuEntry(Icons.share_outlined, '推荐美术之路给好友', actions.recommend),
+        _MenuEntry(Icons.card_giftcard_outlined, '兑换中心', actions.redeem),
+      ],
+    ];
+    final support = <_MenuEntry>[
+      _MenuEntry(Icons.feedback_outlined, '意见反馈', actions.feedback),
+      _MenuEntry(Icons.support_agent_outlined, '联系客服', actions.contactService),
+      _MenuEntry(Icons.menu_book_outlined, '操作指南', actions.openGuide),
+      _MenuEntry(Icons.description_outlined, '服务协议与隐私政策', actions.openTerms),
+    ];
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          value,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF0B081A),
-            fontFamily: 'Barlow',
-            height: 1.15,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF6D6B75),
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w400,
-            height: 1,
-          ),
-        ),
+        _MenuGroup(title: '常用服务', entries: common),
+        const SizedBox(height: AppSpace.s16),
+        _MenuGroup(title: '帮助与支持', entries: support),
       ],
     );
   }
 }
 
-class _ActionListCard extends StatelessWidget {
-  const _ActionListCard({
-    required this.checkStatusEnabled,
-    required this.onQr,
-    required this.onRecommend,
-    required this.onFeedback,
-    required this.onService,
-    this.onRedeem,
-  });
+class _MenuEntry {
+  const _MenuEntry(this.icon, this.label, this.onTap);
 
-  final bool checkStatusEnabled;
-  final VoidCallback onQr;
-  final VoidCallback onRecommend;
-  final VoidCallback onFeedback;
-  final VoidCallback onService;
-  final VoidCallback? onRedeem;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(10),
-      clipBehavior: Clip.antiAlias,
-      child: SizedBox.expand(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.zero,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _ActionTile(
-                iconAsset: AppAssets.infoIconQr,
-                label: '我的二维码',
-                onTap: onQr,
-                showDivider: true,
-              ),
-              if (checkStatusEnabled)
-                _ActionTile(
-                  iconAsset: AppAssets.infoIconRecommend,
-                  label: '推荐美术之路给好友',
-                  onTap: onRecommend,
-                  showDivider: true,
-                ),
-              _ActionTile(
-                iconAsset: AppAssets.infoIconFeedback,
-                label: '需求反馈',
-                onTap: onFeedback,
-                showDivider: true,
-              ),
-              _ActionTile(
-                iconAsset: AppAssets.infoIconService,
-                label: '联系客服',
-                onTap: onService,
-                showDivider: checkStatusEnabled && onRedeem != null,
-              ),
-              if (checkStatusEnabled && onRedeem != null)
-                _ActionTile(
-                  iconAsset: AppAssets.infoIconRedeem,
-                  label: '兑换中心',
-                  onTap: onRedeem!,
-                  showDivider: false,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.iconAsset,
-    required this.label,
-    required this.onTap,
-    required this.showDivider,
-  });
-
-  final String iconAsset;
+  final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final bool showDivider;
+}
+
+class _MenuGroup extends StatelessWidget {
+  const _MenuGroup({required this.title, required this.entries});
+
+  final String title;
+  final List<_MenuEntry> entries;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
+    return AppCard(
+      padding: const EdgeInsets.only(bottom: AppSpace.s4),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            height: 48,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Image.asset(
-                    iconAsset,
-                    width: 18,
-                    height: 18,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 22 / 14,
-                        color: const Color(0xFF0B081A),
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w400,
-                      ),
-                    ),
-                  ),
-                  Image.asset(
-                    AppAssets.infoChevron,
-                    width: 24,
-                    height: 24,
-                    fit: BoxFit.contain,
-                  ),
-                ],
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s4,
             ),
+            child: Text(title, style: AppText.title16),
           ),
-          if (showDivider)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Divider(
-                height: 0.5,
-                thickness: 0.5,
-                color: Color(0xFFE6E8EB),
+          for (var i = 0; i < entries.length; i++)
+            AppListRow(
+              title: entries[i].label,
+              leading: Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: AppColors.surfaceSubtle,
+                  borderRadius: AppRadius.br8,
+                ),
+                child: Icon(entries[i].icon, size: 18, color: AppColors.ink),
               ),
+              chevron: true,
+              divider: i < entries.length - 1,
+              onTap: entries[i].onTap,
             ),
         ],
       ),
@@ -919,20 +607,6 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// 我的二维码弹窗：紫白渐变头 + 头像/名称 + 浅紫框 二维码 + 双按钮（保存到相册 / 关闭）。
-// 完全对齐 Figma 428×××（高度由内容撑起）布局：
-//   · 顶部 180 高 D8CCFF→white 渐变（由 GradientHeaderDialog 提供）
-//   · 标题「我的二维码」20/500 居中，距顶与「新建笔记」弹窗一致（25）
-//   · 380×294 #F5F6FA 二维码卡：上方 头像+名称+手机号 横排，中部紫渐变框 152×154
-//     包二维码 122×122，下方两行说明文字
-//   · 双按钮：取消（白）/ 主操作（紫渐变）
-//
-// 「保存到相册」走 `qr_image_saver`：
-//   · web → 浏览器下载 PNG；
-//   · 桌面 → 弹系统保存对话框写入文件；
-//   · 移动暂不支持，提示用户截屏保存。
-// =============================================================================
 class _MyQrCodeDialog extends StatefulWidget {
   const _MyQrCodeDialog({
     required this.nickname,
@@ -943,7 +617,7 @@ class _MyQrCodeDialog extends StatefulWidget {
 
   final String nickname;
   final String mobile;
-  final String? avatarUrl;
+  final String avatarUrl;
   final String imageUrl;
 
   @override
@@ -951,316 +625,46 @@ class _MyQrCodeDialog extends StatefulWidget {
 }
 
 class _MyQrCodeDialogState extends State<_MyQrCodeDialog> {
-  late final Uint8List? _qrBytes;
   bool _saving = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _qrBytes = _QrImage.tryDecodeBase64(widget.imageUrl);
-  }
-
-  Future<void> _onSave() async {
-    if (_saving) return;
-    final bytes = _qrBytes;
-    if (bytes == null) {
-      AppToast.showError(context, '二维码暂不支持保存，请截屏');
-      return;
-    }
+  Future<void> _save() async {
     setState(() => _saving = true);
-    final result = await saveQrImageBytes(
-      bytes: bytes,
-      suggestedName: _suggestedFileName(),
+    final saved = await saveMyQrCode(
+      context,
+      imageUrl: widget.imageUrl,
+      nickname: widget.nickname,
     );
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     setState(() => _saving = false);
-    if (result.ok) {
+    if (saved) {
       Navigator.of(context).pop();
-      AppToast.showSuccess(
-        context,
-        kIsWeb ? '已开始下载二维码' : '已保存到 ${result.path}',
-      );
-      return;
     }
-    if (result.cancelled) {
-      return;
-    }
-    AppToast.showError(context, result.error ?? '保存失败');
-  }
-
-  String _suggestedFileName() {
-    final raw = widget.nickname.trim();
-    final safe = raw.replaceAll(RegExp(r'[\\/:*?"<>|\s]'), '_');
-    final name = safe.isEmpty ? 'qrcode' : '${safe}_qrcode';
-    return '$name.png';
   }
 
   @override
   Widget build(BuildContext context) {
-    return GradientHeaderDialog(
+    return AppDialog(
       title: '我的二维码',
-      headerHeight: 169,
-      gradientMidStop: 0.35,
-      width: 428,
-      contentPadding: const EdgeInsets.fromLTRB(
-        24,
-        kAppDialogTitlePaddingTop,
-        24,
-        30,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _QrCodeCard(
-            nickname: widget.nickname,
-            mobile: widget.mobile,
-            avatarUrl: widget.avatarUrl,
-            imageUrl: widget.imageUrl,
-          ),
-          const SizedBox(height: 24),
-          AppDialogActionBar(
-            cancelLabel: '关闭',
-            confirmLabel: _saving ? '保存中…' : '保存到相册',
-            confirmEnabled: !_saving,
-            onCancel: () => Navigator.of(context).pop(),
-            onConfirm: _onSave,
-          ),
-        ],
+      actions: [
+        AppButton(
+          label: '关闭',
+          variant: AppButtonVariant.secondary,
+          onTap: () => Navigator.of(context).pop(),
+        ),
+        AppButton(label: '保存二维码', loading: _saving, onTap: _save),
+      ],
+      child: MyQrCodeCard(
+        nickname: widget.nickname.isEmpty ? '未命名' : widget.nickname,
+        mobile: widget.mobile,
+        avatarUrl: widget.avatarUrl,
+        imageUrl: widget.imageUrl,
       ),
     );
   }
 }
 
-class _QrCodeCard extends StatelessWidget {
-  const _QrCodeCard({
-    required this.nickname,
-    required this.mobile,
-    required this.avatarUrl,
-    required this.imageUrl,
-  });
-
-  final String nickname;
-  final String mobile;
-  final String? avatarUrl;
-  final String imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _MiniAvatar(url: avatarUrl, size: 44),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    nickname,
-                    style: const TextStyle(
-                      color: Color(0xFF0B081A),
-                      fontSize: 16,
-                      fontFamily: 'PingFang SC',
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    mobile,
-                    style: const TextStyle(
-                      color: Color(0xFF6D6B75),
-                      fontSize: 14,
-                      fontFamily: 'PingFang SC',
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: 152,
-            height: 154,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFF2EAFF), Color(0x00F2EAFF)],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.topCenter,
-            padding: const EdgeInsets.only(top: 15),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                width: 122,
-                height: 122,
-                child: _QrImage(url: imageUrl),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            '快来与我一起在美术之路学习吧～',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF0B081A),
-              fontSize: 16,
-              fontFamily: 'PingFang SC',
-              height: 20 / 16,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            '好友可直接通过扫描二维码下载美术之路并添加你为好友',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFFCECED1),
-              fontSize: 12,
-              fontFamily: 'PingFang SC',
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 我的二维码可能是普通 http(s) 链接，也可能是 `/app/user/myQrcode` 直接
-/// 返回的 `data:image/...;base64,xxx` 内联图。这里两种格式都兜住，再退化为
-/// 占位 / 错误图。
-class _QrImage extends StatelessWidget {
-  const _QrImage({required this.url});
-
-  final String url;
-
-  @override
-  Widget build(BuildContext context) {
-    final trimmed = url.trim();
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return Image.network(
-        trimmed,
-        fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => _errorBox(),
-      );
-    }
-    final bytes = tryDecodeBase64(trimmed);
-    if (bytes != null) {
-      return Image.memory(
-        bytes,
-        fit: BoxFit.contain,
-        gaplessPlayback: true,
-        errorBuilder: (_, _, _) => _errorBox(),
-      );
-    }
-    return _placeholderBox();
-  }
-
-  static Widget _placeholderBox() {
-    return const ColoredBox(
-      color: Colors.white,
-      child: Center(
-        child: Icon(Icons.qr_code_2_rounded, color: Color(0xFF715EFE)),
-      ),
-    );
-  }
-
-  static Widget _errorBox() {
-    return const ColoredBox(
-      color: Colors.white,
-      child: Center(
-        child: Icon(Icons.broken_image_outlined, color: Color(0xFFCECED1)),
-      ),
-    );
-  }
-
-  /// 兼容两种返回：
-  /// - `data:image/png;base64,xxx` / `data:image/;base64,xxx`（接口实际格式）
-  /// - 纯 base64 串（兜底）
-  /// 解码失败时返回 null，由调用方退化到占位图。「保存到相册」会复用本方法
-  /// 把同一份 bytes 写入文件，避免再 decode 一次。
-  static Uint8List? tryDecodeBase64(String raw) {
-    if (raw.isEmpty) return null;
-    var payload = raw;
-    if (payload.startsWith('data:')) {
-      final commaIdx = payload.indexOf(',');
-      if (commaIdx < 0) return null;
-      payload = payload.substring(commaIdx + 1);
-    }
-    payload = payload.replaceAll(RegExp(r'\s'), '');
-    if (payload.isEmpty) return null;
-    try {
-      return base64Decode(payload);
-    } catch (_) {
-      return null;
-    }
-  }
-}
-
-/// 圆形头像：先用 [ClipOval] + `antiAliasWithSaveLayer` 保证图片本身是真正的
-/// 圆（避免 `Container(shape: circle)` + `Border` 在小尺寸下渲染成多边形），
-/// 外面再叠一层 2px 白边圆环。
-class _MiniAvatar extends StatelessWidget {
-  const _MiniAvatar({required this.url, required this.size});
-
-  final String? url;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final trimmed = url?.trim() ?? '';
-    final network =
-        trimmed.startsWith('http://') || trimmed.startsWith('https://');
-    final inner = network
-        ? Image.network(
-            trimmed,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.medium,
-            errorBuilder: (_, _, _) => const ColoredBox(
-              color: Color(0xFFEFEEF3),
-              child: Icon(Icons.person_rounded, color: Color(0xFF7E879C)),
-            ),
-          )
-        : const ColoredBox(
-            color: Color(0xFFEFEEF3),
-            child: Icon(Icons.person_rounded, color: Color(0xFF7E879C)),
-          );
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ClipOval(clipBehavior: Clip.antiAliasWithSaveLayer, child: inner),
-          IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 兑换会员弹窗：紫白渐变头 + 单行兑换码输入框 + 取消/确认按钮。
-// 点击「确认」后 pop(text) 由调用方走兑换接口；空字符串视为未输入。
-// =============================================================================
 class _RedeemVipDialog extends StatefulWidget {
   const _RedeemVipDialog();
 
@@ -1277,310 +681,126 @@ class _RedeemVipDialogState extends State<_RedeemVipDialog> {
     super.dispose();
   }
 
+  void _submit() => Navigator.of(context).pop(_ctrl.text.trim());
+
   @override
   Widget build(BuildContext context) {
-    return GradientHeaderDialog(
+    return AppDialog(
       title: '兑换会员',
-      headerHeight: 169,
-      gradientMidStop: 0.35,
-      width: 428,
-      contentPadding: const EdgeInsets.fromLTRB(
-        24,
-        kAppDialogTitlePaddingTop,
-        24,
-        30,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _DialogTextField(controller: _ctrl, hint: '请输入兑换码'),
-          const SizedBox(height: 24),
-          AppDialogActionBar(
-            cancelLabel: '取消',
-            confirmLabel: '确认',
-            onCancel: () => Navigator.of(context).pop(),
-            onConfirm: () => Navigator.of(context).pop(_ctrl.text.trim()),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 联系客服弹窗：紫白渐变头 + 「联系邮箱」标签 + 只读邮箱框（带复制按钮）+ 关闭。
-// 复制成功后 toast 提示，关闭按钮居中走 Pop。
-// =============================================================================
-class _ContactServiceDialog extends StatelessWidget {
-  const _ContactServiceDialog({required this.email});
-
-  final String email;
-
-  @override
-  Widget build(BuildContext context) {
-    return GradientHeaderDialog(
-      title: '联系客服',
-      headerHeight: 169,
-      gradientMidStop: 0.35,
-      width: 428,
-      contentPadding: const EdgeInsets.fromLTRB(
-        24,
-        kAppDialogTitlePaddingTop,
-        24,
-        30,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '联系邮箱',
-            style: TextStyle(
-              color: Color(0xFF0B081A),
-              fontSize: 14,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w500,
-              height: 20 / 14,
-            ),
-          ),
-          const SizedBox(height: 8),
-          _ReadonlyValueRow(
-            value: email,
-            onCopy: () async {
-              await Clipboard.setData(ClipboardData(text: email));
-              if (!context.mounted) return;
-              AppToast.showSuccess(context, '已复制邮箱');
-            },
-          ),
-          const SizedBox(height: 24),
-          Center(
-            child: SizedBox(
-              width: 380,
-              child: _OutlineActionButton(
-                label: '关闭',
-                onTap: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 推荐给好友弹窗：紫白渐变头 + 推广链接展示 + 复制 / 关闭按钮。
-// 链接来自 1.0 `APP_PROMO_URL`；点击复制写入剪贴板并 toast 提示。
-// =============================================================================
-class _RecommendDialog extends StatelessWidget {
-  const _RecommendDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return GradientHeaderDialog(
-      title: '推荐给好友',
-      headerHeight: 169,
-      gradientMidStop: 0.35,
-      width: 428,
-      contentPadding: const EdgeInsets.fromLTRB(
-        24,
-        kAppDialogTitlePaddingTop,
-        24,
-        30,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '把美术之路推荐给你的同学和朋友，一起在这里学画画～',
-            style: TextStyle(
-              color: Color(0xFF6D6B75),
-              fontSize: 14,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '推广链接',
-            style: TextStyle(
-              color: Color(0xFF0B081A),
-              fontSize: 14,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w500,
-              height: 20 / 14,
-            ),
-          ),
-          const SizedBox(height: 8),
-          _ReadonlyValueRow(
-            value: _kAppPromoUrl,
-            onCopy: () async {
-              await Clipboard.setData(const ClipboardData(text: _kAppPromoUrl));
-              if (!context.mounted) return;
-              AppToast.showSuccess(context, '链接已复制，快去发给好友吧');
-            },
-          ),
-          const SizedBox(height: 24),
-          AppDialogActionBar(
-            cancelLabel: '关闭',
-            confirmLabel: '复制链接',
-            onCancel: () => Navigator.of(context).pop(),
-            onConfirm: () async {
-              await Clipboard.setData(const ClipboardData(text: _kAppPromoUrl));
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-              AppToast.showSuccess(context, '链接已复制，快去发给好友吧');
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 通用：单行文本输入框（兑换码 / 其他短输入）。
-class _DialogTextField extends StatelessWidget {
-  const _DialogTextField({required this.controller, required this.hint});
-
-  final TextEditingController controller;
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: AppTextField(
-        controller: controller,
+      message: '输入画室发放的兑换码，兑换后会员有效期自动顺延。',
+      actions: [
+        AppButton(
+          label: '取消',
+          variant: AppButtonVariant.secondary,
+          onTap: () => Navigator.of(context).pop(),
+        ),
+        AppButton(label: '兑换', onTap: _submit),
+      ],
+      child: AppInputField(
+        controller: _ctrl,
+        hint: '请输入兑换码',
         autofocus: true,
-        cursorColor: const Color(0xFF715EFE),
-        cursorWidth: 1.5,
-        cursorHeight: 16,
-        style: TextStyle(
-          fontSize: 14,
-          color: Color(0xFF0B081A),
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-        ),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: Color(0xFFCECED1),
-            fontSize: 14,
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w400,
-            height: 20 / 14,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFF3F2F3)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFD9C7FF)),
-          ),
-        ),
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
       ),
     );
   }
 }
 
-// 通用：带复制按钮的只读行（用于显示邮箱 / 推广链接）。
-class _ReadonlyValueRow extends StatelessWidget {
-  const _ReadonlyValueRow({required this.value, required this.onCopy});
-
-  final String value;
-  final VoidCallback onCopy;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFF3F2F3)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Color(0xFF0B081A),
-                fontSize: 14,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w400,
-                height: 20 / 14,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onCopy,
-            behavior: HitTestBehavior.opaque,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Icon(
-                Icons.copy_rounded,
-                size: 18,
-                color: Color(0xFF715EFE),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 通用：白底 outline 单按钮（联系客服弹窗的「关闭」用）。
-class _OutlineActionButton extends StatelessWidget {
-  const _OutlineActionButton({required this.label, required this.onTap});
+/// 带复制按钮的只读字段（客服邮箱、推广链接）。
+class _CopyField extends StatelessWidget {
+  const _CopyField({required this.label, required this.value});
 
   final String label;
-  final VoidCallback onTap;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        height: 45,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF3F2F3)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x59B5B5B5),
-              blurRadius: 20,
-              offset: Offset(0, 16),
-            ),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            color: Color(0xFF0B081A),
-            fontSize: 16,
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w400,
-            height: 12 / 16,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label, style: AppText.caption12Strong),
+        const SizedBox(height: AppSpace.s8),
+        Container(
+          height: AppSize.iconButton,
+          padding: const EdgeInsets.only(left: AppSpace.s12),
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceSubtle,
+            borderRadius: AppRadius.br8,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body14,
+                ),
+              ),
+              AppIconButton(
+                icon: Icons.copy_rounded,
+                semanticLabel: '复制',
+                size: AppButtonSize.sm,
+                filled: false,
+                color: AppColors.brand,
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: value));
+                  if (!context.mounted) {
+                    return;
+                  }
+                  AppToast.showSuccess(context, '已复制');
+                },
+              ),
+            ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _PersonalCenterSkeleton extends StatelessWidget {
+  const _PersonalCenterSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        AppSpace.page,
+        AppSpace.s4,
+        AppSpace.page,
+        AppSpace.s24,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                AppCard(
+                  padding: EdgeInsets.all(AppSpace.s20),
+                  child: Row(
+                    children: [
+                      AppSkeleton.circle(size: 64),
+                      SizedBox(width: AppSpace.s16),
+                      Expanded(
+                        child: AppSkeletonText(lines: 2, lineHeight: 16),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: AppSpace.s16),
+                AppCard(child: AppSkeletonText(lines: 4)),
+              ],
+            ),
+          ),
+          SizedBox(width: AppSpace.s16),
+          SizedBox(
+            width: 320,
+            child: AppCard(child: AppSkeletonText(lines: 6)),
+          ),
+        ],
       ),
     );
   }

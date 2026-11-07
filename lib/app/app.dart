@@ -171,6 +171,7 @@ class _MyAppState extends ConsumerState<MyApp> {
               applyHeightToLastDescent: false,
             ),
             child: FirstLaunchPermissionHost(
+              navigatorKey: rootNavigatorKey,
               child: GlobalKeyboardFocusSentinel(
                 child: _TapOutsideToDismissKeyboard(
                   child: child ?? const SizedBox.shrink(),

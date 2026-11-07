@@ -166,6 +166,7 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
     if (cached != null) {
       state = state.copyWith(
         selectedChildId: childId,
+        clearSelectedChildId: childId == null,
         videoList: cached.items,
         currentPage: cached.currentPage,
         hasMore: cached.hasMore,
@@ -178,6 +179,7 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
 
     state = state.copyWith(
       selectedChildId: childId,
+      clearSelectedChildId: childId == null,
       loading: true,
       loadingMore: false,
       errorMessage: '',

@@ -1,6 +1,7 @@
 /// 任课老师端校级通知 API 数据模型与 JSON 解析。
 library;
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import 'admin_notice_data.dart';
@@ -70,28 +71,8 @@ TeacherNoticeListItem? parseTeacherNoticeDetail(dynamic raw) {
   return record == null ? null : TeacherNoticeListItem.fromRecord(record);
 }
 
+/// 通知类型标签：只有「紧急」用危险色，其余类型一律中性灰，不再按类型配彩色。
 ({Color foreground, Color background}) teacherNoticeTagStyle(String type) {
-  return switch (type.trim()) {
-    '督导' => (
-        foreground: const Color(0xFF325BFF),
-        background: const Color(0xFFE8EDFF),
-      ),
-    '活动' => (
-        foreground: const Color(0xFFFF6A00),
-        background: const Color(0xFFFFEDD3),
-      ),
-    '会议' => (
-        foreground: const Color(0xFF0CAC40),
-        background: const Color(0xFFE4FFED),
-      ),
-    '紧急' => (
-        foreground: const Color(0xFFFF323C),
-        background: const Color(0xFFFFE5E5),
-      ),
-    _ => (
-        foreground: const Color(0xFF0B081A),
-        background: const Color(0xFFE3DFFF),
-      ),
-  };
+  final tone = type.trim() == '紧急' ? AppTone.danger : AppTone.neutral;
+  return (foreground: tone.foreground, background: tone.background);
 }
-

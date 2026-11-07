@@ -11,11 +11,7 @@ import 'circle_state.dart';
 final circleTeacherRoleAdminProvider = FutureProvider<bool>((ref) async {
   final user = ref.watch(
     shellControllerProvider.select(
-      (s) => (
-        id: s.user.id,
-        role: s.user.role,
-        identity: s.user.identity,
-      ),
+      (s) => (id: s.user.id, role: s.user.role, identity: s.user.identity),
     ),
   );
   if (user.id.isEmpty) return false;

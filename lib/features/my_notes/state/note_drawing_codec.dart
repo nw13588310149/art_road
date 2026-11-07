@@ -71,9 +71,11 @@ abstract final class NoteDrawingCodec {
             points.add(Offset(dx, dy));
           }
         } else if (point is Map) {
-          final dx = (point['x'] as num?)?.toDouble() ??
+          final dx =
+              (point['x'] as num?)?.toDouble() ??
               (point['dx'] as num?)?.toDouble();
-          final dy = (point['y'] as num?)?.toDouble() ??
+          final dy =
+              (point['y'] as num?)?.toDouble() ??
               (point['dy'] as num?)?.toDouble();
           if (dx != null && dy != null) {
             points.add(Offset(dx, dy));
@@ -162,20 +164,15 @@ class NoteDrawingPayload {
   });
 
   factory NoteDrawingPayload.pencilKit(String base64) => NoteDrawingPayload._(
-        kind: NoteDrawingKind.pencilKit,
-        pencilKitBase64: base64,
-      );
+    kind: NoteDrawingKind.pencilKit,
+    pencilKitBase64: base64,
+  );
 
   factory NoteDrawingPayload.strokes(List<NoteStroke> strokes) =>
-      NoteDrawingPayload._(
-        kind: NoteDrawingKind.strokes,
-        strokes: strokes,
-      );
+      NoteDrawingPayload._(kind: NoteDrawingKind.strokes, strokes: strokes);
 
-  factory NoteDrawingPayload.remotePath(String path) => NoteDrawingPayload._(
-        kind: NoteDrawingKind.remotePath,
-        remotePath: path,
-      );
+  factory NoteDrawingPayload.remotePath(String path) =>
+      NoteDrawingPayload._(kind: NoteDrawingKind.remotePath, remotePath: path);
 
   final NoteDrawingKind kind;
   final String? pencilKitBase64;

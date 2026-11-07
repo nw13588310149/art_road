@@ -29,6 +29,7 @@
 //        "驳回"打开 GradientHeaderDialog 填理由。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -38,7 +39,6 @@ import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/api_response.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/admin_repository.dart';
@@ -48,20 +48,20 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kBoardBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextHintLight = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kGreen = Color(0xFF0CAC40);
-const Color _kGreenSoftBg = Color(0xFFE4FFED);
-const Color _kRed = Color(0xFFFF323C);
-const Color _kRedSoftBg = Color(0xFFFFE4E5);
-const Color _kOrange = Color(0xFFFF6A00);
-const Color _kOrangeSoftBg = Color(0xFFFFEDD3);
+const Color _kPageBg = AppColors.page;
+const Color _kBoardBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextHintLight = AppColors.textTertiary;
+const Color _kPurple = AppColors.brand;
+const Color _kGreen = AppColors.success;
+const Color _kGreenSoftBg = AppColors.successSoft;
+const Color _kRed = AppColors.danger;
+const Color _kRedSoftBg = AppColors.dangerSoft;
+const Color _kOrange = AppColors.warning;
+const Color _kOrangeSoftBg = AppColors.warningSoft;
 
 // —— 状态 ————————————————————————————————————————————————————————
 enum _StatusTab {
@@ -165,8 +165,7 @@ class _AdminDormLeaveApprovalViewState
       setState(() {
         _requests = const [];
         _loading = false;
-        _loadError =
-            resp.displayMsg;
+        _loadError = resp.displayMsg;
       });
       return;
     }
@@ -193,44 +192,43 @@ class _AdminDormLeaveApprovalViewState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _StatsRow(
-              pendingCount: _pendingCount,
-              approvedCount: _approvedCount,
-              rejectedCount: _rejectedCount,
-            ),
-            SizedBox(height: ui(8)),
-            Padding(
-              padding: EdgeInsets.only(left: ui(8)),
-              child: Text(
-                '教师提交申请后由教务老师在本页审批；批准或拒绝后将同步至教师端。',
-                style: TextStyle(
-                  fontSize: ui(12),
-                  color: _kTextHint,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w400,
-                  height: 1.5,
-                ),
+            pendingCount: _pendingCount,
+            approvedCount: _approvedCount,
+            rejectedCount: _rejectedCount,
+          ),
+          SizedBox(height: ui(8)),
+          Padding(
+            padding: EdgeInsets.only(left: ui(8)),
+            child: Text(
+              '教师提交申请后由教务老师在本页审批；批准或拒绝后将同步至教师端。',
+              style: TextStyle(
+                fontSize: ui(12),
+                color: _kTextHint,
+                fontWeight: AppFont.w400,
+                height: 1.5,
               ),
             ),
-            SizedBox(height: ui(16)),
-            _ControlBar(
-              current: _tab,
-              onTap: (t) {
-                if (_tab == t) return;
-                setState(() => _tab = t);
-                unawaited(_loadList());
-              },
+          ),
+          SizedBox(height: ui(16)),
+          _ControlBar(
+            current: _tab,
+            onTap: (t) {
+              if (_tab == t) return;
+              setState(() => _tab = t);
+              unawaited(_loadList());
+            },
+          ),
+          SizedBox(height: ui(16)),
+          MainContentLoadingShell(
+            loading: _loading && _requests.isEmpty,
+            minHeight: ui(200),
+            child: _CardsGrid(
+              records: _requests,
+              emptyMessage: _loadError ?? '暂无相关申请',
+              onApprove: _onApprove,
+              onReject: _onReject,
             ),
-            SizedBox(height: ui(16)),
-            MainContentLoadingShell(
-              loading: _loading && _requests.isEmpty,
-              minHeight: ui(200),
-              child: _CardsGrid(
-                records: _requests,
-                emptyMessage: _loadError ?? '暂无相关申请',
-                onApprove: _onApprove,
-                onReject: _onReject,
-              ),
-            ),
+          ),
         ],
       ),
     );
@@ -238,17 +236,10 @@ class _AdminDormLeaveApprovalViewState
 
   Future<void> _onApprove(TeacherLeaveRecord record) async {
     final repo = ref.read(adminRepositoryProvider);
-    final resp = await repo.teacherLeaveAudit(
-      id: record.id,
-      status: 1,
-    );
+    final resp = await repo.teacherLeaveAudit(id: record.id, status: 1);
     if (!mounted) return;
     if (!resp.isSuccess) {
-      AppToast.show(
-        context,
-        resp.displayMsg,
-        type: AppToastType.error,
-      );
+      AppToast.show(context, resp.displayMsg, type: AppToastType.error);
       return;
     }
     AppToast.show(context, '已通过 ${record.teacherName} 的${record.leaveType}申请');
@@ -268,17 +259,10 @@ class _AdminDormLeaveApprovalViewState
     );
     if (!mounted) return;
     if (!resp.isSuccess) {
-      AppToast.show(
-        context,
-        resp.displayMsg,
-        type: AppToastType.error,
-      );
+      AppToast.show(context, resp.displayMsg, type: AppToastType.error);
       return;
     }
-    AppToast.show(
-      context,
-      '已驳回 ${record.teacherName} 的${record.leaveType}申请',
-    );
+    AppToast.show(context, '已驳回 ${record.teacherName} 的${record.leaveType}申请');
     await _reloadAll();
   }
 }
@@ -317,7 +301,7 @@ class _Banner extends StatelessWidget {
                 width: ui(32),
                 height: ui(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(8)),
                   border: Border.all(color: _kBorderSoft, width: 1),
                 ),
@@ -325,7 +309,7 @@ class _Banner extends StatelessWidget {
                 child: Icon(
                   Icons.chevron_left_rounded,
                   size: ui(20),
-                  color: const Color(0xFF1C274C),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -341,7 +325,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -352,7 +335,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.4,
                     ),
@@ -418,10 +400,7 @@ class _StatsRow extends StatelessWidget {
 // —— 控制条：左 tabs + 右 "审批中 N 条" + 紫渐变 "发起申请" ——————————
 
 class _ControlBar extends StatelessWidget {
-  const _ControlBar({
-    required this.current,
-    required this.onTap,
-  });
+  const _ControlBar({required this.current, required this.onTap});
 
   final _StatusTab current;
   final ValueChanged<_StatusTab> onTap;
@@ -435,7 +414,7 @@ class _ControlBar extends StatelessWidget {
       constraints: BoxConstraints(minHeight: ui(44)),
       padding: EdgeInsets.fromLTRB(ui(4), ui(4), ui(3), ui(4)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
         border: Border.all(color: _kBorderSoft, width: 1),
       ),
@@ -485,8 +464,7 @@ class _TabPill extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: active ? Colors.white : _kTextSecondary,
-            fontFamily: 'PingFang SC',
+            color: active ? AppColors.surface : _kTextSecondary,
             fontWeight: AppFont.w500,
             height: 1.2,
           ),
@@ -523,7 +501,6 @@ class _CardsGrid extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
             ),
           ),
@@ -574,7 +551,7 @@ class _LeaveCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(ui(12)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -634,7 +611,6 @@ class _CardHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.0,
                   ),
@@ -646,7 +622,6 @@ class _CardHeader extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.0,
                     ),
@@ -658,7 +633,6 @@ class _CardHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.0,
                   ),
@@ -669,7 +643,6 @@ class _CardHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.0,
                   ),
@@ -700,7 +673,7 @@ class _LeaveAvatar extends StatelessWidget {
       height: ui(40),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFD7D5FF),
+        color: AppColors.brandTint,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Text(
@@ -710,7 +683,6 @@ class _LeaveAvatar extends StatelessWidget {
           height: 1.0,
           fontWeight: AppFont.w600,
           color: _kPurple,
-          fontFamily: 'PingFang SC',
         ),
       ),
     );
@@ -748,7 +720,6 @@ class _StatusBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: status.fg,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 15.24 / 12,
         ),
@@ -818,7 +789,6 @@ class _InfoLine extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.5,
           ),
@@ -829,7 +799,6 @@ class _InfoLine extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.5,
             ),
@@ -866,10 +835,10 @@ class _CardActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                  colors: [AppColors.brandSoft, AppColors.brand],
                 )
               : null,
-          color: isPrimary ? null : Colors.white,
+          color: isPrimary ? null : AppColors.surface,
           border: Border.all(color: _kBorderSoft, width: 1),
           borderRadius: BorderRadius.circular(ui(8)),
         ),
@@ -878,8 +847,7 @@ class _CardActionButton extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: isPrimary ? Colors.white : _kTextDark,
-            fontFamily: 'PingFang SC',
+            color: isPrimary ? AppColors.surface : _kTextDark,
             fontWeight: AppFont.w400,
             height: 24 / 14,
           ),
@@ -898,7 +866,7 @@ Future<String?> _showRejectDialog(
   final controller = TextEditingController();
   return showScaledDialog<String>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.80),
+    barrierColor: AppColors.ink.withValues(alpha: 0.80),
     builder: (dialogContext) {
       final ui = DashboardScaleScope.of(dialogContext).ui;
       return GradientHeaderDialog(
@@ -921,7 +889,6 @@ Future<String?> _showRejectDialog(
               style: TextStyle(
                 fontSize: ui(16),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 20 / 16,
               ),
@@ -932,7 +899,6 @@ Future<String?> _showRejectDialog(
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 20 / 14,
               ),
@@ -945,7 +911,7 @@ Future<String?> _showRejectDialog(
                 vertical: ui(12),
               ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(ui(8)),
                 border: Border.all(color: _kBorderSoft, width: 1),
               ),
@@ -961,7 +927,6 @@ Future<String?> _showRejectDialog(
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 20 / 14,
                 ),
@@ -970,7 +935,6 @@ Future<String?> _showRejectDialog(
                   hintStyle: TextStyle(
                     fontSize: ui(14),
                     color: _kTextHintLight,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 20 / 14,
                   ),

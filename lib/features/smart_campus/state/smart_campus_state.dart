@@ -1,4 +1,11 @@
-enum SmartCampusRole { student, teacher, headTeacher, dormManager, admin, principal }
+enum SmartCampusRole {
+  student,
+  teacher,
+  headTeacher,
+  dormManager,
+  admin,
+  principal,
+}
 
 enum SmartCampusMainView {
   dashboard,
@@ -53,10 +60,7 @@ class TeacherScheduleFocusTarget {
 }
 
 /// 宿管首页待办点击「补卡 / 查寝」进入查寝动态页时的初始 tab。
-enum TeacherDormDynamicInitialTab {
-  classRoster,
-  punchAudit,
-}
+enum TeacherDormDynamicInitialTab { classRoster, punchAudit }
 
 enum PrincipalMailboxMessageType { report, suggestion, other }
 
@@ -265,8 +269,9 @@ class SmartCampusState {
       hasUserSelectedRole: hasUserSelectedRole ?? this.hasUserSelectedRole,
       identityResolved: identityResolved ?? this.identityResolved,
       mainView: mainView ?? this.mainView,
-      returnMainView:
-          clearReturnMainView ? null : (returnMainView ?? this.returnMainView),
+      returnMainView: clearReturnMainView
+          ? null
+          : (returnMainView ?? this.returnMainView),
       selectedMailboxMessageType:
           selectedMailboxMessageType ?? this.selectedMailboxMessageType,
       isMailboxAnonymous: isMailboxAnonymous ?? this.isMailboxAnonymous,
@@ -278,7 +283,8 @@ class SmartCampusState {
           ? null
           : (teacherDormDynamicInitialTab ?? this.teacherDormDynamicInitialTab),
       availableRoles: availableRoles ?? this.availableRoles,
-      dashboardRefreshEpoch: dashboardRefreshEpoch ?? this.dashboardRefreshEpoch,
+      dashboardRefreshEpoch:
+          dashboardRefreshEpoch ?? this.dashboardRefreshEpoch,
     );
   }
 }

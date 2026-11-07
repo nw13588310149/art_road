@@ -315,30 +315,33 @@ String _pickString(
 }
 
 /// 学生展示名：`studentName` / `realname` 优先，`studentNickname` 备用。
-String _pickStudentName(
-  Map<String, dynamic> map, [
-  String fallback = '未命名学生',
-]) {
-  return _pickString(
-    map,
-    ['studentName', 'realname', 'studentNickname'],
-    fallback,
-  );
+String _pickStudentName(Map<String, dynamic> map, [String fallback = '未命名学生']) {
+  return _pickString(map, [
+    'studentName',
+    'realname',
+    'studentNickname',
+  ], fallback);
 }
 
 String _pickStudentHeadUrl(Map<String, dynamic> map) {
-  final raw = _pickString(
-    map,
-    ['studentHeadUrl', 'headUrl', 'avatarUrl', 'avatar', 'headImg'],
-  );
+  final raw = _pickString(map, [
+    'studentHeadUrl',
+    'headUrl',
+    'avatarUrl',
+    'avatar',
+    'headImg',
+  ]);
   if (raw.isNotEmpty) return raw;
   for (final key in ['user', 'student']) {
     final nested = _asMap(map[key]);
     if (nested == null) continue;
-    final fromNested = _pickString(
-      nested,
-      ['headUrl', 'avatar', 'avatarUrl', 'headImg', 'studentHeadUrl'],
-    );
+    final fromNested = _pickString(nested, [
+      'headUrl',
+      'avatar',
+      'avatarUrl',
+      'headImg',
+      'studentHeadUrl',
+    ]);
     if (fromNested.isNotEmpty) return fromNested;
   }
   return '';
@@ -362,13 +365,14 @@ List<DormitoryDetailField> parseTeacherDormitoryCheckDetailFields(dynamic raw) {
     DormitoryDetailField('打卡时间', _clock(_pickString(map, ['checkTime']))),
     DormitoryDetailField('所在宿舍', _dormName(map)),
     DormitoryDetailField('查寝状态', _teacherStatusLabel(status)),
-    if (handleStatus > 0)
-      DormitoryDetailField('处理状态', '$handleStatus'),
+    if (handleStatus > 0) DormitoryDetailField('处理状态', '$handleStatus'),
     DormitoryDetailField('宿管备注', _pickString(map, ['remark', 'note'], '无')),
   ];
 }
 
-List<DormitoryDetailField> parseTeacherDormitoryMakeupDetailFields(dynamic raw) {
+List<DormitoryDetailField> parseTeacherDormitoryMakeupDetailFields(
+  dynamic raw,
+) {
   final map = _unwrapMap(raw) ?? const <String, dynamic>{};
   final status = _pickInt(map, ['status']);
   return [

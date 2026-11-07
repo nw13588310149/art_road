@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shell/ui/shell_layout.dart';
@@ -75,12 +76,12 @@ class _RoleSwitcherButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                  colors: [AppColors.brandSoft, AppColors.brand],
                 )
               : null,
-          color: active ? null : Colors.white,
+          color: active ? null : AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: const Color(0xFFF3F2F3)),
+          border: Border.all(color: AppColors.lineSoft),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -89,8 +90,8 @@ class _RoleSwitcherButton extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: ui(11),
-            color: active ? Colors.white : const Color(0xFF0B081A),
+            fontSize: ui(12),
+            color: active ? AppColors.surface : AppColors.ink,
             fontWeight: FontWeight.w400,
             height: 12 / 11,
           ),

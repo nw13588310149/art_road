@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/art/art_tokens.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 import 'study_common.dart';
@@ -24,6 +23,8 @@ class StudyHeroCard extends StatelessWidget {
 
   /// 正数表示名次上升。
   final int? rankingChange;
+
+  /// 接口给出的超过百分比；有名次与参考人数时以二者计算的结果为准，保证能互相核对。
   final int? surpassedPercent;
   final StudyStatistics? statistics;
   final VoidCallback? onOpenReport;
@@ -31,85 +32,65 @@ class StudyHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = statistics;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF1EEFF), Colors.white],
-          stops: [0, 0.6],
-        ),
-      ),
-      child: Stack(
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Positioned(
-            right: -60,
-            top: -70,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: ArtColors.brand.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(22),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final wide = constraints.maxWidth >= 720;
-                final ring = StudyScoreRing(
-                  score: exam.totalScore,
-                  maxScore: exam.maxScore,
-                  size: wide ? 148 : 118,
-                );
-                final info = _HeroInfo(
-                  exam: exam,
-                  scoreChange: scoreChange,
-                  rankingChange: rankingChange,
-                  surpassedPercent: surpassedPercent,
-                  onOpenReport: onOpenReport,
-                );
-                if (wide) {
-                  return Row(
-                    children: [
-                      ring,
-                      const SizedBox(width: 28),
-                      Expanded(child: info),
-                      if (stats != null) ...[
-                        const SizedBox(width: 20),
-                        Container(width: 1, height: 132, color: ArtColors.line),
-                        const SizedBox(width: 20),
-                        _HeroStats(statistics: stats, vertical: true),
-                      ],
-                    ],
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        ring,
-                        const SizedBox(width: 20),
-                        Expanded(child: info),
-                      ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth >= 640;
+              return Row(
+                children: [
+                  StudyScoreRing(
+                    score: exam.totalScore,
+                    maxScore: exam.maxScore,
+                    size: wide ? 148 : 120,
+                  ),
+                  SizedBox(width: wide ? AppSpace.s32 : AppSpace.s20),
+                  Expanded(
+                    child: _HeroInfo(
+                      exam: exam,
+                      scoreChange: scoreChange,
+                      rankingChange: rankingChange,
+                      surpassedPercent:
+                          surpassedPercentOf(
+                            exam.totalRanking,
+                            exam.participantCount,
+                          ) ??
+                          surpassedPercent,
+                      onOpenReport: onOpenReport,
                     ),
-                    if (stats != null) ...[
-                      const SizedBox(height: 18),
-                      _HeroStats(statistics: stats, vertical: false),
-                    ],
-                  ],
-                );
-              },
-            ),
+                  ),
+                ],
+              );
+            },
           ),
+          if (stats != null) ...[
+            const SizedBox(height: AppSpace.s20),
+            _HeroStats(statistics: stats),
+          ],
         ],
       ),
     );
+  }
+}
+
+/// 考试状态标签：已出分 / 无成绩 / 阅卷中。
+class StudyExamStatusTag extends StatelessWidget {
+  const StudyExamStatusTag({required this.exam, super.key});
+
+  final StudyExamRecord exam;
+
+  @override
+  Widget build(BuildContext context) {
+    if (exam.isPublished && exam.hasScore) {
+      return const AppTag(label: '已出分', tone: AppTone.success);
+    }
+    if (exam.isPublished) {
+      return const AppTag(label: '无成绩');
+    }
+    return const AppTag(label: '阅卷中', tone: AppTone.warning);
   }
 }
 
@@ -138,6 +119,9 @@ class _HeroInfo extends StatelessWidget {
     ].join(' · ');
     final percent = surpassedPercent;
     final openReport = onOpenReport;
+    final organization = exam.organizationName.isEmpty
+        ? '校区'
+        : exam.organizationName;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -149,86 +133,82 @@ class _HeroInfo extends StatelessWidget {
                 exam.examName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: ArtText.title(size: 19),
+                style: AppText.title20,
               ),
             ),
-            const SizedBox(width: 8),
-            scored
-                ? const StudyChip(label: '已出分', color: ArtColors.success)
-                : StudyChip(
-                    label: exam.isPublished ? '无成绩' : '阅卷中',
-                    color: ArtColors.warn,
-                  ),
+            const SizedBox(width: AppSpace.s8),
+            StudyExamStatusTag(exam: exam),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppSpace.s4),
         Text(
           meta,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: ArtText.caption(size: 13),
+          style: AppText.body13,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpace.s16),
         if (!scored)
           Text(
-            exam.isPublished ? '本场考试暂无成绩（可能缺考或成绩未录入）' : '阅卷中，出分后提醒',
-            style: ArtText.body(size: 14, color: ArtColors.ink2),
+            exam.isPublished ? '本场考试暂无成绩（可能缺考或成绩未录入）' : '阅卷中，出分后会通知你',
+            style: AppText.body14.copyWith(color: AppColors.textSecondary),
           )
         else
           Wrap(
-            spacing: 28,
-            runSpacing: 14,
+            spacing: AppSpace.s32,
+            runSpacing: AppSpace.s12,
             children: [
               _HeroMetric(
-                label: '总排名',
+                label: '全画室排名',
                 child: StudyRankText(
                   rank: exam.totalRanking,
                   total: exam.participantCount,
-                  size: 22,
-                  color: ArtColors.brandDeep,
+                  totalUnit: '人参考',
+                  size: 20,
+                  color: AppColors.brand,
                 ),
               ),
               _HeroMetric(
-                label: exam.organizationName.isEmpty
-                    ? '校区排名'
-                    : '${exam.organizationName}排名',
+                label: '$organization排名',
                 child: StudyRankText(
                   rank: exam.organizationRanking,
                   total: exam.organizationParticipantCount,
-                  size: 22,
+                  totalUnit: '人参考',
+                  size: 20,
                 ),
               ),
               if (scoreChange != null || rankingChange != null)
                 _HeroMetric(
                   label: '较上次',
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        StudyDeltaTag(value: scoreChange),
-                        StudyDeltaTag(value: rankingChange, unit: '名'),
-                      ],
-                    ),
+                  child: Wrap(
+                    spacing: AppSpace.s8,
+                    runSpacing: AppSpace.s4,
+                    children: [
+                      StudyDeltaTag(value: scoreChange),
+                      StudyDeltaTag(value: rankingChange, unit: '名'),
+                    ],
                   ),
                 ),
             ],
           ),
         if (scored && (percent != null || openReport != null)) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpace.s16),
           Wrap(
-            spacing: 12,
-            runSpacing: 10,
+            spacing: AppSpace.s12,
+            runSpacing: AppSpace.s8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              if (percent != null) _SurpassPill(percent: percent),
+              if (percent != null)
+                AppTag(
+                  label: '超过全画室 $percent% 的考生',
+                  tone: AppTone.brand,
+                ),
               if (openReport != null)
-                ArtButton(
+                AppButton(
                   label: '查看完整报告',
                   icon: Icons.article_outlined,
-                  primary: false,
-                  height: 32,
+                  variant: AppButtonVariant.quiet,
+                  size: AppButtonSize.sm,
                   onTap: openReport,
                 ),
             ],
@@ -251,122 +231,39 @@ class _HeroMetric extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: ArtText.caption()),
-        const SizedBox(height: 4),
-        child,
+        Text(label, style: AppText.caption12),
+        const SizedBox(height: AppSpace.s4),
+        SizedBox(height: 26, child: Align(alignment: Alignment.centerLeft, child: child)),
       ],
     );
   }
 }
 
-class _SurpassPill extends StatelessWidget {
-  const _SurpassPill({required this.percent});
-
-  final int percent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: ArtColors.brandGradient,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.emoji_events_rounded, size: 15, color: Colors.white),
-          const SizedBox(width: 5),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '超过 ',
-                  style: ArtText.body(size: 13, color: Colors.white),
-                ),
-                TextSpan(
-                  text: '$percent%',
-                  style: ArtText.number(size: 15, color: Colors.white),
-                ),
-                TextSpan(
-                  text: ' 的考生',
-                  style: ArtText.body(size: 13, color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _HeroStats extends StatelessWidget {
-  const _HeroStats({required this.statistics, required this.vertical});
+  const _HeroStats({required this.statistics});
 
   final StudyStatistics statistics;
-  final bool vertical;
 
   @override
   Widget build(BuildContext context) {
     final items = [
       ('累计测评', statistics.total),
-      ('已发布', statistics.published),
-      ('待更新', statistics.pending),
+      ('已出分', statistics.published),
+      ('待出成绩', statistics.pending),
     ];
-    if (vertical) {
-      return SizedBox(
-        width: 104,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < items.length; i++) ...[
-              if (i > 0) const SizedBox(height: 12),
-              _HeroStatItem(label: items[i].$1, value: items[i].$2),
-            ],
-          ],
-        ),
-      );
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: ArtColors.line),
-      ),
-      child: Row(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) Container(width: 1, height: 32, color: ArtColors.line),
-            Expanded(
-              child: Center(
-                child: _HeroStatItem(label: items[i].$1, value: items[i].$2),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroStatItem extends StatelessWidget {
-  const _HeroStatItem({required this.label, required this.value});
-
-  final String label;
-  final int value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+    return Row(
       children: [
-        Text(label, style: ArtText.caption()),
-        const SizedBox(height: 2),
-        StudyNumberText('$value', unit: ' 场', size: 20),
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpace.s12),
+          Expanded(
+            child: AppStatTile(
+              label: items[i].$1,
+              value: '${items[i].$2}',
+              unit: '场',
+              boxed: true,
+            ),
+          ),
+        ],
       ],
     );
   }

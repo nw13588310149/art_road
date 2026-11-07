@@ -4,12 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/art/art_tokens.dart';
-import '../../../core/theme/app_font.dart';
-import '../../../core/widgets/app_loading_indicator.dart';
+import '../../../app/router/route_paths.dart';
+import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/art_widgets.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/student_artworks_controller.dart';
@@ -17,7 +14,7 @@ import 'artwork_upload_dialog.dart';
 import 'student_artwork_detail_view.dart';
 import 'widgets/artwork_widgets.dart';
 
-/// 学生「作品档案」：统计、我的高频问题、按月分组的作品墙，点开进入作品详情。
+/// 学生「作品档案」：统计、点评小结、按月分组的作品墙，点开进入作品详情。
 class StudentArtworksView extends ConsumerStatefulWidget {
   const StudentArtworksView({this.initialArtworkId, super.key});
 
@@ -120,103 +117,173 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
     StudentArtworksState state,
     StudentArtworksController controller,
   ) {
-    return PageInitLoadingShell(
-      loading: state.loading && !state.loaded,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ArtPageHeader(
-            title: '作品档案',
-            subtitle: '记录每一张画，收好老师的每一次点评',
-            actions: [
-              ArtButton(
-                label: '上传作品',
-                icon: Icons.add_photo_alternate_outlined,
-                onTap: _upload,
-              ),
-            ],
-          ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return AppRefreshIndicator(
-                  onRefresh: controller.refresh,
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverToBoxAdapter(
-                          child: _StatsRow(stats: state.stats),
-                        ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: '作品档案',
+          subtitle: '记录每一张画，收好老师的每一次点评',
+          actions: [
+            AppButton(
+              label: '上传作品',
+              icon: Icons.add_photo_alternate_outlined,
+              size: AppButtonSize.sm,
+              onTap: _upload,
+            ),
+          ],
+        ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return AppRefreshIndicator(
+                onRefresh: controller.refresh,
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpace.page,
+                        AppSpace.s4,
+                        AppSpace.page,
+                        0,
                       ),
+                      sliver: SliverToBoxAdapter(
+                        child: state.loaded
+                            ? _StatsCard(stats: state.stats)
+                            : const AppSkeleton(
+                                height: 96,
+                                radius: AppRadius.card,
+                              ),
+                      ),
+                    ),
+                    if (state.loaded)
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpace.page,
+                          AppSpace.s16,
+                          AppSpace.page,
+                          0,
+                        ),
                         sliver: SliverToBoxAdapter(
                           child: _InsightsCard(insights: state.insights),
                         ),
                       ),
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                        sliver: SliverToBoxAdapter(
-                          child: Row(
-                            children: [
-                              ArtSegmentTabs<ArtworkStatusFilter>(
-                                items: ArtworkStatusFilter.values,
-                                value: state.filter,
-                                labelOf: (f) => f.label,
-                                onChanged: (f) =>
-                                    unawaited(controller.setFilter(f)),
-                              ),
-                              const Spacer(),
-                              Text(
-                                '共 ${state.total} 件',
-                                style: ArtText.caption(),
-                              ),
-                            ],
-                          ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpace.page,
+                        AppSpace.s24,
+                        AppSpace.page,
+                        0,
+                      ),
+                      sliver: SliverToBoxAdapter(
+                        child: Row(
+                          children: [
+                            AppSegmented<ArtworkStatusFilter>(
+                              segments: [
+                                for (final filter in ArtworkStatusFilter.values)
+                                  AppSegment(value: filter, label: filter.label),
+                              ],
+                              value: state.filter,
+                              onChanged: (f) =>
+                                  unawaited(controller.setFilter(f)),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '共 ${state.total} 件',
+                              style: AppText.caption12,
+                            ),
+                          ],
                         ),
                       ),
-                      ..._gridSlivers(state, constraints.maxWidth - 40),
-                      const SliverToBoxAdapter(child: SizedBox(height: 28)),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    ),
+                    ..._gridSlivers(
+                      state,
+                      controller,
+                      constraints.maxWidth - AppSpace.page * 2,
+                    ),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: AppSpace.s32),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  List<Widget> _gridSlivers(StudentArtworksState state, double width) {
+  List<Widget> _gridSlivers(
+    StudentArtworksState state,
+    StudentArtworksController controller,
+    double width,
+  ) {
+    const spacing = AppSpace.s16;
+    final columns = math.max(2, ((width + spacing) / (200 + spacing)).floor());
+    final cardWidth = (width - spacing * (columns - 1)) / columns;
+    final extent = cardWidth * 3 / 4 + _ArtworkCard.infoHeight;
+    SliverGridDelegate grid() => SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: columns,
+      mainAxisSpacing: spacing,
+      crossAxisSpacing: spacing,
+      mainAxisExtent: extent,
+    );
+
     if (state.items.isEmpty) {
-      if (state.loadingList) {
-        return const [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: AppLoadingIndicator(size: 36)),
+      if (!state.loaded || state.loadingList) {
+        return [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s16,
+              AppSpace.page,
+              0,
+            ),
+            sliver: SliverGrid(
+              gridDelegate: grid(),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => const AppSkeleton(
+                  height: double.infinity,
+                  radius: AppRadius.card,
+                ),
+                childCount: columns,
+              ),
             ),
           ),
         ];
       }
-      if (!state.loaded) {
-        return const [];
+      if (state.listFailed) {
+        return [
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 240,
+              child: AppErrorState(
+                title: '作品加载失败',
+                description: '请检查网络后重试',
+                onRetry: controller.refresh,
+              ),
+            ),
+          ),
+        ];
       }
       final canUpload = state.filter != ArtworkStatusFilter.reviewed;
       return [
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 28),
-            child: ArtEmptyState(
+          child: SizedBox(
+            height: 240,
+            child: AppEmptyState(
               icon: Icons.photo_library_outlined,
-              message: switch (state.filter) {
-                ArtworkStatusFilter.all => '还没有作品，上传第一张画请老师点评吧',
+              title: switch (state.filter) {
+                ArtworkStatusFilter.all => '还没有作品',
                 ArtworkStatusFilter.pending => '没有待点评的作品',
                 ArtworkStatusFilter.reviewed => '还没有完成点评的作品',
+              },
+              description: switch (state.filter) {
+                ArtworkStatusFilter.all => '把日常作业拍照上传，老师会逐一点评',
+                ArtworkStatusFilter.pending => '上传的作品在老师点评完成前会出现在这里',
+                ArtworkStatusFilter.reviewed => '全部老师点评完成后，作品会出现在这里',
               },
               actionLabel: canUpload ? '上传作品' : null,
               onAction: canUpload ? _upload : null,
@@ -226,10 +293,6 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
       ];
     }
 
-    const spacing = 14.0;
-    final columns = math.max(2, ((width + spacing) / (200 + spacing)).floor());
-    final cardWidth = (width - spacing * (columns - 1)) / columns;
-    final extent = cardWidth * 3 / 4 + _ArtworkCard.infoHeight;
     final groups = ArtworkRules.groupByMonth(
       state.items,
       (item) => item.drawingDate,
@@ -237,23 +300,23 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
     return [
       for (final (month, works) in groups) ...[
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.page,
+            AppSpace.s20,
+            AppSpace.page,
+            AppSpace.s12,
+          ),
           sliver: SliverToBoxAdapter(
-            child: Text(
-              ArtworkRules.monthLabel(month),
-              style: ArtText.title(size: 15),
+            child: AppSectionHeader(
+              title: ArtworkRules.monthLabel(month),
+              trailing: Text('${works.length} 件', style: AppText.caption12),
             ),
           ),
         ),
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.page),
           sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: columns,
-              mainAxisSpacing: spacing,
-              crossAxisSpacing: spacing,
-              mainAxisExtent: extent,
-            ),
+            gridDelegate: grid(),
             delegate: SliverChildBuilderDelegate(
               (context, index) => _ArtworkCard(
                 item: works[index],
@@ -267,7 +330,7 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
       if (state.loadingMore)
         const SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.symmetric(vertical: AppSpace.s16),
             child: Center(child: AppLoadingIndicator(size: 30)),
           ),
         ),
@@ -275,125 +338,31 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
   }
 }
 
-class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.stats});
+class _StatsCard extends StatelessWidget {
+  const _StatsCard({required this.stats});
 
   final ArtworkStats stats;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: ArtworkStatCard(
-            label: '累计作品',
-            value: stats.total,
-            icon: Icons.collections_outlined,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ArtworkStatCard(
-            label: '已点评',
-            value: stats.reviewed,
-            icon: Icons.task_alt_rounded,
-            color: ArtColors.success,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ArtworkStatCard(
-            label: '待点评',
-            value: stats.pending,
-            icon: Icons.hourglass_top_rounded,
-            color: ArtColors.warn,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// 「我的高频问题」：老师点评标签的高频统计 + 针对性练习入口。
-class _InsightsCard extends StatelessWidget {
-  const _InsightsCard({required this.insights});
-
-  final ArtworkInsights insights;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasTags = insights.topTags.isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: ArtColors.brandWash,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ArtColors.brandTint),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final items = [
+      ('累计作品', stats.total),
+      ('已点评', stats.reviewed),
+      ('待点评', stats.pending),
+    ];
+    return AppCard(
+      child: Row(
         children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.insights_rounded,
-                size: 18,
-                color: ArtColors.brand,
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpace.s12),
+            Expanded(
+              child: AppStatTile(
+                label: items[i].$1,
+                value: '${items[i].$2}',
+                unit: '件',
+                boxed: true,
               ),
-              const SizedBox(width: 6),
-              Text('我的高频问题', style: ArtText.title(size: 16)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  hasTags ? '基于 ${insights.reviewedCount} 份已点评作品' : '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: ArtText.caption(),
-                ),
-              ),
-            ],
-          ),
-          if (!hasTags) ...[
-            const SizedBox(height: 10),
-            Text(
-              '老师点评后，这里会汇总你最常出现的问题，并推荐对应的范画、教程与工具。',
-              style: ArtText.body(size: 13, color: ArtColors.ink2),
             ),
-          ] else ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                if (insights.averageScore != null)
-                  _MetaPill(
-                    label: '平均分',
-                    value: ArtworkRules.formatScore(insights.averageScore),
-                  ),
-                if (insights.bestSubject.isNotEmpty)
-                  _MetaPill(label: '最佳科目', value: insights.bestSubject),
-                if (insights.weakestSubject.isNotEmpty)
-                  _MetaPill(label: '待加强', value: insights.weakestSubject),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final tag in insights.topTags)
-                  ArtworkTagChip(
-                    name: tag.name,
-                    color: tag.color,
-                    count: tag.count,
-                    tooltip: tag.explanation,
-                  ),
-              ],
-            ),
-            for (final suggestion in insights.suggestions) ...[
-              const SizedBox(height: 8),
-              _SuggestionRow(suggestion: suggestion),
-            ],
           ],
         ],
       ),
@@ -401,35 +370,133 @@ class _InsightsCard extends StatelessWidget {
   }
 }
 
-class _MetaPill extends StatelessWidget {
-  const _MetaPill({required this.label, required this.value});
+/// 点评小结：只统计全部老师点评完成的日常作品；问题与亮点分开展示。
+class _InsightsCard extends StatelessWidget {
+  const _InsightsCard({required this.insights});
+
+  final ArtworkInsights insights;
+
+  @override
+  Widget build(BuildContext context) {
+    final problems = [
+      for (final tag in insights.topTags)
+        if (!ArtworkRules.isHighlightTag(tag.color, positive: tag.positive))
+          tag,
+    ];
+    final highlights = [
+      for (final tag in insights.topTags)
+        if (ArtworkRules.isHighlightTag(tag.color, positive: tag.positive))
+          tag,
+    ];
+    final hasData = insights.reviewedCount > 0;
+    return AppCard(
+      title: '点评小结',
+      subtitle: hasData ? '基于 ${insights.reviewedCount} 件已点评的日常作品' : null,
+      child: !hasData
+          ? Text(
+              '老师点评后，这里会汇总你常出现的问题和做得好的地方，并推荐对应的范画、教程与工具',
+              style: AppText.body13.copyWith(color: AppColors.textTertiary),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: AppSpace.s24,
+                  runSpacing: AppSpace.s8,
+                  children: [
+                    if (insights.averageScore != null)
+                      _MetaItem(
+                        label: '平均分',
+                        value:
+                            '${ArtworkRules.displayScore(insights.averageScore)} 分',
+                      ),
+                    if (insights.bestSubject.isNotEmpty)
+                      _MetaItem(
+                        label: '得分最高科目',
+                        value: insights.bestSubject,
+                      ),
+                    if (insights.weakestSubject.isNotEmpty)
+                      _MetaItem(
+                        label: '有待加强',
+                        value: insights.weakestSubject,
+                      ),
+                  ],
+                ),
+                if (problems.isNotEmpty) ...[
+                  const SizedBox(height: AppSpace.s16),
+                  _TagGroup(label: '高频问题', tags: problems),
+                ],
+                if (highlights.isNotEmpty) ...[
+                  const SizedBox(height: AppSpace.s12),
+                  _TagGroup(label: '做得好的地方', tags: highlights),
+                ],
+                if (insights.suggestions.isNotEmpty) ...[
+                  const SizedBox(height: AppSpace.s16),
+                  for (var i = 0; i < insights.suggestions.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpace.s8),
+                    _SuggestionRow(suggestion: insights.suggestions[i]),
+                  ],
+                ],
+              ],
+            ),
+    );
+  }
+}
+
+class _MetaItem extends StatelessWidget {
+  const _MetaItem({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: '$label  ', style: AppText.caption12),
+          TextSpan(text: value, style: AppText.body14Strong),
+        ],
       ),
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: '$label ', style: ArtText.caption()),
-            TextSpan(
-              text: value,
-              style: ArtText.body(
-                size: 12,
-                color: ArtColors.brandDeep,
-                weight: AppFont.w500,
-              ),
-            ),
-          ],
+    );
+  }
+}
+
+class _TagGroup extends StatelessWidget {
+  const _TagGroup({required this.label, required this.tags});
+
+  final String label;
+  final List<ArtworkInsightTag> tags;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 88,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(label, style: AppText.caption12),
+          ),
         ),
-      ),
+        Expanded(
+          child: Wrap(
+            spacing: AppSpace.s8,
+            runSpacing: AppSpace.s8,
+            children: [
+              for (final tag in tags)
+                ArtworkReviewTag(
+                  name: tag.name,
+                  color: tag.color,
+                  positive: tag.positive,
+                  count: tag.count,
+                  tooltip: tag.explanation,
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -446,75 +513,67 @@ class _SuggestionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = suggestion;
-    final label = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: ArtColors.fromHex(s.color),
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(s.tag, style: ArtText.body(size: 13, weight: AppFont.w500)),
-      ],
-    );
+    final label = AppTag(label: s.tag, tone: AppTone.warning);
     final text = Text(
       s.text,
-      maxLines: 1,
+      maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: ArtText.body(size: 13, color: ArtColors.ink2),
+      style: AppText.body13,
     );
     final actions = Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: AppSpace.s4,
       children: [
-        _LinkPill(
-          icon: Icons.photo_library_outlined,
+        AppButton(
           label: '看范画',
-          onTap: () => _open(context, '/gallery', <String, dynamic>{
+          icon: Icons.photo_library_outlined,
+          variant: AppButtonVariant.text,
+          size: AppButtonSize.sm,
+          onTap: () => _open(context, RoutePaths.gallery, <String, dynamic>{
             'subject': s.gallerySubject,
             'keyword': s.galleryKeyword,
           }),
         ),
-        _LinkPill(
-          icon: Icons.play_circle_outline_rounded,
+        AppButton(
           label: '看教程',
-          onTap: () => _open(context, '/video-tutorial', <String, dynamic>{
+          icon: Icons.play_circle_outline_rounded,
+          variant: AppButtonVariant.text,
+          size: AppButtonSize.sm,
+          onTap: () => _open(context, RoutePaths.videoTutorial, <String, dynamic>{
             'keyword': s.galleryKeyword,
           }),
         ),
         if (s.tool.isNotEmpty)
-          _LinkPill(
-            icon: Icons.handyman_outlined,
+          AppButton(
             label: s.tool,
-            onTap: () =>
-                _open(context, '/toolbox', <String, dynamic>{'tool': s.tool}),
+            icon: Icons.handyman_outlined,
+            variant: AppButtonVariant.text,
+            size: AppButtonSize.sm,
+            onTap: () => _open(context, RoutePaths.artToolbox, <String, dynamic>{
+              'tool': s.tool,
+            }),
           ),
       ],
     );
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+    return AppCard(
+      color: AppColors.surfaceSubtle,
+      bordered: false,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s12,
+        vertical: AppSpace.s8,
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth < 620) {
+          if (constraints.maxWidth < 640) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     label,
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpace.s8),
                     Expanded(child: text),
                   ],
                 ),
-                const SizedBox(height: 8),
                 actions,
               ],
             );
@@ -522,9 +581,9 @@ class _SuggestionRow extends StatelessWidget {
           return Row(
             children: [
               label,
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpace.s12),
               Expanded(child: text),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpace.s12),
               actions,
             ],
           );
@@ -534,108 +593,51 @@ class _SuggestionRow extends StatelessWidget {
   }
 }
 
-class _LinkPill extends StatelessWidget {
-  const _LinkPill({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: ArtColors.brandWash,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: ArtColors.brandDeep),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: ArtText.body(
-                size: 12,
-                color: ArtColors.brandDeep,
-                weight: AppFont.w500,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ArtworkCard extends StatelessWidget {
   const _ArtworkCard({required this.item, required this.onTap});
 
   /// 封面以下信息区的固定高度。
-  static const infoHeight = 76.0;
+  static const infoHeight = 78.0;
 
   final ArtworkSummary item;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ArtCard(
+    return AppCard(
       padding: EdgeInsets.zero,
-      color: ArtColors.subtle,
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AspectRatio(
             aspectRatio: 4 / 3,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                ArtNetworkImage(
-                  item.coverUrl,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-                Positioned(
-                  left: 8,
-                  top: 8,
-                  child: ArtworkStatusBadge(done: item.reviewed, solid: true),
-                ),
-                if (item.imageCount > 1)
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.card - 1),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  AppImage(src: item.coverUrl),
                   Positioned(
-                    right: 8,
-                    bottom: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '${item.imageCount} 张',
-                        style: ArtText.caption(size: 11, color: Colors.white),
-                      ),
-                    ),
+                    left: AppSpace.s8,
+                    top: AppSpace.s8,
+                    child: ArtworkStatusTag(done: item.reviewed),
                   ),
-              ],
+                  if (item.imageCount > 1)
+                    Positioned(
+                      right: AppSpace.s8,
+                      bottom: AppSpace.s8,
+                      child: ArtworkImageCountTag(count: item.imageCount),
+                    ),
+                ],
+              ),
             ),
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              padding: const EdgeInsets.all(AppSpace.s12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -644,23 +646,21 @@ class _ArtworkCard extends StatelessWidget {
                     item.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: ArtText.body(weight: AppFont.w500),
+                    style: AppText.body14Strong,
                   ),
                   Row(
                     children: [
-                      Flexible(
-                        child: ArtworkSubjectChip(subject: item.subject),
-                      ),
-                      const SizedBox(width: 6),
+                      ArtworkSubjectTag(subject: item.subject),
+                      const SizedBox(width: AppSpace.s8),
                       Expanded(
                         child: Text(
-                          ArtworkRules.dotDate(item.drawingDate),
+                          ArtworkRules.dateText(item.drawingDate),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: ArtText.caption(size: 11),
+                          style: AppText.caption12,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: AppSpace.s4),
                       _CardScore(item: item),
                     ],
                   ),
@@ -683,17 +683,24 @@ class _CardScore extends StatelessWidget {
   Widget build(BuildContext context) {
     final score = item.finalScore;
     if (item.reviewed && score != null) {
-      return Text(
-        ArtworkRules.formatScore(score),
-        style: ArtText.number(size: 17, color: ArtColors.brandDeep),
+      return Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: ArtworkRules.displayScore(score),
+              style: AppText.number(size: 16),
+            ),
+            TextSpan(text: ' 分', style: AppText.caption12),
+          ],
+        ),
       );
     }
     if (item.reviewed) {
-      return Text('看评语', style: ArtText.caption(size: 11));
+      return Text('看评语', style: AppText.caption12);
     }
     return Text(
-      '${item.reviewedCount}/${item.teacherCount} 已评',
-      style: ArtText.caption(size: 11, color: ArtColors.warn),
+      '${item.reviewedCount}/${item.teacherCount} 位已评',
+      style: AppText.caption12,
     );
   }
 }

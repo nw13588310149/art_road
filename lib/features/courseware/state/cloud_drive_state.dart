@@ -81,15 +81,15 @@ class CloudCategoryItem {
   final String name;
   final int count;
 
-  String get subtitle => '已存储 $count 个文件';
+  String get subtitle => '$count 份资料';
 }
 
 class CloudFolderItem {
   const CloudFolderItem({
     required this.id,
     required this.title,
-    this.sizeLabel = '10MB',
-    this.dateLabel = '2026.04.07',
+    this.sizeLabel = '',
+    this.dateLabel = '',
     this.fileCount = 0,
     this.isCreateShortcut = false,
   });
@@ -129,8 +129,8 @@ class CloudFileItem {
     required this.type,
     required this.audioUrl,
     required this.imageUrls,
-    this.dateLabel = '04.07.2026',
-    this.sizeLabel = '10MB',
+    this.dateLabel = '',
+    this.sizeLabel = '',
     this.isPlaying = false,
   });
 
@@ -199,20 +199,19 @@ class CloudShareClassItem {
 }
 
 String _formatCloudStorageBytes(int bytes) {
-  if (bytes <= 0) return '0B';
+  if (bytes <= 0) return '0 B';
   const gb = 1024 * 1024 * 1024;
   const mb = 1024 * 1024;
   const kb = 1024;
+  String fixed(double v) =>
+      v >= 10 || v == v.roundToDouble() ? '${v.round()}' : v.toStringAsFixed(1);
   if (bytes >= gb) {
-    final v = bytes / gb;
-    return v >= 10 ? '${v.round()}GB' : '${v.toStringAsFixed(1)}GB';
+    return '${fixed(bytes / gb)} GB';
   }
   if (bytes >= mb) {
-    final v = bytes / mb;
-    return v >= 10 ? '${v.round()}MB' : '${v.toStringAsFixed(1)}MB';
+    return '${fixed(bytes / mb)} MB';
   }
-  final v = bytes / kb;
-  return v >= 10 ? '${v.round()}KB' : '${v.toStringAsFixed(1)}KB';
+  return '${fixed(bytes / kb)} KB';
 }
 
 class CloudDriveState {
@@ -283,12 +282,19 @@ class CloudDriveState {
     return (storageUsedBytes / storageTotalBytes * 100).clamp(0, 100);
   }
 
-  /// 例如 `168GB可用/512GB`；无有效总量时返回 `—`。
+  /// 例如 `168 GB 可用 / 512 GB`；无有效总量时返回 `—`。
   String get storageAvailabilityLabel {
     if (storageTotalBytes <= 0) return '—';
     final available = math.max(0, storageTotalBytes - storageUsedBytes);
-    return '${_formatCloudStorageBytes(available)}可用/'
+    return '${_formatCloudStorageBytes(available)} 可用 / '
         '${_formatCloudStorageBytes(storageTotalBytes)}';
+  }
+
+  /// 例如 `已用 0.6 GB / 共 5 GB`；无有效总量时返回空串。
+  String get storageUsageLabel {
+    if (storageTotalBytes <= 0) return '';
+    return '已用 ${_formatCloudStorageBytes(storageUsedBytes)} / '
+        '共 ${_formatCloudStorageBytes(storageTotalBytes)}';
   }
 
   CloudCategoryItem? get selectedCategory {

@@ -19,8 +19,10 @@ Uint8List? cropFaceIdPhotoFromViewport({
   final inverse = Matrix4.inverted(imageToViewport);
 
   final topLeft = MatrixUtils.transformPoint(inverse, frameInViewport.topLeft);
-  final bottomRight =
-      MatrixUtils.transformPoint(inverse, frameInViewport.bottomRight);
+  final bottomRight = MatrixUtils.transformPoint(
+    inverse,
+    frameInViewport.bottomRight,
+  );
 
   var x = topLeft.dx.round();
   var y = topLeft.dy.round();

@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 /// 证件照取景框：框外半透明遮罩 + 白色描边与四角标记。
@@ -15,19 +16,16 @@ class FaceIdFramePainter extends CustomPainter {
       ..addRect(Offset.zero & previewSize)
       ..addRect(frameRect)
       ..fillType = PathFillType.evenOdd;
-    canvas.drawPath(
-      dimPath,
-      Paint()..color = const Color(0x99000000),
-    );
+    canvas.drawPath(dimPath, Paint()..color = const Color(0x99000000));
 
     final border = Paint()
-      ..color = Colors.white
+      ..color = AppColors.surface
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawRect(frameRect, border);
 
     final corner = Paint()
-      ..color = const Color(0xFF9585FF)
+      ..color = AppColors.brandSoft
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
@@ -40,8 +38,16 @@ class FaceIdFramePainter extends CustomPainter {
     canvas.drawLine(r.topRight, r.topRight + const Offset(0, len), corner);
     canvas.drawLine(r.bottomLeft, r.bottomLeft + const Offset(len, 0), corner);
     canvas.drawLine(r.bottomLeft, r.bottomLeft + const Offset(0, -len), corner);
-    canvas.drawLine(r.bottomRight, r.bottomRight + const Offset(-len, 0), corner);
-    canvas.drawLine(r.bottomRight, r.bottomRight + const Offset(0, -len), corner);
+    canvas.drawLine(
+      r.bottomRight,
+      r.bottomRight + const Offset(-len, 0),
+      corner,
+    );
+    canvas.drawLine(
+      r.bottomRight,
+      r.bottomRight + const Offset(0, -len),
+      corner,
+    );
   }
 
   @override

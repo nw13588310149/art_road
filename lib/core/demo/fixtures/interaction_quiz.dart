@@ -8,8 +8,8 @@ import 'interaction_quiz_bank.dart';
 
 const _types = <String>['sequence', 'random', 'exam', 'error'];
 
-/// 美术常识刷题：每个账号、每个 schoolId 一本练习簿，
-/// 含顺序 / 随机 / 考前密卷 / 错题集四类练习和一份错题本。
+/// 美术常识题库：每个账号、每个 schoolId 一本练习簿，
+/// 含顺序 / 随机 / 高频考点 / 错题本四类练习和一份错题记录。
 void registerQuizFixtures(DemoRouter r) {
   r.post('/app/user/questionPracticeSummary', (req) {
     final book = _book(req);
@@ -129,7 +129,7 @@ Map<String, dynamic> _create(
     case 'error':
       final wrong = _wrong(book);
       if (wrong.isEmpty) {
-        throw const DemoApiException('错题集暂无题目，先去做几道题吧');
+        throw const DemoApiException('错题本还是空的，做错的题会自动收进来');
       }
       practice = _newPractice(type, [...wrong]);
     default:
@@ -143,7 +143,7 @@ Map<String, dynamic> _create(
   return practice;
 }
 
-/// 错题集随错题本更新：一轮做完后按最新错题重建，进行中只追加新错题。
+/// 错题本练习随错题记录更新：一轮做完后按最新错题重建，进行中只追加新错题。
 void _syncErrorPractice(Map<String, dynamic> book) {
   final wrong = _wrong(book);
   final current = _practice(book, 'error');

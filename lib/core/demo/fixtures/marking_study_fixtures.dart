@@ -30,6 +30,7 @@ void registerMarkingStudyFixtures(DemoRouter marking) {
         'avatarUrl': DemoMedia.url(person.avatarRef),
         'organizationName': person.organizationName,
         'schoolName': DemoMarkingData.schoolName,
+        'studentNo': person.studentNo,
       },
       'statistics': <String, dynamic>{
         'total': newestFirst.length,
@@ -555,7 +556,7 @@ Map<String, dynamic> _examReport(DemoExamEntry entry) {
     'rankingChange': changes.ranking,
     'previousExamId': changes.previous?.exam.examId,
     'surpassedPercent': rank != null && participants > 1
-        ? ((participants - rank) / (participants - 1) * 100).round()
+        ? ((participants - rank) / participants * 100).round()
         : null,
     'interpretations': entry.scored
         ? _interpretations(entry, changes.previous)

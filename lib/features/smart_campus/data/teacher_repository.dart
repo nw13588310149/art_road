@@ -111,10 +111,7 @@ class TeacherRepository {
   }) {
     return client.post(
       '$_base/dormNormalStat',
-      data: <String, dynamic>{
-        'beginDate': beginDate,
-        'endDate': endDate,
-      },
+      data: <String, dynamic>{'beginDate': beginDate, 'endDate': endDate},
     );
   }
 
@@ -279,7 +276,11 @@ class TeacherRepository {
   ///   作业批改 / 考评管理等）调用统一传 `1`，让后端按"我任教的班级"过滤。
   /// - `isHeadTeacher`: 是不是班主任。班主任端调用本接口时传 `1`，让后端按
   ///   "我担任班主任的班级"过滤；不传 = 不按该字段过滤。
-  Future<ApiResponse> classList({int? type, int? isClassTeacher, int? isHeadTeacher}) {
+  Future<ApiResponse> classList({
+    int? type,
+    int? isClassTeacher,
+    int? isHeadTeacher,
+  }) {
     final body = <String, dynamic>{};
     if (type != null) body['type'] = type;
     if (isClassTeacher != null) body['isClassTeacher'] = isClassTeacher;
@@ -680,11 +681,7 @@ class TeacherRepository {
     String tags = '',
   }) {
     final body = encodeNumericIdRequestBody(
-      <String, dynamic>{
-        'studentId': studentId,
-        'remark': remark,
-        'tags': tags,
-      },
+      <String, dynamic>{'studentId': studentId, 'remark': remark, 'tags': tags},
       numericIdKeys: const {'studentId'},
     );
     if (body == null) {
@@ -941,7 +938,11 @@ class TeacherRepository {
       mime = DioMediaType('audio', 'mp4'); // .m4a / .aac
     }
     final form = FormData.fromMap(<String, dynamic>{
-      'file': MultipartFile.fromBytes(bytes, filename: filename, contentType: mime),
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: filename,
+        contentType: mime,
+      ),
     });
     return client.postFormData('/app/common/v2/fileUpload', data: form);
   }
@@ -977,19 +978,13 @@ class TeacherRepository {
     Object? status,
     List<int>? statusList,
   }) {
-    final data = <String, dynamic>{
-      'current': current,
-      'size': size,
-    };
+    final data = <String, dynamic>{'current': current, 'size': size};
     if (statusList != null) {
       data['statusList'] = statusList;
     } else {
       data['status'] = status ?? '';
     }
-    return client.post(
-      '$_base/headTeacherStudentLeaveList',
-      data: data,
-    );
+    return client.post('$_base/headTeacherStudentLeaveList', data: data);
   }
 
   /// 学生请假审批：`status` 3=同意 / 4=拒绝。

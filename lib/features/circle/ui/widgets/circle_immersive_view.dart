@@ -2,10 +2,7 @@ import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_assets.dart';
-import '../../../../core/widgets/app_toast.dart';
-import '../../../../core/widgets/art_widgets.dart';
-import '../../../../core/widgets/scaled_dialog.dart';
+import '../../../../core/ui/ui.dart';
 import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_controller.dart';
 import '../../state/circle_state.dart';
@@ -13,7 +10,6 @@ import 'circle_action_buttons.dart';
 import 'circle_badges.dart';
 import 'circle_comment_panel.dart';
 import 'circle_media_player.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 /// 沉浸模式：全屏单帖，纵向 PageView 翻页，右侧操作按钮，下方文字浮层；
 /// 评论面板从右侧滑入，覆盖在沉浸面板之上。
@@ -45,11 +41,7 @@ class _CircleImmersiveViewState extends State<CircleImmersiveView> {
     super.didUpdateWidget(oldWidget);
     final target = widget.state.immersiveIndex;
     if (_pageController.hasClients && _pageController.page?.round() != target) {
-      _pageController.animateToPage(
-        target,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeInOutCubic,
-      );
+      _pageController.jumpToPage(target);
     }
   }
 
@@ -93,16 +85,19 @@ class _CircleImmersiveViewState extends State<CircleImmersiveView> {
   }
 
   Future<void> _confirmDeletePost(BuildContext context, CirclePost post) async {
-    final ok = await showConfirmDialog(
+    final ok = await showAppConfirm(
       context: context,
-      title: '删除帖子',
-      content: '确定删除这条动态吗？删除后不可恢复。',
+      title: '删除动态',
+      message: '删除后这条动态和它的评论都不可恢复。',
+      danger: true,
     );
     if (!ok || !context.mounted) return;
     final message = await widget.controller.deletePost(post.id);
     if (!context.mounted) return;
     if (message != null && message.isNotEmpty) {
-      AppToast.show(context, message);
+      AppToast.showError(context, message);
+    } else {
+      AppToast.showSuccess(context, '动态已删除');
     }
   }
 
@@ -110,10 +105,11 @@ class _CircleImmersiveViewState extends State<CircleImmersiveView> {
     BuildContext context,
     String commentId,
   ) async {
-    final ok = await showConfirmDialog(
+    final ok = await showAppConfirm(
       context: context,
       title: '删除评论',
-      content: '确定删除这条评论吗？',
+      message: '删除后不可恢复。',
+      danger: true,
     );
     if (!ok || !context.mounted) return;
     final postId = _activePostId();
@@ -136,18 +132,15 @@ class _CircleImmersiveViewState extends State<CircleImmersiveView> {
     final posts = state.visiblePosts;
 
     if (posts.isEmpty) {
-      return const ColoredBox(
-        color: Color(0xFF0B081A),
-        child: Center(
-          child: Text(
-            '暂无动态',
-            style: TextStyle(
-              color: Color(0xFFB6B5BB),
-              fontSize: 14,
-              fontFamily: 'PingFang SC',
-            ),
-          ),
-        ),
+      return ColoredBox(
+        color: AppColors.surface,
+        child: state.listLoading
+            ? const Center(child: AppLoadingIndicator())
+            : const AppEmptyState(
+                icon: Icons.forum_outlined,
+                title: '还没有动态',
+                description: '分享一张作品或写生日记，同学和老师都能看到',
+              ),
       );
     }
 
@@ -155,7 +148,7 @@ class _CircleImmersiveViewState extends State<CircleImmersiveView> {
         state.commentsLoadingPostId == _activePostId();
 
     return ColoredBox(
-      color: const Color(0xFF0B081A),
+      color: AppColors.ink,
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
@@ -260,16 +253,20 @@ class _ImmersiveSlide extends StatelessWidget {
 
         if (canDeletePost && onDeletePost != null)
           Positioned(
-            top: ui(16),
-            right: ui(16),
-            child: GestureDetector(
-              onTap: onDeletePost,
-              behavior: HitTestBehavior.opaque,
-              child: Image.asset(
-                AppAssets.homeDel,
-                width: ui(32),
-                height: ui(32),
-                fit: BoxFit.contain,
+            top: AppSpace.s16,
+            right: AppSpace.s16,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.ink.withValues(alpha: 0.4),
+                borderRadius: AppRadius.br8,
+              ),
+              child: AppIconButton(
+                icon: Icons.delete_outline_rounded,
+                semanticLabel: '删除动态',
+                size: AppButtonSize.sm,
+                filled: false,
+                color: AppColors.onBrand,
+                onTap: onDeletePost,
               ),
             ),
           ),
@@ -286,15 +283,15 @@ class _ImmersiveSlide extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: isDouyinLayout
-                    ? const [
-                        Color(0x00000000),
-                        Color(0x66000000),
-                        Color(0x99000000),
+                    ? [
+                        AppColors.ink.withValues(alpha: 0),
+                        AppColors.ink.withValues(alpha: 0.4),
+                        AppColors.ink.withValues(alpha: 0.6),
                       ]
-                    : const [
-                        Color(0x000B081A),
-                        Color(0xCC0B081A),
-                        Color(0xFF0B081A),
+                    : [
+                        AppColors.ink.withValues(alpha: 0),
+                        AppColors.ink.withValues(alpha: 0.8),
+                        AppColors.ink,
                       ],
                 stops: isDouyinLayout ? const [0, 0.55, 1] : const [0, 0.6, 1],
               ),
@@ -341,7 +338,6 @@ class _ImmersiveAuthorLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     final role = formatCircleAuthorRole(post.author.role);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -351,28 +347,19 @@ class _ImmersiveAuthorLine extends StatelessWidget {
             '@${post.author.name}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: ui(20),
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w600,
-              height: 1,
+            style: AppText.title20.copyWith(
+              color: AppColors.onBrand,
               shadows: nameShadows,
             ),
           ),
         ),
         if (role.isNotEmpty) ...[
-          SizedBox(width: ui(8)),
+          const SizedBox(width: AppSpace.s8),
           Text(
             role,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: const Color(0xFFB6B5BB),
-              fontSize: ui(14),
-              fontFamily: 'PingFang SC',
-              height: 1,
-            ),
+            style: AppText.body14.copyWith(color: AppColors.textPlaceholder),
           ),
         ],
       ],
@@ -420,46 +407,35 @@ class _DouyinVideoTextBlock extends StatelessWidget {
 
   final CirclePost post;
 
+  static final _textShadow = <Shadow>[
+    Shadow(color: AppColors.ink.withValues(alpha: 0.5), blurRadius: 4),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ImmersiveAuthorLine(
-          post: post,
-          nameShadows: const [
-            Shadow(color: Color(0x80000000), blurRadius: 4),
-          ],
-        ),
+        _ImmersiveAuthorLine(post: post, nameShadows: _textShadow),
         if (post.text.trim().isNotEmpty) ...[
-          SizedBox(height: ui(8)),
+          const SizedBox(height: AppSpace.s8),
           _ImmersiveScrollableBodyText(
             text: post.text,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: ui(14),
-              fontFamily: 'PingFang SC',
-              height: 1.35,
-              shadows: const [
-                Shadow(color: Color(0x80000000), blurRadius: 4),
-              ],
+            style: AppText.body14.copyWith(
+              color: AppColors.onBrand,
+              shadows: _textShadow,
             ),
           ),
         ],
         if (post.badges.isNotEmpty) ...[
-          SizedBox(height: ui(6)),
+          const SizedBox(height: AppSpace.s8),
           CircleBadgeRow(badges: post.badges),
         ],
-        SizedBox(height: ui(6)),
+        const SizedBox(height: AppSpace.s8),
         Text(
           post.timeLabel,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.55),
-            fontSize: ui(14),
-            fontFamily: 'PingFang SC',
-          ),
+          style: AppText.body13.copyWith(color: AppColors.textPlaceholder),
         ),
       ],
     );
@@ -473,34 +449,24 @@ class _ImmersiveTextBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         _ImmersiveAuthorLine(post: post),
         if (post.badges.isNotEmpty) ...[
-          SizedBox(height: ui(6)),
+          const SizedBox(height: AppSpace.s8),
           CircleBadgeRow(badges: post.badges),
         ],
-        SizedBox(height: ui(12)),
+        const SizedBox(height: AppSpace.s12),
         _ImmersiveScrollableBodyText(
           text: post.text,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: ui(14),
-            fontFamily: 'PingFang SC',
-            height: 24 / 14,
-          ),
+          style: AppText.body14.copyWith(color: AppColors.onBrand),
         ),
-        SizedBox(height: ui(6)),
+        const SizedBox(height: AppSpace.s8),
         Text(
           post.timeLabel,
-          style: TextStyle(
-            color: const Color(0xFFB6B5BB),
-            fontSize: ui(14),
-            fontFamily: 'PingFang SC',
-          ),
+          style: AppText.body13.copyWith(color: AppColors.textPlaceholder),
         ),
       ],
     );
@@ -538,27 +504,31 @@ class _ImmersiveActions extends StatelessWidget {
         ),
         SizedBox(height: gapAfterAvatar),
         CircleActionButton(
-          iconAsset: post.liked ? AppAssets.circleFav1 : AppAssets.circleFav,
+          icon: Icons.favorite_border_rounded,
+          activeIcon: Icons.favorite_rounded,
+          label: post.liked ? '取消点赞' : '点赞',
+          active: post.liked,
           count: post.likeCount,
           onTap: onLike,
           dark: true,
-          iconSize: compact ? ui(28) : null,
         ),
         SizedBox(height: gapBetween),
         CircleActionButton(
-          iconAsset: AppAssets.circleMsg,
+          icon: Icons.chat_bubble_outline_rounded,
+          label: '评论',
           count: post.commentCount,
           onTap: onComment,
           dark: true,
-          iconSize: compact ? ui(28) : null,
         ),
         SizedBox(height: gapBetween),
         CircleActionButton(
-          iconAsset: post.favorited ? AppAssets.circleSc1 : AppAssets.circleSc,
+          icon: Icons.bookmark_border_rounded,
+          activeIcon: Icons.bookmark_rounded,
+          label: post.favorited ? '取消收藏' : '收藏',
+          active: post.favorited,
           count: post.favoriteCount,
           onTap: onFavorite,
           dark: true,
-          iconSize: compact ? ui(28) : null,
         ),
       ],
     );
@@ -578,18 +548,16 @@ class _ImmersiveAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    // 与 shell 顶栏头像一致：外圈白底，内圈图片缩小 ui(4) 形成白边。
-    final innerSize = size - ui(4);
+    // 外圈白底 2px，深色画面上头像轮廓清楚。
     return Container(
       width: size,
       height: size,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: ArtAvatar(name: name, url: url, size: innerSize),
+      child: AppAvatar(name: name, url: url, size: size - 4),
     );
   }
 }
@@ -619,12 +587,10 @@ class _AnimatedCommentScrim extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
+            duration: AppMotion.overlay,
+            curve: AppMotion.overlayCurve,
             opacity: visible ? 1 : 0,
-            child: ColoredBox(
-              color: Colors.black.withValues(alpha: 0.38),
-            ),
+            child: const ColoredBox(color: AppColors.scrim),
           ),
         ),
       ),
@@ -646,14 +612,14 @@ class _AnimatedCommentPanel extends StatelessWidget {
     // 外扩 2px，由外层 [CirclePage] ClipRRect 裁切，避免圆角 anti-alias 缝。
     const bleed = 2.0;
     return AnimatedPositioned(
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
+      duration: AppMotion.overlay,
+      curve: AppMotion.overlayCurve,
       top: -ui(bleed),
       bottom: -ui(bleed),
       right: visible ? -ui(bleed) : -ui(440),
       width: ui(420 + bleed * 2),
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 180),
+        duration: AppMotion.overlay,
         opacity: visible ? 1 : 0,
         child: ClipRRect(
           borderRadius: BorderRadius.only(
@@ -663,7 +629,7 @@ class _AnimatedCommentPanel extends StatelessWidget {
           clipBehavior: Clip.hardEdge,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.only(
                 topRight: Radius.circular(radius),
                 bottomRight: Radius.circular(radius),

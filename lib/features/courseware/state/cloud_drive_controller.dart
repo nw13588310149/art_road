@@ -1167,7 +1167,7 @@ class CloudDriveController extends StateNotifier<CloudDriveState> {
         return value;
       }
     }
-    return '10MB';
+    return '';
   }
 
   int _resolveFolderFileCount(Map<String, dynamic> item) {
@@ -1216,30 +1216,30 @@ class CloudDriveController extends StateNotifier<CloudDriveState> {
       if (parsed != null) {
         final month = parsed.month.toString().padLeft(2, '0');
         final day = parsed.day.toString().padLeft(2, '0');
-        return '$month.$day.${parsed.year}';
+        return '${parsed.year}-$month-$day';
       }
       return raw;
     }
-    return '04.07.2026';
+    return '';
   }
 
   String _formatBytes(double bytes) {
     if (bytes <= 0) {
-      return '0MB';
+      return '0 MB';
     }
     const kb = 1024.0;
     const mb = kb * 1024.0;
     const gb = mb * 1024.0;
     if (bytes >= gb) {
       final value = bytes / gb;
-      return '${value.toStringAsFixed(value < 10 ? 1 : 0)}GB';
+      return '${value.toStringAsFixed(value < 10 ? 1 : 0)} GB';
     }
     if (bytes >= mb) {
       final value = bytes / mb;
-      return '${value.toStringAsFixed(value < 10 ? 1 : 0)}MB';
+      return '${value.toStringAsFixed(value < 10 ? 1 : 0)} MB';
     }
     final value = bytes / kb;
-    return '${value.toStringAsFixed(value < 10 ? 1 : 0)}KB';
+    return '${value.toStringAsFixed(value < 10 ? 1 : 0)} KB';
   }
 
   double _parseSizeNumber(String value) {

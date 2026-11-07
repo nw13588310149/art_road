@@ -61,7 +61,10 @@ Future<GroupChatMediaSaveResult> saveGroupChatMediaBytes({
   );
 }
 
-String sanitizeChatDownloadFileName(String raw, {String fallback = 'download'}) {
+String sanitizeChatDownloadFileName(
+  String raw, {
+  String fallback = 'download',
+}) {
   var name = raw.trim();
   if (name.isEmpty) return fallback;
   name = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
@@ -70,7 +73,8 @@ String sanitizeChatDownloadFileName(String raw, {String fallback = 'download'}) 
     if (dot > 0 && dot < name.length - 1) {
       final ext = name.substring(dot);
       final stem = name.substring(0, dot);
-      name = '${stem.substring(0, (120 - ext.length).clamp(1, stem.length))}$ext';
+      name =
+          '${stem.substring(0, (120 - ext.length).clamp(1, stem.length))}$ext';
     } else {
       name = name.substring(0, 120);
     }

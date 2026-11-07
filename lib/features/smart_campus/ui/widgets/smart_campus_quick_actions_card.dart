@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shell/ui/shell_layout.dart';
@@ -64,7 +65,8 @@ class SmartCampusQuickActionsCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (var ci = 0; ci < rowSize; ci++) ...[
-                  if (ci > 0) SizedBox(width: ui(kSmartCampusQuickActionsColGap)),
+                  if (ci > 0)
+                    SizedBox(width: ui(kSmartCampusQuickActionsColGap)),
                   Expanded(
                     child: () {
                       final idx = ri * rowSize + ci;
@@ -136,8 +138,7 @@ class SmartCampusQuickActionCell extends StatelessWidget {
                   fontSize: ui(14),
                   height: 1.2,
                   fontWeight: AppFont.w500,
-                  color: const Color(0xFF1A1A1A),
-                  fontFamily: 'PingFang SC',
+                  color: AppColors.ink,
                 ),
               ),
             ],

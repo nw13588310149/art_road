@@ -59,7 +59,7 @@ abstract final class DemoContentFavorites {
         );
       }
     }
-    for (final id in const ['6013', '6008', '6005']) {
+    for (final id in const ['6013', '6008', '6010']) {
       final info = DemoContentVideos.favoriteInfo(id);
       if (info != null &&
           !DemoFavorites.contains(userId, DemoFavorites.typeVideo, id)) {

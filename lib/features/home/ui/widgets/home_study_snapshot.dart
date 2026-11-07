@@ -6,8 +6,7 @@ import '../../../../core/art/art_subject.dart';
 import '../../../../core/art/art_tokens.dart';
 import '../../../../core/demo/demo_accounts.dart';
 import '../../../../core/providers/app_providers.dart';
-import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../../shell/state/shell_controller.dart';
 import '../../../shell/state/shell_state.dart';
 import '../../../study_center/data/study_center_repository.dart';
@@ -43,13 +42,27 @@ class HomeStudySnapshot {
   final double? topScore;
   final int? participants;
   final double? scoreChange;
+
+  /// 名次变化：正数表示名次上升。
   final int? rankingChange;
 
   /// 学生：各科分数与档位；老师：各科平均分。
   final List<({String name, double? score, String grade})> subjects;
+
+  /// 卡片标题。成绩查询接口不带班级字段，教职工看到的是全画室成绩，标题如实写「画室」。
+  String get title => staff ? '画室学情速览' : '学情速览';
+
+  String get subtitle {
+    final parts = [
+      if (examName.isNotEmpty) examName,
+      if (examDate.isNotEmpty) examDate,
+      if (staff && participants != null) '全画室 $participants 人',
+    ];
+    return parts.join(' · ');
+  }
 }
 
-/// 首页「学情速览」：学生看最近一次已出分考试，教职工看最近一次考试的班级概况。
+/// 首页「学情速览」：学生看最近一次已出分考试，教职工看最近一次已发布考试的全画室概况。
 final homeStudySnapshotProvider =
     FutureProvider.autoDispose<HomeStudySnapshot?>((ref) async {
       final role = ref.watch(shellControllerProvider.select((s) => s.user.role));
@@ -58,9 +71,14 @@ final homeStudySnapshotProvider =
           : DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
       final repository = ref.watch(studyCenterRepositoryProvider);
 
+      // 宿管不查看学生成绩。
+      if (effectiveRole == 'dormManager') return null;
+
       if (isStaffRole(effectiveRole)) {
         final examsResponse = await repository.teacherExams();
-        if (!examsResponse.isSuccess) return null;
+        if (!examsResponse.isSuccess) {
+          throw StateError(examsResponse.displayMsg);
+        }
         final exams = StudyPage<TeacherExam>.fromJson(
           examsResponse.data,
           TeacherExam.fromJson,
@@ -68,7 +86,9 @@ final homeStudySnapshotProvider =
         if (exams.isEmpty) return null;
         final exam = exams.first;
         final rowsResponse = await repository.scoreQuery(examId: exam.examId);
-        if (!rowsResponse.isSuccess) return null;
+        if (!rowsResponse.isSuccess) {
+          throw StateError(rowsResponse.displayMsg);
+        }
         final rows = StudyPage<ScoreQueryRow>.fromJson(
           rowsResponse.data,
           ScoreQueryRow.fromJson,
@@ -109,7 +129,9 @@ final homeStudySnapshotProvider =
       }
 
       final response = await repository.overview();
-      if (!response.isSuccess) return null;
+      if (!response.isSuccess) {
+        throw StateError(response.displayMsg);
+      }
       final overview = StudyOverview.fromJson(response.data);
       final stage = overview.recentStage;
       if (stage == null) return null;
@@ -128,7 +150,11 @@ final homeStudySnapshotProvider =
         rankingChange: stage.rankingChange,
         subjects: [
           for (final subject in exam.subjects)
-            (name: subject.subjectName, score: subject.score, grade: subject.grade),
+            (
+              name: subject.subjectName,
+              score: subject.score,
+              grade: subject.grade,
+            ),
         ],
       );
     });
@@ -136,14 +162,50 @@ final homeStudySnapshotProvider =
 class HomeStudySnapshotCard extends ConsumerWidget {
   const HomeStudySnapshotCard({super.key});
 
+  static const double _bodyHeight = 76;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(homeStudySnapshotProvider);
     return snapshot.when(
-      loading: () => const SizedBox(height: 112),
-      error: (_, _) => const SizedBox.shrink(),
+      loading: () => const AppCard(
+        title: '学情速览',
+        child: SizedBox(
+          height: _bodyHeight,
+          child: Row(
+            children: [
+              Expanded(child: AppSkeleton(height: _bodyHeight, radius: 12)),
+              SizedBox(width: AppSpace.s8),
+              Expanded(child: AppSkeleton(height: _bodyHeight, radius: 12)),
+              SizedBox(width: AppSpace.s8),
+              Expanded(child: AppSkeleton(height: _bodyHeight, radius: 12)),
+            ],
+          ),
+        ),
+      ),
+      error: (_, _) => AppCard(
+        title: '学情速览',
+        child: SizedBox(
+          height: 168,
+          child: AppErrorState(
+            title: '学情速览加载失败',
+            description: '请检查网络后重试',
+            onRetry: () => ref.invalidate(homeStudySnapshotProvider),
+          ),
+        ),
+      ),
       data: (data) => data == null
-          ? const SizedBox.shrink()
+          ? const AppCard(
+              title: '学情速览',
+              child: SizedBox(
+                height: 168,
+                child: AppEmptyState(
+                  icon: Icons.insights_rounded,
+                  title: '暂无已出分的考试',
+                  description: '月考出分后，这里会显示总分、排名和各科档位',
+                ),
+              ),
+            )
           : _SnapshotCard(
               data: data,
               onOpen: () =>
@@ -161,207 +223,79 @@ class _SnapshotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    final full = data.maxScore;
+    final tiles = <(int, Widget)>[
+      if (data.staff) ...[
+        (
+          5,
+          AppStatTile(
+            label: '平均分',
+            value: formatScore(data.totalScore),
+            unit: full == null ? null : '/ ${formatScore(full)}',
+            boxed: true,
+          ),
+        ),
+        (
+          4,
+          AppStatTile(
+            label: '最高分',
+            value: formatScore(data.topScore),
+            boxed: true,
+          ),
+        ),
+      ] else ...[
+        (
+          6,
+          AppStatTile(
+            label: '总分',
+            value: formatScore(data.totalScore),
+            unit: full == null ? null : '/ ${formatScore(full)}',
+            delta: data.scoreChange,
+            deltaSuffix: ' 分',
+            valueColor: AppColors.brand,
+            boxed: true,
+          ),
+        ),
+        (
+          5,
+          AppStatTile(
+            label: '总排名',
+            value: data.ranking?.toString() ?? '—',
+            unit: data.participants == null ? null : '/ ${data.participants}',
+            delta: data.rankingChange,
+            deltaSuffix: ' 名',
+            boxed: true,
+          ),
+        ),
+      ],
+      for (final subject in data.subjects)
+        (
+          4,
+          AppStatTile(
+            label: data.staff ? '${subject.name}均分' : subject.name,
+            value: formatScore(subject.score),
+            unit: subject.grade.isEmpty ? null : '${subject.grade} 档',
+            boxed: true,
+          ),
+        ),
+    ];
+
+    return AppCard(
+      title: data.title,
+      subtitle: data.subtitle,
+      trailing: const Icon(
+        Icons.chevron_right_rounded,
+        size: 20,
+        color: AppColors.textPlaceholder,
+      ),
       onTap: onOpen,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 760;
-            final summary = _Summary(data: data);
-            final subjects = _SubjectStrip(data: data);
-            if (!wide) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  summary,
-                  const SizedBox(height: 12),
-                  subjects,
-                ],
-              );
-            }
-            return Row(
-              children: [
-                Expanded(flex: 5, child: summary),
-                const SizedBox(width: 16),
-                Expanded(flex: 6, child: subjects),
-                const SizedBox(width: 12),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: ArtColors.ink4,
-                  size: 22,
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _Summary extends StatelessWidget {
-  const _Summary({required this.data});
-
-  final HomeStudySnapshot data;
-
-  @override
-  Widget build(BuildContext context) {
-    final change = data.scoreChange;
-    return Row(
-      children: [
-        Container(
-          width: 96,
-          height: 84,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [ArtColors.brandSoft, ArtColors.brandDeep],
-            ),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  formatScore(data.totalScore),
-                  maxLines: 1,
-                  style: ArtText.number(size: 24, color: Colors.white),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                data.staff
-                    ? '平均分'
-                    : '总分 / ${formatScore(data.maxScore)}',
-                maxLines: 1,
-                style: ArtText.caption(size: 11, color: const Color(0xE6FFFFFF)),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                data.staff ? '班级学情速览' : '学情速览',
-                style: ArtText.caption(color: ArtColors.brandDeep),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                data.examName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: ArtText.title(size: 16),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 10,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(data.examDate, style: ArtText.caption()),
-                  if (data.staff) ...[
-                    Text('参考 ${data.participants ?? '—'} 人', style: ArtText.caption()),
-                    Text('最高 ${formatScore(data.topScore)} 分', style: ArtText.caption()),
-                  ] else
-                    Text(
-                      '总排名 ${data.ranking ?? '—'} / ${data.participants ?? '—'}',
-                      style: ArtText.caption(),
-                    ),
-                  if (!data.staff && change != null && change != 0)
-                    Text(
-                      '较上次 ${change > 0 ? '+' : ''}${formatScore(change)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: change > 0 ? ArtColors.up : ArtColors.down,
-                        fontWeight: AppFont.w500,
-                        fontFamily: 'PingFang SC',
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SubjectStrip extends StatelessWidget {
-  const _SubjectStrip({required this.data});
-
-  final HomeStudySnapshot data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < data.subjects.length; i++) ...[
-          if (i > 0) const SizedBox(width: 10),
-          Expanded(child: _SubjectTile(item: data.subjects[i], staff: data.staff)),
-        ],
-      ],
-    );
-  }
-}
-
-class _SubjectTile extends StatelessWidget {
-  const _SubjectTile({required this.item, required this.staff});
-
-  final ({String name, double? score, String grade}) item;
-  final bool staff;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = artSubjectColor(item.name);
-    return Container(
-      height: 84,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: artSubjectSoftColor(item.name),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  staff ? '${item.name}均分' : item.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: accent,
-                    fontWeight: AppFont.w600,
-                    fontFamily: 'PingFang SC',
-                  ),
-                ),
-              ),
-              if (!staff && item.grade.isNotEmpty)
-                ArtGradeBadge(grade: item.grade, size: 20),
-            ],
-          ),
-          Text(
-            formatScore(item.score),
-            style: ArtText.number(size: 22, color: ArtColors.ink),
-          ),
+          for (var i = 0; i < tiles.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpace.s8),
+            Expanded(flex: tiles[i].$1, child: tiles[i].$2),
+          ],
         ],
       ),
     );

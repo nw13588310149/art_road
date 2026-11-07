@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/art/art_tokens.dart';
-import '../../../../core/widgets/app_loading_indicator.dart';
+import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/app_refresh_indicator.dart';
-import '../../../../core/widgets/app_toast.dart';
-import '../../../../core/widgets/art_widgets.dart';
-import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 import '../../state/student_study_controller.dart';
 import '../../state/study_center_args.dart';
@@ -21,7 +17,7 @@ import '../widgets/study_interpretations.dart';
 import '../widgets/study_subject_cards.dart';
 import 'student_exam_list.dart';
 
-/// 「我的学情」：总览 / 成绩报告 / 成长曲线三个页内视图。
+/// 「我的学情」：总览 / 成绩报告 / 成长曲线三个页内视图，切换立即生效。
 class StudentStudyView extends ConsumerWidget {
   const StudentStudyView({required this.args, super.key});
 
@@ -34,14 +30,18 @@ class StudentStudyView extends ConsumerWidget {
     final controller = ref.read(provider.notifier);
     ref.listen<StudentStudyState>(provider, (previous, next) {
       final message = next.errorMessage;
-      if (message.isEmpty || message == previous?.errorMessage) return;
+      if (message.isEmpty || message == previous?.errorMessage) {
+        return;
+      }
       AppToast.showError(context, message);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (controller.mounted) controller.clearError();
+        if (controller.mounted) {
+          controller.clearError();
+        }
       });
     });
 
-    final Widget child = switch (state.section) {
+    return switch (state.section) {
       StudentStudySection.overview => _StudentOverview(
         key: const ValueKey<String>('study-overview'),
         state: state,
@@ -60,14 +60,10 @@ class StudentStudyView extends ConsumerWidget {
         key: const ValueKey<String>('study-growth'),
         archiveId: '',
         title: '成长曲线',
-        subtitle: '仅统计已出分的考试 · 数据来自艺考网阅卷系统',
+        subtitle: '仅统计已出分的考试 · 成绩来自艺考网阅卷系统',
         onBack: controller.back,
       ),
     };
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      child: child,
-    );
   }
 }
 
@@ -83,26 +79,24 @@ class _StudentOverview extends StatelessWidget {
 
   String _subtitle(StudyOverview overview) {
     final profile = overview.profile;
-    final admission = overview.latestAdmissionNo;
     return [
       profile.schoolName,
       profile.organizationName,
-      profile.name,
-      if (admission.isNotEmpty) '准考证号 $admission',
+      if (profile.studentNo.isNotEmpty) '学号 ${profile.studentNo}',
     ].where((part) => part.isNotEmpty).join(' · ');
   }
 
   @override
   Widget build(BuildContext context) {
     final overview = state.overview;
-    final header = ArtPageHeader(
+    final header = AppPageHeader(
       title: '我的学情',
-      subtitle: overview == null ? null : _subtitle(overview),
+      subtitle: overview == null ? '成绩来自艺考网阅卷系统' : _subtitle(overview),
       actions: [
-        ArtButton(
+        AppButton(
           label: '成长曲线',
           icon: Icons.show_chart_rounded,
-          height: 36,
+          size: AppButtonSize.sm,
           onTap: controller.openGrowth,
         ),
       ],
@@ -110,8 +104,12 @@ class _StudentOverview extends StatelessWidget {
     final Widget body;
     if (overview == null) {
       body = state.loadFailed
-          ? StudyErrorView(message: '学情数据加载失败', onRetry: controller.refresh)
-          : const SizedBox.shrink();
+          ? AppErrorState(
+              title: '学情数据加载失败',
+              description: '请检查网络后重试',
+              onRetry: controller.refresh,
+            )
+          : const _OverviewSkeleton();
     } else {
       body = _OverviewBody(
         overview: overview,
@@ -119,9 +117,43 @@ class _StudentOverview extends StatelessWidget {
         controller: controller,
       );
     }
-    return PageInitLoadingShell(
-      loading: state.loading && overview == null,
-      child: StudyPageFrame(header: header, body: body),
+    return StudyPageFrame(header: header, body: body);
+  }
+}
+
+class _OverviewSkeleton extends StatelessWidget {
+  const _OverviewSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: studyBodyPadding,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        AppCard(
+          padding: const EdgeInsets.all(AppSpace.s20),
+          child: Row(
+            children: [
+              const AppSkeleton.circle(size: 148),
+              const SizedBox(width: AppSpace.s32),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    AppSkeleton(width: 220, height: 24),
+                    SizedBox(height: AppSpace.s12),
+                    AppSkeleton(width: 300),
+                    SizedBox(height: AppSpace.s24),
+                    AppSkeletonText(lines: 2, lineHeight: 20),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpace.s16),
+        const StudyCardSkeleton(lines: 5),
+      ],
     );
   }
 }
@@ -168,13 +200,17 @@ class _OverviewBody extends ConsumerWidget {
       child: ListView(
         key: const PageStorageKey<String>('study-overview-list'),
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: studyBodyPadding,
         children: [
           if (recent == null || exam == null)
-            const StudyCard(
-              child: ArtEmptyState(
-                message: '还没有已出分的考试，出分后会在这里展示成绩与解读',
-                icon: Icons.insights_outlined,
+            AppCard(
+              child: SizedBox(
+                height: 200,
+                child: AppEmptyState(
+                  icon: Icons.insights_outlined,
+                  title: '还没有已出分的考试',
+                  description: '阅卷完成、成绩发布后，这里会展示总分、排名与各科表现',
+                ),
               ),
             )
           else ...[
@@ -182,19 +218,17 @@ class _OverviewBody extends ConsumerWidget {
               exam: exam,
               scoreChange: report?.scoreChange ?? recent.scoreChange,
               rankingChange: report?.rankingChange ?? recent.rankingChange,
-              surpassedPercent:
-                  report?.surpassedPercent ??
-                  surpassedPercentOf(exam.totalRanking, exam.participantCount),
+              surpassedPercent: report?.surpassedPercent,
               statistics: overview.statistics,
               onOpenReport: () => controller.openReport(exam.examId),
             ),
-            const SizedBox(height: 18),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 10),
-              child: StudySectionHeader(title: '各科表现', subtitle: exam.examName),
-            ),
+            const SizedBox(height: AppSpace.s24),
+            AppSectionHeader(title: '各科表现', subtitle: exam.examName),
+            const SizedBox(height: AppSpace.s12),
             StudySubjectCards(
               subjects: exam.subjects,
+              participantCount: exam.participantCount,
+              organizationParticipantCount: exam.organizationParticipantCount,
               onOpenPaper: (subject) => openStudyPaperViewer(
                 context,
                 exam: exam,
@@ -206,25 +240,20 @@ class _OverviewBody extends ConsumerWidget {
                 subject: subject,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpace.s16),
             StudyInterpretationsCard(
               items: report?.interpretations ?? const <StudyInterpretation>[],
               loading: report == null && (reportState?.loading ?? false),
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.s16),
           StudentExamListCard(
             state: state,
             onFilterChanged: controller.setFilter,
             onOpen: (item) => controller.openReport(item.examId),
             onLoadMore: () => controller.loadExams(),
           ),
-          const SizedBox(height: 16),
-          Text(
-            '成绩以阅卷系统最终结果为准，仅供本人查阅',
-            textAlign: TextAlign.center,
-            style: ArtText.caption(),
-          ),
+          const StudyFootnote('成绩以阅卷系统最终结果为准，仅供本人查阅'),
         ],
       ),
     );

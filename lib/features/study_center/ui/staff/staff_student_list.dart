@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/art/art_tokens.dart';
-import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/app_text_field.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 import '../widgets/study_common.dart';
@@ -47,15 +45,21 @@ class StaffStudentListSliver extends StatelessWidget {
         final wide = constraints.crossAxisExtent >= 640;
         return DecoratedSliver(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.surface,
+            borderRadius: AppRadius.br12,
+            border: Border.all(color: AppColors.lineSoft),
           ),
           sliver: SliverMainAxisGroup(
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-                  child: StudySectionHeader(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.card,
+                    AppSpace.card,
+                    AppSpace.card,
+                    AppSpace.s12,
+                  ),
+                  child: AppSectionHeader(
                     title: subjectName.isEmpty ? '总分排名' : '$subjectName排名',
                     subtitle: subtitle,
                     trailing: SizedBox(
@@ -73,12 +77,21 @@ class StaffStudentListSliver extends StatelessWidget {
               ),
               if (rows.isEmpty)
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: ArtEmptyState(
-                      message: keyword.trim().isEmpty ? '暂无成绩' : '没有找到匹配的学生',
-                      icon: Icons.person_search_outlined,
-                    ),
+                  child: SizedBox(
+                    height: 180,
+                    child: keyword.trim().isEmpty
+                        ? const AppEmptyState(
+                            icon: Icons.person_search_outlined,
+                            title: '暂无成绩',
+                            description: '本场考试出分后会按名次列出学生',
+                          )
+                        : AppEmptyState(
+                            icon: Icons.person_search_outlined,
+                            title: '没有找到匹配的学生',
+                            description: '换个姓名或准考证号试试',
+                            actionLabel: '清除搜索',
+                            onAction: () => onKeywordChanged(''),
+                          ),
                   ),
                 )
               else
@@ -92,7 +105,7 @@ class StaffStudentListSliver extends StatelessWidget {
                     onTap: () => onOpen(rows[index]),
                   ),
                 ),
-              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpace.s12)),
             ],
           ),
         );
@@ -101,12 +114,12 @@ class StaffStudentListSliver extends StatelessWidget {
   }
 }
 
-const _rowPadding = EdgeInsets.symmetric(horizontal: 32);
+const _rowPadding = EdgeInsets.symmetric(horizontal: 28);
 const _rankWidth = 44.0;
 const _avatarSpace = 48.0;
 const _scoreWidth = 96.0;
-const _gradeWidth = 48.0;
-const _chevronWidth = 22.0;
+const _gradeWidth = 56.0;
+const _chevronWidth = 24.0;
 
 class _ListHead extends StatelessWidget {
   const _ListHead({required this.wide, required this.showGrade});
@@ -116,19 +129,22 @@ class _ListHead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = ArtText.caption(size: 12);
+    final style = AppText.caption12;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: ArtColors.subtle,
-        borderRadius: BorderRadius.circular(10),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpace.card),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s12,
+        vertical: AppSpace.s8,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceSubtle,
+        borderRadius: AppRadius.br8,
       ),
       child: Row(
         children: [
           SizedBox(
             width: _rankWidth,
-            child: Text('排名', style: style),
+            child: Text('名次', style: style),
           ),
           const SizedBox(width: _avatarSpace),
           Expanded(flex: 4, child: Text('学生', style: style)),
@@ -180,107 +196,93 @@ class _StudentRow extends StatelessWidget {
       children: [
         if (showDivider)
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32),
-            child: Divider(height: 1, thickness: 1, color: ArtColors.line),
+            padding: _rowPadding,
+            child: Divider(height: 1, thickness: 1, color: AppColors.lineSoft),
           ),
-        Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: onTap,
-            child: Padding(
-              padding: _rowPadding.add(
-                const EdgeInsets.symmetric(vertical: 10),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: _rankWidth,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: _RankBadge(rank: rank),
-                    ),
+        AppPressable(
+          onTap: onTap,
+          semanticLabel: '查看${row.studentName}的成绩报告',
+          child: Padding(
+            padding: _rowPadding.add(
+              const EdgeInsets.symmetric(vertical: AppSpace.s8),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: _rankWidth,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _RankBadge(rank: rank),
                   ),
-                  ArtAvatar(
-                    name: row.studentName,
-                    url: row.avatarUrl,
-                    size: 36,
+                ),
+                AppAvatar(name: row.studentName, url: row.avatarUrl, size: 36),
+                const SizedBox(width: _avatarSpace - 36),
+                Expanded(
+                  flex: 4,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        row.studentName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body14Strong,
+                      ),
+                      Text(
+                        wide || row.organizationName.isEmpty
+                            ? '准考证号 ${row.admissionNo}'
+                            : row.organizationName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption12,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: _avatarSpace - 36),
+                ),
+                if (wide)
                   Expanded(
-                    flex: 4,
+                    flex: 3,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          row.studentName,
+                          row.organizationName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: ArtText.body(size: 14, weight: AppFont.w500),
+                          style: AppText.body13,
                         ),
-                        Text(
-                          wide || row.organizationName.isEmpty
-                              ? '准考证号 ${row.admissionNo}'
-                              : row.organizationName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: ArtText.caption(size: 11),
-                        ),
+                        if (subjectName.isEmpty && organizationRank != null)
+                          Text(
+                            '校区第 $organizationRank 名',
+                            style: AppText.caption12,
+                          ),
                       ],
                     ),
                   ),
-                  if (wide)
-                    Expanded(
-                      flex: 3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            row.organizationName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: ArtText.body(
-                              size: 13,
-                              color: ArtColors.ink2,
-                            ),
-                          ),
-                          if (subjectName.isEmpty && organizationRank != null)
-                            Text(
-                              '校区第 $organizationRank 名',
-                              style: ArtText.caption(size: 11),
-                            ),
-                        ],
-                      ),
-                    ),
-                  SizedBox(
-                    width: _scoreWidth,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: StudyNumberText(
-                        formatScore(score),
-                        unit: ' 分',
-                        size: 17,
-                        color: ArtColors.brandDeep,
-                      ),
+                SizedBox(
+                  width: _scoreWidth,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: StudyNumberText(
+                      formatScore(score),
+                      unit: ' 分',
+                      size: 16,
                     ),
                   ),
-                  SizedBox(
-                    width: _gradeWidth,
-                    child: Center(
-                      child: grade.isEmpty
-                          ? const SizedBox.shrink()
-                          : ArtGradeBadge(grade: grade, size: 22),
-                    ),
+                ),
+                SizedBox(
+                  width: _gradeWidth,
+                  child: Center(child: StudyGradeTag(grade: grade)),
+                ),
+                const SizedBox(
+                  width: _chevronWidth,
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textPlaceholder,
+                    size: 20,
                   ),
-                  const SizedBox(
-                    width: _chevronWidth,
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      color: ArtColors.ink4,
-                      size: 22,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -294,40 +296,33 @@ class _RankBadge extends StatelessWidget {
 
   final int? rank;
 
-  static const _medals = <List<Color>>[
-    [Color(0xFFFFD36B), Color(0xFFF2A516)],
-    [Color(0xFFE3E7EE), Color(0xFFAEB6C5)],
-    [Color(0xFFF6C9A4), Color(0xFFD68B5B)],
-  ];
-
   @override
   Widget build(BuildContext context) {
     final value = rank;
     if (value == null) {
-      return Text('—', style: ArtText.number(size: 14, color: ArtColors.ink3));
+      return Text(
+        '—',
+        style: AppText.number(size: 14, color: AppColors.textTertiary),
+      );
     }
-    if (value >= 1 && value <= _medals.length) {
+    if (value <= 3) {
       return Container(
         width: 26,
         height: 26,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
+          color: AppColors.brandWash,
           shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: _medals[value - 1],
-          ),
         ),
         child: Text(
           '$value',
-          style: ArtText.number(size: 13, color: Colors.white),
+          style: AppText.number(size: 13, color: AppColors.brandDeep),
         ),
       );
     }
     return Text(
       '$value',
-      style: ArtText.number(size: 15, color: ArtColors.ink2),
+      style: AppText.number(size: 14, color: AppColors.textSecondary),
     );
   }
 }
@@ -348,64 +343,27 @@ class _SearchFieldState extends State<_SearchField> {
   );
 
   @override
+  void didUpdateWidget(covariant _SearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initial != oldWidget.initial &&
+        widget.initial != _controller.text) {
+      _controller.text = widget.initial;
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  void _update(String value) {
-    widget.onChanged(value);
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 38,
-      child: AppTextField(
-        controller: _controller,
-        onChanged: _update,
-        textInputAction: TextInputAction.search,
-        style: ArtText.body(size: 14),
-        decoration: InputDecoration(
-          isDense: true,
-          filled: true,
-          fillColor: ArtColors.subtle,
-          hintText: '搜索姓名 / 准考证号',
-          hintStyle: ArtText.body(size: 13, color: ArtColors.ink4),
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            size: 18,
-            color: ArtColors.ink3,
-          ),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 36,
-            minHeight: 36,
-          ),
-          suffixIcon: _controller.text.isEmpty
-              ? null
-              : GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    _controller.clear();
-                    _update('');
-                  },
-                  child: const Icon(
-                    Icons.cancel_rounded,
-                    size: 16,
-                    color: ArtColors.ink4,
-                  ),
-                ),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 9,
-            horizontal: 8,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
-          ),
-        ),
-      ),
+    return AppSearchField(
+      controller: _controller,
+      hint: '搜索姓名 / 准考证号',
+      size: AppControlSize.sm,
+      onChanged: widget.onChanged,
     );
   }
 }

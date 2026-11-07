@@ -213,11 +213,11 @@ List<DormitoryRoomStudent> _parseUserList(dynamic raw) {
         m['studentId']?.toString() ??
         '';
     if (userId.isEmpty) continue;
-    final rawAvatar = _pickString(
-      m,
-      ['studentHeadUrl', 'headUrl', 'avatar'],
-      '',
-    );
+    final rawAvatar = _pickString(m, [
+      'studentHeadUrl',
+      'headUrl',
+      'avatar',
+    ], '');
     parsed.add(
       DormitoryRoomStudent(
         userId: userId,
@@ -448,11 +448,7 @@ class DormitoryCheckHistoryItem {
       bedName: bedName,
       checkDate: _pickString(map, ['checkDate', 'date']),
       checkType: _pickString(map, ['checkType', 'scene']),
-      deadline: _pickString(map, [
-        'checkDeadline',
-        'deadline',
-        'requiredTime',
-      ]),
+      deadline: _pickString(map, ['checkDeadline', 'deadline', 'requiredTime']),
       checkTime: _historyClock(_pickString(map, ['checkTime', 'stampTime'])),
       status: DormitoryStudentCheckStatus.fromApi(statusLabel),
       statusLabel: statusLabel,
@@ -663,20 +659,14 @@ String _historyStudentName(Map<String, dynamic> map, {String bedName = ''}) {
   return '未登记学生';
 }
 
-String _historyStudentNo(
-  Map<String, dynamic> map,
-  Map<String, dynamic> user,
-) {
+String _historyStudentNo(Map<String, dynamic> map, Map<String, dynamic> user) {
   final no = _pickString(map, ['studentNo', 'userNo']);
   if (no.isNotEmpty) return no;
   final fromUser = _pickString(user, ['studentNo', 'no', 'userNo']);
   return fromUser.isNotEmpty ? fromUser : '—';
 }
 
-String _historyAvatarUrl(
-  Map<String, dynamic> map,
-  Map<String, dynamic> user,
-) {
+String _historyAvatarUrl(Map<String, dynamic> map, Map<String, dynamic> user) {
   final raw = _pickString(map, ['studentHeadUrl', 'headUrl', 'avatar']);
   if (raw.isEmpty) {
     final fromUser = _pickString(user, ['headUrl', 'avatar', 'avatarUrl']);
@@ -794,32 +784,17 @@ List<DormitoryDetailField> buildDormitoryCheckDetailFieldsFromHistoryItem(
     if (item.studentNo.isNotEmpty && item.studentNo != '—')
       DormitoryDetailField('学生学号', item.studentNo),
     if (item.mobile.isNotEmpty) DormitoryDetailField('手机号', item.mobile),
-    DormitoryDetailField(
-      '查寝日期',
-      item.checkDate.isEmpty ? '—' : item.checkDate,
-    ),
-    DormitoryDetailField(
-      '我的宿舍',
-      item.dormName.isEmpty ? '—' : item.dormName,
-    ),
-    DormitoryDetailField(
-      '我的床位',
-      item.bedName.isEmpty ? '—' : item.bedLabel,
-    ),
-    DormitoryDetailField(
-      '打卡时间',
-      item.checkTime.isEmpty ? '—' : item.checkTime,
-    ),
+    DormitoryDetailField('查寝日期', item.checkDate.isEmpty ? '—' : item.checkDate),
+    DormitoryDetailField('我的宿舍', item.dormName.isEmpty ? '—' : item.dormName),
+    DormitoryDetailField('我的床位', item.bedName.isEmpty ? '—' : item.bedLabel),
+    DormitoryDetailField('打卡时间', item.checkTime.isEmpty ? '—' : item.checkTime),
     DormitoryDetailField(
       '查寝状态',
       item.statusLabel.isEmpty ? '—' : item.statusLabel,
     ),
     if (item.remark.isNotEmpty) DormitoryDetailField('查寝备注', item.remark),
     if (item.handleStatus > 0)
-      DormitoryDetailField(
-        '处理状态',
-        item.handleStatus == 1 ? '已处理' : '待处理',
-      ),
+      DormitoryDetailField('处理状态', item.handleStatus == 1 ? '已处理' : '待处理'),
   ];
 }
 
@@ -840,10 +815,7 @@ List<DormitoryDetailField> parseDormitoryCheckDetailFields(dynamic raw) {
   final mobile = _pickString(user, ['mobile', 'phone']);
   return [
     DormitoryDetailField('学生姓名', studentDisplay),
-    DormitoryDetailField(
-      '学生学号',
-      studentNo != '—' ? studentNo : '—',
-    ),
+    DormitoryDetailField('学生学号', studentNo != '—' ? studentNo : '—'),
     if (studentNo == '—' && mobile.isNotEmpty)
       DormitoryDetailField('手机号', mobile),
     DormitoryDetailField('查寝日期', _pickString(map, ['checkDate', 'date'])),

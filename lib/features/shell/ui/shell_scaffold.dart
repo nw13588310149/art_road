@@ -7,8 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/router/route_paths.dart';
 import '../../../core/network/app_network_monitor.dart';
 import '../../../core/network/network_page_refresh.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/scaled_dialog.dart';
+import '../../../core/ui/ui.dart';
 import '../../home/state/home_dashboard_controller.dart';
 import '../state/school_binding_controller.dart';
 import '../state/school_binding_state.dart';
@@ -108,11 +107,11 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
 
     _offlineDialogScheduled = true;
     _offlineDialogOpen = true;
-    final exitApp = await showConfirmDialog(
+    final exitApp = await showAppConfirm(
       context: context,
       barrierDismissible: false,
       title: '网络不可用',
-      content: '当前设备未连接网络。您可以选择无网使用基础功能，或退出应用。',
+      message: '当前设备未连接网络。你可以继续使用已加载的内容，或退出应用。',
       cancelLabel: '无网使用',
       confirmLabel: '退出应用',
     );
@@ -177,9 +176,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
       sidebar: RepaintBoundary(
         child: ShellLeftNav(
           state: state,
-          currentRoute: widget.currentRoute == RoutePaths.helpGuide
-              ? RoutePaths.smartCampus
-              : widget.currentRoute,
+          currentRoute: widget.currentRoute,
           onToggleCollapse: controller.toggleCollapse,
           onNavigate: (route) => _navigate(context, ref, route),
         ),

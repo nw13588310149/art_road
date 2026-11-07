@@ -29,16 +29,15 @@
 //   字体 PingFang SC，数字 32 用 Barlow（与 Figma 一致）。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
@@ -53,16 +52,16 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kBoardBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSection = Color(0xFF1A1A1A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleStatus = Color(0xFF8E7FFF);
-const Color _kRed = Color(0xFFFF323C);
+const Color _kPageBg = AppColors.page;
+const Color _kBoardBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSection = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleStatus = AppColors.brandSoft;
+const Color _kRed = AppColors.danger;
 const Color _kBlue = Color(0xFF325BFF);
 
 /// 标题栏与统计块、统计块与补卡列表之间的统一间距（与 [SmartCampusSecondaryPageShell.headerGap] 一致）。
@@ -133,7 +132,7 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
   Future<void> _openApplyDialog() async {
     final result = await showScaledDialog<_DormResubmitFormResult>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
+      barrierColor: AppColors.ink.withValues(alpha: 0.8),
       builder: (ctx) => const _DormResubmitDialog(),
     );
     if (!mounted || result == null) return;
@@ -210,7 +209,9 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
       AppToast.show(context, '未获取到补卡详情');
       return;
     }
-    final cancelling = ref.read(studentDormitoryControllerProvider).cancellingMakeupId == item.id;
+    final cancelling =
+        ref.read(studentDormitoryControllerProvider).cancellingMakeupId ==
+        item.id;
     await showDormitoryDetailDialog(
       context,
       title: '补卡申请 · ${item.checkType}',
@@ -268,9 +269,9 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
             .selectListSection(section),
       ),
       body: PageInitLoadingShell(
-        loading: state.loading &&
-            ((state.listSection ==
-                        StudentDormitoryListSection.checkRecords &&
+        loading:
+            state.loading &&
+            ((state.listSection == StudentDormitoryListSection.checkRecords &&
                     records.isEmpty) ||
                 (state.listSection !=
                         StudentDormitoryListSection.checkRecords &&
@@ -278,48 +279,48 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          if (state.error.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.only(top: ui(8)),
-              child: Text(
-                state.error,
-                style: TextStyle(fontSize: ui(12), color: _kRed),
+            if (state.error.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(top: ui(8)),
+                child: Text(
+                  state.error,
+                  style: TextStyle(fontSize: ui(12), color: _kRed),
+                ),
               ),
+            _DormStatsRow(
+              dorm: dormLabel,
+              normal: normalCount,
+              abnormal: abnormalCount,
+              pendingResubmits: pendingMakeups,
             ),
-          _DormStatsRow(
-            dorm: dormLabel,
-            normal: normalCount,
-            abnormal: abnormalCount,
-            pendingResubmits: pendingMakeups,
-          ),
-          if (state.loading &&
-              ((state.listSection ==
-                          StudentDormitoryListSection.checkRecords &&
-                      records.isEmpty) ||
-                  (state.listSection !=
-                          StudentDormitoryListSection.checkRecords &&
-                      state.makeupItems.isEmpty)))
-            const SizedBox.shrink()
-          else if (state.listSection ==
-              StudentDormitoryListSection.checkRecords) ...[
-            SizedBox(height: ui(8)),
-            _SectionHeader(tab: _tab, onTab: (t) => setState(() => _tab = t)),
-            SizedBox(height: ui(8)),
-            _DormCardsGrid(
-              records: visible,
-              onTap: (record) => unawaited(
-                _showCheckDetail(record.id, '${record.session} · 查寝详情'),
+            if (state.loading &&
+                ((state.listSection ==
+                            StudentDormitoryListSection.checkRecords &&
+                        records.isEmpty) ||
+                    (state.listSection !=
+                            StudentDormitoryListSection.checkRecords &&
+                        state.makeupItems.isEmpty)))
+              const SizedBox.shrink()
+            else if (state.listSection ==
+                StudentDormitoryListSection.checkRecords) ...[
+              SizedBox(height: ui(8)),
+              _SectionHeader(tab: _tab, onTab: (t) => setState(() => _tab = t)),
+              SizedBox(height: ui(8)),
+              _DormCardsGrid(
+                records: visible,
+                onTap: (record) => unawaited(
+                  _showCheckDetail(record.id, '${record.session} · 查寝详情'),
+                ),
               ),
-            ),
-          ] else ...[
-            SizedBox(height: ui(_kStatsBlockGap)),
-            _MakeupCardsGrid(
-              items: state.makeupItems,
-              onTap: (item) => unawaited(_showMakeupDetail(item)),
-            ),
+            ] else ...[
+              SizedBox(height: ui(_kStatsBlockGap)),
+              _MakeupCardsGrid(
+                items: state.makeupItems,
+                onTap: (item) => unawaited(_showMakeupDetail(item)),
+              ),
+            ],
           ],
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -367,10 +368,7 @@ class _DormBanner extends StatelessWidget {
               children: [
                 _ApplyResubmitButton(onTap: onApplyResubmit),
                 SizedBox(width: ui(8)),
-                _MainSectionHeader(
-                  section: section,
-                  onSection: onSection,
-                ),
+                _MainSectionHeader(section: section, onSection: onSection),
               ],
             ),
           ),
@@ -386,7 +384,6 @@ class _DormBanner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.1,
                     ),
@@ -400,7 +397,6 @@ class _DormBanner extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.1,
                       ),
@@ -440,14 +436,14 @@ class _BackButton extends StatelessWidget {
         height: ui(32),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderSoft),
         ),
         child: Icon(
           Icons.chevron_left_rounded,
           size: ui(20),
-          color: const Color(0xFF1C274C),
+          color: AppColors.ink,
         ),
       ),
     );
@@ -470,7 +466,7 @@ class _ApplyResubmitButton extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: ui(12)),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -488,8 +484,7 @@ class _ApplyResubmitButton extends StatelessWidget {
               '申请补卡',
               style: TextStyle(
                 fontSize: ui(12),
-                color: Colors.black,
-                fontFamily: 'PingFang SC',
+                color: AppColors.ink,
                 fontWeight: AppFont.w600,
                 height: 1,
               ),
@@ -573,10 +568,7 @@ class _DormStatsRow extends StatelessWidget {
 enum _DormTab { all, abnormal }
 
 class _MainSectionHeader extends StatelessWidget {
-  const _MainSectionHeader({
-    required this.section,
-    required this.onSection,
-  });
+  const _MainSectionHeader({required this.section, required this.onSection});
 
   final StudentDormitoryListSection section;
   final ValueChanged<StudentDormitoryListSection> onSection;
@@ -638,8 +630,7 @@ class _MainSectionTabItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(12),
-            color: selected ? Colors.white : _kTextHint,
-            fontFamily: 'PingFang SC',
+            color: selected ? AppColors.surface : _kTextHint,
             fontWeight: selected ? AppFont.w500 : AppFont.w400,
             height: 1.2,
           ),
@@ -663,9 +654,8 @@ class _SectionHeader extends StatelessWidget {
         Text(
           '我的查寝记录',
           style: TextStyle(
-            fontSize: ui(18),
+            fontSize: ui(16),
             color: _kTextSection,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w500,
             height: 1.1,
           ),
@@ -675,7 +665,7 @@ class _SectionHeader extends StatelessWidget {
           height: ui(44),
           padding: EdgeInsets.all(ui(4)),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorderSoft),
           ),
@@ -730,8 +720,7 @@ class _TabPill extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: active ? Colors.white : _kTextSecondary,
-            fontFamily: 'PingFang SC',
+            color: active ? AppColors.surface : _kTextSecondary,
             fontWeight: AppFont.w500,
             height: 1,
           ),
@@ -760,16 +749,12 @@ class _DormCardsGrid extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: ui(40)),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
         ),
         child: Text(
           '当前筛选下没有查寝记录',
-          style: TextStyle(
-            fontSize: ui(13),
-            color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
-          ),
+          style: TextStyle(fontSize: ui(13), color: _kTextSecondary),
         ),
       );
     }
@@ -789,7 +774,10 @@ class _DormCardsGrid extends StatelessWidget {
             for (final r in records)
               SizedBox(
                 width: cardWidth,
-                child: _DormCard(record: r, onTap: onTap == null ? null : () => onTap!(r)),
+                child: _DormCard(
+                  record: r,
+                  onTap: onTap == null ? null : () => onTap!(r),
+                ),
               ),
           ],
         );
@@ -811,82 +799,78 @@ class _DormCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(ui(16)),
       child: Container(
-      padding: EdgeInsets.all(ui(12)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(16)),
-        border: Border.all(color: _kBorderSoft),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                record.session,
-                style: TextStyle(
-                  fontSize: ui(18),
-                  color: _kTextSection,
-                  // Figma 在不同 cell 间混用了 Barlow / PingFang SC，这里
-                  // 必须用 PingFang SC：Barlow 不含中文字形，
-                  // CanvasKit 字体回退会触发 "table index is out of bounds"。
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w600,
-                  height: 1.1,
-                ),
-              ),
-              const Spacer(),
-              _StatusBadge(status: record.status),
-            ],
-          ),
-          SizedBox(height: ui(4)),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  record.dorm,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+        padding: EdgeInsets.all(ui(12)),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(ui(16)),
+          border: Border.all(color: _kBorderSoft),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  record.session,
                   style: TextStyle(
-                    fontSize: ui(13),
-                    color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 20 / 13,
+                    fontSize: ui(16),
+                    color: _kTextSection,
+                    // Figma 在不同 cell 间混用了 Barlow / PingFang SC，这里
+                    // 必须用 PingFang SC：Barlow 不含中文字形，
+                    // CanvasKit 字体回退会触发 "table index is out of bounds"。
+                    fontWeight: AppFont.w600,
+                    height: 1.1,
                   ),
                 ),
-              ),
-              Text(
-                record.date,
-                style: TextStyle(
-                  fontSize: ui(12),
-                  color: _kTextHint,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w400,
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: ui(12)),
-          _TimePanel(
-            requiredTime: record.requiredTime,
-            stampedTime: record.stampedTime,
-            stampedHighlight: record.status == _DormStatus.late,
-          ),
-          SizedBox(height: ui(10)),
-          Text(
-            '备注：${record.note}',
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1,
+                const Spacer(),
+                _StatusBadge(status: record.status),
+              ],
             ),
-          ),
-        ],
-      ),
+            SizedBox(height: ui(4)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    record.dorm,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: ui(13),
+                      color: _kTextSecondary,
+                      fontWeight: AppFont.w400,
+                      height: 20 / 13,
+                    ),
+                  ),
+                ),
+                Text(
+                  record.date,
+                  style: TextStyle(
+                    fontSize: ui(12),
+                    color: _kTextHint,
+                    fontWeight: AppFont.w400,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: ui(12)),
+            _TimePanel(
+              requiredTime: record.requiredTime,
+              stampedTime: record.stampedTime,
+              stampedHighlight: record.status == _DormStatus.late,
+            ),
+            SizedBox(height: ui(10)),
+            Text(
+              '备注：${record.note}',
+              style: TextStyle(
+                fontSize: ui(12),
+                color: _kTextHint,
+                fontWeight: AppFont.w400,
+                height: 1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -928,10 +912,7 @@ class _MakeupCardsGrid extends StatelessWidget {
             for (final item in items)
               SizedBox(
                 width: cardWidth,
-                child: _MakeupCard(
-                  item: item,
-                  onTap: () => onTap(item),
-                ),
+                child: _MakeupCard(item: item, onTap: () => onTap(item)),
               ),
           ],
         );
@@ -950,10 +931,14 @@ class _MakeupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final (Color bg, Color fg, String label) = switch (item.status) {
-      0 => (const Color(0xFFFFF3E0), const Color(0xFFFF9800), '待审核'),
-      1 => (const Color(0xFFE8F5E9), const Color(0xFF1CD097), '已通过'),
-      2 => (const Color(0xFFFEE4E8), _kRed, '已驳回'),
-      _ => (const Color(0xFFF5F6FA), _kTextSecondary, item.statusText.isEmpty ? '未知' : item.statusText),
+      0 => (AppColors.warningSoft, AppColors.warning, '待审核'),
+      1 => (AppColors.successSoft, const Color(0xFF1CD097), '已通过'),
+      2 => (AppColors.dangerSoft, _kRed, '已驳回'),
+      _ => (
+        AppColors.surfaceSubtle,
+        _kTextSecondary,
+        item.statusText.isEmpty ? '未知' : item.statusText,
+      ),
     };
     return InkWell(
       onTap: onTap,
@@ -961,7 +946,7 @@ class _MakeupCard extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(ui(12)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(16)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -974,16 +959,18 @@ class _MakeupCard extends StatelessWidget {
                   child: Text(
                     item.checkType,
                     style: TextStyle(
-                      fontSize: ui(18),
+                      fontSize: ui(16),
                       color: _kTextSection,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.1,
                     ),
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: ui(6), vertical: ui(2)),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ui(6),
+                    vertical: ui(2),
+                  ),
                   decoration: BoxDecoration(
                     color: bg,
                     borderRadius: BorderRadius.circular(ui(4)),
@@ -1037,8 +1024,7 @@ class _StatusBadge extends StatelessWidget {
         label,
         style: TextStyle(
           fontSize: ui(12),
-          color: Colors.white,
-          fontFamily: 'PingFang SC',
+          color: AppColors.surface,
           fontWeight: AppFont.w400,
           height: 15.24 / 12,
         ),
@@ -1115,7 +1101,6 @@ class _TimeCell extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1126,7 +1111,6 @@ class _TimeCell extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: valueColor,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1252,7 +1236,6 @@ class _FieldLabel extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(14),
         color: _kTextDark,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w500,
         height: 20 / 14,
       ),
@@ -1277,7 +1260,7 @@ class _DatePickerField extends StatelessWidget {
         height: ui(48),
         padding: EdgeInsets.symmetric(horizontal: ui(16)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -1288,8 +1271,7 @@ class _DatePickerField extends StatelessWidget {
                 text,
                 style: TextStyle(
                   fontSize: ui(14),
-                  color: isPlaceholder ? const Color(0xFFCECED1) : _kTextDark,
-                  fontFamily: 'PingFang SC',
+                  color: isPlaceholder ? AppColors.textTertiary : _kTextDark,
                   fontWeight: AppFont.w400,
                   height: 20 / 14,
                 ),
@@ -1317,7 +1299,7 @@ class _NoteField extends StatelessWidget {
     return Container(
       height: ui(80),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
         border: Border.all(color: _kBorderSoft),
       ),
@@ -1332,7 +1314,6 @@ class _NoteField extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(14),
           color: _kTextDark,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 20 / 14,
         ),
@@ -1340,8 +1321,7 @@ class _NoteField extends StatelessWidget {
           hintText: '请输入',
           hintStyle: TextStyle(
             fontSize: ui(14),
-            color: const Color(0xFFCECED1),
-            fontFamily: 'PingFang SC',
+            color: AppColors.textTertiary,
             fontWeight: AppFont.w400,
             height: 20 / 14,
           ),

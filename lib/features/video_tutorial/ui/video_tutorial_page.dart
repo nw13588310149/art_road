@@ -7,32 +7,25 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:chinese_font_library/chinese_font_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/audio/mpv_player_smooth.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
+import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
-import '../../../core/widgets/app_text_field.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/art_widgets.dart';
 import '../../../core/widgets/class_share_drawer.dart';
-import '../../../core/widgets/seamless_banner_carousel.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../smart_campus/navigation/group_chat_return.dart';
 import '../../my_collection/navigation/collection_return.dart';
 import '../data/video_publisher_data.dart';
 import '../state/video_tutorial_controller.dart';
 import '../state/video_tutorial_state.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import 'video_player_smooth_session.dart';
 
 const int _kVideoPreloadLimit = 8;
@@ -61,7 +54,6 @@ class _VideoTutorialV2PageState extends ConsumerState<VideoTutorialV2Page> {
   VideoTutorialPageArgs get _pageArgs => widget.args;
   final ScrollController _scrollController = ScrollController();
   late final TextEditingController _searchController;
-  int _bannerIndex = 0;
   bool _isDetailOpening = false;
   // 首次 didChangeDependencies 时消费一次路由参数（如 my_collection 跳转过来
   // 携带的 openVideoId），避免 build 周期内被反复触发。
@@ -127,7 +119,6 @@ class _VideoTutorialV2PageState extends ConsumerState<VideoTutorialV2Page> {
 
   void _preloadImages(VideoTutorialState state) {
     final urls = <String>{
-      for (final item in state.banners.take(1)) _resolveUrl(item.imageUrl),
       for (final item in state.videoList.take(_kVideoPreloadLimit))
         _resolveUrl(item.coverImg),
       for (final item
@@ -262,6 +253,9 @@ class _VideoTutorialV2PageState extends ConsumerState<VideoTutorialV2Page> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(videoTutorialControllerProvider(_pageArgs));
+    final controller = ref.read(
+      videoTutorialControllerProvider(_pageArgs).notifier,
+    );
     ref.listen<VideoTutorialState>(videoTutorialControllerProvider(_pageArgs), (
       previous,
       next,
@@ -271,158 +265,209 @@ class _VideoTutorialV2PageState extends ConsumerState<VideoTutorialV2Page> {
         _scrollController.jumpTo(0);
       }
     });
-    final scale = DashboardScaleScope.of(context);
-    final ui = scale.ui;
     _preloadImages(state);
+    final navigator = Navigator.of(context);
+    final schoolMode = _pageArgs.schoolMode;
+    final menus = state.menus;
+    final selectedMenu = state.selectedMenu;
+    final searching = state.searchKeyword.trim().isNotEmpty;
+    final videos = state.videoList;
+    final showFeatured =
+        !searching && state.selectedChildId == null && videos.length >= 4;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(16)),
-      ),
-      child: Column(
-        children: [
-          // ── 固定头部：仅一级分类（不随列表滚动）─────────────
-          Padding(
-            padding: EdgeInsets.fromLTRB(ui(16), ui(16), ui(16), ui(12)),
-            child: _VideoCategoryHeader(
-              scale: scale,
-              menus: state.menus,
-              selectedMenuId: state.selectedMenuId,
-              onSelectMenu: _selectMenu,
-              searchController: _searchController,
-              onSearchSubmitted: _submitSearch,
-            ),
-          ),
-          // ── 视频列表区：仅此区域可滚动 ──────────────────────────────────
-          Expanded(
-            child: AppRefreshIndicator(
-              onRefresh: () => ref
-                  .read(videoTutorialControllerProvider(_pageArgs).notifier)
-                  .refresh(),
-              child: CustomScrollView(
-                key: const PageStorageKey<String>('video_tutorial_scroll'),
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                scrollCacheExtent: ScrollCacheExtent.pixels(ui(420)),
-                slivers: [
-                  // Banner + 最新视频：并入滚动区域
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(ui(16), 0, ui(16), ui(16)),
-                      child: _BannerAndLatestSection(
-                        scale: scale,
-                        banners: state.banners,
-                        activeIndex: _bannerIndex,
-                        loading: state.loading,
-                        // 右侧"最新视频"：直接取下方网格列表的前三条
-                        latestVideos: state.videoList.take(3).toList(),
-                        resolveUrl: _resolveUrl,
-                        onBannerChanged: (i) {
-                          if (!mounted || _bannerIndex == i) return;
-                          setState(() => _bannerIndex = i);
-                        },
-                        onOpenVideo: _openVideoDetail,
-                      ),
-                    ),
-                  ),
-                  // 二级目录：紧跟 banner 下方，一起滚动
-                  // 与下方视频网格的间距 = 16（Figma 规格）
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(ui(16), 0, ui(16), ui(16)),
-                      child: _SubCategoryBar(
-                        scale: scale,
-                        items: state.selectedMenu?.children ?? const [],
-                        selectedId: state.selectedChildId,
-                        onSelect: _selectChildMenu,
-                      ),
-                    ),
-                  ),
-                  if (state.videoList.isEmpty && state.loading)
-                    const SliverToBoxAdapter(child: SizedBox.shrink())
-                  else if (state.videoList.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: Text(
-                          state.errorMessage.isEmpty
-                              ? '暂无视频数据'
-                              : state.errorMessage,
-                          style: TextStyle(
-                            fontSize: ui(14),
-                            color: const Color(0xFFB6B5BB),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      // 去除滚动容器底部 padding
-                      padding: EdgeInsets.fromLTRB(ui(16), 0, ui(16), 0),
-                      sliver: SliverGrid(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          mainAxisSpacing: ui(16),
-                          crossAxisSpacing: ui(16),
-                          childAspectRatio:
-                              _kVideoGridCardDesignW / _kVideoGridCardDesignH,
-                        ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final item = state.videoList[index];
-                            return _VideoGridCard(
-                              key: ValueKey<String>('video_grid_${item.id}'),
-                              scale: scale,
-                              item: item,
-                              resolveUrl: _resolveUrl,
-                              onTap: () => _openVideoDetail(item),
-                            );
-                          },
-                          childCount: state.videoList.length,
-                          findChildIndexCallback: (key) {
-                            if (key is! ValueKey<String>) return null;
-                            final value = key.value;
-                            if (!value.startsWith('video_grid_')) return null;
-                            final id = value.substring('video_grid_'.length);
-                            final index = state.videoList.indexWhere(
-                              (item) => item.id == id,
-                            );
-                            return index < 0 ? null : index;
-                          },
-                        ),
-                      ),
-                    ),
-                  if (state.loadingMore)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.zero,
-                        child: const Center(child: AppLoadingIndicator()),
-                      ),
-                    ),
-                  if (!state.loadingMore &&
-                      !state.hasMore &&
-                      state.videoList.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.zero,
-                        child: Center(
-                          child: Text(
-                            '没有更多了',
-                            style: TextStyle(
-                              fontSize: ui(12),
-                              color: const Color(0xFFB6B5BB),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: schoolMode ? '课程视频' : '视频中心',
+          subtitle: schoolMode
+              ? '画室老师录制的讲评与示范'
+              : '素描、色彩、速写专项课程与老师示范',
+          onBack: navigator.canPop() ? navigator.pop : null,
+          actions: [
+            SizedBox(
+              width: 240,
+              child: AppSearchField(
+                controller: _searchController,
+                hint: (selectedMenu?.id != null && selectedMenu!.name.isNotEmpty)
+                    ? '搜索${selectedMenu.name}视频'
+                    : '搜索视频',
+                onSubmitted: (_) => _submitSearch(),
               ),
             ),
+          ],
+          bottom: menus.length < 2
+              ? null
+              : SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: AppTabs<String>(
+                    tabs: [
+                      for (final menu in menus)
+                        AppTab(value: menu.id ?? '', label: menu.name),
+                    ],
+                    value: state.selectedMenuId ?? '',
+                    onChanged: (id) => _selectMenu(id.isEmpty ? null : id),
+                  ),
+                ),
+        ),
+        Expanded(
+          child: AppRefreshIndicator(
+            onRefresh: controller.refresh,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = _videoColumnsFor(
+                  constraints.maxWidth - AppSpace.page * 2,
+                );
+                final cardWidth =
+                    (constraints.maxWidth -
+                        AppSpace.page * 2 -
+                        AppSpace.s16 * (columns - 1)) /
+                    columns;
+                return CustomScrollView(
+                  key: const PageStorageKey<String>('video_tutorial_scroll'),
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(420),
+                  slivers: [
+                    if (showFeatured)
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpace.page,
+                          AppSpace.s4,
+                          AppSpace.page,
+                          AppSpace.s16,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: _FeaturedVideoSection(
+                            featured: videos.first,
+                            latest: videos.skip(1).take(3).toList(),
+                            resolveUrl: _resolveUrl,
+                            onOpenVideo: _openVideoDetail,
+                          ),
+                        ),
+                      ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpace.page,
+                        AppSpace.s4,
+                        AppSpace.page,
+                        AppSpace.s16,
+                      ),
+                      sliver: SliverToBoxAdapter(
+                        child: _SubCategoryChips(
+                          items: selectedMenu?.children ?? const [],
+                          selectedId: state.selectedChildId,
+                          onSelect: _selectChildMenu,
+                        ),
+                      ),
+                    ),
+                    if (videos.isEmpty && state.loading)
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpace.page,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: _VideoGridSkeleton(columns: columns),
+                        ),
+                      )
+                    else if (videos.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: searching
+                            ? AppEmptyState(
+                                icon: Icons.search_off_rounded,
+                                title: '没有找到相关视频',
+                                description: '换个关键词，或切换到「全部」分类试试',
+                                actionLabel: '清除搜索',
+                                onAction: _searchController.clear,
+                              )
+                            : state.errorMessage.isNotEmpty
+                            ? AppErrorState(
+                                title: '视频加载失败',
+                                description: state.errorMessage,
+                                onRetry: controller.refresh,
+                              )
+                            : const AppEmptyState(
+                                icon: Icons.video_library_outlined,
+                                title: '这个分类还没有视频',
+                                description: '老师上传课程后会显示在这里',
+                              ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpace.page,
+                        ),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: columns,
+                                mainAxisSpacing: AppSpace.s16,
+                                crossAxisSpacing: AppSpace.s16,
+                                mainAxisExtent:
+                                    cardWidth * 10 / 16 +
+                                    _kVideoCardInfoHeight,
+                              ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final item = videos[index];
+                              return _VideoGridCard(
+                                key: ValueKey<String>('video_grid_${item.id}'),
+                                item: item,
+                                resolveUrl: _resolveUrl,
+                                onTap: () => _openVideoDetail(item),
+                              );
+                            },
+                            childCount: videos.length,
+                            findChildIndexCallback: (key) {
+                              if (key is! ValueKey<String>) return null;
+                              final value = key.value;
+                              if (!value.startsWith('video_grid_')) {
+                                return null;
+                              }
+                              final id = value.substring('video_grid_'.length);
+                              final index = videos.indexWhere(
+                                (item) => item.id == id,
+                              );
+                              return index < 0 ? null : index;
+                            },
+                          ),
+                        ),
+                      ),
+                    if (state.loadingMore)
+                      const SliverPadding(
+                        padding: EdgeInsets.symmetric(vertical: AppSpace.s16),
+                        sliver: SliverToBoxAdapter(
+                          child: Center(child: AppLoadingIndicator()),
+                        ),
+                      ),
+                    if (!state.loadingMore &&
+                        !state.hasMore &&
+                        videos.isNotEmpty)
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          0,
+                          AppSpace.s16,
+                          0,
+                          AppSpace.s24,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: Center(
+                            child: Text('没有更多了', style: AppText.caption12),
+                          ),
+                        ),
+                      )
+                    else
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: AppSpace.s24),
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -530,8 +575,8 @@ class _VideoDetailRoute extends PageRouteBuilder<void> {
   }) : super(
          opaque: false,
          barrierDismissible: false,
-         transitionDuration: const Duration(milliseconds: 320),
-         reverseTransitionDuration: const Duration(milliseconds: 240),
+         transitionDuration: AppMotion.overlay,
+         reverseTransitionDuration: AppMotion.overlay,
          pageBuilder: (context, animation, secondary) => _VideoDetailOverlay(
            detail: detail,
            resolveUrl: resolveUrl,
@@ -580,27 +625,35 @@ class _VideoDetailOverlay extends StatelessWidget {
           opacity: animation,
           child: GestureDetector(
             onTap: () => Navigator.of(context).pop(),
-            child: Container(color: Colors.black.withValues(alpha: 0.6)),
+            child: const ColoredBox(
+              color: AppColors.scrim,
+              child: SizedBox.expand(),
+            ),
           ),
         ),
         SlideTransition(
           position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
               .animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                CurvedAnimation(
+                  parent: animation,
+                  curve: AppMotion.overlayCurve,
+                ),
               ),
           child: Align(
             alignment: Alignment.centerRight,
-            child: FractionallySizedBox(
-              widthFactor: 0.5,
+            child: Container(
+              width: AppSize.drawerWide,
+              height: double.infinity,
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(AppRadius.panel),
+                ),
+                boxShadow: AppShadow.overlay,
+              ),
               child: Material(
-                // 强制纯白底：Material 3 在 elevation 较大时会叠一层
-                // `colorScheme.surfaceTint` 的覆盖（默认走 colorScheme.primary
-                // = 绿色），混到白底上视觉就偏暖偏黄。这里同时锁定 color 与
-                // surfaceTintColor，让面板底部始终是纯白。
-                color: Colors.white,
-                surfaceTintColor: Colors.transparent,
-                elevation: 32,
-                shadowColor: Colors.black.withValues(alpha: 0.4),
+                type: MaterialType.transparency,
                 child: _VideoDetailSheet(
                   initialDetail: detail,
                   resolveUrl: resolveUrl,
@@ -882,7 +935,36 @@ class _VideoDetailSheetState extends ConsumerState<_VideoDetailSheet>
     final detail = ctrlState.detail ?? _currentDetail;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.s24,
+            AppSpace.s12,
+            AppSpace.s16,
+            AppSpace.s12,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '视频详情',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.title20,
+                ),
+              ),
+              AppIconButton(
+                icon: Icons.close_rounded,
+                semanticLabel: '关闭',
+                size: AppButtonSize.sm,
+                filled: false,
+                color: AppColors.textSecondary,
+                onTap: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        ),
         AspectRatio(
           aspectRatio: 16 / 9,
           child: _player != null && _videoController != null
@@ -893,7 +975,6 @@ class _VideoDetailSheetState extends ConsumerState<_VideoDetailSheet>
                   videoId: detail.id,
                   seriesVideos: detail.seriesVideoList,
                   onSwitchVideo: _switchToVideo,
-                  onClose: () => Navigator.of(context).pop(),
                   onEnterPip: _enterPip,
                 )
               : _PlayerPlaceholder(
@@ -903,6 +984,7 @@ class _VideoDetailSheetState extends ConsumerState<_VideoDetailSheet>
         ),
         _DetailActionBar(
           isFavorite: detail.isFavorite,
+          stepCount: detail.scoreImages.length,
           tabController: _tabController,
           onFavorite: _toggleFavorite,
           onShare: _showShareSheet,
@@ -1031,7 +1113,6 @@ class _ProfessionalPlayer extends StatefulWidget {
     required this.videoId,
     required this.seriesVideos,
     required this.onSwitchVideo,
-    required this.onClose,
     required this.onEnterPip,
   });
 
@@ -1041,7 +1122,6 @@ class _ProfessionalPlayer extends StatefulWidget {
   final String videoId;
   final List<VideoListItem> seriesVideos;
   final ValueChanged<VideoListItem> onSwitchVideo;
-  final VoidCallback onClose;
   final VoidCallback onEnterPip;
 
   @override
@@ -1377,7 +1457,6 @@ class _ProfessionalPlayerState extends State<_ProfessionalPlayer> {
   }
 
   static String _fmt(Duration d) {
-    if (d == Duration.zero) return '--:--';
     final h = d.inHours;
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -1482,13 +1561,6 @@ class _ProfessionalPlayerState extends State<_ProfessionalPlayer> {
                     ignoring: !_showControls,
                     child: Stack(
                       children: [
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: _PlayerTopBar(onClose: widget.onClose),
-                        ),
-
                         Positioned.fill(
                           child: Center(
                             child: _CenterPlayBtn(
@@ -1810,41 +1882,6 @@ class _VerticalProgressBadge extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(color: Colors.white, fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlayerTopBar extends StatelessWidget {
-  const _PlayerTopBar({required this.onClose});
-
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onClose,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFF212028).withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Image.asset(
-                AppAssets.videoV2Back,
-                width: 32,
-                height: 32,
-                fit: BoxFit.contain,
-              ),
-            ),
           ),
         ],
       ),
@@ -2564,7 +2601,6 @@ class _FullscreenPageState extends State<_FullscreenPage> {
   }
 
   static String _fmt(Duration d) {
-    if (d == Duration.zero) return '--:--';
     final h = d.inHours;
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -3276,50 +3312,60 @@ class _PlayerPlaceholder extends StatelessWidget {
 class _DetailActionBar extends StatelessWidget {
   const _DetailActionBar({
     required this.isFavorite,
+    required this.stepCount,
     required this.tabController,
     required this.onFavorite,
     required this.onShare,
   });
 
   final bool isFavorite;
+  final int stepCount;
   final TabController tabController;
   final VoidCallback onFavorite;
   final VoidCallback onShare;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(AppSpace.s24, 0, AppSpace.s16, 0),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
+      ),
       child: Row(
         children: [
           Expanded(
             child: AnimatedBuilder(
               animation: tabController,
-              builder: (context, _) => Row(
-                children: [
-                  _DetailTabButton(
-                    text: '视频详情',
-                    selected: tabController.index == 0,
-                    onTap: () => tabController.index = 0,
-                  ),
-                  const SizedBox(width: 14),
-                  _DetailTabButton(
-                    text: '步骤图',
-                    selected: tabController.index == 1,
-                    onTap: () => tabController.index = 1,
-                  ),
-                ],
+              builder: (context, _) => Align(
+                alignment: Alignment.centerLeft,
+                child: AppTabs<int>(
+                  tabs: [
+                    const AppTab(value: 0, label: '视频详情'),
+                    AppTab(
+                      value: 1,
+                      label: '步骤图',
+                      count: stepCount > 0 ? stepCount : null,
+                    ),
+                  ],
+                  value: tabController.index,
+                  onChanged: (index) => tabController.index = index,
+                ),
               ),
             ),
           ),
-          _ActionBtn(icon: AppAssets.videoV2Share, label: '分享', onTap: onShare),
-          const SizedBox(width: 8),
-          _ActionBtn(
-            icon: isFavorite
-                ? AppAssets.videoV2StarFilled
-                : AppAssets.videoV2Star,
-            label: '收藏',
-            highlighted: isFavorite,
+          AppButton(
+            label: '分享',
+            icon: Icons.share_outlined,
+            variant: AppButtonVariant.quiet,
+            size: AppButtonSize.sm,
+            onTap: onShare,
+          ),
+          const SizedBox(width: AppSpace.s8),
+          AppButton(
+            label: isFavorite ? '已收藏' : '收藏',
+            icon: isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+            variant: AppButtonVariant.quiet,
+            size: AppButtonSize.sm,
             onTap: onFavorite,
           ),
         ],
@@ -3328,108 +3374,7 @@ class _DetailActionBar extends StatelessWidget {
   }
 }
 
-class _DetailTabButton extends StatelessWidget {
-  const _DetailTabButton({
-    required this.text,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String text;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      overlayColor: WidgetStateProperty.all(Colors.transparent),
-      splashFactory: NoSplash.splashFactory,
-      child: SizedBox(
-        width: 76,
-        height: 32,
-        // 文字与缩放都改为左对齐：让 tab 文字的左边始终贴着 76 宽盒子的
-        // 左边（= action bar padding.left = 20），与下方 _DetailInfoTab
-        // 标题文字的左边对齐；同时把 Transform.scale 的 pivot 也设为
-        // centerLeft，避免选中态 1.18 放大时左边再往左飘 5px。
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Transform.scale(
-            scale: selected ? 1.18 : 1.0,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              text,
-              textAlign: TextAlign.left,
-              style: TextStyle(
-                fontSize: 14,
-                color: selected
-                    ? const Color(0xFF0B081A)
-                    : const Color(0xFF6D6B75),
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionBtn extends StatelessWidget {
-  const _ActionBtn({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.highlighted = false,
-  });
-
-  final String icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.fromLTRB(12, 4, 13, 4),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF4F4FF),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: highlighted ? 3 : 0),
-              child: Image.asset(
-                icon,
-                width: highlighted ? 14 : 20,
-                height: highlighted ? 14 : 20,
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: highlighted
-                    ? const Color(0xFF715EFE)
-                    : const Color(0xFF0B081A),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DetailInfoTab extends StatefulWidget {
+class _DetailInfoTab extends StatelessWidget {
   const _DetailInfoTab({
     required this.detail,
     required this.resolveUrl,
@@ -3441,109 +3386,66 @@ class _DetailInfoTab extends StatefulWidget {
   final ValueChanged<VideoListItem> onOpenSeriesVideo;
 
   @override
-  State<_DetailInfoTab> createState() => _DetailInfoTabState();
-}
-
-class _DetailInfoTabState extends State<_DetailInfoTab> {
-  bool _expanded = true;
-
-  @override
   Widget build(BuildContext context) {
-    final detail = widget.detail;
+    final publisher = videoPublisherFor(detail.id);
+    final related = detail.seriesVideoList.take(6).toList();
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s24,
+        AppSpace.s16,
+        AppSpace.s24,
+        AppSpace.s24,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题 + 收起/展开 切换
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    detail.name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF0B081A),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Transform.rotate(
-                  angle: _expanded ? 0 : math.pi,
-                  child: Image.asset(
-                    AppAssets.videoV2Collapse,
-                    width: 24,
-                    height: 24,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // 仅展开态展示：简介 / 版权说明；相关视频始终保留。
-          AnimatedSize(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topLeft,
-            child: _expanded
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      Text(
-                        detail.description.isEmpty
-                            ? '暂无简介'
-                            : detail.description,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          height: 2.0,
-                          color: Color(0xFF6D6B75),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '视频来源用户上传，如有侵权，请立即联系删除。',
-                          style: TextStyle(
-                            fontSize: 10,
-                            height: 2.0,
-                            color: Color(0xFFB6B5BB),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : const SizedBox.shrink(),
-          ),
-          if (detail.seriesVideoList.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            const Text(
-              '相关视频',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF0B081A),
+          Text(detail.name, style: AppText.title16),
+          const SizedBox(height: AppSpace.s8),
+          Row(
+            children: [
+              AppAvatar(
+                name: publisher.nickname,
+                url: publisher.avatarUrl,
+                size: 20,
               ),
-            ),
-            const SizedBox(height: 12),
-            ...detail.seriesVideoList
-                .take(6)
-                .map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _SeriesCard(
-                      item: item,
-                      resolveUrl: widget.resolveUrl,
-                      onTap: () => widget.onOpenSeriesVideo(item),
-                    ),
-                  ),
+              const SizedBox(width: AppSpace.s8),
+              Flexible(
+                child: Text(
+                  [
+                    publisher.nickname,
+                    if (detail.duration.isNotEmpty) detail.duration,
+                  ].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption12,
                 ),
+              ),
+              const SizedBox(width: AppSpace.s12),
+              _ViewCount(count: detail.playCount),
+            ],
+          ),
+          const SizedBox(height: AppSpace.s12),
+          Text(
+            detail.description.isEmpty ? '老师暂未填写简介' : detail.description,
+            style: AppText.body14.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.7,
+            ),
+          ),
+          const SizedBox(height: AppSpace.s8),
+          Text('视频由画室老师提供', style: AppText.caption12),
+          if (related.isNotEmpty) ...[
+            const SizedBox(height: AppSpace.s24),
+            Text('相关视频', style: AppText.title16),
+            const SizedBox(height: AppSpace.s12),
+            for (var i = 0; i < related.length; i++) ...[
+              if (i > 0) const SizedBox(height: AppSpace.s12),
+              _SeriesCard(
+                item: related[i],
+                resolveUrl: resolveUrl,
+                onTap: () => onOpenSeriesVideo(related[i]),
+              ),
+            ],
           ],
         ],
       ),
@@ -3566,38 +3468,40 @@ class _StepImagesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (images.isEmpty) {
-      return const Center(
-        child: Text(
-          '暂无步骤图',
-          style: TextStyle(fontSize: 14, color: Color(0xFFB6B5BB)),
-        ),
+      return const AppEmptyState(
+        icon: Icons.photo_library_outlined,
+        title: '这节课还没有步骤图',
+        description: '老师上传示范步骤后会显示在这里',
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s24,
+        AppSpace.s16,
+        AppSpace.s24,
+        AppSpace.s24,
+      ),
       itemCount: images.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpace.s12),
       itemBuilder: (context, index) {
         final url = images[index];
-        return GestureDetector(
+        return AppPressable(
           onTap: () => onPreviewImage(url),
+          semanticLabel: '查看第 ${index + 1} 张步骤图',
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFF3F2F3)),
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.lineSoft),
+              borderRadius: AppRadius.br12,
             ),
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppSpace.s8),
             child: _VideoCachedImage(
               url: resolveUrl(url),
               fit: BoxFit.contain,
-              fallback: const SizedBox(
+              fallback: SizedBox(
                 height: 120,
                 child: Center(
-                  child: Text(
-                    '图片加载失败',
-                    style: TextStyle(fontSize: 12, color: Color(0xFFB6B5BB)),
-                  ),
+                  child: Text('图片加载失败', style: AppText.caption12),
                 ),
               ),
             ),
@@ -3608,6 +3512,7 @@ class _StepImagesTab extends StatelessWidget {
   }
 }
 
+/// 相关视频：整行可点，副标题为「讲师 · 时长」。
 class _SeriesCard extends StatelessWidget {
   const _SeriesCard({
     required this.item,
@@ -3621,131 +3526,69 @@ class _SeriesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final publisher = videoPublisherFor(
+      item.id,
+      name: item.teacherName,
+      avatarUrl: item.teacherAvatar,
+    );
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        height: 96,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF4F4FF),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.fromLTRB(8, 8, 24, 8),
+      semanticLabel: '播放 ${item.name}',
+      child: SizedBox(
+        height: 72,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Stack(
-                children: [
-                  SizedBox(
-                    width: 148,
-                    height: 80,
-                    child: _VideoCachedImage(
+              borderRadius: AppRadius.br8,
+              child: SizedBox(
+                width: 128,
+                height: 72,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _VideoCachedImage(
                       url: resolveUrl(item.coverImg),
                       fit: BoxFit.cover,
                       fallback: const ColoredBox(
-                        color: Color(0xFFEDEDF2),
-                        child: Center(
-                          child: Icon(
-                            Icons.ondemand_video_rounded,
-                            color: Color(0xFFB6B5BB),
-                            size: 20,
-                          ),
+                        color: AppColors.surfaceSubtle,
+                        child: Icon(
+                          Icons.ondemand_video_rounded,
+                          color: AppColors.textPlaceholder,
+                          size: 20,
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    right: 4,
-                    bottom: 5,
-                    child: Container(
-                      height: 18,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.24),
-                        borderRadius: BorderRadius.circular(18),
+                    if (item.duration.isNotEmpty)
+                      Positioned(
+                        right: AppSpace.s4,
+                        bottom: AppSpace.s4,
+                        child: _DurationChip(duration: item.duration),
                       ),
-                      child: Center(
-                        child: Text(
-                          item.duration,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            height: 1,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: AppSpace.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     item.name,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF0B081A),
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: AppText.body14Strong,
                   ),
-                  const SizedBox(height: 6),
+                  const Spacer(),
                   Text(
-                    item.name,
+                    [
+                      publisher.nickname,
+                      if (item.duration.isNotEmpty) item.duration,
+                    ].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFFB6B5BB),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // 紫色渐变播放按钮：270° linear-gradient(#9585FF → #715EFE)
-            Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: Center(
-                      child: Image.asset(
-                        AppAssets.videoV2RelatedPlay,
-                        width: 16,
-                        height: 16,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  const Text(
-                    '播放',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      height: 1,
-                      fontWeight: FontWeight.w400,
-                    ),
+                    style: AppText.caption12,
                   ),
                 ],
               ),
@@ -3761,372 +3604,65 @@ class _SeriesCard extends StatelessWidget {
 // I. 主列表 UI 组件
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _VideoCategoryHeader extends StatelessWidget {
-  const _VideoCategoryHeader({
-    required this.scale,
-    required this.menus,
-    required this.selectedMenuId,
-    required this.onSelectMenu,
-    required this.searchController,
-    required this.onSearchSubmitted,
-  });
+int _videoColumnsFor(double width) =>
+    width >= 840 ? 4 : (width >= 600 ? 3 : 2);
 
-  final DashboardScaleData scale;
-  final List<VideoMenu> menus;
-  final String? selectedMenuId;
-  final ValueChanged<String?> onSelectMenu;
-  final TextEditingController searchController;
-  final VoidCallback onSearchSubmitted;
+/// 卡片封面下方信息区高度：内边距 + 两行标题 + 讲师行。
+const double _kVideoCardInfoHeight = 92;
+
+/// 播放量：眼睛图标 + 数字（与资讯、范画一致）。
+class _ViewCount extends StatelessWidget {
+  const _ViewCount({required this.count});
+
+  final int count;
 
   @override
   Widget build(BuildContext context) {
-    final ui = scale.ui;
-    // Figma 规格：
-    //   - 整体高度 36
-    //   - 活动 tab：18/500/PingFang SC/#0B081A
-    //   - 非活动 tab：14/500/PingFang SC/#6D6B75
-    //   - 都不带背景填充与横向 padding；选中态仅切换字号 + 颜色
-    //   - tab 之间：固定 32px 间距（按钮右边 → 下一个按钮文字左边）
-    //   - 每个 tab 始终预留"激活字号(18)"的宽度作为布局尺寸，
-    //     这样切换选中态时其他按钮（含搜索框）位置不会被推动
-    //   - 搜索框：254×36，white bg，1px #F3F2F3 outline，radius 12
-    // 当 menus 为空时安全兜底；否则取选中菜单（找不到时退回首项）。
-    final VideoMenu? selectedMenu = menus.isEmpty
-        ? null
-        : menus.firstWhere(
-            (m) => m.id == selectedMenuId,
-            orElse: () => menus.first,
-          );
-    final searchHint = (selectedMenu != null && selectedMenu.name.isNotEmpty)
-        ? '${selectedMenu.name}视频'
-        : '搜索视频';
-    // 整个顶部栏严格 36 高度。tab 项 + 搜索框都在这个固定高度里垂直居中。
-    final barH = ui(36);
-    return SizedBox(
-      height: barH,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: menus.length,
-              // tab 之间固定 32px 间距，与选中态无关。
-              separatorBuilder: (_, _) => SizedBox(width: ui(20)),
-              itemBuilder: (context, index) {
-                final menu = menus[index];
-                final active = menu.id == selectedMenuId;
-                return GestureDetector(
-                  onTap: () => onSelectMenu(menu.id),
-                  behavior: HitTestBehavior.opaque,
-                  child: SizedBox(
-                    height: barH,
-                    child: Center(
-                      // 用 Stack 把"激活字号占位文本"与"实际文本"叠在一起：
-                      //   - 占位文本始终按激活字号渲染但完全透明，仅用于撑开
-                      //     按钮宽度，确保切换选中态时该 tab 的尺寸不变；
-                      //   - 实际文本根据选中态切换字号与颜色，水平/垂直居中。
-                      // 这样选中放大不会推动右侧其他 tab 与搜索框的位置。
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Text(
-                            menu.name,
-                            style: TextStyle(
-                              fontSize: ui(18),
-                              color: const Color(0x00000000),
-                              fontFamily: 'PingFang SC',
-                              fontWeight: AppFont.w500,
-                              height: 1,
-                            ).useSystemChineseFont(),
-                          ),
-                          Text(
-                            menu.name,
-                            style: TextStyle(
-                              fontSize: active ? ui(18) : ui(14),
-                              color: active
-                                  ? const Color(0xFF0B081A)
-                                  : const Color(0xFF6D6B75),
-                              fontFamily: 'PingFang SC',
-                              fontWeight: AppFont.w500,
-                              height: 1,
-                            ).useSystemChineseFont(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          SizedBox(width: ui(12)),
-          Container(
-            width: ui(254),
-            height: barH,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(ui(12)),
-              border: Border.all(color: const Color(0xFFF3F2F3), width: 1),
-            ),
-            padding: EdgeInsets.symmetric(horizontal: ui(16)),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                AppAssetGraphic(
-                  AppAssets.shellV2Search,
-                  width: ui(14.43),
-                  height: ui(14.43),
-                  fit: BoxFit.contain,
-                ),
-                SizedBox(width: ui(6)),
-                Expanded(
-                  child: AppTextField(
-                    controller: searchController,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (_) => onSearchSubmitted(),
-                    cursorColor: const Color(0xFF715EFE),
-                    cursorWidth: 1.5,
-                    cursorHeight: ui(14),
-                    style: TextStyle(
-                      fontSize: ui(14),
-                      color: const Color(0xFF0B081A),
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 1,
-                    ).useSystemChineseFont(),
-                    decoration: InputDecoration(
-                      isCollapsed: true,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      focusedErrorBorder: InputBorder.none,
-                      hintText: searchHint,
-                      hintStyle: TextStyle(
-                        fontSize: ui(14),
-                        color: const Color(0xFFD1D1D1),
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w400,
-                        height: 1,
-                      ).useSystemChineseFont(),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(
+          Icons.visibility_outlined,
+          size: 14,
+          color: AppColors.textTertiary,
+        ),
+        const SizedBox(width: AppSpace.s4),
+        Text(
+          '$count',
+          style: AppText.number(size: 12, color: AppColors.textTertiary),
+        ),
+      ],
     );
   }
 }
 
-class _BannerAndLatestSection extends StatelessWidget {
-  const _BannerAndLatestSection({
-    required this.scale,
-    required this.banners,
-    required this.activeIndex,
-    required this.loading,
-    required this.latestVideos,
-    required this.resolveUrl,
-    required this.onBannerChanged,
-    required this.onOpenVideo,
-  });
+/// 时长角标：封面右下角半透明墨色底。
+class _DurationChip extends StatelessWidget {
+  const _DurationChip({required this.duration});
 
-  final DashboardScaleData scale;
-  final List<VideoBannerItem> banners;
-  final int activeIndex;
-  final bool loading;
-  final List<VideoListItem> latestVideos;
-  final String Function(String) resolveUrl;
-  final ValueChanged<int> onBannerChanged;
-  final ValueChanged<VideoListItem> onOpenVideo;
+  final String duration;
 
   @override
   Widget build(BuildContext context) {
-    final ui = scale.ui;
-    final bannerUrls = banners
-        .map((item) => resolveUrl(item.imageUrl))
-        .where((url) => url.isNotEmpty)
-        .toList();
-    final hasBanner = bannerUrls.isNotEmpty;
-    return SizedBox(
-      // Figma：左侧轮播图 + 右侧"最新视频"列表卡 共同高度 = 280
-      height: ui(280),
-      child: Row(
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(ui(16)),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: hasBanner
-                        ? SeamlessBannerCarousel(
-                            imageUrls: bannerUrls,
-                            placeholder: const ColoredBox(
-                              color: Color(0xFFF5F6FA),
-                            ),
-                            animationDuration: const Duration(
-                              milliseconds: 300,
-                            ),
-                            animationCurve: Curves.easeOutCubic,
-                            onPageChanged: onBannerChanged,
-                          )
-                        : loading
-                        ? const ColoredBox(color: Color(0xFFF5F6FA))
-                        : Image.asset(
-                            'assets/demo/scene/studio-wall.jpg',
-                            fit: BoxFit.cover,
-                          ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: ui(70),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.28),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (hasBanner && bannerUrls.length > 1)
-                    Positioned(
-                      right: ui(16),
-                      bottom: ui(12),
-                      child: Row(
-                        children: List.generate(bannerUrls.length, (index) {
-                          final active = index == activeIndex;
-                          return Container(
-                            width: active ? ui(20) : ui(8),
-                            height: ui(4),
-                            margin: EdgeInsets.only(left: ui(4)),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(
-                                alpha: active ? 1 : 0.6,
-                              ),
-                              borderRadius: BorderRadius.circular(ui(12)),
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(width: ui(12)),
-          _LatestVideoListCard(
-            scale: scale,
-            items: latestVideos,
-            resolveUrl: resolveUrl,
-            onOpenVideo: onOpenVideo,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LatestVideoListCard extends StatelessWidget {
-  const _LatestVideoListCard({
-    required this.scale,
-    required this.items,
-    required this.resolveUrl,
-    required this.onOpenVideo,
-  });
-
-  final DashboardScaleData scale;
-  final List<VideoListItem> items;
-  final String Function(String) resolveUrl;
-  final ValueChanged<VideoListItem> onOpenVideo;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = scale.ui;
-    // Figma 规格：宽 255、radius 12、bg #F5F6FA。
-    // 标题"最新视频"：13/400/PingFang SC/#0B081A，行高 1。
-    // 行：thumb 68×68 + 标题 13/500（1 行）+ 作者行（与网格卡一致）。
-    //
-    // 布局：父 SizedBox 已固定 280，整张卡片在 Row 的 280 高度内；
-    //   12(top) + 13(title) + 8(gap) + 3×68 + 2×12 + 6(bottom) = 263 ≤ 280。
-    //   13px 余量留给字体度量浮动，所以无需再用 OverflowBox/ClipRect 兜底——
-    //   直接用纯 Column 渲染行即可，避免历史上 OverflowBox 在某些缩放下
-    //   不绘制内容的问题（导致只看到标题、看不到任何行）。
-    final visibleCount = math.min(items.length, 3);
-    const rowGap = 12.0;
     return Container(
-      width: ui(255),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
-        borderRadius: BorderRadius.circular(ui(12)),
+        color: AppColors.ink.withValues(alpha: 0.6),
+        borderRadius: AppRadius.br4,
       ),
-      padding: EdgeInsets.fromLTRB(ui(12.5), ui(12), ui(12.5), ui(6)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '最新视频',
-            style: TextStyle(
-              fontSize: ui(13),
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1,
-            ).useSystemChineseFont(),
-          ),
-          SizedBox(height: ui(8)),
-          if (items.isEmpty)
-            Expanded(
-              child: Center(
-                child: Text(
-                  '暂无视频',
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: const Color(0xFFB6B5BB),
-                    fontFamily: 'PingFang SC',
-                  ).useSystemChineseFont(),
-                ),
-              ),
-            )
-          else
-            for (int i = 0; i < visibleCount; i++) ...[
-              if (i > 0) SizedBox(height: ui(rowGap)),
-              _LatestVideoRow(
-                scale: scale,
-                item: items[i],
-                coverUrl: resolveUrl(items[i].coverImg),
-                onTap: () => onOpenVideo(items[i]),
-              ),
-            ],
-        ],
+      child: Text(
+        duration,
+        style: AppText.number(size: 12, color: AppColors.onBrand),
       ),
     );
   }
 }
 
-/// 视频卡片作者行：授课老师头像 + 姓名 + 播放量（与网格卡一致）
-class _VideoPublisherMetaRow extends StatelessWidget {
-  const _VideoPublisherMetaRow({
-    required this.item,
-    required this.size,
-    this.showPlayCount = true,
-  });
+/// 讲师行：头像 + 姓名 + 播放量。
+class _VideoTeacherRow extends StatelessWidget {
+  const _VideoTeacherRow({required this.item});
 
   final VideoListItem item;
-  final double Function(double designPx) size;
-  final bool showPlayCount;
 
   @override
   Widget build(BuildContext context) {
@@ -4135,128 +3671,207 @@ class _VideoPublisherMetaRow extends StatelessWidget {
       name: item.teacherName,
       avatarUrl: item.teacherAvatar,
     );
-    final playCount = item.playCount;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        ArtAvatar(
+        AppAvatar(
           name: publisher.nickname,
           url: publisher.avatarUrl,
-          size: size(16),
+          size: 18,
         ),
-        SizedBox(width: size(4)),
+        const SizedBox(width: AppSpace.s4),
         Expanded(
           child: Text(
             publisher.nickname,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: size(10),
-              color: const Color(0xFFB6B5BB),
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w500,
-              height: 1,
-            ).useSystemChineseFont(),
+            style: AppText.caption12,
           ),
         ),
-        if (showPlayCount) ...[
-          AppAssetGraphic(
-            AppAssets.videoV2CardViews,
-            width: size(12),
-            height: size(12),
-          ),
-          SizedBox(width: size(4)),
-          Text(
-            '$playCount',
-            style: TextStyle(
-              fontSize: size(12),
-              color: const Color(0xFFB6B5BB),
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w500,
-              height: 1,
-            ).useSystemChineseFont(),
-          ),
-        ],
+        _ViewCount(count: item.playCount),
       ],
     );
   }
 }
 
-/// 最新视频列表行：68×68 缩略图 + 标题 + 作者行。
+/// 推荐视频（大图：封面 + 标题 + 讲师 + 时长 + 播放按钮）+ 右侧最新视频列表。
+class _FeaturedVideoSection extends StatelessWidget {
+  const _FeaturedVideoSection({
+    required this.featured,
+    required this.latest,
+    required this.resolveUrl,
+    required this.onOpenVideo,
+  });
+
+  final VideoListItem featured;
+  final List<VideoListItem> latest;
+  final String Function(String) resolveUrl;
+  final ValueChanged<VideoListItem> onOpenVideo;
+
+  @override
+  Widget build(BuildContext context) {
+    final publisher = videoPublisherFor(
+      featured.id,
+      name: featured.teacherName,
+      avatarUrl: featured.teacherAvatar,
+    );
+    final hero = AppPressable(
+      onTap: () => onOpenVideo(featured),
+      semanticLabel: '播放 ${featured.name}',
+      child: ClipRRect(
+        borderRadius: AppRadius.br12,
+        child: SizedBox(
+          height: 260,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AppImage(src: resolveUrl(featured.coverImg)),
+              // 底部压暗，保证白字标题在任何封面上都可读。
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0.45, 1],
+                    colors: [
+                      AppColors.ink.withValues(alpha: 0),
+                      AppColors.ink.withValues(alpha: 0.7),
+                    ],
+                  ),
+                ),
+              ),
+              Center(
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.ink.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    size: 36,
+                    color: AppColors.onBrand,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: AppSpace.s20,
+                right: AppSpace.s20,
+                bottom: AppSpace.s16,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const AppTag(label: '推荐', tone: AppTone.brand),
+                    const SizedBox(height: AppSpace.s8),
+                    Text(
+                      featured.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.title20.copyWith(color: AppColors.onBrand),
+                    ),
+                    const SizedBox(height: AppSpace.s4),
+                    Text(
+                      [
+                        publisher.nickname,
+                        if (featured.duration.isNotEmpty) featured.duration,
+                      ].join(' · '),
+                      style: AppText.body13.copyWith(
+                        color: AppColors.onBrand.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 680 || latest.isEmpty) {
+          return hero;
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: hero),
+            const SizedBox(width: AppSpace.s16),
+            SizedBox(
+              width: 300,
+              height: 260,
+              child: AppCard(
+                title: '最新视频',
+                child: Column(
+                  children: [
+                    for (var i = 0; i < latest.length; i++) ...[
+                      if (i > 0) const SizedBox(height: AppSpace.s12),
+                      _LatestVideoRow(
+                        item: latest[i],
+                        coverUrl: resolveUrl(latest[i].coverImg),
+                        onTap: () => onOpenVideo(latest[i]),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _LatestVideoRow extends StatelessWidget {
   const _LatestVideoRow({
-    required this.scale,
     required this.item,
     required this.coverUrl,
     required this.onTap,
   });
 
-  final DashboardScaleData scale;
   final VideoListItem item;
   final String coverUrl;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final ui = scale.ui;
-    return GestureDetector(
+    return AppPressable(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
+      semanticLabel: item.name,
       child: SizedBox(
-        height: ui(68),
+        height: 54,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(ui(4)),
-              child: SizedBox(
-                width: ui(68),
-                height: ui(68),
-                child: _VideoCachedImage(
-                  url: coverUrl,
-                  fit: BoxFit.cover,
-                  fallback: Container(
-                    color: const Color(0xFF898989),
-                    child: Icon(
-                      Icons.play_circle_fill_rounded,
-                      color: Colors.white.withValues(alpha: 0.6),
-                      size: ui(20),
+            AppImage(
+              src: coverUrl,
+              width: 86,
+              height: 54,
+              borderRadius: AppRadius.br8,
+            ),
+            const SizedBox(width: AppSpace.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption12Strong.copyWith(
+                      color: AppColors.ink,
                     ),
                   ),
-                ),
-              ),
-            ),
-            SizedBox(width: ui(12)),
-            Expanded(
-              child: SizedBox(
-                height: ui(68),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        color: const Color(0xFF0B081A),
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w500,
-                        height: 1.3,
-                      ).useSystemChineseFont(),
+                  const Spacer(),
+                  Text(
+                    item.duration,
+                    style: AppText.number(
+                      size: 12,
+                      color: AppColors.textTertiary,
                     ),
-                    SizedBox(height: ui(8)),
-                    SizedBox(
-                      height: ui(16),
-                      child: _VideoPublisherMetaRow(
-                        item: item,
-                        size: ui,
-                        showPlayCount: false,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -4266,261 +3881,154 @@ class _LatestVideoRow extends StatelessWidget {
   }
 }
 
-class _SubCategoryBar extends StatelessWidget {
-  const _SubCategoryBar({
-    required this.scale,
+/// 二级分类：「全部」+ 各子分类，AppChip 单选。
+class _SubCategoryChips extends StatelessWidget {
+  const _SubCategoryChips({
     required this.items,
     required this.selectedId,
     required this.onSelect,
   });
 
-  final DashboardScaleData scale;
   final List<VideoMenuChild> items;
   final String? selectedId;
   final ValueChanged<String?> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final ui = scale.ui;
     if (items.isEmpty) return const SizedBox.shrink();
-    // Figma 规格：
-    //   - 容器 padding 12/10/12/10、radius 8
-    //   - active bg #0D1535，文字 white；inactive bg #F5F6FA，文字 #0B081A
-    //   - 文字 14/400/PingFang SC（height 1）
-    //   - 容器总高 ≈ 10 + 文字 line-box(~20) + 10 = 40
-    //   - 项之间 gap 8（保持原值，Figma 仅给出单个 chip）
-    return SizedBox(
-      height: ui(31),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        separatorBuilder: (_, _) => SizedBox(width: ui(12)),
-        itemBuilder: (context, index) {
-          final item = items[index];
-          final active = item.id == selectedId;
-          return GestureDetector(
+    return Wrap(
+      spacing: AppSpace.s8,
+      runSpacing: AppSpace.s8,
+      children: [
+        AppChip(
+          label: '全部',
+          selected: selectedId == null,
+          onTap: () => onSelect(null),
+        ),
+        for (final item in items)
+          AppChip(
+            label: item.name,
+            selected: item.id == selectedId,
             onTap: () => onSelect(item.id),
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: ui(12)),
-              decoration: BoxDecoration(
-                color: active
-                    ? const Color(0xFF0D1535)
-                    : const Color(0xFFF5F6FA),
-                borderRadius: BorderRadius.circular(ui(8)),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                item.name,
-                style: TextStyle(
-                  fontSize: ui(14),
-                  color: active ? Colors.white : const Color(0xFF0B081A),
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w400,
-                  height: 1,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+          ),
+      ],
     );
   }
 }
 
-// 网格卡设计尺寸（与 Figma 220×180 一致）
-const double _kVideoGridCardDesignW = 220;
-const double _kVideoGridCardDesignH = 180;
-const double _kVideoGridCoverDesignH = 124;
-
-// 视频网格卡片 — 封面 220:124；缩略图 52×70 叠放在封面左下角延伸至信息区
 class _VideoGridCard extends StatelessWidget {
   const _VideoGridCard({
     super.key,
-    required this.scale,
     required this.item,
     required this.resolveUrl,
     required this.onTap,
   });
 
-  final DashboardScaleData scale;
   final VideoListItem item;
   final String Function(String) resolveUrl;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final ui = scale.ui;
-    // LayoutBuilder 获取实际卡片宽度，按 220px 设计基准等比缩放所有尺寸
-    return LayoutBuilder(
-      builder: (context, box) {
-        final cw = box.maxWidth;
-        final ch = box.maxHeight;
-        final s = cw / _kVideoGridCardDesignW;
-
-        // 按网格实际高度切分封面/信息区，避免 aspectRatio 舍入导致信息区偏矮
-        final coverH = ch * (_kVideoGridCoverDesignH / _kVideoGridCardDesignH);
-        // 缩略图：52×70；左/下边距与卡片边框均为 10
-        const thumbInset = 10.0;
-        const thumbDesignW = 52.0;
-        const thumbDesignH = 70.0;
-        final thumbL = thumbInset * s;
-        final thumbTop =
-            (_kVideoGridCardDesignH - thumbDesignH - thumbInset) * s;
-        final thumbW = thumbDesignW * s;
-        final thumbH = thumbDesignH * s;
-        // 信息区左侧预留宽度（缩略图右边缘 + 4px 间距）
-        final infoLeft = (thumbInset + thumbDesignW + 4.0) * s;
-        // 缩略图下移后，标题/作者行同步下移；底内边距与缩略图 inset 对齐
-        final infoTopPad = 9.0 * s;
-        final infoBottomPad = thumbInset * s;
-        final titleLineH = 13.0 * s * 1.3;
-        final metaRowH = 16.0 * s;
-        const titleUpOffset = 3.0;
-
-        return Material(
-          color: const Color(0xFFF5F6FA),
-          borderRadius: BorderRadius.circular(ui(12)),
-          clipBehavior: Clip.hardEdge,
-          child: InkWell(
-            onTap: onTap,
-            child: Stack(
+    return AppCard(
+      padding: EdgeInsets.zero,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 10,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.card),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _VideoCachedImage(
+                    url: resolveUrl(item.coverImg),
+                    fit: BoxFit.cover,
+                    fallback: const ColoredBox(
+                      color: AppColors.surfaceSubtle,
+                      child: Icon(
+                        Icons.ondemand_video_rounded,
+                        color: AppColors.textPlaceholder,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                  if (item.duration.isNotEmpty)
+                    Positioned(
+                      right: AppSpace.s8,
+                      bottom: AppSpace.s8,
+                      child: _DurationChip(duration: item.duration),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.s12,
+              AppSpace.s8,
+              AppSpace.s12,
+              AppSpace.s12,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 卡片主体：封面 + 信息区
-                SizedBox.expand(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: coverH,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: _VideoCachedImage(
-                                url: resolveUrl(item.coverImg),
-                                fit: BoxFit.cover,
-                                fallback: Container(
-                                  color: const Color(0xFFEDEDF2),
-                                  child: Icon(
-                                    Icons.ondemand_video_rounded,
-                                    color: const Color(0xFFB6B5BB),
-                                    size: ui(28),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              right: 8.0 * s,
-                              bottom: 8.0 * s,
-                              child: Container(
-                                height: 18.0 * s,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8.0 * s,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.24),
-                                  borderRadius: BorderRadius.circular(18.0 * s),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    item.duration,
-                                    style: TextStyle(
-                                      fontSize: 12.0 * s,
-                                      color: Colors.white,
-                                      fontFamily: 'PingFang SC',
-                                      fontWeight: AppFont.w400,
-                                      height: 1,
-                                    ).useSystemChineseFont(),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            infoLeft,
-                            infoTopPad,
-                            10.0 * s,
-                            infoBottomPad,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Transform.translate(
-                                offset: Offset(0, -titleUpOffset * s),
-                                child: SizedBox(
-                                  height: titleLineH,
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      item.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 13.0 * s,
-                                        color: const Color(0xFF0B081A),
-                                        fontWeight: AppFont.w500,
-                                        fontFamily: 'PingFang SC',
-                                        height: 1.3,
-                                      ).useSystemChineseFont(),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              SizedBox(
-                                height: metaRowH,
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: _VideoPublisherMetaRow(
-                                    item: item,
-                                    size: (px) => px * s,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                SizedBox(
+                  height: 44,
+                  child: Text(
+                    item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body14Strong,
                   ),
                 ),
-                // 缩略图：叠在封面左下角，延伸至信息区
-                Positioned(
-                  left: thumbL,
-                  top: thumbTop,
-                  width: thumbW,
-                  height: thumbH,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4.0 * s),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4.0 * s),
-                      child: _VideoCachedImage(
-                        url: resolveUrl(item.coverImg),
-                        fit: BoxFit.cover,
-                        fallback: Container(color: const Color(0xFFEDEDF2)),
-                      ),
-                    ),
-                  ),
-                ),
+                const SizedBox(height: AppSpace.s4),
+                _VideoTeacherRow(item: item),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
+    );
+  }
+}
+
+class _VideoGridSkeleton extends StatelessWidget {
+  const _VideoGridSkeleton({required this.columns});
+
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpace.s16,
+      runSpacing: AppSpace.s16,
+      children: [
+        for (var i = 0; i < columns * 2; i++)
+          FractionallySizedBox(
+            widthFactor: (1 / columns) - 0.02,
+            child: const AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 10,
+                    child: AppSkeleton(radius: AppRadius.card),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(AppSpace.s12),
+                    child: AppSkeletonText(lines: 3),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

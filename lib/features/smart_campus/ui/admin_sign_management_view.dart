@@ -30,6 +30,7 @@
 // 字体：PingFang SC（中文）+ Barlow（时间数字）
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -40,7 +41,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/segment_toggle.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
@@ -56,21 +56,21 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ─── 调色板 ────────────────────────────────────────────────────────────────
 
-const Color _kCardBg = Colors.white;
-const Color _kPageBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kBorderHair = Color(0xFFE6E9F1);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleLight = Color(0xFF8E7FFF);
-const Color _kPurpleSoftBg = Color(0xFFE3DFFF);
-const Color _kGreen = Color(0xFF0CAC40);
-const Color _kGreenBg = Color(0xFFDFFCF0);
-const Color _kOrange = Color(0xFFF59E0B);
+const Color _kCardBg = AppColors.surface;
+const Color _kPageBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kBorderHair = AppColors.line;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleLight = AppColors.brandSoft;
+const Color _kPurpleSoftBg = AppColors.brandTint;
+const Color _kGreen = AppColors.success;
+const Color _kGreenBg = AppColors.successSoft;
+const Color _kOrange = AppColors.warning;
 const Color _kOrangeBg = Color(0xFFFFF7E6);
-const Color _kRed = Color(0xFFFF323C);
+const Color _kRed = AppColors.danger;
 const Color _kRedBg = Color(0xFFFFEEEF);
 
 const double _kSignBadgeHeight = 22;
@@ -148,7 +148,7 @@ class _AdminSignManagementViewState extends State<AdminSignManagementView> {
       context: context,
       barrierLabel: '关闭',
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.18),
+      barrierColor: AppColors.ink.withValues(alpha: 0.18),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, anim, _) {
         return DashboardScaleScope(
@@ -231,7 +231,7 @@ class _SignBanner extends StatelessWidget {
                 child: Icon(
                   Icons.chevron_left_rounded,
                   size: ui(20),
-                  color: const Color(0xFF1C274C),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -247,7 +247,6 @@ class _SignBanner extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(16),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                     height: 1.2,
                   ),
@@ -259,7 +258,6 @@ class _SignBanner extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -330,7 +328,7 @@ class _MakeupBadgeButton extends StatelessWidget {
             height: ui(32),
             padding: EdgeInsets.symmetric(horizontal: ui(12)),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(ui(8)),
               border: Border.all(color: _kBorderSoft),
             ),
@@ -349,8 +347,7 @@ class _MakeupBadgeButton extends StatelessWidget {
                   '补签审核',
                   style: TextStyle(
                     fontSize: ui(12),
-                    color: Colors.black,
-                    fontFamily: 'PingFang SC',
+                    color: AppColors.ink,
                     fontWeight: AppFont.w600,
                     height: 1,
                   ),
@@ -374,9 +371,8 @@ class _MakeupBadgeButton extends StatelessWidget {
                 child: Text(
                   smartCampusCountBadgeLabel(count)!,
                   style: TextStyle(
-                    fontSize: ui(10),
-                    color: Colors.white,
-                    fontFamily: 'PingFang SC',
+                    fontSize: ui(12),
+                    color: AppColors.surface,
                     fontWeight: AppFont.w500,
                     height: 1,
                   ),
@@ -529,8 +525,7 @@ class _LargeClassTabState extends ConsumerState<_LargeClassTab> {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final pageLoading =
-        _loadingClasses || (_loadingData && _sessions.isEmpty);
+    final pageLoading = _loadingClasses || (_loadingData && _sessions.isEmpty);
 
     return SingleChildScrollView(
       padding: EdgeInsets.zero,
@@ -592,9 +587,8 @@ class _LargeClassTabState extends ConsumerState<_LargeClassTab> {
         _LargeClassSessionCard(
           session: session,
           expanded: _expandedIndex == i,
-          onToggle: () => setState(
-            () => _expandedIndex = _expandedIndex == i ? null : i,
-          ),
+          onToggle: () =>
+              setState(() => _expandedIndex = _expandedIndex == i ? null : i),
           onChangeStudentStatus: (studentIdx, status) {
             unawaited(_updateStudentStatus(session, studentIdx, status));
           },
@@ -680,7 +674,9 @@ class _SignClassNameBadge extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     return Container(
       height: ui(_kSignBadgeHeight),
-      padding: EdgeInsets.symmetric(horizontal: ui(_kSignBadgeHorizontalPadding)),
+      padding: EdgeInsets.symmetric(
+        horizontal: ui(_kSignBadgeHorizontalPadding),
+      ),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: _kPageBg,
@@ -694,7 +690,6 @@ class _SignClassNameBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(_kSignBadgeFontSize),
           color: _kTextSecondary,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -781,9 +776,8 @@ class _LargeClassSessionCard extends StatelessWidget {
                               child: Text(
                                 session.courseName,
                                 style: TextStyle(
-                                  fontSize: ui(15),
+                                  fontSize: ui(16),
                                   color: _kTextDark,
-                                  fontFamily: 'PingFang SC',
                                   fontWeight: AppFont.w600,
                                   height: 1.2,
                                 ),
@@ -797,7 +791,6 @@ class _LargeClassSessionCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextSecondary,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.3,
                           ),
@@ -867,7 +860,6 @@ class _LargeClassSessionCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kTextSecondary,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w500,
                           height: 1,
                         ),
@@ -876,9 +868,8 @@ class _LargeClassSessionCard extends StatelessWidget {
                       Text(
                         '点击状态可修改',
                         style: TextStyle(
-                          fontSize: ui(10),
+                          fontSize: ui(12),
                           color: _kTextHint,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                           height: 1,
                         ),
@@ -900,7 +891,6 @@ class _LargeClassSessionCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kTextHint,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                           height: 1,
                         ),
@@ -948,11 +938,7 @@ class _LargeClassTeacherRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _MiniAvatar(
-            seed: teacherName,
-            size: ui(36),
-            imageUrl: avatarUrl,
-          ),
+          _MiniAvatar(seed: teacherName, size: ui(36), imageUrl: avatarUrl),
           SizedBox(width: ui(10)),
           Expanded(
             child: Column(
@@ -963,7 +949,6 @@ class _LargeClassTeacherRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                     height: 1.2,
                   ),
@@ -972,9 +957,8 @@ class _LargeClassTeacherRow extends StatelessWidget {
                 Text(
                   '任课教师',
                   style: TextStyle(
-                    fontSize: ui(11),
+                    fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                   ),
@@ -1021,7 +1005,6 @@ class _StudentSignRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1,
                   ),
@@ -1030,9 +1013,8 @@ class _StudentSignRow extends StatelessWidget {
                 Text(
                   student.studentNo,
                   style: TextStyle(
-                    fontSize: ui(11),
+                    fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                   ),
@@ -1087,7 +1069,6 @@ class _StudentStatusChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: color,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -1238,8 +1219,7 @@ class _SmallClassTabState extends ConsumerState<_SmallClassTab> {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final pageLoading =
-        _loadingClasses || (_loadingData && _sessions.isEmpty);
+    final pageLoading = _loadingClasses || (_loadingData && _sessions.isEmpty);
 
     return SingleChildScrollView(
       padding: EdgeInsets.zero,
@@ -1390,7 +1370,7 @@ class _SmallClassTabState extends ConsumerState<_SmallClassTab> {
         .length;
     showScaledDialog<void>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.18),
+      barrierColor: AppColors.ink.withValues(alpha: 0.18),
       builder: (ctx) => GradientHeaderDialog(
         title: '学生课后评价',
         width: 460,
@@ -1403,7 +1383,6 @@ class _SmallClassTabState extends ConsumerState<_SmallClassTab> {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextHint,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.2,
               ),
@@ -1451,7 +1430,6 @@ class _SmallClassTabState extends ConsumerState<_SmallClassTab> {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                   ),
                 ),
@@ -1540,9 +1518,8 @@ class _SmallClassFlowHint extends StatelessWidget {
             Text(
               steps[i],
               style: TextStyle(
-                fontSize: ui(11),
+                fontSize: ui(12),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -1611,9 +1588,8 @@ class _SmallClassSessionCard extends StatelessWidget {
                                 child: Text(
                                   session.courseName,
                                   style: TextStyle(
-                                    fontSize: ui(15),
+                                    fontSize: ui(16),
                                     color: _kTextDark,
-                                    fontFamily: 'PingFang SC',
                                     fontWeight: AppFont.w600,
                                     height: 1.2,
                                   ),
@@ -1627,7 +1603,6 @@ class _SmallClassSessionCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: ui(12),
                               color: _kTextSecondary,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w400,
                               height: 1.3,
                             ),
@@ -1690,9 +1665,8 @@ class _SmallClassSessionCard extends StatelessWidget {
                             child: Text(
                               '学生（${session.students.length}人）',
                               style: TextStyle(
-                                fontSize: ui(11),
+                                fontSize: ui(12),
                                 color: _kTextSecondary,
-                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w500,
                                 height: 1,
                               ),
@@ -1722,13 +1696,13 @@ class _SmallClassSessionCard extends StatelessWidget {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: onViewEvaluation,
-                            icon: Icon(Icons.star_outline_rounded, size: ui(14)),
+                            icon: Icon(
+                              Icons.star_outline_rounded,
+                              size: ui(14),
+                            ),
                             label: Text(
                               '查看评价',
-                              style: TextStyle(
-                                fontSize: ui(12),
-                                fontFamily: 'PingFang SC',
-                              ),
+                              style: TextStyle(fontSize: ui(12)),
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: _kPurple,
@@ -1740,8 +1714,7 @@ class _SmallClassSessionCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (canConfirm || isConfirmed)
-                          SizedBox(width: ui(10)),
+                        if (canConfirm || isConfirmed) SizedBox(width: ui(10)),
                       ],
                       if (canConfirm) ...[
                         Expanded(
@@ -1753,7 +1726,7 @@ class _SmallClassSessionCard extends StatelessWidget {
                                     height: ui(14),
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Colors.white,
+                                      color: AppColors.surface,
                                     ),
                                   )
                                 : Icon(
@@ -1762,14 +1735,11 @@ class _SmallClassSessionCard extends StatelessWidget {
                                   ),
                             label: Text(
                               confirming ? '确认中…' : '确认完成',
-                              style: TextStyle(
-                                fontSize: ui(12),
-                                fontFamily: 'PingFang SC',
-                              ),
+                              style: TextStyle(fontSize: ui(12)),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _kPurple,
-                              foregroundColor: Colors.white,
+                              foregroundColor: AppColors.surface,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -1803,7 +1773,6 @@ class _SmallClassSessionCard extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: ui(12),
                                     color: _kGreen,
-                                    fontFamily: 'PingFang SC',
                                     fontWeight: AppFont.w500,
                                     height: 1,
                                   ),
@@ -1863,7 +1832,6 @@ class _TimelineSection extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1,
                   ),
@@ -1920,12 +1888,7 @@ class _TimestampChip extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: ui(11),
-            color: _kTextHint,
-            fontFamily: 'PingFang SC',
-            height: 1,
-          ),
+          style: TextStyle(fontSize: ui(12), color: _kTextHint, height: 1),
         ),
         SizedBox(width: ui(4)),
         if (done) ...[
@@ -1944,12 +1907,7 @@ class _TimestampChip extends StatelessWidget {
         ] else
           Text(
             '—',
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-              height: 1,
-            ),
+            style: TextStyle(fontSize: ui(12), color: _kTextHint, height: 1),
           ),
       ],
     );
@@ -1968,9 +1926,8 @@ class _TimelineLabel extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: ui(10),
+        fontSize: ui(12),
         color: color,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 1,
       ),
@@ -2042,7 +1999,6 @@ class _StudentTimeRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1.2,
                 ),
@@ -2053,9 +2009,8 @@ class _StudentTimeRow extends StatelessWidget {
                 Text(
                   student.studentNo,
                   style: TextStyle(
-                    fontSize: ui(10),
+                    fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                   ),
@@ -2073,15 +2028,11 @@ class _StudentTimeRow extends StatelessWidget {
         ),
         SizedBox(
           width: _StudentSignTimeColumnHeader.timeColWidth(ui),
-          child: Center(
-            child: _StudentTimeCell(time: student.checkInTime),
-          ),
+          child: Center(child: _StudentTimeCell(time: student.checkInTime)),
         ),
         SizedBox(
           width: _StudentSignTimeColumnHeader.timeColWidth(ui),
-          child: Center(
-            child: _StudentTimeCell(time: student.checkOutTime),
-          ),
+          child: Center(child: _StudentTimeCell(time: student.checkOutTime)),
         ),
       ],
     );
@@ -2105,9 +2056,8 @@ class _StudentAttendanceBadge extends StatelessWidget {
       child: Text(
         courseSignStatusLabel(status),
         style: TextStyle(
-          fontSize: ui(10),
+          fontSize: ui(12),
           color: courseSignStatusFg(status),
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -2145,12 +2095,7 @@ class _StudentTimeCell extends StatelessWidget {
     }
     return Text(
       '未签到',
-      style: TextStyle(
-        fontSize: ui(11),
-        color: _kTextHint,
-        fontFamily: 'PingFang SC',
-        height: 1,
-      ),
+      style: TextStyle(fontSize: ui(12), color: _kTextHint, height: 1),
     );
   }
 }
@@ -2242,7 +2187,11 @@ class _StepDot extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: isDone
-              ? Icon(Icons.check_rounded, size: ui(12), color: Colors.white)
+              ? Icon(
+                  Icons.check_rounded,
+                  size: ui(12),
+                  color: AppColors.surface,
+                )
               : null,
         ),
         SizedBox(height: ui(4)),
@@ -2253,10 +2202,10 @@ class _StepDot extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             style: TextStyle(
-              fontSize: ui(9),
-              color:
-                  isDone ? _kPurpleLight : (isCurrent ? _kOrange : _kTextHint),
-              fontFamily: 'PingFang SC',
+              fontSize: ui(12),
+              color: isDone
+                  ? _kPurpleLight
+                  : (isCurrent ? _kOrange : _kTextHint),
               fontWeight: isDone ? AppFont.w500 : AppFont.w400,
               height: 1,
             ),
@@ -2299,7 +2248,9 @@ class _SmallClassStatusBadge extends StatelessWidget {
     }
     return Container(
       height: ui(_kSignBadgeHeight),
-      padding: EdgeInsets.symmetric(horizontal: ui(_kSignBadgeHorizontalPadding)),
+      padding: EdgeInsets.symmetric(
+        horizontal: ui(_kSignBadgeHorizontalPadding),
+      ),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: bg,
@@ -2312,7 +2263,6 @@ class _SmallClassStatusBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(_kSignBadgeFontSize),
           color: color,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -2326,10 +2276,7 @@ class _SmallClassStatusBadge extends StatelessWidget {
 // =============================================================================
 
 class _MakeupAuditDrawer extends ConsumerStatefulWidget {
-  const _MakeupAuditDrawer({
-    required this.onClose,
-    required this.onAuditDone,
-  });
+  const _MakeupAuditDrawer({required this.onClose, required this.onAuditDone});
 
   final VoidCallback onClose;
   final void Function(int remaining) onAuditDone;
@@ -2431,7 +2378,7 @@ class _MakeupAuditDrawerState extends ConsumerState<_MakeupAuditDrawer> {
       width: ui(520),
       height: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(ui(16)),
           bottomLeft: Radius.circular(ui(16)),
@@ -2462,7 +2409,6 @@ class _MakeupAuditDrawerState extends ConsumerState<_MakeupAuditDrawer> {
                   style: TextStyle(
                     fontSize: ui(16),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                     height: 1.2,
                   ),
@@ -2481,9 +2427,8 @@ class _MakeupAuditDrawerState extends ConsumerState<_MakeupAuditDrawer> {
                     child: Text(
                       '$pending',
                       style: TextStyle(
-                        fontSize: ui(11),
-                        color: Colors.white,
-                        fontFamily: 'PingFang SC',
+                        fontSize: ui(12),
+                        color: AppColors.surface,
                         fontWeight: AppFont.w500,
                         height: 1,
                       ),
@@ -2512,37 +2457,33 @@ class _MakeupAuditDrawerState extends ConsumerState<_MakeupAuditDrawer> {
               child: _loading && _records.isEmpty
                   ? const SizedBox.shrink()
                   : _records.isEmpty
-                ? Center(
-                    child: Text(
-                      _error.isNotEmpty ? _error : '暂无补签申请',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        color: _kTextHint,
-                        fontFamily: 'PingFang SC',
+                  ? Center(
+                      child: Text(
+                        _error.isNotEmpty ? _error : '暂无补签申请',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: ui(13), color: _kTextHint),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView.separated(
+                        padding: EdgeInsets.fromLTRB(
+                          ui(16),
+                          ui(16),
+                          ui(16),
+                          ui(20),
+                        ),
+                        itemCount: _records.length,
+                        separatorBuilder: (_, _) => SizedBox(height: ui(12)),
+                        itemBuilder: (ctx, i) => _MakeupAuditCard(
+                          record: _records[i],
+                          busy: _busyId == _records[i].id,
+                          onApprove: () => _audit(i, 1),
+                          onReject: (reason) =>
+                              _audit(i, 2, auditReason: reason),
+                        ),
                       ),
                     ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _load,
-                    child: ListView.separated(
-                      padding: EdgeInsets.fromLTRB(
-                        ui(16),
-                        ui(16),
-                        ui(16),
-                        ui(20),
-                      ),
-                      itemCount: _records.length,
-                      separatorBuilder: (_, _) => SizedBox(height: ui(12)),
-                      itemBuilder: (ctx, i) => _MakeupAuditCard(
-                        record: _records[i],
-                        busy: _busyId == _records[i].id,
-                        onApprove: () => _audit(i, 1),
-                        onReject: (reason) =>
-                            _audit(i, 2, auditReason: reason),
-                      ),
-                    ),
-                  ),
             ),
           ),
         ],
@@ -2591,9 +2532,8 @@ class _MakeupAuditCard extends StatelessWidget {
               Text(
                 record.applyTime,
                 style: TextStyle(
-                  fontSize: ui(11),
+                  fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1,
                 ),
@@ -2624,7 +2564,6 @@ class _MakeupAuditCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: ui(13),
                               color: _kTextDark,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w600,
                               height: 1,
                             ),
@@ -2635,9 +2574,8 @@ class _MakeupAuditCard extends StatelessWidget {
                           Text(
                             record.studentNo,
                             style: TextStyle(
-                              fontSize: ui(11),
+                              fontSize: ui(12),
                               color: _kTextHint,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w400,
                               height: 1,
                             ),
@@ -2651,9 +2589,8 @@ class _MakeupAuditCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: ui(11),
+                        fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -2674,9 +2611,8 @@ class _MakeupAuditCard extends StatelessWidget {
                   child: Text(
                     record.signTypeLabel,
                     style: TextStyle(
-                      fontSize: ui(11),
+                      fontSize: ui(12),
                       color: _kPurple,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1,
                     ),
@@ -2730,7 +2666,6 @@ class _MakeupAuditCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kRed,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.4,
                 ),
@@ -2753,13 +2688,7 @@ class _MakeupAuditCard extends StatelessWidget {
                       ),
                       padding: EdgeInsets.symmetric(vertical: ui(8)),
                     ),
-                    child: Text(
-                      '驳回',
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        fontFamily: 'PingFang SC',
-                      ),
-                    ),
+                    child: Text('驳回', style: TextStyle(fontSize: ui(13))),
                   ),
                 ),
                 SizedBox(width: ui(10)),
@@ -2768,7 +2697,7 @@ class _MakeupAuditCard extends StatelessWidget {
                     onPressed: busy ? null : onApprove,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kPurple,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.surface,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ui(8)),
@@ -2777,10 +2706,7 @@ class _MakeupAuditCard extends StatelessWidget {
                     ),
                     child: Text(
                       busy ? '处理中…' : '通过',
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        fontFamily: 'PingFang SC',
-                      ),
+                      style: TextStyle(fontSize: ui(13)),
                     ),
                   ),
                 ),
@@ -2798,7 +2724,6 @@ class _MakeupAuditCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kGreen,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1,
                   ),
@@ -2819,11 +2744,7 @@ class _MakeupAuditCard extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: Text(
           '驳回原因',
-          style: TextStyle(
-            fontSize: ui(15),
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w600,
-          ),
+          style: TextStyle(fontSize: ui(16), fontWeight: AppFont.w600),
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(ui(16)),
@@ -2833,11 +2754,7 @@ class _MakeupAuditCard extends StatelessWidget {
           maxLines: 3,
           decoration: InputDecoration(
             hintText: '请填写驳回原因…',
-            hintStyle: TextStyle(
-              fontSize: ui(13),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-            ),
+            hintStyle: TextStyle(fontSize: ui(13), color: _kTextHint),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(ui(8)),
             ),
@@ -2847,13 +2764,7 @@ class _MakeupAuditCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              '取消',
-              style: TextStyle(
-                color: _kTextSecondary,
-                fontFamily: 'PingFang SC',
-              ),
-            ),
+            child: Text('取消', style: TextStyle(color: _kTextSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -2864,7 +2775,7 @@ class _MakeupAuditCard extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _kRed,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.surface,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(ui(8)),
@@ -2900,9 +2811,8 @@ class _MakeupStatusBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: ui(11),
+          fontSize: ui(12),
           color: color,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -3001,7 +2911,7 @@ class _ClassFilterFieldState extends State<_ClassFilterField> {
         width: ui(220),
         height: ui(44),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -3017,7 +2927,6 @@ class _ClassFilterFieldState extends State<_ClassFilterField> {
                   fontSize: ui(14),
                   height: 1.2,
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                 ),
               ),
             ),
@@ -3027,7 +2936,7 @@ class _ClassFilterFieldState extends State<_ClassFilterField> {
               child: Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: ui(22),
-                color: const Color(0xFFC6C6C6),
+                color: AppColors.textPlaceholder,
               ),
             ),
           ],
@@ -3089,7 +2998,7 @@ class _FilterBar extends StatelessWidget {
             height: ui(44),
             padding: EdgeInsets.symmetric(horizontal: ui(16)),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(ui(12)),
             ),
             child: Row(
@@ -3106,7 +3015,6 @@ class _FilterBar extends StatelessWidget {
                     fontSize: ui(14),
                     height: 1.2,
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                   ),
                 ),
@@ -3133,11 +3041,7 @@ class _EmptyHint extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: ui(13),
-          color: _kTextHint,
-          fontFamily: 'PingFang SC',
-        ),
+        style: TextStyle(fontSize: ui(13), color: _kTextHint),
       ),
     );
   }
@@ -3172,7 +3076,6 @@ class _PendingMakeupRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(13),
                 color: _kOrange,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -3205,9 +3108,8 @@ class _SignProgressPill extends StatelessWidget {
       child: Text(
         '$signed / $total 已签',
         style: TextStyle(
-          fontSize: ui(11),
+          fontSize: ui(12),
           color: isAll ? _kGreen : _kOrange,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -3234,7 +3136,7 @@ class _MiniAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: const BoxDecoration(
-        color: Color(0xFFB98FFF),
+        color: AppColors.brandSoft,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
@@ -3242,8 +3144,7 @@ class _MiniAvatar extends StatelessWidget {
         firstChar,
         style: TextStyle(
           fontSize: size * 0.4,
-          color: Colors.white,
-          fontFamily: 'PingFang SC',
+          color: AppColors.surface,
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -3276,7 +3177,6 @@ class _InfoLine extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -3288,7 +3188,6 @@ class _InfoLine extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -3332,7 +3231,6 @@ class _StudentEvalBlock extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                     height: 1,
                   ),
@@ -3341,9 +3239,8 @@ class _StudentEvalBlock extends StatelessWidget {
                 Text(
                   student.studentNo,
                   style: TextStyle(
-                    fontSize: ui(11),
+                    fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     height: 1,
                   ),
                 ),
@@ -3381,7 +3278,6 @@ class _StudentEvalBlock extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   height: 1,
                 ),
               ),
@@ -3431,11 +3327,7 @@ class _EvalRow extends StatelessWidget {
           width: ui(64),
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(12), color: _kTextHint),
           ),
         ),
         Expanded(
@@ -3444,7 +3336,6 @@ class _EvalRow extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
             ),
           ),
@@ -3614,7 +3505,8 @@ class _MakeupRecord {
       signTypeLabel: _makeupSignTypeLabel(s(['signType'])),
       avatarUrl: head.isEmpty ? '' : MediaUrl.resolve(head),
       studentNo: s(['studentNo', 'no']),
-      rejectReason: (status == _MakeupStatus.rejected && approveRemark.isNotEmpty)
+      rejectReason:
+          (status == _MakeupStatus.rejected && approveRemark.isNotEmpty)
           ? approveRemark
           : null,
     );

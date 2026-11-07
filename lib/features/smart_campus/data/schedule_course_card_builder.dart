@@ -4,12 +4,7 @@ import '../../../core/network/media_url.dart';
 import 'schedule_color_palette.dart';
 
 /// 课表网格内课程卡片的四种视觉主题（与管理员排课页一致）。
-enum ScheduleCourseCardKind {
-  smallOrange,
-  smallBlue,
-  bigStandard,
-  bigExtended,
-}
+enum ScheduleCourseCardKind { smallOrange, smallBlue, bigStandard, bigExtended }
 
 /// 课表课程卡展示数据（管理员 / 教师 / 学生共用）。
 class ScheduleCourseCardData {
@@ -41,12 +36,22 @@ ScheduleCardThemeKind scheduleCourseCardThemeKind(ScheduleCourseCardKind kind) {
   };
 }
 
+/// 课程卡第二行写什么：学生看老师，老师看班级，管理端看老师。
+enum ScheduleCardSubline { teacher, className, teacherAndClass }
+
+/// 教室名去掉校区前缀（「城东校区 · 素描教室 A」→「素描教室 A」），校区写在页头。
+String scheduleRoomName(String location) {
+  final parts = location.split(' · ');
+  return parts.length > 1 ? parts.last.trim() : location.trim();
+}
+
 /// 从 API `courseList` 单条记录构建课表课程卡展示数据。
 /// 字段映射与管理员排课页 `_parseCourseCard` 保持一致。
 ScheduleCourseCardData buildScheduleCourseCard(
   Map<String, dynamic> json,
-  int smallIdxInCell,
-) {
+  int smallIdxInCell, {
+  ScheduleCardSubline subline = ScheduleCardSubline.teacherAndClass,
+}) {
   final typeRaw = json['type'];
   final type = typeRaw is int
       ? typeRaw
@@ -73,8 +78,15 @@ ScheduleCourseCardData buildScheduleCourseCard(
     'teacher',
   ]);
   final className = pickScheduleString(json, ['className', 'class']);
-  final colorOverride =
-      parseScheduleHexColor(pickScheduleString(json, ['color']));
+  final colorOverride = parseScheduleHexColor(
+    pickScheduleString(json, ['color']),
+  );
+  final line = switch (subline) {
+    ScheduleCardSubline.teacher => teacher.isEmpty ? className : teacher,
+    ScheduleCardSubline.className => className.isEmpty ? teacher : className,
+    ScheduleCardSubline.teacherAndClass =>
+      [teacher, className].where((s) => s.isNotEmpty).join(' · '),
+  };
 
   if (isSmall) {
     final kind = smallIdxInCell.isEven
@@ -82,9 +94,9 @@ ScheduleCourseCardData buildScheduleCourseCard(
         : ScheduleCourseCardKind.smallBlue;
     return ScheduleCourseCardData(
       kind: kind,
-      location: location,
+      location: scheduleRoomName(location),
       name: name,
-      subline: className.isNotEmpty ? className : teacher,
+      subline: line,
       logoUrl: resolveScheduleLogoUrl(json),
       capacity: pickScheduleCapacityLabel(json),
       bgColor: colorOverride,
@@ -92,11 +104,9 @@ ScheduleCourseCardData buildScheduleCourseCard(
   }
   return ScheduleCourseCardData(
     kind: ScheduleCourseCardKind.bigStandard,
-    location: location,
+    location: scheduleRoomName(location),
     name: name,
-    subline: teacher.isEmpty
-        ? className
-        : (className.isEmpty ? teacher : '$teacher-$className'),
+    subline: line,
     logoUrl: resolveScheduleLogoUrl(json),
     bgColor: colorOverride,
   );
@@ -163,7 +173,7 @@ String? pickScheduleCapacityLabel(Map<String, dynamic> json) {
   final totalCount =
       json['totalCount'] ?? json['capacity'] ?? json['classSize'];
   if (attendCount != null && totalCount != null) {
-    return '$attendCount/$totalCount人';
+    return '$attendCount/$totalCount 人';
   }
   return null;
 }

@@ -1,13 +1,12 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/app_toast.dart';
 import '../../../../core/widgets/scaled_dialog.dart';
 import '../../../shell/ui/shell_layout.dart';
 import 'face_camera_registry.dart';
@@ -49,13 +48,13 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
     try {
       final cameras = await FaceCameraRegistry.getCameras();
       if (cameras.isEmpty) {
-        if (mounted) setState(() => _initError = '未检测到可用摄像头');
+        if (mounted) setState(() => _initError = '当前设备没有可用的摄像头，请返回改用上传照片');
         return;
       }
       _cameraPair = FaceCameraRegistry.resolvePair(cameras);
       await _bindCamera(_cameraPair.indexFor(useFront: _useFront));
     } catch (e) {
-      if (mounted) setState(() => _initError = '无法打开摄像头：$e');
+      if (mounted) setState(() => _initError = '无法打开摄像头，请在系统设置中允许访问摄像头，或返回改用上传照片');
     }
   }
 
@@ -87,7 +86,9 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
       );
       await controller.initialize();
       if (Platform.isIOS) {
-        await controller.lockCaptureOrientation(DeviceOrientation.landscapeLeft);
+        await controller.lockCaptureOrientation(
+          DeviceOrientation.landscapeLeft,
+        );
       }
 
       var minZ = 1.0;
@@ -119,7 +120,7 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
       if (!mounted) return;
       setState(() {
         _switchingCamera = false;
-        _initError = '无法打开摄像头：$e';
+        _initError = '无法打开摄像头，请在系统设置中允许访问摄像头，或返回改用上传照片';
       });
     }
   }
@@ -206,40 +207,51 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
     final canSwitch = _cameraPair.canSwitch;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.ink,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(8)),
+              padding: EdgeInsets.symmetric(
+                horizontal: ui(16),
+                vertical: ui(8),
+              ),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: _busy ? null : () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.close_rounded, color: Colors.white, size: ui(24)),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: AppColors.surface,
+                      size: ui(24),
+                    ),
                   ),
                   Expanded(
                     child: Text(
                       '拍摄证件照',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: ui(17),
-                        color: Colors.white,
-                        fontFamily: 'PingFang SC',
+                        fontSize: ui(16),
+                        color: AppColors.surface,
                         fontWeight: AppFont.w600,
                       ),
                     ),
                   ),
                   if (canSwitch)
                     TextButton.icon(
-                      onPressed: (_busy || _switchingCamera) ? null : _switchCamera,
-                      icon: Icon(Icons.cameraswitch_rounded, color: Colors.white, size: ui(20)),
+                      onPressed: (_busy || _switchingCamera)
+                          ? null
+                          : _switchCamera,
+                      icon: Icon(
+                        Icons.cameraswitch_rounded,
+                        color: AppColors.surface,
+                        size: ui(20),
+                      ),
                       label: Text(
                         _cameraSwitchLabel,
                         style: TextStyle(
                           fontSize: ui(13),
-                          color: Colors.white,
-                          fontFamily: 'PingFang SC',
+                          color: AppColors.surface,
                           fontWeight: AppFont.w500,
                         ),
                       ),
@@ -257,7 +269,6 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: Colors.white70,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.5,
                 ),
@@ -272,7 +283,9 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
                   child: _initError != null
                       ? _ErrorPane(message: _initError!)
                       : _switchingCamera
-                      ? const Center(child: AppLoadingIndicator(color: Colors.white))
+                      ? const Center(
+                          child: AppLoadingIndicator(color: AppColors.surface),
+                        )
                       : _controller?.value.isInitialized == true
                       ? LayoutBuilder(
                           builder: (context, constraints) {
@@ -296,7 +309,7 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
                           },
                         )
                       : const Center(
-                          child: AppLoadingIndicator(color: Colors.white),
+                          child: AppLoadingIndicator(color: AppColors.surface),
                         ),
                 ),
               ),
@@ -310,7 +323,8 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
                     ui: ui,
                     icon: Icons.remove_rounded,
                     label: '缩小',
-                    enabled: !_busy && !_switchingCamera && _zoom > _minZoom + 0.05,
+                    enabled:
+                        !_busy && !_switchingCamera && _zoom > _minZoom + 0.05,
                     onPressed: _zoomOut,
                   ),
                   Padding(
@@ -319,8 +333,7 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
                       _zoomLabel,
                       style: TextStyle(
                         fontSize: ui(14),
-                        color: Colors.white,
-                        fontFamily: 'PingFang SC',
+                        color: AppColors.surface,
                         fontWeight: AppFont.w500,
                       ),
                     ),
@@ -329,7 +342,8 @@ class _FaceIdCameraPageState extends State<FaceIdCameraPage> {
                     ui: ui,
                     icon: Icons.add_rounded,
                     label: '放大',
-                    enabled: !_busy && !_switchingCamera && _zoom < _maxZoom - 0.05,
+                    enabled:
+                        !_busy && !_switchingCamera && _zoom < _maxZoom - 0.05,
                     onPressed: _zoomIn,
                   ),
                 ],
@@ -374,18 +388,17 @@ class _ZoomButton extends StatelessWidget {
       opacity: enabled ? 1 : 0.45,
       child: TextButton.icon(
         onPressed: enabled ? onPressed : null,
-        icon: Icon(icon, color: Colors.white, size: ui(22)),
+        icon: Icon(icon, color: AppColors.surface, size: ui(22)),
         label: Text(
           label,
           style: TextStyle(
             fontSize: ui(13),
-            color: Colors.white,
-            fontFamily: 'PingFang SC',
+            color: AppColors.surface,
             fontWeight: AppFont.w500,
           ),
         ),
         style: TextButton.styleFrom(
-          backgroundColor: Colors.white.withValues(alpha: 0.12),
+          backgroundColor: AppColors.surface.withValues(alpha: 0.12),
           padding: EdgeInsets.symmetric(horizontal: ui(14), vertical: ui(8)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(ui(8)),

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_font.dart';
+import '../../../../core/ui/ui.dart';
 
 /// 原卷水印：斜向平铺的半透明文字，不拦截手势。
 class StudyPaperWatermark extends StatelessWidget {
@@ -12,7 +13,9 @@ class StudyPaperWatermark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (text.trim().isEmpty) return const SizedBox.shrink();
+    if (text.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
     return IgnorePointer(
       child: ClipRect(
         child: CustomPaint(
@@ -31,19 +34,19 @@ class _WatermarkPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
+    if (size.isEmpty) {
+      return;
+    }
     // 深色字 + 浅色描影，浅色画纸和深色背景上都能辨认。
     final painter = TextPainter(
       text: TextSpan(
         text: text,
-        style: TextStyle(
-          fontSize: 15,
-          fontFamily: 'PingFang SC',
+        style: AppText.body16.copyWith(
           fontWeight: AppFont.w500,
-          color: Colors.black.withValues(alpha: 0.13),
+          color: AppColors.ink.withValues(alpha: 0.13),
           shadows: [
             Shadow(
-              color: Colors.white.withValues(alpha: 0.14),
+              color: AppColors.onBrand.withValues(alpha: 0.14),
               offset: const Offset(0.8, 0.8),
             ),
           ],

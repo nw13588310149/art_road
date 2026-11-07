@@ -1,12 +1,11 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/app_toast.dart';
 import '../../../../core/widgets/scaled_dialog.dart';
 import '../../../shell/ui/shell_layout.dart';
 import 'face_id_frame_overlay.dart';
@@ -161,11 +160,11 @@ class _FaceIdPhotoCropPageState extends State<FaceIdPhotoCropPage> {
   }
 
   Matrix4 get _imageToViewport => faceIdPhotoTransformFromGesture(
-        imageSize: _imageSize,
-        viewportSize: _viewportSize,
-        scale: _scale,
-        offset: _offset,
-      );
+    imageSize: _imageSize,
+    viewportSize: _viewportSize,
+    scale: _scale,
+    offset: _offset,
+  );
 
   Future<void> _confirm() async {
     if (_busy || _frameRect == Rect.zero || _viewportSize == Size.zero) return;
@@ -208,26 +207,32 @@ class _FaceIdPhotoCropPageState extends State<FaceIdPhotoCropPage> {
     final ui = DashboardScaleScope.of(context).ui;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.ink,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(8)),
+              padding: EdgeInsets.symmetric(
+                horizontal: ui(16),
+                vertical: ui(8),
+              ),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: _busy ? null : () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.close_rounded, color: Colors.white, size: ui(24)),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: AppColors.surface,
+                      size: ui(24),
+                    ),
                   ),
                   Expanded(
                     child: Text(
                       widget.title,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: ui(17),
-                        color: Colors.white,
-                        fontFamily: 'PingFang SC',
+                        fontSize: ui(16),
+                        color: AppColors.surface,
                         fontWeight: AppFont.w600,
                       ),
                     ),
@@ -244,7 +249,6 @@ class _FaceIdPhotoCropPageState extends State<FaceIdPhotoCropPage> {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: Colors.white70,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.5,
                 ),
@@ -284,7 +288,7 @@ class _FaceIdPhotoCropPageState extends State<FaceIdPhotoCropPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppLoadingIndicator(color: Colors.white),
+            AppLoadingIndicator(color: AppColors.surface),
             SizedBox(height: 12),
             Text(
               '正在加载图片…',
@@ -305,7 +309,7 @@ class _FaceIdPhotoCropPageState extends State<FaceIdPhotoCropPage> {
     }
     final displayBytes = _displayBytes;
     if (displayBytes == null) {
-      return const Center(child: AppLoadingIndicator(color: Colors.white));
+      return const Center(child: AppLoadingIndicator(color: AppColors.surface));
     }
 
     return LayoutBuilder(
@@ -357,7 +361,7 @@ class _FaceIdCropViewport extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (viewportSize == Size.zero || imageSize == Size.zero) {
-      return const Center(child: AppLoadingIndicator(color: Colors.white));
+      return const Center(child: AppLoadingIndicator(color: AppColors.surface));
     }
 
     final drawW = imageSize.width * scale;

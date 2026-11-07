@@ -4,6 +4,7 @@ import '../../demo_store.dart';
 import 'campus_a_common.dart';
 import 'campus_a_courses.dart';
 import 'campus_a_leave.dart';
+import 'campus_b_courses.dart';
 
 /// 学生课表与课堂签到：`courseList`、小课签到 / 签退 / 评价、签到统计与记录、补签。
 ///
@@ -65,33 +66,13 @@ abstract final class CampusASign {
     return list;
   }
 
-  /// 演示学生的固定缺勤课：最近一次可申请补签、已通过、已驳回各一节。
-  static ({String open, String approved, String rejected}) _forcedAbsences(
-    int personIndex,
-  ) {
-    final c = CampusA.classOf(personIndex);
-    return (
-      open: CampusACourses.courseIdFor(
-        c,
-        CampusACourses.weekdayOnOrBefore(CampusA.daysAgo(2)),
-        3,
-      ),
-      approved: CampusACourses.courseIdFor(
-        c,
-        CampusACourses.weekdayOnOrBefore(CampusA.daysAgo(9)),
-        2,
-      ),
-      rejected: CampusACourses.courseIdFor(
-        c,
-        CampusACourses.weekdayOnOrBefore(CampusA.daysAgo(16)),
-        3,
-      ),
-    );
-  }
+  /// 演示学生的固定缺勤课：最近一次可申请补签、已通过、已驳回各一节（与老师端一致）。
+  static ({String open, String approved, String rejected}) _forcedAbsences() =>
+      cbForcedAbsences();
 
   static List<Map<String, dynamic>> _seedMakeups(DemoAccount account) {
     final index = CampusA.personIndexOf(account);
-    final forced = _forcedAbsences(index);
+    final forced = _forcedAbsences();
     final now = DateTime.now();
     Map<String, dynamic>? seed(
       String id,
@@ -124,15 +105,15 @@ abstract final class CampusASign {
         '6302',
         forced.rejected,
         2,
-        '当晚身体不舒服提前回宿舍了，忘记请假',
-        '未提前请假，按缺勤处理；后续请先向班主任报备',
+        cbForcedMakeupTexts.rejected.reason,
+        cbForcedMakeupTexts.rejected.remark,
       ),
       ?seed(
         '6301',
         forced.approved,
         1,
-        '人脸识别设备故障未能打卡，任课老师可以作证',
-        '经任课老师确认情况属实，同意补签',
+        cbForcedMakeupTexts.approved.reason,
+        cbForcedMakeupTexts.approved.remark,
       ),
     ];
   }
@@ -281,7 +262,7 @@ abstract final class CampusASign {
       }
     } else {
       final leave = _leaveOverlap(account, course);
-      final forced = _forcedAbsences(index);
+      final forced = _forcedAbsences();
       final isForced =
           index == DemoAccounts.student.personIndex &&
           (course.id == forced.open ||
@@ -306,10 +287,8 @@ abstract final class CampusASign {
         final inAt = status == 2
             ? course.startAt.add(Duration(minutes: 3 + h % 10))
             : course.startAt.subtract(Duration(minutes: 2 + h % 8));
-        signIn = _clockOf(inAt.add(Duration(seconds: h % 60)));
-        signOut = _clockOf(
-          course.endAt.add(Duration(minutes: h % 5, seconds: (h ~/ 7) % 60)),
-        );
+        signIn = _clockOf(inAt);
+        signOut = _clockOf(course.endAt.add(Duration(minutes: h % 5)));
         if (status == 2) {
           remark = '迟到 ${3 + h % 10} 分钟';
         }

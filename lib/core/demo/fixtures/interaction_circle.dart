@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../data/demo_campus_data.dart';
 import '../demo_accounts.dart';
 import '../demo_backend.dart';
+import '../demo_clock.dart';
 import '../demo_store.dart';
 import '../media/demo_media.dart';
 import 'interaction_common.dart';
@@ -497,14 +498,17 @@ DemoAuthorCard _seedAuthor(String spec) {
 }
 
 _CircleSeed _buildSeed() {
-  final now = DateTime.now();
+  final now = DemoClock.now();
   final posts = <Map<String, dynamic>>[];
   final comments = <Map<String, dynamic>>[];
   for (var i = 0; i < _seedPosts.length; i++) {
     final spec = _seedPosts[i];
     final id = '1990000000${100101 + i}';
     final author = _seedAuthor(spec.author);
-    final created = now.subtract(Duration(minutes: spec.minutesAgo));
+    // 错开分钟数，避免整小时倒推出一串同分钟的发帖时间。
+    final created = DemoClock.ago(
+      Duration(minutes: spec.minutesAgo + (i * 17) % 50),
+    );
     final isVideo = spec.video.isNotEmpty;
     posts.add(<String, dynamic>{
       'id': id,
@@ -556,9 +560,9 @@ const _seedPosts = <_SeedPost>[
     author: 't:t-9',
     minutesAgo: 26 * 60,
     content:
-        '【考务通知】11 月月考安排：11 月 15 日（周六）08:30 素描、14:00 色彩，'
-        '11 月 16 日（周日）08:30 速写。请携带准考证提前 20 分钟入场，按考号就座，'
-        '画具自备，考场内禁止使用手机。',
+        '【考务通知】11 月月考定于 11 月 15 日（周日）三校区同步进行，一天考完：'
+        '08:30 素描、14:00 色彩、19:00 速写。请携带准考证提前 20 分钟入场，按考号就座，'
+        '画板画架由画室提供，其余画具自备，考场内禁止使用手机。',
     images: ['${_scene}exam-hall.jpg'],
     likes: 86,
     favorites: 41,

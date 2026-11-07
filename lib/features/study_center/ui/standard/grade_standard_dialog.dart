@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/art/art_subject.dart';
 import '../../../../core/art/art_tokens.dart';
-import '../../../../core/theme/app_font.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 import '../../state/study_detail_providers.dart';
 import '../widgets/grade_band_table.dart';
-import '../widgets/study_common.dart';
 
 /// 学生端评分标准弹窗。
 Future<void> showStudyGradeStandard(
@@ -16,7 +14,7 @@ Future<void> showStudyGradeStandard(
   required String examId,
   required StudySubjectRecord subject,
 }) {
-  return showDialog<void>(
+  return showAppDialog<void>(
     context: context,
     builder: (context) =>
         StudyGradeStandardDialog(examId: examId, subject: subject),
@@ -37,16 +35,22 @@ class StudyGradeStandardDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final key = StudySubjectKey(examId: examId, subjectId: subject.subjectId);
     final standard = ref.watch(studyGradeStandardProvider(key));
-    return StudyDialogShell(
+    return AppDialog(
       title: '${subject.subjectName} · 评分标准',
-      subtitle: '阅卷老师先判定档位，再在档位区间内给分',
-      icon: Icons.rule_rounded,
-      accent: artSubjectColor(subject.subjectName),
+      message: '阅卷老师先判定档位，再在档位区间内给分',
+      width: AppSize.dialogWide,
       child: standard.when(
-        loading: () => const StudyLoadingBlock(height: 260),
-        error: (error, _) => StudyErrorView(
-          message: studyErrorText(error, '评分标准加载失败'),
-          onRetry: () => ref.invalidate(studyGradeStandardProvider(key)),
+        loading: () => const SizedBox(
+          height: 260,
+          child: Center(child: AppLoadingIndicator(size: 36)),
+        ),
+        error: (error, _) => SizedBox(
+          height: 260,
+          child: AppErrorState(
+            title: '评分标准加载失败',
+            description: studyErrorText(error, '请检查网络后重试'),
+            onRetry: () => ref.invalidate(studyGradeStandardProvider(key)),
+          ),
         ),
         data: (value) => GradeStandardContent(
           standard: value,
@@ -76,7 +80,9 @@ class GradeStandardContent extends StatelessWidget {
         ? '截尾平均：去掉一个最高分和一个最低分，取其余老师分数的平均值，减少个别评分偏差的影响。'
         : '算术平均：每份试卷由多位阅卷老师独立评阅，最终得分取各位老师分数的平均值。';
     final threshold = standard.diffThreshold;
-    if (threshold == null || threshold <= 0) return rule;
+    if (threshold == null || threshold <= 0) {
+      return rule;
+    }
     return '$rule老师之间分差超过 ${formatScore(threshold)} 分（分差阈值）时，'
         '试卷会提交仲裁组复核。';
   }
@@ -93,8 +99,8 @@ class GradeStandardContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: AppSpace.s8,
+          runSpacing: AppSpace.s8,
           children: [
             if (full != null)
               _InfoTile(label: '满分', value: '${formatScore(full)} 分'),
@@ -111,21 +117,18 @@ class GradeStandardContent extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpace.s12),
         Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: ArtColors.subtle,
-            borderRadius: BorderRadius.circular(12),
+          padding: const EdgeInsets.all(AppSpace.s12),
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceSubtle,
+            borderRadius: AppRadius.br8,
           ),
-          child: Text(
-            algorithmText(standard),
-            style: ArtText.body(size: 13, color: ArtColors.ink2, height: 1.6),
-          ),
+          child: Text(algorithmText(standard), style: AppText.body13),
         ),
-        const SizedBox(height: 18),
-        Text('档位标准', style: ArtText.title(size: 15)),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpace.s20),
+        Text('档位标准', style: AppText.title16),
+        const SizedBox(height: AppSpace.s12),
         GradeBandTable(
           bands: standard.bands,
           highlightGrade: highlight,
@@ -151,26 +154,24 @@ class _InfoTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(minWidth: 112),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s12,
+        vertical: AppSpace.s8,
+      ),
       decoration: BoxDecoration(
-        color: highlighted ? ArtColors.brandWash : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: highlighted ? ArtColors.brandLight : ArtColors.line,
-        ),
+        color: highlighted ? AppColors.brandWash : AppColors.surfaceSubtle,
+        borderRadius: AppRadius.br8,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: ArtText.caption(size: 11)),
-          const SizedBox(height: 3),
+          Text(label, style: AppText.caption12),
+          const SizedBox(height: 2),
           Text(
             value,
-            style: ArtText.body(
-              size: 14,
-              color: highlighted ? ArtColors.brandDeep : ArtColors.ink,
-              weight: AppFont.w600,
+            style: AppText.body14Strong.copyWith(
+              color: highlighted ? AppColors.brandDeep : AppColors.ink,
             ),
           ),
         ],

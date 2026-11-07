@@ -170,8 +170,7 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
     final mapped = mapBackendRoleToCampus(role, identity);
     _mappedBackendRole = mapped;
     final isPrivileged =
-        mapped == SmartCampusRole.admin ||
-        mapped == SmartCampusRole.principal;
+        mapped == SmartCampusRole.admin || mapped == SmartCampusRole.principal;
     final available = isPrivileged ? _allRoles : <SmartCampusRole>[mapped];
 
     final SmartCampusRole nextSelected;
@@ -356,9 +355,7 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
       return;
     }
     final SmartCampusMainView? returnTo =
-        state.mainView == SmartCampusMainView.dashboard
-            ? null
-            : state.mainView;
+        state.mainView == SmartCampusMainView.dashboard ? null : state.mainView;
     state = state.copyWith(
       mainView: target,
       returnMainView: returnTo,
@@ -408,10 +405,7 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
 
   /// 首页课表 / 课程卡片入口：按 `/myInfo` 真实身份切到对应角色的
   /// 「授课课表 / 我的课表」，避免 admin / 校长视角占位页拦截。
-  void openMyScheduleForUser({
-    required String role,
-    required String identity,
-  }) {
+  void openMyScheduleForUser({required String role, required String identity}) {
     final mapped = mapBackendRoleToCampus(role, identity);
     final SmartCampusRole? scheduleRole = switch (mapped) {
       SmartCampusRole.teacher || SmartCampusRole.headTeacher => mapped,
@@ -550,9 +544,7 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
       return;
     }
     final SmartCampusMainView? returnTo =
-        state.mainView == SmartCampusMainView.dashboard
-            ? null
-            : state.mainView;
+        state.mainView == SmartCampusMainView.dashboard ? null : state.mainView;
     state = state.copyWith(
       mainView: SmartCampusMainView.dormDynamic,
       returnMainView: returnTo,
@@ -774,10 +766,7 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
     SmartCampusMainView target;
     if (returnTo != null) {
       target = returnTo;
-      state = state.copyWith(
-        mainView: target,
-        clearReturnMainView: true,
-      );
+      state = state.copyWith(mainView: target, clearReturnMainView: true);
     } else if (state.mainView == SmartCampusMainView.dashboard) {
       return;
     } else {

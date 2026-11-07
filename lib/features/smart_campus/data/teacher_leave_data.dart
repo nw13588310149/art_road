@@ -11,11 +11,12 @@
 library;
 
 import '../../../core/network/media_url.dart';
+import 'campus_format.dart';
 
 enum TeacherLeaveStatus {
   pending(0, '待审批'),
   approved(1, '已通过'),
-  rejected(2, '已拒绝');
+  rejected(2, '已驳回');
 
   const TeacherLeaveStatus(this.code, this.label);
 
@@ -65,11 +66,10 @@ class TeacherLeaveRecord {
   final String? auditReason;
   final String auditTime;
 
-  /// 卡片 header 展示：`时长2天`。
+  /// 卡片 header 展示：`时长 2 天`。
   String get durationLabel {
     if (duration.isEmpty || duration == '—') return '—';
-    if (duration.startsWith('时长')) return duration;
-    return '时长$duration';
+    return campusDuration(duration, prefix: '时长');
   }
 
   factory TeacherLeaveRecord.fromJson(Map<String, dynamic> json) {
@@ -79,13 +79,15 @@ class TeacherLeaveRecord {
         : const <String, dynamic>{};
 
     final name = _pickString(teacher, ['realname', 'nickname'], '');
-    final teacherId = _pickString(
-      json,
-      ['teacherId'],
-      _pickString(teacher, ['id'], ''),
-    );
+    final teacherId = _pickString(json, [
+      'teacherId',
+    ], _pickString(teacher, ['id'], ''));
     final mobile = _pickString(teacher, ['mobile'], '');
-    final headUrlRaw = _pickString(teacher, ['headUrl', 'avatar', 'headImg'], '');
+    final headUrlRaw = _pickString(teacher, [
+      'headUrl',
+      'avatar',
+      'headImg',
+    ], '');
     final headUrl = headUrlRaw.isNotEmpty ? MediaUrl.resolve(headUrlRaw) : '';
 
     final typeRaw = int.tryParse(json['type']?.toString() ?? '');
@@ -95,11 +97,11 @@ class TeacherLeaveRecord {
       _ => '请假',
     };
 
-    final start = _formatDateTime(json['startTime']);
-    final end = _formatDateTime(json['endTime']);
-    final timeRange = start.isNotEmpty && end.isNotEmpty
-        ? '$start - $end'
-        : (start.isNotEmpty ? start : end);
+    final timeRange = campusRange(
+      json['startTime'],
+      json['endTime'],
+      fallback: '',
+    );
 
     return TeacherLeaveRecord(
       id: _pickString(json, ['id'], ''),
@@ -111,15 +113,16 @@ class TeacherLeaveRecord {
       duration: _formatDuration(_pickString(json, ['leaveDuration'], '—')),
       timeRange: timeRange.isNotEmpty ? timeRange : '—',
       reason: _pickString(json, ['leaveReason'], '—'),
-      appliedAt: _formatDateTime(json['createTime']),
+      appliedAt: campusDateTimeOf(json['createTime']),
       handoff: _pickString(json, ['shiftHandover'], '—'),
-      status: TeacherLeaveStatus.fromApi(json['status']) ??
+      status:
+          TeacherLeaveStatus.fromApi(json['status']) ??
           TeacherLeaveStatus.pending,
       auditReason: () {
         final raw = _pickString(json, ['auditReason'], '');
         return raw.isEmpty ? null : raw;
       }(),
-      auditTime: _formatDateTime(json['auditTime']),
+      auditTime: campusDateTimeOf(json['auditTime']),
     );
   }
 }
@@ -162,8 +165,7 @@ int? parseTeacherLeaveTotal(dynamic raw) {
 
 /// 待审批本人请假条数（`status: 0` 列表的 `total` 或 `records` 长度）。
 int parseTeacherLeavePendingCount(dynamic raw) {
-  return parseTeacherLeaveTotal(raw) ??
-      parseTeacherLeaveList(raw).length;
+  return parseTeacherLeaveTotal(raw) ?? parseTeacherLeaveList(raw).length;
 }
 
 List<Map<String, dynamic>> _extractRecordMaps(dynamic raw) {
@@ -216,18 +218,6 @@ String _formatDuration(String raw) {
     return trimmed;
   }
   return trimmed;
-}
-
-String _formatDateTime(dynamic raw) {
-  if (raw == null) return '';
-  final s = raw.toString().trim();
-  if (s.isEmpty) return '';
-  final dt = DateTime.tryParse(s);
-  if (dt == null) return s;
-  final local = dt.toLocal();
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${local.year}-${two(local.month)}-${two(local.day)} '
-      '${two(local.hour)}:${two(local.minute)}';
 }
 
 /// Tab → API `status`；`null` = 全部。

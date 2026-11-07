@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
-import '../../../../core/constants/app_assets.dart';
-import '../../../../core/widgets/app_asset_graphic.dart';
-import '../../../../core/widgets/art_widgets.dart';
-import '../../../shell/ui/shell_layout.dart';
+import '../../../../core/ui/ui.dart';
+import '../../../../core/widgets/app_text_field.dart';
 import '../../state/circle_state.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-/// 沉浸模式下从右侧滑入的评论面板（抖音风）。
-/// 顶部标题、可滚动评论列表、底部输入框三段式布局。
+/// 大图模式下从右侧滑入的评论面板：标题、可滚动评论列表、底部输入条。
 class CircleCommentPanel extends StatefulWidget {
   const CircleCommentPanel({
     super.key,
@@ -59,43 +53,40 @@ class _CircleCommentPanelState extends State<CircleCommentPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     final post = widget.post;
+    final Widget body;
+    if (post == null) {
+      body = const SizedBox.shrink();
+    } else if (widget.commentsLoading) {
+      body = const Center(child: AppLoadingIndicator());
+    } else if (post.comments.isEmpty) {
+      body = const AppEmptyState(
+        icon: Icons.mode_comment_outlined,
+        title: '还没有评论',
+        description: '写下你的看法，作者会收到提醒',
+      );
+    } else {
+      body = _CommentList(
+        post: post,
+        permissions: widget.permissions,
+        comments: post.comments,
+        onLike: widget.onCommentLikeTap,
+        onDeleteComment: widget.onDeleteComment,
+      );
+    }
     return Material(
-      color: Colors.transparent,
+      type: MaterialType.transparency,
       child: Column(
         children: [
           _PanelHeader(count: post?.commentCount ?? 0, onClose: widget.onClose),
-          Container(height: 1, color: const Color(0xFFF3F2F3)),
-          Expanded(
-            child: post == null
-                ? const SizedBox.shrink()
-                : Stack(
-                    children: [
-                      if (widget.commentsLoading)
-                        const Center(
-                          child: AppLoadingIndicator(),
-                        ),
-                      if (!widget.commentsLoading)
-                        (post.comments.isEmpty
-                            ? const _CommentEmpty()
-                            : _CommentList(
-                                post: post,
-                                permissions: widget.permissions,
-                                comments: post.comments,
-                                onLike: widget.onCommentLikeTap,
-                                onDeleteComment: widget.onDeleteComment,
-                              )),
-                    ],
-                  ),
-          ),
-          Container(height: 1, color: const Color(0xFFF3F2F3)),
+          const Divider(height: 1, thickness: 1, color: AppColors.lineSoft),
+          Expanded(child: body),
+          const Divider(height: 1, thickness: 1, color: AppColors.lineSoft),
           _InputBar(
             controller: _input,
             focusNode: _focus,
             onSend: _handleSubmit,
           ),
-          SizedBox(height: ui(8)),
         ],
       ),
     );
@@ -110,48 +101,31 @@ class _PanelHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return SizedBox(
-      height: ui(52),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        child: Row(
-          children: [
-            Text(
-              '评论',
-              style: TextStyle(
-                color: const Color(0xFF0B081A),
-                fontSize: ui(16),
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w600,
-              ),
-            ),
-            SizedBox(width: ui(8)),
-            Text(
-              formatCircleCount(count),
-              style: TextStyle(
-                color: const Color(0xFFB6B5BB),
-                fontSize: ui(14),
-                fontFamily: 'PingFang SC',
-              ),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: onClose,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                width: ui(28),
-                height: ui(28),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.close_rounded,
-                  size: ui(18),
-                  color: const Color(0xFF1A1A1A),
-                ),
-              ),
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s16,
+        AppSpace.s8,
+        AppSpace.s8,
+        AppSpace.s8,
+      ),
+      child: Row(
+        children: [
+          Text('评论', style: AppText.title16),
+          const SizedBox(width: AppSpace.s8),
+          Text(
+            formatCircleCount(count),
+            style: AppText.number(size: 14, color: AppColors.textTertiary),
+          ),
+          const Spacer(),
+          AppIconButton(
+            icon: Icons.close_rounded,
+            semanticLabel: '关闭评论',
+            size: AppButtonSize.sm,
+            filled: false,
+            color: AppColors.textSecondary,
+            onTap: onClose,
+          ),
+        ],
       ),
     );
   }
@@ -174,18 +148,21 @@ class _CommentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return ListView.separated(
-      padding: EdgeInsets.fromLTRB(ui(16), ui(16), ui(16), ui(20)),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s16,
+        AppSpace.s16,
+        AppSpace.s16,
+        AppSpace.s20,
+      ),
       itemCount: comments.length,
-      separatorBuilder: (_, _) => SizedBox(height: ui(20)),
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpace.s20),
       itemBuilder: (context, index) {
         final c = comments[index];
-        final canDelete = onDeleteComment != null &&
-            permissions.canDeleteComment(post, c);
+        final canDelete =
+            onDeleteComment != null && permissions.canDeleteComment(post, c);
         return _CommentTile(
           comment: c,
-          showDelete: canDelete,
           onLike: () => onLike(c.id),
           onDelete: canDelete ? () => onDeleteComment!(c.id) : null,
         );
@@ -198,190 +175,89 @@ class _CommentTile extends StatelessWidget {
   const _CommentTile({
     required this.comment,
     required this.onLike,
-    required this.showDelete,
     this.onDelete,
   });
 
   final CircleComment comment;
   final VoidCallback onLike;
-  final bool showDelete;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
+    final role = formatCircleAuthorRole(comment.author.role);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ArtAvatar(
-          name: comment.author.name,
-          url: comment.author.avatarUrl,
-          size: ui(44),
-        ),
-        SizedBox(width: ui(11)),
+        AppAvatar(name: comment.author.name, url: comment.author.avatarUrl),
+        const SizedBox(width: AppSpace.s12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                comment.author.name,
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: comment.author.name,
+                      style: AppText.body14Strong,
+                    ),
+                    if (role.isNotEmpty)
+                      TextSpan(text: '  $role', style: AppText.caption12),
+                  ],
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: const Color(0xFF0B081A),
-                  fontSize: ui(16),
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w600,
-                ),
               ),
-              Transform.translate(
-                offset: Offset(0, -ui(2)),
-                child: Text(
-                  formatCircleAuthorRole(comment.author.role),
-                  style: TextStyle(
-                    color: const Color(0xFFB6B5BB),
-                    fontSize: ui(13),
-                    fontFamily: 'PingFang SC',
-                  ),
-                ),
-              ),
-              SizedBox(height: ui(8)),
-              Text(
-                comment.text,
-                style: TextStyle(
-                  color: const Color(0xFF000000),
-                  fontSize: ui(14),
-                  fontFamily: 'PingFang SC',
-                  height: 19.6 / 14,
-                ),
-              ),
-              SizedBox(height: ui(6)),
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: ui(12),
-                runSpacing: ui(4),
+              const SizedBox(height: AppSpace.s4),
+              Text(comment.text, style: AppText.body14),
+              const SizedBox(height: AppSpace.s4),
+              Row(
                 children: [
                   if (comment.timeLabel.isNotEmpty)
-                    Text(
-                      comment.timeLabel,
-                      style: TextStyle(
-                        color: const Color(0xFFB6B5BB),
-                        fontSize: ui(12),
-                        fontFamily: 'PingFang SC',
-                      ),
-                    ),
-                  Text(
-                    '回复',
-                    style: TextStyle(
-                      color: const Color(0xFFB6B5BB),
-                      fontSize: ui(12),
-                      fontFamily: 'PingFang SC',
-                    ),
-                  ),
-                  if (showDelete && onDelete != null)
-                    GestureDetector(
+                    Text(comment.timeLabel, style: AppText.caption12),
+                  if (onDelete != null) ...[
+                    const SizedBox(width: AppSpace.s12),
+                    AppPressable(
                       onTap: onDelete,
-                      behavior: HitTestBehavior.opaque,
-                      child: Text(
-                        '删除',
-                        style: TextStyle(
-                          color: const Color(0xFFB6B5BB),
-                          fontSize: ui(12),
-                          fontFamily: 'PingFang SC',
-                        ),
-                      ),
+                      semanticLabel: '删除评论',
+                      child: Text('删除', style: AppText.caption12),
                     ),
+                  ],
                 ],
               ),
             ],
           ),
         ),
-        SizedBox(width: ui(8)),
-        _CommentLike(comment: comment, onTap: onLike),
-      ],
-    );
-  }
-}
-
-class _CommentLike extends StatelessWidget {
-  const _CommentLike({required this.comment, required this.onTap});
-
-  final CircleComment comment;
-  final VoidCallback onTap;
-
-  static const _activeCanvasExtent = 94.0;
-  static const _inactiveCanvasExtent = 80.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final iconAsset =
-        comment.liked ? AppAssets.circleFav1 : AppAssets.circleFav2;
-    final baseSize = ui(20);
-    final iconBoxSize = baseSize * _activeCanvasExtent / _inactiveCanvasExtent;
-    final visualSize =
-        iconAsset == AppAssets.circleFav2 ? iconBoxSize : baseSize;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: iconBoxSize,
-            height: iconBoxSize,
-            child: Center(
-              child: AppAssetGraphic(
-                iconAsset,
-                width: visualSize,
-                height: visualSize,
+        const SizedBox(width: AppSpace.s8),
+        AppPressable(
+          onTap: onLike,
+          semanticLabel: comment.liked ? '取消点赞' : '点赞',
+          selected: comment.liked,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                comment.liked
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                size: 20,
+                color: comment.liked
+                    ? AppColors.brand
+                    : AppColors.textTertiary,
               ),
-            ),
+              const SizedBox(height: 2),
+              Text(
+                formatCircleCount(comment.likeCount),
+                style: AppText.number(
+                  size: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: ui(2)),
-          Text(
-            formatCircleCount(comment.likeCount),
-            style: TextStyle(
-              color: const Color(0xFF0B081A),
-              fontSize: ui(12),
-              fontFamily: 'PingFang SC',
-              height: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CommentEmpty extends StatelessWidget {
-  const _CommentEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.mode_comment_outlined,
-            size: ui(40),
-            color: const Color(0xFFB6B5BB),
-          ),
-          SizedBox(height: ui(10)),
-          Text(
-            '抢沙发吧～',
-            style: TextStyle(
-              color: const Color(0xFFB6B5BB),
-              fontSize: ui(14),
-              fontFamily: 'PingFang SC',
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -399,18 +275,17 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return Padding(
-      padding: EdgeInsets.fromLTRB(ui(16), ui(10), ui(16), ui(10)),
+      padding: const EdgeInsets.all(AppSpace.s12),
       child: Row(
         children: [
           Expanded(
             child: Container(
-              height: ui(40),
-              padding: EdgeInsets.symmetric(horizontal: ui(14)),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F8),
-                borderRadius: BorderRadius.circular(ui(20)),
+              height: AppSize.buttonSm,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceSubtle,
+                borderRadius: AppRadius.br8,
               ),
               alignment: Alignment.centerLeft,
               child: AppTextField(
@@ -418,47 +293,26 @@ class _InputBar extends StatelessWidget {
                 focusNode: focusNode,
                 onSubmitted: (_) => onSend(),
                 textInputAction: TextInputAction.send,
-                cursorColor: const Color(0xFF715EFE),
-                cursorWidth: 1.5,
-                cursorHeight: ui(16),
-                style: TextStyle(
-                  color: const Color(0xFF0B081A),
-                  fontSize: ui(14),
-                  fontFamily: 'PingFang SC',
-                ),
+                cursorColor: AppColors.brand,
+                style: AppText.body14,
                 decoration: InputDecoration(
                   isCollapsed: true,
                   border: InputBorder.none,
-                  hintText: '说点什么…',
-                  hintStyle: TextStyle(
-                    color: const Color(0xFFB6B5BB),
-                    fontSize: ui(14),
-                    fontFamily: 'PingFang SC',
+                  hintText: '写下你的评论',
+                  hintStyle: AppText.body14.copyWith(
+                    color: AppColors.textPlaceholder,
                   ),
                 ),
               ),
             ),
           ),
-          SizedBox(width: ui(10)),
-          GestureDetector(
-            onTap: onSend,
-            child: Container(
-              height: ui(40),
-              padding: EdgeInsets.symmetric(horizontal: ui(20)),
-              decoration: BoxDecoration(
-                color: const Color(0xFF715EFE),
-                borderRadius: BorderRadius.circular(ui(20)),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '发送',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: ui(14),
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w500,
-                ),
-              ),
+          const SizedBox(width: AppSpace.s8),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => AppButton(
+              label: '发送',
+              size: AppButtonSize.sm,
+              onTap: value.text.trim().isEmpty ? null : onSend,
             ),
           ),
         ],

@@ -11,12 +11,9 @@ class HomeworkAssetIcon extends StatelessWidget {
     super.key,
   }) : expand = false;
 
-  const HomeworkAssetIcon.expand(
-    this.asset, {
-    this.colorFilter,
-    super.key,
-  })  : size = null,
-        expand = true;
+  const HomeworkAssetIcon.expand(this.asset, {this.colorFilter, super.key})
+    : size = null,
+      expand = true;
 
   final String asset;
   final double? size;

@@ -2,21 +2,15 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/art/art_tokens.dart';
-import '../../../core/theme/app_font.dart';
+import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
-import '../../../core/widgets/app_text_field.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/art_widgets.dart';
-import '../../../core/widgets/scaled_dialog.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/student_artworks_controller.dart';
-import 'widgets/artwork_widgets.dart';
 
 /// 学生上传作品弹窗；提交成功返回 true。
 Future<bool?> showArtworkUploadDialog(BuildContext context) {
-  return showScaledDialog<bool>(
+  return showAppDialog<bool>(
     context: context,
     barrierDismissible: false,
     builder: (_) => const ArtworkUploadDialog(),
@@ -68,12 +62,13 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
       return;
     }
     if (_hasInput) {
-      final discard = await showConfirmDialog(
+      final discard = await showAppConfirm(
         context: context,
         title: '放弃上传？',
-        content: '已选择的照片和填写的内容不会保存。',
+        message: '已选择的照片和填写的内容不会保存。',
         confirmLabel: '放弃',
         cancelLabel: '继续编辑',
+        danger: true,
       );
       if (!discard || !mounted) {
         return;
@@ -213,7 +208,6 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -221,32 +215,23 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
           _close();
         }
       },
-      child: Dialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 600, maxHeight: maxHeight),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ArtworkDialogHeader(
-                title: '上传作品',
-                subtitle: '老师会逐一点评，全部老师点评完成后可查看分数与评语',
-                onClose: _submitting ? null : _close,
-              ),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                  child: _buildForm(),
-                ),
-              ),
-              _buildFooter(),
-            ],
+      child: AppDialog(
+        title: '上传作品',
+        message: '老师会逐一点评，全部老师点评完成后可查看分数与评语',
+        width: AppSize.dialogWide,
+        actions: [
+          AppButton(
+            label: '取消',
+            variant: AppButtonVariant.secondary,
+            onTap: _submitting ? null : _close,
           ),
-        ),
+          AppButton(
+            label: _submitting ? '提交中' : '提交作品',
+            loading: _submitting,
+            onTap: _submit,
+          ),
+        ],
+        child: _buildForm(),
       ),
     );
   }
@@ -262,8 +247,8 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
               '${_images.length}/${ArtworkRules.imageLimit} · JPG / PNG，单张不超过 20MB',
         ),
         Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: AppSpace.s12,
+          runSpacing: AppSpace.s12,
           children: [
             for (final image in _images)
               _PickedThumb(
@@ -279,108 +264,57 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
               ),
           ],
         ),
-        const SizedBox(height: 18),
-        const _FieldLabel(label: '作品名称'),
-        AppTextField(
+        const SizedBox(height: AppSpace.s20),
+        AppInputField(
           controller: _title,
+          label: '作品名称',
+          required: true,
+          hint: '例如：石膏头像结构练习',
           enabled: enabled,
           maxLength: ArtworkRules.titleLimit,
           textInputAction: TextInputAction.next,
-          style: ArtText.body(),
-          decoration: artworkInputDecoration(hint: '例如：石膏头像结构练习'),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpace.s20),
         const _FieldLabel(label: '科目'),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
+        AppSegmented<String>(
+          segments: [
             for (final subject in _subjects)
-              _ChoicePill(
-                label: subject,
-                selected: _subject == subject,
-                onTap: enabled
-                    ? () => setState(() => _subject = subject)
-                    : null,
-              ),
+              AppSegment(value: subject, label: subject),
           ],
+          value: _subject,
+          enabled: enabled,
+          onChanged: (subject) => setState(() => _subject = subject),
         ),
         if (_subject == _otherSubject) ...[
-          const SizedBox(height: 10),
-          AppTextField(
+          const SizedBox(height: AppSpace.s12),
+          AppInputField(
             controller: _customSubject,
+            hint: '填写科目，如：设计、创作、书法',
             enabled: enabled,
             maxLength: ArtworkRules.subjectLimit,
-            style: ArtText.body(),
-            decoration: artworkInputDecoration(hint: '填写科目，如：设计、创作、书法'),
           ),
         ],
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpace.s20),
         const _FieldLabel(label: '绘画日期'),
         _DateField(date: _date, onTap: enabled ? _pickDate : null),
-        const SizedBox(height: 18),
-        const _FieldLabel(label: '作品说明', hint: '选填'),
-        AppTextField(
+        const SizedBox(height: AppSpace.s20),
+        AppInputField(
           controller: _description,
+          label: '作品说明（选填）',
+          hint: '记录这张画的练习重点或遇到的困难，方便老师有针对性地点评',
           enabled: enabled,
-          maxLength: ArtworkRules.descriptionLimit,
+          multiline: true,
           minLines: 3,
-          maxLines: 6,
-          keyboardType: TextInputType.multiline,
-          style: ArtText.body(),
-          decoration: artworkInputDecoration(
-            hint: '记录这张画的练习重点或遇到的困难，方便老师有针对性地点评',
-            showCounter: true,
-          ),
+          maxLines: 5,
+          maxLength: ArtworkRules.descriptionLimit,
         ),
-      ],
-    );
-  }
-
-  Widget _buildFooter() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_submitting) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: _progress,
-                minHeight: 6,
-                color: ArtColors.brand,
-                backgroundColor: ArtColors.brandWash,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(_progressText, style: ArtText.caption()),
-            const SizedBox(height: 12),
-          ],
-          Row(
-            children: [
-              Expanded(
-                child: ArtButton(
-                  label: '取消',
-                  primary: false,
-                  height: 42,
-                  onTap: _submitting ? null : _close,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ArtButton(
-                  label: _submitting ? '提交中' : '提交作品',
-                  height: 42,
-                  loading: _submitting,
-                  onTap: _submit,
-                ),
-              ),
-            ],
-          ),
+        if (_submitting) ...[
+          const SizedBox(height: AppSpace.s16),
+          AppProgressBar(value: _progress, height: 6),
+          const SizedBox(height: AppSpace.s4),
+          Text(_progressText, style: AppText.caption12),
         ],
-      ),
+      ],
     );
   }
 }
@@ -394,18 +328,18 @@ class _FieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Text(label, style: ArtText.body(weight: AppFont.w500)),
+          Text(label, style: AppText.body14),
           if (hint.isNotEmpty) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpace.s8),
             Expanded(
               child: Text(
                 hint,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: ArtText.caption(),
+                style: AppText.caption12,
               ),
             ),
           ],
@@ -423,6 +357,7 @@ class _PickedThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final remove = onRemove;
     return SizedBox(
       width: 92,
       height: 92,
@@ -430,40 +365,40 @@ class _PickedThumb extends StatelessWidget {
         children: [
           Positioned.fill(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.br8,
               child: Image.memory(
                 image.bytes,
                 fit: BoxFit.cover,
                 cacheWidth: 240,
                 gaplessPlayback: true,
                 errorBuilder: (_, _, _) => const ColoredBox(
-                  color: ArtColors.subtle,
+                  color: AppColors.surfaceSubtle,
                   child: Icon(
                     Icons.broken_image_outlined,
-                    color: ArtColors.ink4,
+                    color: AppColors.textPlaceholder,
                   ),
                 ),
               ),
             ),
           ),
-          if (onRemove != null)
+          if (remove != null)
             Positioned(
-              top: 4,
-              right: 4,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onRemove,
+              top: AppSpace.s4,
+              right: AppSpace.s4,
+              child: AppPressable(
+                onTap: remove,
+                semanticLabel: '移除这张照片',
                 child: Container(
                   width: 22,
                   height: 22,
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
+                    color: AppColors.ink.withValues(alpha: 0.56),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.close_rounded,
                     size: 14,
-                    color: Colors.white,
+                    color: AppColors.onBrand,
                   ),
                 ),
               ),
@@ -482,42 +417,33 @@ class _AddImageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return AppPressable(
       onTap: loading ? null : onTap,
+      enabled: onTap != null,
+      semanticLabel: '添加照片',
       child: Container(
         width: 92,
         height: 92,
         decoration: BoxDecoration(
-          color: ArtColors.brandWash,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: ArtColors.brandLight),
+          color: AppColors.brandWash,
+          borderRadius: AppRadius.br8,
+          border: Border.all(color: AppColors.brandTint),
         ),
         child: loading
-            ? const Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: ArtColors.brand,
-                  ),
-                ),
-              )
+            ? const Center(child: AppLoadingIndicator(size: 24))
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.add_photo_alternate_outlined,
-                    size: 26,
-                    color: onTap == null ? ArtColors.ink4 : ArtColors.brand,
+                    size: 24,
+                    color: AppColors.brand,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpace.s4),
                   Text(
                     '添加照片',
-                    style: ArtText.caption(
-                      size: 11,
-                      color: ArtColors.brandDeep,
+                    style: AppText.caption12.copyWith(
+                      color: AppColors.brandDeep,
                     ),
                   ),
                 ],
@@ -527,46 +453,7 @@ class _AddImageTile extends StatelessWidget {
   }
 }
 
-class _ChoicePill extends StatelessWidget {
-  const _ChoicePill({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? ArtColors.brand : ArtColors.subtle,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? ArtColors.brand : ArtColors.line,
-          ),
-        ),
-        child: Text(
-          label,
-          style: ArtText.body(
-            size: 13,
-            color: selected ? Colors.white : ArtColors.ink2,
-            weight: selected ? AppFont.w500 : AppFont.w400,
-            height: 1.2,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+/// 日期字段：整行可点，外观与下拉选择一致，右侧日历图标。
 class _DateField extends StatelessWidget {
   const _DateField({required this.date, required this.onTap});
 
@@ -575,29 +462,34 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return AppPressable(
       onTap: onTap,
+      enabled: onTap != null,
+      semanticLabel: '选择绘画日期',
       child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        height: AppSize.control,
+        padding: const EdgeInsets.only(
+          left: AppSpace.s12,
+          right: AppSpace.s8,
+        ),
         decoration: BoxDecoration(
-          color: ArtColors.subtle,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: ArtColors.line),
+          color: AppColors.surface,
+          borderRadius: AppRadius.br8,
+          border: Border.all(color: AppColors.line),
         ),
         child: Row(
           children: [
+            Expanded(
+              child: Text(
+                ArtworkRules.ymd(date),
+                style: AppText.number(size: 14),
+              ),
+            ),
             const Icon(
               Icons.calendar_today_outlined,
-              size: 17,
-              color: ArtColors.ink3,
+              size: 16,
+              color: AppColors.textTertiary,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(ArtworkRules.ymd(date), style: ArtText.body()),
-            ),
-            Text('修改', style: ArtText.caption(color: ArtColors.brandDeep)),
           ],
         ),
       ),

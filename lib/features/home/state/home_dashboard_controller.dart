@@ -4,38 +4,64 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_response.dart';
 import '../../../core/network/media_url.dart';
-import '../../../core/providers/app_providers.dart';
-import '../../../core/storage/app_storage.dart';
 import '../../../core/widgets/dashboard_course_notice_card.dart';
+import '../../shell/state/shell_controller.dart';
+import '../../shell/state/shell_state.dart';
 import '../data/home_repository.dart';
 import 'home_dashboard_state.dart';
 
 final homeDashboardControllerProvider =
-    StateNotifierProvider.autoDispose<HomeDashboardController, HomeDashboardState>((ref) {
+    StateNotifierProvider.autoDispose<
+      HomeDashboardController,
+      HomeDashboardState
+    >((ref) {
       final repository = ref.watch(homeRepositoryProvider);
-      final storage = ref.watch(appStorageProvider);
-      return HomeDashboardController(
-        repository: repository,
-        storage: storage,
-      );
+      final role = ref.read(shellControllerProvider).user.role;
+      return HomeDashboardController(repository: repository, initialRole: role);
     });
+
+const _weekdayLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+/// 周条与课程列表对齐：课程列表那天的节数取列表长度，两处显示同一个数。
+List<HomeWeekDayItem> alignWeekWithCourses(
+  List<HomeWeekDayItem> week,
+  List<HomeCourseNotice> courses,
+) {
+  if (week.isEmpty || courses.isEmpty) {
+    return week;
+  }
+  final date = courses.first.date;
+  if (date.isEmpty || courses.any((course) => course.date != date)) {
+    return week;
+  }
+  return [
+    for (final day in week)
+      day.dateText == date ? day.copyWith(courseCount: courses.length) : day,
+  ];
+}
+
+/// 有个人课表的角色：学生、任课老师、班主任。
+bool homeRoleHasTimetable(String role) =>
+    role == 'student' || role == 'teacher' || role == 'headTeacher';
 
 class HomeDashboardController extends StateNotifier<HomeDashboardState> {
   HomeDashboardController({
     required HomeRepository repository,
-    required AppStorage storage,
+    String initialRole = '',
   }) : _repository = repository,
-       _storage = storage,
        super(
          HomeDashboardState(
-           quickActions: buildQuickActions(storage.showMemberContent),
+           role: initialRole,
+           quickActions: buildQuickActions(
+             isStaff: isStaffRole(initialRole),
+             role: initialRole,
+           ),
          ),
        ) {
     unawaited(refresh());
   }
 
   final HomeRepository _repository;
-  final AppStorage _storage;
   bool _refreshInFlight = false;
 
   Future<void> refresh() async {
@@ -45,11 +71,7 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
     _refreshInFlight = true;
     try {
       if (!mounted) return;
-      state = state.copyWith(
-        loading: true,
-        quickActions: buildQuickActions(_storage.showMemberContent),
-        errorMessage: '',
-      );
+      state = state.copyWith(loading: true, errorMessage: '');
 
       final responses = await Future.wait<ApiResponse>([
         _safeRequest(_repository.getMyInfo),
@@ -64,42 +86,41 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
       final latestResponse = responses[2];
       final nextCourseResponse = responses[3];
 
-      final weekItems = await _buildWeekItems(myInfoResponse.data);
+      final role = _extractUser(myInfoResponse.data)['role']?.toString() ?? '';
+      final now = DateTime.now();
+      final weekItems = await _buildWeekItems(role, now);
       if (!mounted) return;
 
       final banners = _parseBanners(bannerResponse.data);
       final newsItems = _parseNews(latestResponse.data);
-      final notices = _parseCourseNotices(nextCourseResponse.data);
+      // 宿管首页显示值班与查寝，不显示班级课程。
+      final notices = role == 'dormManager'
+          ? const <HomeCourseNotice>[]
+          : _parseCourseNotices(nextCourseResponse.data, now);
 
-      final hasAnyData =
-          banners.isNotEmpty ||
-          newsItems.isNotEmpty ||
-          weekItems.isNotEmpty ||
-          notices.isNotEmpty;
-
-      state = state.copyWith(
+      final next = HomeDashboardState(
         loading: false,
+        role: role,
         bannerItems: banners,
+        quickActions: buildQuickActions(
+          isStaff: isStaffRole(role),
+          role: role,
+        ),
         newsItems: newsItems,
-        weekItems: weekItems,
+        weekItems: alignWeekWithCourses(weekItems, notices),
         courseNotices: notices,
-        errorMessage: hasAnyData
+      );
+      final failed = responses.any((response) => !response.isSuccess);
+      state = next.copyWith(
+        errorMessage: next.hasContent || !failed
             ? ''
-            : _firstApiError([
-                myInfoResponse,
-                bannerResponse,
-                latestResponse,
-                nextCourseResponse,
-              ]),
+            : _firstApiError(responses),
       );
     } catch (_) {
       if (!mounted) return;
       state = state.copyWith(
         loading: false,
-        weekItems: state.weekItems.isEmpty
-            ? _emptyWeekItems()
-            : state.weekItems,
-        errorMessage: '',
+        errorMessage: state.hasContent ? '' : '网络异常，请稍后重试',
       );
     } finally {
       _refreshInFlight = false;
@@ -168,14 +189,15 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
           .where((e) => e.isNotEmpty)
           .toList();
 
-      final created = DateTime.tryParse(item['createTime']?.toString() ?? '');
+      final created = DateTime.tryParse(
+        (item['createTime']?.toString() ?? '').replaceFirst(' ', 'T'),
+      );
 
       result.add(
         HomeNewsItem(
           id: _toInt(item['id']),
           title: item['title']?.toString() ?? '',
-          shortTitle:
-              item['shortText1']?.toString() ?? '\u6700\u65b0\u8d44\u8baf',
+          shortTitle: item['shortText1']?.toString() ?? '最新资讯',
           tags: tags,
           viewCount: _toInt(item['viewCount']),
           createTime: created,
@@ -185,7 +207,7 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
     return result;
   }
 
-  List<HomeCourseNotice> _parseCourseNotices(dynamic data) {
+  List<HomeCourseNotice> _parseCourseNotices(dynamic data, DateTime now) {
     final items = <Map<String, dynamic>>[];
     if (data is Map<String, dynamic>) {
       items.add(data);
@@ -196,46 +218,41 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
         }
       }
     }
-    if (items.isEmpty) {
-      return const [];
-    }
 
     final result = <HomeCourseNotice>[];
     for (final item in items) {
       final subject = _extractMap(item['subject']);
       final teacher = _extractMap(item['teacher']);
       final schoolClass = _extractMap(item['schoolClass']);
-      final beginTime = _toTimeText(item['timeBegin']?.toString() ?? '');
-      final endTime = _toTimeText(item['timeEnd']?.toString() ?? '');
-      final subjectName = subject['name']?.toString() ?? '';
-      final teacherName =
-          teacher['realname']?.toString().trim().isNotEmpty == true
-          ? teacher['realname'].toString().trim()
+      final rawBegin = item['timeBegin']?.toString() ?? '';
+      final rawEnd = item['timeEnd']?.toString() ?? '';
+      final beginTime = _toTimeText(rawBegin);
+      final endTime = _toTimeText(rawEnd);
+      final subjectName = subject['name']?.toString().trim() ?? '';
+      final realname = teacher['realname']?.toString().trim() ?? '';
+      final teacherName = realname.isNotEmpty
+          ? realname
           : teacher['nickname']?.toString().trim() ?? '';
-      final className = schoolClass['name']?.toString().trim() ?? '';
-
       if (subjectName.isEmpty || teacherName.isEmpty) {
         continue;
       }
 
-      // 从 timeBegin/timeEnd 计算真实课时时长
-      final durationMinutes = _calcDurationMinutes(
-        item['timeBegin']?.toString() ?? '',
-        item['timeEnd']?.toString() ?? '',
-      );
-      final classLabel = className.isNotEmpty ? className : '课程';
-      final durationText = durationMinutes > 0
-          ? '$durationMinutes分钟·$classLabel'
-          : '45分钟·$classLabel';
+      final durationMinutes = _calcDurationMinutes(rawBegin, rawEnd);
+      final className = schoolClass['name']?.toString().trim() ?? '';
+      final room = item['room']?.toString().trim() ?? '';
+      final description = [
+        if (durationMinutes > 0) '$durationMinutes 分钟',
+        if (className.isNotEmpty) className,
+        if (room.isNotEmpty) room,
+      ].join(' · ');
 
-      // 接口 color 字段作为卡片彩色标记（如 "#fed7aa"）
-      final colorHex = item['color']?.toString();
+      // 接口 color 字段作为课程色（如 "#fed7aa"），白色视为未设置。
+      final colorHex = item['color']?.toString() ?? '';
       final typeRaw = item['type'] ?? item['courseType'] ?? item['classType'];
       final type = typeRaw is int
           ? typeRaw
           : (int.tryParse(typeRaw?.toString() ?? '') ?? 0);
-      final isSmallCourse = type == 1;
-      final avatarRaw = teacher['headUrl']?.toString().trim() ?? '';
+      final date = item['date']?.toString() ?? '';
 
       result.add(
         HomeCourseNotice(
@@ -244,30 +261,32 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
           subjectName: subjectName,
           teacherName: teacherName,
           // 没有教师头像时留空，由课程卡显示姓氏头像，不用班级 / 学校 logo 顶替。
-          teacherAvatar: MediaUrl.resolve(avatarRaw),
-          description: durationText,
-          status: _resolveCourseStatus(item),
-          isSmallCourse: isSmallCourse,
+          teacherAvatar: MediaUrl.resolve(
+            teacher['headUrl']?.toString().trim() ?? '',
+          ),
+          description: description,
+          status: _resolveCourseStatus(now, date, beginTime, endTime),
+          date: date.length >= 10 ? date.substring(0, 10) : date,
+          isSmallCourse: type == 1,
           cardColorHex:
-              (colorHex != null &&
-                  colorHex.isNotEmpty &&
-                  colorHex != '#ffffff' &&
-                  colorHex != '#FFFFFF')
-              ? colorHex
-              : null,
+              colorHex.isEmpty || colorHex.toLowerCase() == '#ffffff'
+              ? null
+              : colorHex,
         ),
       );
     }
-
+    result.sort((a, b) => a.startTime.compareTo(b.startTime));
     return result;
   }
 
-  HomeCourseStatus _resolveCourseStatus(Map<String, dynamic> item) {
-    final date = item['date']?.toString() ?? '';
-    final beginTime = _toTimeText(item['timeBegin']?.toString() ?? '');
-    final endTime = _toTimeText(item['timeEnd']?.toString() ?? '');
+  HomeCourseStatus _resolveCourseStatus(
+    DateTime now,
+    String date,
+    String beginTime,
+    String endTime,
+  ) {
     return switch (resolveDashboardCourseRunStateFromIsoDate(
-      DateTime.now(),
+      now,
       date,
       beginTime,
       endTime,
@@ -285,75 +304,64 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
     return value;
   }
 
-  Future<List<HomeWeekDayItem>> _buildWeekItems(dynamic myInfoData) async {
-    final userMap = _extractUser(myInfoData);
-    final role = userMap['role']?.toString() ?? '';
-    if (role != 'teacher' && role != 'student') {
-      return _emptyWeekItems();
+  /// 本周七天的课程数。学生取学生课表，任课老师与班主任取本人授课课表；
+  /// 宿管、管理员没有个人课表，返回空列表（首页不显示周条）。
+  Future<List<HomeWeekDayItem>> _buildWeekItems(
+    String role,
+    DateTime now,
+  ) async {
+    if (!homeRoleHasTimetable(role)) {
+      return const [];
     }
 
-    final now = DateTime.now();
-    final monday = now.subtract(Duration(days: now.weekday - 1));
-    final sunday = monday.add(const Duration(days: 6));
+    final today = DateTime(now.year, now.month, now.day);
+    final monday = today.subtract(Duration(days: now.weekday - 1));
     final beginDate = _formatDate(monday);
-    final endDate = _formatDate(sunday);
+    final endDate = _formatDate(monday.add(const Duration(days: 6)));
 
     final courseResponse = await _safeRequest(() {
-      if (role == 'teacher') {
-        return _repository.getTeacherCourseList(
+      if (role == 'student') {
+        return _repository.getStudentCourseList(
           beginDate: beginDate,
           endDate: endDate,
         );
       }
-      return _repository.getStudentCourseList(
+      return _repository.getTeacherCourseList(
         beginDate: beginDate,
         endDate: endDate,
       );
     });
 
-    if (courseResponse.code != 0 || courseResponse.data == null) {
-      return _emptyWeekItems();
-    }
-
-    final countsByDate = _courseCountsByDate(courseResponse.data);
-    const weeks = [
-      '\u5468\u4e00',
-      '\u5468\u4e8c',
-      '\u5468\u4e09',
-      '\u5468\u56db',
-      '\u5468\u4e94',
-      '\u5468\u516d',
-      '\u5468\u65e5',
+    final countsByDate = courseResponse.code == 0
+        ? _courseCountsByDate(courseResponse.data)
+        : const <String, int>{};
+    return [
+      for (var i = 0; i < 7; i++)
+        _weekDay(monday.add(Duration(days: i)), today, countsByDate),
     ];
-    final items = <HomeWeekDayItem>[];
-    for (var i = 0; i < 7; i++) {
-      final date = monday.add(Duration(days: i));
-      final dateText = _formatDate(date);
-      final count = countsByDate[dateText] ?? 0;
+  }
 
-      items.add(
-        HomeWeekDayItem(
-          weekText: weeks[i],
-          dayText: '${date.day}',
-          dateText: dateText,
-          courseCount: count,
-          isToday:
-              date.year == now.year &&
-              date.month == now.month &&
-              date.day == now.day,
-        ),
-      );
-    }
-    return items;
+  HomeWeekDayItem _weekDay(
+    DateTime date,
+    DateTime today,
+    Map<String, int> counts,
+  ) {
+    final dateText = _formatDate(date);
+    return HomeWeekDayItem(
+      weekText: _weekdayLabels[date.weekday - 1],
+      dayText: '${date.day}',
+      dateText: dateText,
+      courseCount: counts[dateText] ?? 0,
+      isToday: date == today,
+    );
   }
 
   Map<String, int> _courseCountsByDate(dynamic data) {
     final counts = <String, int>{};
     if (data is Map) {
       for (final entry in data.entries) {
-        final key = entry.key.toString();
         final value = entry.value;
-        counts[key] = value is List ? value.length : 0;
+        counts[entry.key.toString()] = value is List ? value.length : 0;
       }
       return counts;
     }
@@ -367,38 +375,11 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
         if (date.isEmpty) {
           continue;
         }
-        counts[date] = (counts[date] ?? 0) + 1;
+        final day = date.length >= 10 ? date.substring(0, 10) : date;
+        counts[day] = (counts[day] ?? 0) + 1;
       }
     }
     return counts;
-  }
-
-  List<HomeWeekDayItem> _emptyWeekItems() {
-    final now = DateTime.now();
-    final monday = now.subtract(Duration(days: now.weekday - 1));
-    const weeks = [
-      '\u5468\u4e00',
-      '\u5468\u4e8c',
-      '\u5468\u4e09',
-      '\u5468\u56db',
-      '\u5468\u4e94',
-      '\u5468\u516d',
-      '\u5468\u65e5',
-    ];
-
-    return List.generate(7, (index) {
-      final date = monday.add(Duration(days: index));
-      return HomeWeekDayItem(
-        weekText: weeks[index],
-        dayText: '${date.day}',
-        dateText: _formatDate(date),
-        courseCount: 0,
-        isToday:
-            date.year == now.year &&
-            date.month == now.month &&
-            date.day == now.day,
-      );
-    });
   }
 
   String _formatDate(DateTime date) {
@@ -427,7 +408,7 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
         return response.displayMsg;
       }
     }
-    return '';
+    return '请检查网络后重试';
   }
 
   int _toInt(dynamic value) {

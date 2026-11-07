@@ -3,13 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
-import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_toast.dart';
+import '../../../core/ui/ui.dart';
 import '../state/auth_controller.dart';
 import '../state/auth_state.dart';
-import 'widgets/auth_design_canvas.dart';
-import 'widgets/auth_figma_components.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import 'widgets/auth_layout.dart';
+import 'widgets/auth_sms_code_row.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -19,243 +17,138 @@ class RegisterPage extends ConsumerStatefulWidget {
 }
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
+  AuthController get _controller =>
+      ref.read(authControllerProvider(AuthScene.register).notifier);
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider(AuthScene.register));
-    final controller = ref.read(
-      authControllerProvider(AuthScene.register).notifier,
-    );
+    final controller = _controller;
+    final passwordError = state.errorOf(AuthField.password);
 
-    return Scaffold(
-      // 与登录页同理：键盘弹出时不要让 Scaffold 压缩 body 触发 canvas 重缩放。
-      resizeToAvoidBottomInset: false,
-      body: AuthDesignCanvas(
-        builder: (scale) => Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: _s(scale, 691),
-              top: _s(scale, 96),
-              child: AuthBrandLogo(scale: scale),
-            ),
-            Positioned(
-              left: _s(scale, 691),
-              top: _s(scale, 163),
-              width: _s(scale, 399),
-              height: _s(scale, 494),
-              child: AuthFigmaCardFrame(
-                scale: scale,
-                title: '账号注册',
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      left: _s(scale, 17),
-                      top: _s(scale, 100),
-                      width: _s(scale, 365),
-                      height: _s(scale, 45),
-                      child: AuthFigmaInputField(
-                        scale: scale,
-                        hintText: '请输入手机号',
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(11),
-                        ],
-                        prefixIcon: AuthImageIcon(
-                          scale: scale,
-                          asset: AppAssets.authPhone,
-                          width: 20,
-                          height: 20,
-                          leftPadding: 12,
-                        ),
-                        onChanged: controller.setMobile,
-                      ),
-                    ),
-                    Positioned(
-                      left: _s(scale, 17),
-                      top: _s(scale, 166),
-                      width: _s(scale, 240),
-                      height: _s(scale, 45),
-                      child: AuthFigmaInputField(
-                        scale: scale,
-                        hintText: '请输入短信验证码',
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(6),
-                        ],
-                        prefixIcon: AuthImageIcon(
-                          scale: scale,
-                          asset: AppAssets.authCode,
-                          width: 18,
-                          height: 18,
-                          leftPadding: 13,
-                        ),
-                        onChanged: controller.setSmsCode,
-                      ),
-                    ),
-                    Positioned(
-                      left: _s(scale, 265),
-                      top: _s(scale, 166),
-                      width: _s(scale, 117),
-                      height: _s(scale, 45),
-                      child: AuthFigmaSmsButton(
-                        scale: scale,
-                        text: state.isSendingSms
-                            ? '重新获取(${state.smsCountDown})'
-                            : '获取验证码',
-                        enabled: !state.isSendingSms,
-                        onTap: () => _onSendSms(context, controller),
-                      ),
-                    ),
-                    Positioned(
-                      left: _s(scale, 17),
-                      top: _s(scale, 232),
-                      width: _s(scale, 365),
-                      height: _s(scale, 45),
-                      child: AuthFigmaInputField(
-                        scale: scale,
-                        hintText: '请输入密码',
-                        obscureText: true,
-                        prefixIcon: AuthImageIcon(
-                          scale: scale,
-                          asset: AppAssets.authPassword,
-                          width: 17,
-                          height: 17,
-                          leftPadding: 14,
-                        ),
-                        onChanged: controller.setPassword,
-                      ),
-                    ),
-                    Positioned(
-                      left: _s(scale, 312),
-                      top: _s(scale, 288),
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () =>
-                            Navigator.pushNamed(context, RoutePaths.forget),
-                        child: Text(
-                          '忘记密码？',
-                          style: TextStyle(
-                            color: const Color(0xFFB6B5BB),
-                            fontSize: _s(scale, 14),
-                            fontFamily: 'PingFang SC',
-                            fontFamilyFallback: const ['Harmony'],
-                            fontWeight: AppFont.w400,
-                            height: 12 / 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: _s(scale, 20),
-                      top: _s(scale, 323.01),
-                      width: _s(scale, 365),
-                      height: _s(scale, 45),
-                      child: AuthFigmaPrimaryButton(
-                        scale: scale,
-                        text: '立即注册',
-                        loading: state.isSubmitting,
-                        onPressed: () =>
-                            _onRegister(context, controller, state.agreeTerms),
-                      ),
-                    ),
-                    Positioned(
-                      left: _s(scale, 92),
-                      top: _s(scale, 398.01),
-                      child: AuthFigmaAgreementRow(
-                        scale: scale,
-                        checked: state.agreeTerms,
-                        onChanged: controller.setAgreeTerms,
-                        onAgreementTap: () =>
-                            Navigator.pushNamed(context, RoutePaths.xieyi2),
-                      ),
-                    ),
-                    Positioned(
-                      top: _s(scale, 449),
-                      left: _s(scale, 126),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '已有账号？',
-                            style: TextStyle(
-                              color: const Color(0xFF0B081A),
-                              fontSize: _s(scale, 14),
-                              fontFamily: 'PingFang SC',
-                              fontFamilyFallback: const ['Harmony'],
-                              fontWeight: AppFont.w400,
-                              height: 12 / 14,
-                            ),
-                          ),
-                          SizedBox(width: _s(scale, 4)),
-                          GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => Navigator.pushReplacementNamed(
-                              context,
-                              RoutePaths.login,
-                            ),
-                            child: Text(
-                              '立即登录！',
-                              style: TextStyle(
-                                color: const Color(0xFF715EFE),
-                                fontSize: _s(scale, 14),
-                                fontFamily: 'PingFang SC',
-                                fontFamilyFallback: const ['Harmony'],
-                                fontWeight: AppFont.w400,
-                                height: 12 / 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+    return AuthPageFrame(
+      card: AuthCard(
+        title: '账号注册',
+        subtitle: '使用手机号注册美术之路账号',
+        children: [
+          AppIconInputField(
+            icon: Icons.phone_iphone_rounded,
+            hint: '请输入手机号',
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.next,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(11),
+            ],
+            errorText: state.errorOf(AuthField.mobile),
+            onChanged: controller.setMobile,
+          ),
+          const SizedBox(height: AppSpace.s12),
+          AuthSmsCodeRow(
+            state: state,
+            onChanged: controller.setSmsCode,
+            onSend: _onSendSms,
+          ),
+          const SizedBox(height: AppSpace.s12),
+          AppIconInputField(
+            icon: Icons.lock_outline_rounded,
+            hint: '请设置密码',
+            obscureText: true,
+            textInputAction: TextInputAction.next,
+            inputFormatters: [
+              LengthLimitingTextInputFormatter(AuthController.passwordMaxLength),
+            ],
+            errorText: passwordError,
+            onChanged: controller.setPassword,
+          ),
+          if (passwordError == null) ...[
+            const SizedBox(height: AppSpace.s4),
+            Text('密码为 6–20 位，建议同时包含字母和数字', style: AppText.caption12),
           ],
-        ),
+          const SizedBox(height: AppSpace.s12),
+          AppIconInputField(
+            icon: Icons.lock_outline_rounded,
+            hint: '请再次输入密码',
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [
+              LengthLimitingTextInputFormatter(AuthController.passwordMaxLength),
+            ],
+            errorText: state.errorOf(AuthField.confirmPassword),
+            onChanged: controller.setConfirmPassword,
+            onSubmitted: (_) => _onRegister(),
+          ),
+          const SizedBox(height: AppSpace.s20),
+          AppButton(
+            label: '立即注册',
+            expand: true,
+            loading: state.isSubmitting,
+            onTap: _onRegister,
+          ),
+          const SizedBox(height: AppSpace.s12),
+          AuthAgreementRow(
+            checked: state.agreeTerms,
+            onChanged: controller.setAgreeTerms,
+            onOpenTerms: _openTerms,
+          ),
+          const SizedBox(height: AppSpace.s12),
+          AuthSwitchLine(
+            prompt: '已有账号？',
+            action: '立即登录',
+            onTap: _backToLogin,
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _onSendSms(
-    BuildContext context,
-    AuthController controller,
-  ) async {
-    final result = await controller.sendSms();
-    if (!context.mounted) {
-      return;
+  void _backToLogin() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacementNamed(RoutePaths.login);
     }
-    _showMessage(context, result.message);
   }
 
-  Future<void> _onRegister(
-    BuildContext context,
-    AuthController controller,
-    bool agreeTerms,
-  ) async {
-    if (!agreeTerms) {
-      _showMessage(context, '请先阅读并同意服务协议与隐私政策');
+  Future<void> _openTerms(AuthTermsSection section) async {
+    final agreed = await openAuthTerms(context, section);
+    if (agreed && mounted) {
+      _controller.setAgreeTerms(true);
+    }
+  }
+
+  Future<void> _onSendSms() async {
+    final result = await _controller.sendSms();
+    if (!mounted || result.field != null) {
       return;
     }
+    AppToast.show(context, result.message);
+  }
 
-    final result = await controller.submitRegister();
-    if (!context.mounted) {
+  Future<void> _onRegister() async {
+    final controller = _controller;
+    var result = await controller.submitRegister();
+    if (!mounted) {
       return;
     }
-
-    _showMessage(context, result.message);
+    if (result.field == AuthField.terms) {
+      final agreed = await showAuthTermsDialog(context, confirmLabel: '同意并注册');
+      if (!agreed || !mounted) {
+        return;
+      }
+      controller.setAgreeTerms(true);
+      result = await controller.submitRegister();
+      if (!mounted) {
+        return;
+      }
+    }
+    if (result.field != null) {
+      return;
+    }
+    AppToast.show(context, result.message);
     if (result.success) {
       Navigator.pushReplacementNamed(context, RoutePaths.login);
     }
   }
-
-  void _showMessage(BuildContext context, String message) {
-    AppToast.show(context, message);
-  }
-
-  static double _s(double scale, double value) => value * scale;
 }

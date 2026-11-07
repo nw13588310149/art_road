@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/art/art_tokens.dart';
-import '../../../core/theme/app_font.dart';
-import '../../../core/widgets/app_loading_indicator.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/art_widgets.dart';
+import '../../../core/ui/ui.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
@@ -14,7 +10,7 @@ import 'artwork_compare_page.dart';
 import 'widgets/artwork_annotation.dart';
 import 'widgets/artwork_widgets.dart';
 
-/// 学生作品详情：大图（可叠加老师批注、对比范画）、作品信息、最终得分与老师点评。
+/// 学生作品详情：大图（可切换老师批注、对比范画）、最终得分、作品信息与老师点评。
 class StudentArtworkDetailView extends ConsumerStatefulWidget {
   const StudentArtworkDetailView({
     required this.artworkId,
@@ -58,28 +54,24 @@ class _StudentArtworkDetailViewState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ArtPageHeader(
+        AppPageHeader(
           title: work?.title ?? '作品详情',
           subtitle: work == null
               ? null
-              : '${work.subject} · 绘于 ${ArtworkRules.dotDate(work.drawingDate)}',
+              : '${work.subject} · 绘于 ${ArtworkRules.dateText(work.drawingDate)}',
           onBack: widget.onBack,
-          actions: [if (work != null) ArtworkStatusBadge(done: work.reviewed)],
+          actions: [if (work != null) ArtworkStatusTag(done: work.reviewed)],
         ),
         Expanded(
-          child: PageInitLoadingShell(
-            loading: state.loading && detail == null,
-            child: detail == null
-                ? (state.loading
-                      ? const SizedBox.shrink()
-                      : ArtEmptyState(
-                          icon: Icons.image_not_supported_outlined,
-                          message: '作品加载失败',
-                          actionLabel: '重新加载',
-                          onAction: controller.load,
-                        ))
-                : _buildBody(detail),
-          ),
+          child: detail == null
+              ? (state.loading
+                    ? const Center(child: AppLoadingIndicator(size: 36))
+                    : AppErrorState(
+                        title: '作品加载失败',
+                        description: '请检查网络后重试',
+                        onRetry: controller.load,
+                      ))
+              : _buildBody(detail),
         ),
       ],
     );
@@ -92,22 +84,35 @@ class _StudentArtworkDetailViewState
         final info = _InfoColumn(detail: detail);
         if (constraints.maxWidth >= 820) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s4,
+              AppSpace.page,
+              AppSpace.s20,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: imagePanel),
-                const SizedBox(width: 16),
-                SizedBox(width: 340, child: SingleChildScrollView(child: info)),
+                const SizedBox(width: AppSpace.s16),
+                SizedBox(
+                  width: 340,
+                  child: SingleChildScrollView(child: info),
+                ),
               ],
             ),
           );
         }
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.page,
+            AppSpace.s4,
+            AppSpace.page,
+            AppSpace.s24,
+          ),
           children: [
             SizedBox(height: 420, child: imagePanel),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpace.s16),
             info,
           ],
         );
@@ -130,18 +135,21 @@ class _StudentArtworkDetailViewState
         if (review.annotations.any((s) => s.imageIndex == index))
           review.teacherName,
     ];
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF2F3F7),
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return AppCard(
+      color: AppColors.surfaceSubtle,
+      bordered: false,
+      padding: const EdgeInsets.all(AppSpace.s12),
       child: Column(
         children: [
           Row(
             children: [
               if (withAnnotations.isNotEmpty)
-                _AnnotationToggle(
+                AppSegmented<bool>(
+                  size: AppControlSize.sm,
+                  segments: const [
+                    AppSegment(value: false, label: '原图'),
+                    AppSegment(value: true, label: '老师批注'),
+                  ],
                   value: _showAnnotations,
                   onChanged: (value) =>
                       setState(() => _showAnnotations = value),
@@ -152,15 +160,15 @@ class _StudentArtworkDetailViewState
                     detail.work.reviewed ? '老师没有在作品上批注' : '老师的批注会显示在作品上',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: ArtText.caption(),
+                    style: AppText.caption12,
                   ),
                 ),
               const Spacer(),
-              ArtButton(
+              AppButton(
                 label: '对比范画',
-                primary: false,
                 icon: Icons.compare_rounded,
-                height: 32,
+                variant: AppButtonVariant.quiet,
+                size: AppButtonSize.sm,
                 onTap: images.isEmpty
                     ? null
                     : () => openArtworkCompare(
@@ -172,12 +180,13 @@ class _StudentArtworkDetailViewState
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpace.s12),
           Expanded(
             child: images.isEmpty
-                ? const ArtEmptyState(
+                ? const AppEmptyState(
                     icon: Icons.image_outlined,
-                    message: '这份作品没有图片',
+                    title: '这份作品没有图片',
+                    description: '重新上传作品时请至少选择 1 张照片',
                   )
                 : ArtworkAnnotatedImage(
                     url: images[index].url,
@@ -193,17 +202,17 @@ class _StudentArtworkDetailViewState
                     ),
                   ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpace.s8),
           Text(
             _showAnnotations && annotators.isNotEmpty
                 ? '红蓝笔迹为${annotators.join('、')}老师的批注 · 点击图片全屏查看'
                 : '点击图片全屏查看',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: ArtText.caption(size: 11),
+            style: AppText.caption12,
           ),
           if (images.length > 1) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpace.s8),
             ArtworkThumbnailStrip(
               images: images,
               selectedIndex: index,
@@ -211,51 +220,6 @@ class _StudentArtworkDetailViewState
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _AnnotationToggle extends StatelessWidget {
-  const _AnnotationToggle({required this.value, required this.onChanged});
-
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => onChanged(!value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: value ? ArtColors.brand : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: value ? ArtColors.brand : ArtColors.line),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              value ? Icons.visibility_rounded : Icons.visibility_off_outlined,
-              size: 16,
-              color: value ? Colors.white : ArtColors.ink2,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '显示老师批注',
-              style: ArtText.body(
-                size: 13,
-                color: value ? Colors.white : ArtColors.ink2,
-                weight: AppFont.w500,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -269,34 +233,37 @@ class _InfoColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final work = detail.work;
-    final reviewed = detail.reviews.where((r) => r.reviewed).toList();
+    final reviewed = artworkReviewsByTime(
+      detail.reviews.where((r) => r.reviewed),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ScoreCard(detail: detail),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpace.s12),
         _WorkInfoCard(work: work),
-        const SizedBox(height: 18),
-        ArtworkSectionTitle(
+        const SizedBox(height: AppSpace.s20),
+        AppSectionHeader(
           title: '老师点评',
           trailing: Text(
             '${work.reviewedCount}/${work.teacherCount} 位老师已点评',
-            style: ArtText.caption(),
+            style: AppText.caption12,
           ),
         ),
+        const SizedBox(height: AppSpace.s12),
         if (!work.reviewed)
           _PendingNote(teachers: detail.teachers)
         else
-          for (final review in reviewed)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: ArtworkReviewCard(review: review),
-            ),
+          for (var i = 0; i < reviewed.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpace.s8),
+            ArtworkReviewCard(review: reviewed[i]),
+          ],
       ],
     );
   }
 }
 
+/// 最终得分：白底卡片 + 品牌紫大号数字。
 class _ScoreCard extends StatelessWidget {
   const _ScoreCard({required this.detail});
 
@@ -307,76 +274,43 @@ class _ScoreCard extends StatelessWidget {
     final work = detail.work;
     final score = work.finalScore;
     final reviewed = work.reviewed;
-    final fg = reviewed ? Colors.white : ArtColors.ink;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
-      decoration: BoxDecoration(
-        gradient: reviewed ? ArtColors.brandGradient : null,
-        color: reviewed ? null : ArtColors.subtle,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return AppCard(
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  reviewed ? '最终得分' : '等待老师点评',
-                  style: ArtText.caption(
-                    color: reviewed
-                        ? Colors.white.withValues(alpha: 0.85)
-                        : ArtColors.ink3,
-                  ),
-                ),
-                const SizedBox(height: 6),
+                Text(reviewed ? '最终得分' : '等待老师点评', style: AppText.caption12),
+                const SizedBox(height: AppSpace.s4),
                 if (reviewed && score != null)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        ArtworkRules.formatScore(score),
-                        style: ArtText.number(size: 32, color: fg),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '/ ${ArtworkRules.formatScore(work.maxScore)}',
-                        style: ArtText.caption(
-                          size: 13,
-                          color: Colors.white.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ],
+                  ArtworkScore(
+                    score: score,
+                    maxScore: work.maxScore,
+                    size: 32,
+                    color: AppColors.brand,
                   )
                 else
                   Text(
                     reviewed
                         ? '老师没有打分，请查看评语'
                         : '${work.reviewedCount}/${work.teacherCount} 位老师已点评',
-                    style: ArtText.body(color: fg, weight: AppFont.w500),
+                    style: AppText.body14Strong,
                   ),
                 if (reviewed && score != null && work.teacherCount > 1) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpace.s4),
                   Text(
                     '${work.teacherCount} 位老师评分的平均分',
-                    style: ArtText.caption(
-                      size: 11,
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
+                    style: AppText.caption12,
                   ),
                 ],
               ],
             ),
           ),
           Icon(
-            reviewed
-                ? Icons.emoji_events_outlined
-                : Icons.hourglass_top_rounded,
-            size: 34,
-            color: reviewed
-                ? Colors.white.withValues(alpha: 0.75)
-                : ArtColors.warn,
+            reviewed ? Icons.task_alt_rounded : Icons.hourglass_top_rounded,
+            size: 28,
+            color: reviewed ? AppColors.success : AppColors.warning,
           ),
         ],
       ),
@@ -391,35 +325,36 @@ class _WorkInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ArtCard(
-      color: ArtColors.subtle,
-      padding: const EdgeInsets.all(14),
+    return AppCard(
+      color: AppColors.surfaceSubtle,
+      bordered: false,
+      padding: const EdgeInsets.all(AppSpace.s12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: AppSpace.s8,
+            runSpacing: AppSpace.s4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              ArtworkSubjectChip(subject: work.subject),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '绘于 ${ArtworkRules.dotDate(work.drawingDate)}',
-                  style: ArtText.caption(),
-                ),
+              ArtworkSubjectTag(subject: work.subject),
+              Text(
+                '绘于 ${ArtworkRules.dateText(work.drawingDate)}',
+                style: AppText.caption12,
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpace.s8),
           Text(
             '提交于 ${ArtworkRules.shortTime(work.createTime)} · ${work.imageCount} 张照片',
-            style: ArtText.caption(),
+            style: AppText.caption12,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpace.s8),
           Text(
             work.description.isEmpty ? '没有填写作品说明' : work.description,
             style: work.description.isEmpty
-                ? ArtText.caption()
-                : ArtText.body(size: 13, color: ArtColors.ink2, height: 1.6),
+                ? AppText.caption12
+                : AppText.body14,
           ),
         ],
       ),
@@ -434,46 +369,25 @@ class _PendingNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ArtCard(
-      color: ArtColors.subtle,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.lock_clock_outlined,
-                size: 18,
-                color: ArtColors.warn,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  '全部老师点评完成后，即可查看分数、评语和批注',
-                  style: ArtText.body(size: 13, weight: AppFont.w500),
-                ),
-              ),
-            ],
-          ),
-          for (final teacher in teachers) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                ArtAvatar(name: teacher.teacherName, size: 26),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${teacher.teacherName}老师',
-                    style: ArtText.body(size: 13),
-                  ),
-                ),
-                ArtworkStatusBadge(done: teacher.reviewed),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AppNotice(
+          tone: AppTone.warning,
+          icon: Icons.lock_clock_outlined,
+          message: '全部老师点评完成后，即可查看分数、评语和批注',
+        ),
+        for (final teacher in teachers)
+          AppListRow(
+            title: '${teacher.teacherName}老师',
+            leading: AppAvatar(name: teacher.teacherName, size: 28),
+            trailing: ArtworkStatusTag(done: teacher.reviewed),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpace.s4,
+              vertical: AppSpace.s8,
             ),
-          ],
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

@@ -31,7 +31,7 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
     String parentReason = '',
     String teacherReason = '',
   }) {
-    final createdAt = cbRel(created.$1, created.$2);
+    final createdAt = cbPast(created.$1, created.$2);
     final cls = cbHomeClassOf(_p(index));
     return <String, dynamic>{
       'id': id,
@@ -47,16 +47,16 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       'teacherAuditReason': teacherReason,
       'parentAuditTime': status == 0
           ? null
-          : cbDateTime(createdAt.add(const Duration(minutes: 25))),
+          : cbDateTime(createdAt.add(const Duration(minutes: 15))),
       'teacherAuditTime': status >= 3
-          ? cbDateTime(createdAt.add(const Duration(hours: 2)))
+          ? cbDateTime(createdAt.add(const Duration(minutes: 40)))
           : null,
       'createTime': cbDateTime(createdAt),
     };
   }
 
-  String ago(int hours) =>
-      cbDateTime(DateTime.now().subtract(Duration(hours: hours)));
+  String ago(int hours, int minutes) =>
+      cbDateTime(cbAgo(Duration(hours: hours, minutes: minutes)));
   String at(int days, String hm) => cbDateTime(cbRel(days, hm));
   Map<String, dynamic> mirrored(Map<String, dynamic> m) => <String, dynamic>{
     'studentId': _sid(1),
@@ -71,31 +71,31 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
     mirrored(<String, dynamic>{
       'id': '6205',
       'type': 1,
-      'startTime': at(6, '08:00'),
+      'startTime': at(6, '08:30'),
       'endTime': at(7, '21:00'),
-      'leaveDuration': '2天',
+      'leaveDuration': '2 天',
       'leaveReason': '周末回家复查视力并重新配眼镜',
-      'createTime': ago(2),
+      'createTime': ago(2, 14),
       'status': 0,
     }),
     mirrored(<String, dynamic>{
       'id': '6204',
       'type': 0,
       'startTime': at(1, '14:00'),
-      'endTime': at(1, '17:30'),
-      'leaveDuration': '3.5小时',
+      'endTime': at(1, '17:00'),
+      'leaveDuration': '3 小时',
       'leaveReason': '牙疼复诊（兰州市口腔医院），需家长陪同',
-      'createTime': ago(20),
+      'createTime': ago(20, 37),
       'status': 1,
       'parentAuditReason': '已同意，复诊由家长陪同',
-      'parentAuditTime': ago(19),
+      'parentAuditTime': ago(19, 52),
     }),
     mirrored(<String, dynamic>{
       'id': '6203',
       'type': 1,
-      'startTime': at(-5, '08:00'),
+      'startTime': at(-5, '08:30'),
       'endTime': at(-4, '21:00'),
-      'leaveDuration': '2天',
+      'leaveDuration': '2 天',
       'leaveReason': '去西安参加美院校考咨询会',
       'createTime': at(-7, '20:16'),
       'status': 4,
@@ -108,8 +108,8 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       'id': '6202',
       'type': 1,
       'startTime': at(-14, '14:00'),
-      'endTime': at(-14, '17:30'),
-      'leaveDuration': '3.5小时',
+      'endTime': at(-14, '17:00'),
+      'leaveDuration': '3 小时',
       'leaveReason': '回家取冬季衣物和新买的画具',
       'createTime': at(-15, '19:30'),
       'status': 3,
@@ -121,35 +121,35 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
     mirrored(<String, dynamic>{
       'id': '6201',
       'type': 0,
-      'startTime': at(-26, '08:00'),
+      'startTime': at(-26, '08:30'),
       'endTime': at(-26, '21:00'),
-      'leaveDuration': '1天',
+      'leaveDuration': '1 天',
       'leaveReason': '感冒发烧到 38.5℃，去医院就诊输液',
-      'createTime': at(-27, '22:05'),
+      'createTime': at(-27, '20:05'),
       'status': 3,
       'parentAuditReason': '孩子发烧需要休息，家长同意',
-      'parentAuditTime': at(-27, '22:20'),
+      'parentAuditTime': at(-27, '20:20'),
       'teacherAuditReason': '同意请假，注意休息，落下的素描课找李静老师补',
-      'teacherAuditTime': at(-26, '07:30'),
+      'teacherAuditTime': at(-27, '21:10'),
     }),
     leave(
       id: '3100001',
       index: 9,
       type: 1,
-      start: (1, '08:00'),
-      end: (2, '17:30'),
+      start: (1, '08:30'),
+      end: (2, '17:00'),
       duration: '2',
       reason: '家中有事需回老家一趟，周日晚上返校。',
       status: 1,
-      created: (0, '08:12'),
-      parentReason: '同意，周日晚上送他返校。',
+      created: (0, '08:40'),
+      parentReason: '同意，周日晚上送孩子返校。',
     ),
     leave(
       id: '3100002',
       index: 21,
       type: 0,
       start: (0, '14:00'),
-      end: (0, '17:30'),
+      end: (0, '17:00'),
       duration: '0.5',
       reason: '感冒发烧 38.2℃，下午去医院就诊。',
       status: 0,
@@ -160,7 +160,7 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       index: 3,
       type: 1,
       start: (-3, '14:00'),
-      end: (-3, '17:30'),
+      end: (-3, '17:00'),
       duration: '0.5',
       reason: '去考点现场确认校考报名信息。',
       status: 3,
@@ -172,12 +172,12 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       id: '3100004',
       index: 30,
       type: 0,
-      start: (-6, '08:00'),
-      end: (-5, '17:30'),
+      start: (-6, '08:30'),
+      end: (-5, '17:00'),
       duration: '2',
       reason: '急性肠胃炎，医生建议休息两天。',
       status: 3,
-      created: (-6, '07:10'),
+      created: (-7, '20:40'),
       parentReason: '已带孩子就医。',
       teacherReason: '注意休息，作业按时补交。',
     ),
@@ -185,7 +185,7 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       id: '3100005',
       index: 15,
       type: 1,
-      start: (3, '08:00'),
+      start: (3, '08:30'),
       end: (3, '11:30'),
       duration: '0.5',
       reason: '参加校考咨询会。',
@@ -198,12 +198,12 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       id: '3100006',
       index: 36,
       type: 1,
-      start: (5, '08:00'),
+      start: (5, '08:30'),
       end: (6, '21:00'),
       duration: '2',
       reason: '姐姐结婚，需要回家两天。',
       status: 1,
-      created: (-1, '21:30'),
+      created: (-1, '20:50'),
       parentReason: '家长已知晓，周日晚上送回学校。',
     ),
     leave(
@@ -212,7 +212,7 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       type: 0,
       start: (-1, '19:00'),
       end: (-1, '21:00'),
-      duration: '2小时',
+      duration: '2 小时',
       reason: '手腕拉伤，晚自习去校医室处理。',
       status: 3,
       created: (-1, '18:40'),
@@ -223,12 +223,12 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       id: '3100008',
       index: 4,
       type: 0,
-      start: (0, '08:00'),
+      start: (0, '08:30'),
       end: (0, '11:30'),
       duration: '0.5',
       reason: '牙疼去口腔医院复诊。',
       status: 1,
-      created: (0, '07:05'),
+      created: (-1, '20:35'),
       parentReason: '同意，我陪孩子去。',
     ),
     leave(
@@ -236,7 +236,7 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       index: 25,
       type: 1,
       start: (2, '14:00'),
-      end: (2, '17:30'),
+      end: (2, '17:00'),
       duration: '0.5',
       reason: '回户籍所在地办理身份证换证。',
       status: 0,
@@ -246,8 +246,8 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       id: '3100010',
       index: 31,
       type: 1,
-      start: (-2, '08:00'),
-      end: (-2, '17:30'),
+      start: (-2, '08:30'),
+      end: (-2, '17:00'),
       duration: '1',
       reason: '想回家休息一天。',
       status: 2,
@@ -258,12 +258,12 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       id: '3100011',
       index: 8,
       type: 0,
-      start: (0, '08:00'),
-      end: (1, '17:30'),
+      start: (0, '08:30'),
+      end: (1, '17:00'),
       duration: '2',
       reason: '扁桃体发炎，需要输液两天。',
       status: 1,
-      created: (0, '07:30'),
+      created: (-1, '21:00'),
       parentReason: '同意。',
     ),
     leave(
@@ -271,7 +271,7 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       index: 20,
       type: 1,
       start: (-8, '14:00'),
-      end: (-8, '17:30'),
+      end: (-8, '17:00'),
       duration: '0.5',
       reason: '参加美院招生宣讲会。',
       status: 3,
@@ -283,8 +283,8 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       id: '3100013',
       index: 38,
       type: 0,
-      start: (-10, '08:00'),
-      end: (25, '17:30'),
+      start: (-10, '08:30'),
+      end: (25, '17:00'),
       duration: '36',
       reason: '右手腕骨折，申请长假休养。',
       status: 3,
@@ -361,7 +361,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
     required (int, String) created,
     String auditReason = '',
   }) {
-    final createdAt = cbRel(created.$1, created.$2);
+    final createdAt = cbPast(created.$1, created.$2);
     return <String, dynamic>{
       'id': id,
       'teacherUserId': DemoCampusData.staffById(staffId)?.userId ?? '',
@@ -375,7 +375,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       'auditReason': auditReason,
       'auditTime': status == 0
           ? null
-          : cbDateTime(createdAt.add(const Duration(hours: 3))),
+          : cbDateTime(createdAt.add(const Duration(minutes: 50))),
       'createTime': cbDateTime(createdAt),
     };
   }
@@ -385,8 +385,8 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       id: '3200001',
       staffId: 't-1',
       type: 1,
-      start: (4, '08:00'),
-      end: (4, '17:30'),
+      start: (4, '08:30'),
+      end: (4, '17:00'),
       duration: '1',
       reason: '参加省美术联考阅卷培训。',
       handover: '当天素描课请张明远老师代课，石膏头像长期作业照常进行。',
@@ -397,13 +397,13 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       id: '3200002',
       staffId: 't-1',
       type: 0,
-      start: (-12, '08:00'),
-      end: (-11, '17:30'),
+      start: (-12, '08:30'),
+      end: (-11, '17:00'),
       duration: '2',
       reason: '急性肠胃炎，医院建议休息两天。',
       handover: '素描课由刘芳老师代管，作业讲评顺延。',
       status: 1,
-      created: (-12, '07:15'),
+      created: (-13, '20:15'),
       auditReason: '同意，注意休息。',
     ),
     leave(
@@ -411,7 +411,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       staffId: 't-4',
       type: 1,
       start: (-20, '14:00'),
-      end: (-20, '17:30'),
+      end: (-20, '17:00'),
       duration: '0.5',
       reason: '孩子学校召开家长会。',
       handover: '速写课改为默写练习，周强老师巡堂。',
@@ -424,7 +424,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       staffId: 't-3',
       type: 1,
       start: (2, '14:00'),
-      end: (2, '17:30'),
+      end: (2, '17:00'),
       duration: '0.5',
       reason: '带队提前踩点冬季写生基地。',
       handover: '色彩课改为静物默写，王海波老师代管课堂纪律。',
@@ -435,7 +435,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       id: '3200005',
       staffId: 't-6',
       type: 1,
-      start: (-3, '08:00'),
+      start: (-3, '08:30'),
       end: (-3, '21:00'),
       duration: '1',
       reason: '回老家办理房产手续。',
@@ -448,7 +448,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       id: '3200006',
       staffId: 'd-1',
       type: 1,
-      start: (1, '08:00'),
+      start: (1, '08:30'),
       end: (1, '21:00'),
       duration: '1',
       reason: '家中老人住院，需要陪护一天。',
@@ -460,7 +460,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       id: '3200007',
       staffId: 't-8',
       type: 0,
-      start: (-1, '08:00'),
+      start: (-1, '08:30'),
       end: (1, '21:00'),
       duration: '3',
       reason: '腰椎间盘突出复发，医生建议卧床休息。',
@@ -473,8 +473,8 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       id: '3200008',
       staffId: 't-7',
       type: 1,
-      start: (6, '08:00'),
-      end: (6, '17:30'),
+      start: (6, '08:30'),
+      end: (6, '17:00'),
       duration: '1',
       reason: '参加省美协美术理论研讨会。',
       handover: '美术常识课改为自习，复习资料已发到班级群。',
@@ -485,26 +485,26 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       id: '3200009',
       staffId: 't-2',
       type: 0,
-      start: (-30, '08:00'),
-      end: (-29, '17:30'),
+      start: (-30, '08:30'),
+      end: (-29, '17:00'),
       duration: '2',
       reason: '重感冒发烧。',
       handover: '素描课由李静老师代课。',
       status: 1,
-      created: (-30, '07:00'),
+      created: (-31, '20:00'),
       auditReason: '同意。',
     ),
     leave(
       id: '3200010',
       staffId: 'd-1',
       type: 0,
-      start: (-15, '08:00'),
+      start: (-15, '08:30'),
       end: (-15, '21:00'),
       duration: '1',
       reason: '发烧需要就医。',
       handover: '查寝由男生公寓宿管代班。',
       status: 1,
-      created: (-15, '06:50'),
+      created: (-16, '20:50'),
       auditReason: '同意。',
     ),
   ];
@@ -590,11 +590,14 @@ DateTime _unifiedExamDay() {
   return thisYear.isBefore(today) ? firstSunday(today.year + 1) : thisYear;
 }
 
-/// 8101–8108 与学生端 / 宿管端首页的校级通知一致；其余为教务端的督导、
-/// 定时与撤回通知。
+/// 月考三科的考试时间（学生端考试安排、校级通知、班级通知共用）。
+const String cbMonthlyExamTimes =
+    '素描（08:30—11:30）、色彩（14:00—17:00）、速写（19:00—20:00）';
+
+/// 校级通知（学生端、宿管端、老师端、管理端共用一份）。8101–8108 为发给
+/// 学生 / 宿管 / 老师的通知，其余为教务端的督导、定时与撤回通知。
 List<Map<String, dynamic>> _seedNotices() {
-  String ago(int days, int hours) =>
-      cbDateTime(DateTime.now().subtract(Duration(days: days, hours: hours)));
+  String ago(int days, String hm) => cbDateTime(cbPast(-days, hm));
   Map<String, dynamic> published({
     required String id,
     required String title,
@@ -633,8 +636,8 @@ List<Map<String, dynamic>> _seedNotices() {
     required int days,
     String hm = '09:30',
   }) {
-    final at = cbRel(days, hm);
-    final created = status == 2 ? cbRel(0, '08:50') : at;
+    final at = status == 2 ? cbRel(days, hm) : cbPast(days, hm);
+    final created = status == 2 ? cbPast(0, '08:50') : at;
     return <String, dynamic>{
       'id': id,
       'title': title,
@@ -659,20 +662,21 @@ List<Map<String, dynamic>> _seedNotices() {
   final exam = _nextMonthlyExamDay();
   final unified = _unifiedExamDay();
   final examLabel = '${exam.month} 月 ${exam.day} 日（周日）';
-  final days = unified.difference(cbToday()).inDays;
+  final countdownAt = cbPast(-3, '08:50');
+  final days = unified.difference(cbDay(countdownAt)).inDays;
   return [
     published(
       id: '8101',
       title: '${exam.month} 月月考安排',
       content:
-          '$examLabel举行${exam.month} 月月考，科目为素描（08:30—11:30）、色彩（13:30—16:30）、'
-          '速写（17:00—18:00）。请各班于考前一天完成考场布置，考生凭准考证入场，画具自备。',
+          '$examLabel举行${exam.month} 月月考，一天考完：$cbMonthlyExamTimes。'
+          '请各班于考前一天完成考场布置，考生凭准考证入场，画具自备。',
       type: '通知',
       priority: '重要',
       scope: 'student,course_teacher,head_teacher,parent',
       creator: '王敏',
       dept: '教务处',
-      time: ago(0, 3),
+      time: ago(0, '09:10'),
     ),
     published(
       id: '8102',
@@ -685,33 +689,33 @@ List<Map<String, dynamic>> _seedNotices() {
       scope: 'student,course_teacher,head_teacher,dormitory,parent',
       creator: '王敏',
       dept: '后勤保障部',
-      time: ago(1, 2),
+      time: ago(1, '16:20'),
     ),
     published(
       id: '8103',
       title: '黄河岸边色彩写生活动报名',
       content:
           '本周六下午组织色彩写生活动，地点：中山桥—白塔山沿线。请自备水粉工具、小马扎和水桶，'
-          '13:30 在城东校区门口集合乘车，16:30 返校。报名请联系各班班主任。',
+          '13:30 在城东校区门口集合乘车，17:00 返校。报名请联系各班班主任。',
       type: '活动',
       priority: '普通',
       scope: 'student,course_teacher,head_teacher',
       creator: '刘芳',
       dept: '色彩教研组',
-      time: ago(2, 1),
+      time: ago(2, '10:35'),
     ),
     published(
       id: '8104',
       title: '距甘肃省美术统考还有 $days 天',
       content:
           '甘肃省美术与设计类专业统考定于 ${unified.year} 年 ${unified.month} 月 ${unified.day} 日举行。'
-          '冲刺阶段每周六上午安排一次全真模拟考试，请同学们调整作息，保证睡眠，按时归寝。',
+          '冲刺阶段每周六上午安排一次全真模拟考试，请同学们调整作息，保持充足睡眠，按时归寝。',
       type: '通知',
       priority: '重要',
       scope: 'student,course_teacher,head_teacher,parent',
       creator: '王敏',
       dept: '教务处',
-      time: ago(3, 4),
+      time: cbDateTime(countdownAt),
     ),
     published(
       id: '8105',
@@ -724,7 +728,7 @@ List<Map<String, dynamic>> _seedNotices() {
       scope: 'student,dormitory,head_teacher',
       creator: '马红梅',
       dept: '宿管中心',
-      time: ago(4, 2),
+      time: ago(4, '15:40'),
     ),
     published(
       id: '8106',
@@ -737,7 +741,7 @@ List<Map<String, dynamic>> _seedNotices() {
       scope: 'student,head_teacher',
       creator: '吴雨桐',
       dept: '升学指导中心',
-      time: ago(5, 3),
+      time: ago(5, '11:15'),
     ),
     published(
       id: '8107',
@@ -750,20 +754,20 @@ List<Map<String, dynamic>> _seedNotices() {
       scope: 'dormitory',
       creator: '王敏',
       dept: '后勤保障部',
-      time: ago(6, 1),
+      time: ago(6, '17:05'),
     ),
     published(
       id: '8108',
       title: '教学研讨会通知',
       content:
-          '下周二 10:00 在城东校区会议室召开冲刺阶段教学研讨会，议题：模考数据分析、各科提分方案、'
+          '下周二 10:00 在城东校区会议室召开冲刺阶段教学研讨会，议题：模考数据分析、各科训练计划、'
           '校考班课程调整。请各教研组长准备 10 分钟汇报。',
       type: '会议',
       priority: '普通',
       scope: 'course_teacher,head_teacher',
       creator: '王敏',
       dept: '教务处',
-      time: ago(2, 6),
+      time: ago(2, '14:25'),
     ),
     notice(
       id: '3300002',
@@ -884,38 +888,49 @@ List<Map<String, dynamic>> cbSortedNotices() =>
 
 const String cbClassNoticesKey = 'campus_b:class_notices';
 
-/// 每班 5 条班级通知，与学生端「我的班级」一致（同一 id、内容与时间）。
+/// 每班 5 条班级通知；学生端「我的班级」读的也是这一份。
 List<Map<String, dynamic>> _seedClassNotices() {
   final exam = _nextMonthlyExamDay();
   final result = <Map<String, dynamic>>[];
   for (var i = 0; i < DemoCampusData.classes.length; i++) {
     final c = DemoCampusData.classes[i];
     final head = DemoCampusData.staffById(c.headTeacherId);
-    final items = <(String, String, int)>[
+    final afternoon = c.id == '503' ? '14:00 起创作构图课' : '14:00 起色彩写生';
+    final items = <(String, String, int, String)>[
       (
         '本周六模拟考试安排',
-        '本周六 08:30—11:30 在${c.organizationName}考试大厅进行素描模拟考试，14:00 起色彩写生。'
+        '本周六 08:30—11:30 在${c.organizationName}考试大厅进行素描模拟考试，$afternoon。'
             '请携带画板、2B—8B 铅笔、可塑橡皮与水粉工具，提前 15 分钟入场。',
-        2,
+        1,
+        '18:40',
       ),
       (
         '归寝纪律提醒',
-        '近期降温，部分同学晚归。请大家 22:30 前完成人脸打卡，确需晚归须提前在「请假管理」中'
+        '近期降温，部分同学晚归。请大家 22:30 前完成人脸打卡，确需晚归须提前在「我的请假」中'
             '提交申请并告知宿管老师。',
-        26,
+        2,
+        '21:05',
       ),
       (
         '${exam.month} 月月考报名确认',
-        '${exam.month} 月 ${exam.day} 日进行月考，请在本周五前于班级群内接龙确认参考，准考证考前一天统一发放。',
-        50,
+        '${exam.month} 月 ${exam.day} 日（周日）进行月考，一天考完：$cbMonthlyExamTimes。'
+            '请在本周五前于班级群内接龙确认参考，准考证考前一天统一发放。',
+        3,
+        '12:20',
       ),
       (
         '水粉颜料集中采购',
         '色彩组统一采购马利 24 色水粉颜料与白色补充装，需要的同学周四前把名单交给画室管理员，'
             '费用多退少补。',
-        98,
+        5,
+        '16:05',
       ),
-      ('家长开放日通知', '下周日上午 9:00 举行家长开放日，展示近期优秀作品并进行一对一学情沟通，请提前告知家长。', 170),
+      (
+        '家长开放日通知',
+        '下周日上午 9:00 举行家长开放日，展示近期优秀作品并进行一对一学情沟通，请提前告知家长。',
+        8,
+        '10:30',
+      ),
     ];
     for (var n = 0; n < items.length; n++) {
       result.add(<String, dynamic>{
@@ -925,9 +940,7 @@ List<Map<String, dynamic>> _seedClassNotices() {
         'content': items[n].$2,
         'creatorId': head?.userId ?? '',
         'creator': head?.name ?? '',
-        'createTime': cbDateTime(
-          DateTime.now().subtract(Duration(hours: items[n].$3)),
-        ),
+        'createTime': cbDateTime(cbPast(-items[n].$3, items[n].$4)),
       });
     }
   }
@@ -1015,7 +1028,7 @@ List<Map<String, dynamic>> _seedDormMakeups() {
     final day = cbAddDays(cbToday(), -daysAgo);
     final created = cbAt(
       cbAddDays(day, session == 1 ? 1 : 0),
-      session == 1 ? '07:50' : '08:10',
+      session == 1 ? '08:40' : '09:10',
     );
     return <String, dynamic>{
       'id': id,
@@ -1035,7 +1048,7 @@ List<Map<String, dynamic>> _seedDormMakeups() {
   }
 
   return [
-    makeup('5503', 7, 1, 1, '画室加练忘记打卡，22:10 已回寝，室友可以作证', 0),
+    makeup('5503', 7, 2, 1, '画室加练忘记打卡，22:10 已回寝，室友可以作证', 0),
     makeup('5505', 19, 1, 2, '身体不适在寝室休息，未下楼刷脸', 0),
     makeup('5504', 12, 2, 2, '早起去画室占位置，出门前忘记刷脸', 0),
     makeup('5501', 1, 6, 2, '早上人脸识别一直失败，马老师现场确认我在寝室', 0),
@@ -1347,13 +1360,13 @@ const Map<int, List<_Msg>> _chatScripts = {
       '您好，这周进步很明显，结构已经交代清楚了，暗部层次还要再整体一些，周末我请李静老师再单独讲一下。',
       '',
     ),
-    ('parent', -2, '21:10', '太感谢了，辛苦老师们！', ''),
+    ('parent', -2, '21:10', '太感谢了，辛苦老师们。', ''),
     ('parent', 0, '07:45', '老师，周六模拟考试需要家长到场吗？', ''),
   ],
   9: [
     ('parent', -1, '22:40', '老师，孩子刚转过来，晚上给我打电话说睡不着，麻烦您多关注一下。', ''),
     ('teacher', -1, '22:55', '收到，我明天找他聊聊，宿管老师也会多留意他。', ''),
-    ('parent', 0, '08:30', '谢谢老师！这是他周末在家画的静物，麻烦老师看看。', ''),
+    ('parent', 0, '08:30', '谢谢老师，这是孩子周末在家画的静物，麻烦老师看看。', ''),
     ('parent', 0, '08:31', '[图片]', 'asset:assets/demo/art/sketch-still-1.jpg'),
   ],
   21: [

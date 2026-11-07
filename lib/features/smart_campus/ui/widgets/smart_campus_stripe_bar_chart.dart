@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -5,9 +6,9 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 import '../../../shell/ui/shell_layout.dart';
 
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kGridLine = Color(0xFFE6E9F1);
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kGridLine = AppColors.line;
 
 /// 智慧校园通用柱形图数据项（班级工作台「七日查寝」、学生「均分柱形」等共用）。
 class SmartCampusBarChartEntry {
@@ -148,10 +149,7 @@ class SmartCampusStripeBarChart extends StatelessWidget {
         height: chartHeightPx,
         child: Padding(
           padding: EdgeInsets.only(top: topPadding),
-          child: SizedBox(
-            height: nominalContentHeight,
-            child: child,
-          ),
+          child: SizedBox(height: nominalContentHeight, child: child),
         ),
       );
     }
@@ -282,7 +280,6 @@ class SmartCampusStripeBarChart extends StatelessWidget {
                       color: entries[i].labelIsHint
                           ? _kTextHint
                           : _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 20 / 12,
                     ),
@@ -311,7 +308,6 @@ class SmartCampusChartYAxis extends StatelessWidget {
     return TextStyle(
       fontSize: ui(12),
       color: _kTextHint,
-      fontFamily: 'PingFang SC',
       fontWeight: AppFont.w400,
       height: 20 / 12,
     );
@@ -412,7 +408,6 @@ class SmartCampusStripeBarColumn extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextSecondary,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 20 / 12,
                 ),
@@ -589,12 +584,7 @@ class SmartCampusChartGridPainter extends CustomPainter {
 
     var y = tickRowHeight / 2;
     for (var i = 0; i < tickCount - 1; i++) {
-      _paintDashedLine(
-        canvas,
-        Offset(0, y),
-        Offset(size.width, y),
-        paint,
-      );
+      _paintDashedLine(canvas, Offset(0, y), Offset(size.width, y), paint);
       y += tickRowHeight + tickGap;
     }
     final baseline = baselineY(
@@ -602,11 +592,7 @@ class SmartCampusChartGridPainter extends CustomPainter {
       tickGap: tickGap,
       tickCount: tickCount,
     );
-    canvas.drawLine(
-      Offset(0, baseline),
-      Offset(size.width, baseline),
-      paint,
-    );
+    canvas.drawLine(Offset(0, baseline), Offset(size.width, baseline), paint);
   }
 
   static void _paintDashedLine(

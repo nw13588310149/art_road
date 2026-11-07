@@ -34,12 +34,12 @@
 //      · 底部 "备注：…" 12/#B6B5BB。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/dormitory_check_data.dart';
@@ -50,14 +50,14 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardGreyBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kBorderLine = Color(0xFFCECED1);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleSoftBg = Color(0xFFE3DFFF);
+const Color _kPageBg = AppColors.page;
+const Color _kCardGreyBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kBorderLine = AppColors.textTertiary;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSoftBg = AppColors.brandTint;
 
 // =============================================================================
 // 顶级视图
@@ -234,7 +234,6 @@ class _DormManagerCheckByRoomViewState
                 style: TextStyle(
                   fontSize: ui(16),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1.2,
                 ),
@@ -310,7 +309,7 @@ class _Banner extends StatelessWidget {
                 width: ui(32),
                 height: ui(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(8)),
                   border: Border.all(color: _kBorderSoft, width: 1),
                 ),
@@ -318,7 +317,7 @@ class _Banner extends StatelessWidget {
                 child: Icon(
                   Icons.chevron_left_rounded,
                   size: ui(20),
-                  color: const Color(0xFF1C274C),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -334,7 +333,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -453,7 +451,7 @@ class _DormitorySelectFieldState<T> extends State<_DormitorySelectField<T>> {
         width: widget.width,
         height: ui(44),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft, width: 1),
         ),
@@ -469,7 +467,6 @@ class _DormitorySelectFieldState<T> extends State<_DormitorySelectField<T>> {
                   fontSize: ui(14),
                   height: 1.2,
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                 ),
               ),
             ),
@@ -479,7 +476,7 @@ class _DormitorySelectFieldState<T> extends State<_DormitorySelectField<T>> {
               child: Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: ui(22),
-                color: const Color(0xFFC6C6C6),
+                color: AppColors.textPlaceholder,
               ),
             ),
           ],
@@ -502,7 +499,7 @@ class _LoadErrorHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(32), horizontal: ui(16)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -510,11 +507,7 @@ class _LoadErrorHint extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: ui(13),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(13), color: _kTextHint),
           ),
           SizedBox(height: ui(12)),
           InkWell(
@@ -524,7 +517,6 @@ class _LoadErrorHint extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(13),
                 color: _kPurple,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
               ),
             ),
@@ -543,17 +535,13 @@ class _EmptyRoomsHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(32)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Center(
         child: Text(
           '暂无查寝数据',
-          style: TextStyle(
-            fontSize: ui(13),
-            color: _kTextHint,
-            fontFamily: 'PingFang SC',
-          ),
+          style: TextStyle(fontSize: ui(13), color: _kTextHint),
         ),
       ),
     );
@@ -647,7 +635,7 @@ class _RoomCard extends StatelessWidget {
       padding: EdgeInsets.all(ui(12)),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -721,7 +709,6 @@ class _RoomHeader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(14),
                         color: _kTextDark,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w500,
                         height: 1.2,
                       ),
@@ -732,7 +719,6 @@ class _RoomHeader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextDark,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.2,
                       ),
@@ -745,7 +731,6 @@ class _RoomHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -782,7 +767,7 @@ class _CheckInAllButton extends StatelessWidget {
               : const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                  colors: [AppColors.brandSoft, AppColors.brand],
                 ),
           color: disabled ? _kBorderLine : null,
           borderRadius: BorderRadius.circular(ui(8)),
@@ -793,14 +778,17 @@ class _CheckInAllButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.fact_check_outlined, size: ui(18), color: Colors.white),
+            Icon(
+              Icons.fact_check_outlined,
+              size: ui(18),
+              color: AppColors.surface,
+            ),
             SizedBox(width: ui(6)),
             Text(
               '一键打卡',
               style: TextStyle(
                 fontSize: ui(14),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
+                color: AppColors.surface,
                 fontWeight: AppFont.w400,
                 height: 1.2,
               ),
@@ -881,7 +869,6 @@ class _RoomStudentTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.2,
                   ),
@@ -894,7 +881,6 @@ class _RoomStudentTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -924,7 +910,7 @@ class _Avatar extends StatelessWidget {
       width: ui(40),
       height: ui(40),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
         image: url.isNotEmpty
             ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
@@ -938,7 +924,6 @@ class _Avatar extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(16),
                 color: _kPurple,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1.0,
               ),
@@ -997,7 +982,7 @@ class _StatusDropdownState extends State<_StatusDropdown> {
         height: ui(36),
         padding: EdgeInsets.symmetric(horizontal: ui(12)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderLine, width: 1),
         ),
@@ -1009,7 +994,6 @@ class _StatusDropdownState extends State<_StatusDropdown> {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),

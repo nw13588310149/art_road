@@ -12,14 +12,14 @@ import '../data/teacher_repository.dart';
 import 'dormitory_manager_state.dart';
 
 final dormitoryManagerControllerProvider =
-    StateNotifierProvider<DormitoryManagerController, DormitoryManagerState>(
-      (ref) {
-        return DormitoryManagerController(
-          repository: ref.watch(dormitoryRepositoryProvider),
-          teacherRepository: ref.watch(teacherRepositoryProvider),
-        );
-      },
-    );
+    StateNotifierProvider<DormitoryManagerController, DormitoryManagerState>((
+      ref,
+    ) {
+      return DormitoryManagerController(
+        repository: ref.watch(dormitoryRepositoryProvider),
+        teacherRepository: ref.watch(teacherRepositoryProvider),
+      );
+    });
 
 class DormitoryManagerController extends StateNotifier<DormitoryManagerState> {
   DormitoryManagerController({

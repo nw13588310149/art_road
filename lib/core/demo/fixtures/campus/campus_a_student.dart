@@ -1,4 +1,3 @@
-import '../../data/demo_campus_data.dart';
 import '../../demo_accounts.dart';
 import '../../demo_backend.dart';
 import '../../demo_store.dart';
@@ -7,67 +6,20 @@ import 'campus_a_common.dart';
 import 'campus_a_leave.dart';
 import 'campus_a_sign.dart';
 import 'campus_a_study.dart';
+import 'campus_b_records.dart';
 
 /// 学生首页与班级：`index` / `mySchoolClass` / `schoolClassNotice/*` /
 /// `noticeList` / `noticeDetail`。
 abstract final class CampusAStudent {
-  static const _classNoticeKey = 'campusA:classNotices';
-
   static String _readKey(DemoAccount account) =>
       'campusA:read:${account.userId}';
 
   // ── 班级通知 ────────────────────────────────────────────────────────
 
-  static List<Map<String, dynamic>> _classNotices() =>
-      DemoStore.list(_classNoticeKey, _seedClassNotices);
-
-  static List<Map<String, dynamic>> _seedClassNotices() {
-    final exam = CampusA.nextMonthlyExamDay();
-    final list = <Map<String, dynamic>>[];
-    for (var i = 0; i < DemoCampusData.classes.length; i++) {
-      final c = DemoCampusData.classes[i];
-      final head = CampusA.headTeacherOf(c);
-      final items = <(String, String, int)>[
-        (
-          '本周六模拟考试安排',
-          '本周六 08:30—11:30 在${c.organizationName}考试大厅进行素描模拟考试，14:00 起色彩写生。请携带画板、2B—8B 铅笔、可塑橡皮与水粉工具，提前 15 分钟入场。',
-          2,
-        ),
-        (
-          '归寝纪律提醒',
-          '近期降温，部分同学晚归。请大家 22:30 前完成人脸打卡，确需晚归须提前在「请假管理」中提交申请并告知宿管老师。',
-          26,
-        ),
-        (
-          '${exam.month} 月月考报名确认',
-          '${exam.month} 月 ${exam.day} 日进行月考，请在本周五前于班级群内接龙确认参考，准考证考前一天统一发放。',
-          50,
-        ),
-        (
-          '水粉颜料集中采购',
-          '色彩组统一采购马利 24 色水粉颜料与白色补充装，需要的同学周四前把名单交给画室管理员，费用多退少补。',
-          98,
-        ),
-        (
-          '家长开放日通知',
-          '下周日上午 9:00 举行家长开放日，展示近期优秀作品并进行一对一学情沟通，请提前告知家长。',
-          170,
-        ),
-      ];
-      for (var n = 0; n < items.length; n++) {
-        list.add(<String, dynamic>{
-          'id': '83${i + 1}${n + 1}',
-          'classId': c.id,
-          'className': c.name,
-          'title': items[n].$1,
-          'content': items[n].$2,
-          'creator': head.name,
-          'createTime': CampusA.ago(hours: items[n].$3),
-        });
-      }
-    }
-    return list;
-  }
+  /// 与班主任「班级工作台」发布的班级通知同一份。
+  static List<Map<String, dynamic>> _classNotices() => [
+    for (final n in cbClassNotices()) cbClassNoticeJson(n),
+  ];
 
   static List<Map<String, dynamic>> _noticesOf(DemoAccount account) {
     final classId = CampusA.classOf(CampusA.personIndexOf(account)).id;

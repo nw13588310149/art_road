@@ -139,7 +139,7 @@ class QuizSessionController extends StateNotifier<QuizSessionState> {
 
     if (!response.isSuccess) {
       state = state.copyWith(
-        errorMessage: response.msg.isEmpty ? '提交失败' : response.msg,
+        errorMessage: response.msg.isEmpty ? '答案提交失败，请重试' : response.msg,
       );
       return;
     }
@@ -151,7 +151,7 @@ class QuizSessionController extends StateNotifier<QuizSessionState> {
     list[idx] = list[idx].copyWith(userAnswer: answer, status: status);
     state = state.copyWith(questions: list, clearErrorMessage: true);
 
-    // 自动刷题：仅当用户停留在刚刚作答的这道题时才跳——若用户
+    // 自动下一题：仅当用户停留在刚刚作答的这道题时才跳——若用户
     // 已经手动切到下一题，就别再"自动跳"覆盖他的操作。
     if (state.autoNext && state.currentIndex == idx) {
       _autoAdvanceTimer?.cancel();
@@ -165,7 +165,7 @@ class QuizSessionController extends StateNotifier<QuizSessionState> {
   void previousQuestion() {
     final i = state.currentIndex - 1;
     if (i < 0) {
-      state = state.copyWith(errorMessage: '已经是第一题了！');
+      state = state.copyWith(errorMessage: '已经是第 1 题');
       return;
     }
     state = state.copyWith(currentIndex: i, clearErrorMessage: true);
@@ -235,7 +235,7 @@ class QuizSessionController extends StateNotifier<QuizSessionState> {
     state = state.copyWith(summaryAfter: list);
   }
 
-  /// 1.0 中弹窗的"考前密卷/随机练习"切换：当前是 exam 切到 random，否则切到 exam。
+  /// 完成弹窗的「高频考点 / 随机练习」切换：当前是 exam 切到 random，否则切到 exam。
   Future<QuizSessionPageArgs?> switchToRecommended() async {
     final summaries = state.summaryAfter;
     if (summaries.isEmpty) return null;

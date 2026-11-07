@@ -1,18 +1,17 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_response.dart';
-import '../../../core/ui/app_avatar.dart';
-import '../../../core/ui/app_course_card.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../../core/widgets/dashboard_course_notice_card.dart';
 import '../../school/data/school_repository.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../shell/state/shell_state.dart';
 import '../../shell/ui/shell_layout.dart';
+import '../data/campus_format.dart';
 import '../data/course_sign_data.dart';
 import '../data/course_teacher_index_data.dart';
 import '../data/head_teacher_index_data.dart';
@@ -30,11 +29,9 @@ import '../data/teacher_repository.dart';
 import '../state/smart_campus_controller.dart';
 import '../state/smart_campus_state.dart';
 import 'widgets/role_switcher_buttons.dart';
-import 'widgets/smart_campus_avatar_role_badge.dart';
 import 'widgets/smart_campus_home_card.dart';
 import 'widgets/smart_campus_quick_action_icon.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
-import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 part 'student_dashboard.dart';
@@ -247,10 +244,7 @@ class _TeacherDashboardLayoutState
     }
   }
 
-  bool _sameTeacherRoleList(
-    List<SmartCampusRole> a,
-    List<SmartCampusRole> b,
-  ) {
+  bool _sameTeacherRoleList(List<SmartCampusRole> a, List<SmartCampusRole> b) {
     if (identical(a, b)) {
       return true;
     }
@@ -483,8 +477,11 @@ class _TeacherDashboardLayoutState
   }
 
   (String, String) _currentWeekDateRange(DateTime now) {
-    final monday = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: now.weekday - DateTime.monday));
+    final monday = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - DateTime.monday));
     final sunday = monday.add(const Duration(days: 6));
     return (_isoDate(monday), _isoDate(sunday));
   }
@@ -523,9 +520,7 @@ class _TeacherDashboardLayoutState
     final onOpenClassAttendance = _guardedNavOptional(
       widget.onOpenClassAttendance,
     );
-    final onOpenStudentRoster = _guardedNavOptional(
-      widget.onOpenStudentRoster,
-    );
+    final onOpenStudentRoster = _guardedNavOptional(widget.onOpenStudentRoster);
     final onOpenHomeworkReview = _guardedNavOptional(
       widget.onOpenHomeworkReview,
     );
@@ -533,9 +528,7 @@ class _TeacherDashboardLayoutState
     final onOpenMyTeacherLeave = _guardedNavOptional(
       widget.onOpenMyTeacherLeave,
     );
-    final onOpenLeaveApproval = _guardedNavOptional(
-      widget.onOpenLeaveApproval,
-    );
+    final onOpenLeaveApproval = _guardedNavOptional(widget.onOpenLeaveApproval);
     final onOpenDormHistory = _guardedNavOptional(widget.onOpenDormHistory);
     final onOpenHomeSchool = _guardedNavOptional(widget.onOpenHomeSchool);
 
@@ -839,78 +832,50 @@ class _TeacherStatRow extends StatelessWidget {
     if (stats.isEmpty) {
       return const SizedBox.shrink();
     }
-    final ui = DashboardScaleScope.of(context).ui;
-    // 父级（Column / ScrollView）纵向高度通常无界；这里先用 SizedBox 给一个
-    // 有界高度（67），Row 内部就可以安全使用 stretch 让 6 张卡等高铺满。
     return SizedBox(
       width: width.isFinite && width > 0 ? width : null,
-      height: ui(67),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < stats.length; i++) ...[
-            if (i > 0) SizedBox(width: ui(16)),
-            Expanded(child: _TeacherStatCard(item: stats[i])),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < stats.length; i++) ...[
+              if (i > 0) const SizedBox(width: AppSpace.s12),
+              Expanded(child: _TeacherStatCard(item: stats[i])),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
+/// 首页指标：白底描边卡片里放 [AppStatTile]（标签在上、数字在下）；
+/// 「29天」「3.5小时」这类值拆成数字 + 中文单位。
 class _TeacherStatCard extends StatelessWidget {
   const _TeacherStatCard({required this.item});
 
   final SmartCampusStatCardData item;
 
+  static final RegExp _numberWithUnit = RegExp(
+    r'^(\d+(?:\.\d+)?)\s*([\u4e00-\u9fa5%]+)$',
+  );
+
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-
-  // 紫色「下一节 15:30」卡 / 班主任端「待办 9」卡：紫字在上、灰色标签在下。
-    final isNextLesson = item.label == '下一节' || item.label == '待办';
-    final isUnifiedExamCountdown = item.label == '距离省统考';
-    final valueColor = isNextLesson
-        ? const Color(0xFF715EFE)
-        : const Color(0xFF0B081A);
-    final value = smartCampusHomeStatValue(
-      value: item.value,
-      ui: ui,
-      color: valueColor,
-      numberColor: isUnifiedExamCountdown ? const Color(0xFF715EFE) : null,
-      suffixFontSize: isUnifiedExamCountdown
-          ? smartCampusHomeStatChineseFontSize - 4
-          : null,
-    );
-
-    return SmartCampusHomeCard(
-      padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
-      boxShadow: [
-        BoxShadow(
-          color: const Color(0xFF95A6C8).withValues(alpha: 0.07),
-          blurRadius: ui(12),
-          offset: Offset(0, ui(4)),
-        ),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Center(child: value),
-          ),
-          Text(
-            item.label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: ui(12),
-              color: const Color(0xFF6D6B75),
-              fontWeight: FontWeight.w400,
-              height: 1,
-            ),
-          ),
-        ],
+    final match = _numberWithUnit.firstMatch(item.value.trim());
+    final highlight = item.label == '下一节' || item.label == '距离省统考';
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s12,
+        AppSpace.s12,
+        AppSpace.s8,
+        AppSpace.s12,
+      ),
+      child: AppStatTile(
+        label: item.label,
+        value: match == null ? item.value : match.group(1)!,
+        unit: match?.group(2),
+        valueColor: highlight ? AppColors.brand : AppColors.ink,
       ),
     );
   }
@@ -1147,16 +1112,7 @@ class _TeacherSidebar extends StatelessWidget {
         ),
         if (showRoleSwitcher) ...[
           SizedBox(height: ui(20)),
-          Text(
-            '身份切换',
-            style: TextStyle(
-              fontSize: ui(14),
-              height: 1.2,
-              fontWeight: AppFont.w500,
-              color: const Color(0xFF1A1A1A),
-              fontFamily: 'PingFang SC',
-            ),
-          ),
+          Text('身份切换', style: AppText.body14Strong),
           SizedBox(height: ui(10)),
           // 多身份用户（admin / 跨端教师）走通用按钮组；普通「任课老师 +
           // 班主任」仍走原 2 Tab，保留单身份教师本地预览班主任视图的体验。
@@ -1172,16 +1128,7 @@ class _TeacherSidebar extends StatelessWidget {
                 ),
         ],
         SizedBox(height: ui(24)),
-        Text(
-          '校级通知',
-          style: TextStyle(
-            fontSize: ui(16),
-            height: 1.2,
-            fontWeight: AppFont.w500,
-            color: const Color(0xFF1A1A1A),
-            fontFamily: 'PingFang SC',
-          ),
-        ),
+        Text('校级通知', style: AppText.title16),
         SizedBox(height: ui(12)),
         if (fillHeight)
           Expanded(
@@ -1218,113 +1165,60 @@ class _TeacherProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     final profile = data.profile;
     final displayName = shellDisplayName.isNotEmpty
         ? shellDisplayName
         : profile.name;
     final isStudent = data.role == SmartCampusRole.student;
     final isHeadTeacher = data.role == SmartCampusRole.headTeacher;
-    final roleFallback = isStudent
-        ? '学生'
-        : (isHeadTeacher ? '班主任' : '任课老师');
-    final statusLabel = isStudent ? '在校' : '运行中';
-
-    return Stack(
-      clipBehavior: Clip.none,
+    final roleLabel = isStudent ? '学生' : (isHeadTeacher ? '班主任' : '任课老师');
+    final statusLabel = isStudent ? '在校' : '在岗';
+    final name = displayName.isEmpty ? roleLabel : displayName;
+    return Row(
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: ui(72),
-              height: ui(72),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFE3DFFF),
-                image: avatarUrl.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(avatarUrl),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: avatarUrl.isEmpty
-                  ? Center(
-                      child: Text(
-                        displayName.isEmpty
-                            ? roleFallback.characters.first
-                            : displayName.characters.first,
-                        style: TextStyle(
-                          fontSize: ui(28),
-                          height: 1.0,
-                          color: const Color(0xFF715EFE),
-                          fontFamily: 'PingFang SC',
-                          fontWeight: AppFont.w500,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-            SizedBox(width: ui(12)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        AppAvatar(name: name, url: avatarUrl, size: 56),
+        const SizedBox(width: AppSpace.s12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: AppSpace.s8,
+                runSpacing: AppSpace.s4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  SizedBox(height: ui(8)),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          displayName.isEmpty ? roleFallback : displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: ui(16),
-                            height: 1.2,
-                            fontWeight: AppFont.w500,
-                            color: const Color(0xFF0B081A),
-                            fontFamily: 'PingFang SC',
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: ui(6)),
-                      _TeacherStatusChip(
-                        label: statusLabel,
-                        compact: true,
-                      ),
-                    ],
-                  ),
+                  Text(name, style: AppText.title16),
+                  AppTag(label: roleLabel, tone: AppTone.brand),
+                ],
+              ),
+              const SizedBox(height: AppSpace.s4),
+              Row(
+                children: [
+                  AppStatusTag(label: statusLabel, tone: AppTone.success),
                   if (institutionName.trim().isNotEmpty) ...[
-                    SizedBox(height: ui(4)),
-                    Text(
-                      institutionName.trim(),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        height: 1.2,
-                        color: const Color(0xFF6D6B75),
-                        fontFamily: 'Source Han Sans SC',
-                        fontWeight: AppFont.w400,
+                    const SizedBox(width: AppSpace.s8),
+                    Flexible(
+                      child: Text(
+                        institutionName.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption12,
                       ),
                     ),
                   ],
                 ],
               ),
-            ),
-          ],
-        ),
-        SmartCampusAvatarRoleBadge(
-          label: profile.badgeLabel.isNotEmpty ? profile.badgeLabel : roleFallback,
-          role: data.role,
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-class _TeacherProfileInfoRows extends StatelessWidget {
+/// 侧栏资料行：学生写专业方向、擅长科目、宿舍与目标院校；老师写任教科目与
+/// 班级（来自 `teacherRole` / `classList`，班主任另写所带班级）。
+class _TeacherProfileInfoRows extends ConsumerStatefulWidget {
   const _TeacherProfileInfoRows({
     required this.data,
     this.shellUser = const ShellUser(),
@@ -1336,209 +1230,108 @@ class _TeacherProfileInfoRows extends StatelessWidget {
   final String? studentDormBedLabel;
 
   @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final isStudent = data.role == SmartCampusRole.student;
-    final isHeadTeacher = data.role == SmartCampusRole.headTeacher;
-    final infoLines = isStudent
-        ? _studentInfoLines(
-            shellUser,
-            dormBedLabel: studentDormBedLabel,
-          )
-        : (isHeadTeacher
-            ? _headTeacherInfoLines()
-            : _courseTeacherInfoLines());
+  ConsumerState<_TeacherProfileInfoRows> createState() =>
+      _TeacherProfileInfoRowsState();
+}
 
+class _TeacherProfileInfoRowsState
+    extends ConsumerState<_TeacherProfileInfoRows> {
+  String _subject = '';
+  List<String> _teachingClasses = const [];
+  List<String> _headClasses = const [];
+
+  bool get _isStudent => widget.data.role == SmartCampusRole.student;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_isStudent) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadStaffInfo());
+    }
+  }
+
+  Future<void> _loadStaffInfo() async {
+    final repo = ref.read(teacherRepositoryProvider);
+    final results = await Future.wait([
+      repo.teacherRole(),
+      repo.classList(),
+      repo.classList(isHeadTeacher: 1),
+    ]);
+    if (!mounted) return;
+    List<String> names(ApiResponse resp) {
+      final raw = resp.data;
+      final list = raw is List
+          ? raw
+          : (raw is Map ? (raw['records'] ?? raw['list']) : null);
+      if (list is! List) return const [];
+      return [
+        for (final item in list)
+          if (item is Map && (item['name']?.toString() ?? '').isNotEmpty)
+            item['name'].toString(),
+      ];
+    }
+
+    var subject = '';
+    final role = results[0].data;
+    final first = role is List && role.isNotEmpty ? role.first : role;
+    if (first is Map) {
+      subject = first['subjectName']?.toString() ?? '';
+    }
+    setState(() {
+      _subject = subject;
+      _teachingClasses = results[1].isSuccess ? names(results[1]) : const [];
+      _headClasses = results[2].isSuccess ? names(results[2]) : const [];
+    });
+  }
+
+  List<(String, String)> _lines() {
+    String display(String value) => value.trim().isEmpty ? '—' : value.trim();
+    if (_isStudent) {
+      final user = widget.shellUser;
+      return [
+        ('专业方向', display(user.primary)),
+        ('擅长科目', display(user.secondary)),
+        ('性别', display(user.gender)),
+        if (widget.studentDormBedLabel != null)
+          ('宿舍', display(widget.studentDormBedLabel!)),
+        ('目标院校', display(user.targetSchool)),
+      ];
+    }
+    final isHead = widget.data.role == SmartCampusRole.headTeacher;
+    return [
+      if (isHead) ('所带班级', display(_headClasses.join('、'))),
+      ('任教科目', display(_subject)),
+      ('任教班级', display(_teachingClasses.join('、'))),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = _lines();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _TeacherDetailLines(lines: infoLines),
-        if (isStudent) ...[
-          SizedBox(height: ui(12)),
-          _StudentTargetSchoolCard(targetSchool: shellUser.targetSchool),
-        ],
-      ],
-    );
-  }
-}
-
-/// 学生侧栏信息行（来自 myInfo.user + myDormitoryInfo）。
-List<String> _studentInfoLines(
-  ShellUser user, {
-  String? dormBedLabel,
-}) {
-  String display(String value) =>
-      value.trim().isEmpty ? '—' : value.trim();
-  final lines = <String>[
-    '主项：${display(user.primary)}',
-    '副项：${display(user.secondary)}',
-    '性别：${display(user.gender)}',
-  ];
-  if (dormBedLabel != null) {
-    lines.add('宿舍：${display(dormBedLabel)}');
-  }
-  return lines;
-}
-
-class _StudentTargetSchoolCard extends StatelessWidget {
-  const _StudentTargetSchoolCard({required this.targetSchool});
-
-  final String targetSchool;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final value = targetSchool.trim().isEmpty ? '—' : targetSchool.trim();
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(ui(12), ui(8), ui(12), ui(8)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(8)),
-        border: Border.all(color: const Color(0xFFF3F2F3)),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '目标院校  · $value',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: const Color(0xFF0B081A),
-          fontSize: ui(11),
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 12 / 11,
-        ),
-      ),
-    );
-  }
-}
-
-/// 班主任侧栏信息行（不依赖班级接口，对齐管理员「岗位 / 权限 / 职责」结构）。
-List<String> _headTeacherInfoLines() {
-  return const [
-    '岗位：班主任',
-    '权限：本班班务管理',
-    '职责：请假查寝、班务协同与家校沟通',
-  ];
-}
-
-/// 任课老师侧栏信息行（与班主任同一结构，文案按授课场景）。
-List<String> _courseTeacherInfoLines() {
-  return const [
-    '岗位：任课老师',
-    '权限：授课与课堂管理',
-    '职责：教导好每一名学生',
-  ];
-}
-
-class _TeacherStatusChip extends StatelessWidget {
-  const _TeacherStatusChip({required this.label, this.compact = false});
-
-  final String label;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: ui(compact ? 6 : 8),
-        vertical: ui(compact ? 3 : 6),
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(4)),
-        border: Border.all(
-          color: const Color(0xFFF3F2F3),
-          width: compact ? 0.5 : 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: ui(6),
-            height: ui(6),
-            decoration: const BoxDecoration(
-              color: Color(0xFF12C58A),
-              shape: BoxShape.circle,
-            ),
-          ),
-          SizedBox(width: ui(4)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: ui(compact ? 11 : 12),
-              color: const Color(0xFF0B081A),
-              fontWeight: compact ? AppFont.w400 : FontWeight.w400,
-              height: 1.0,
-              fontFamily: compact ? 'PingFang SC' : null,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TeacherDetailLines extends StatelessWidget {
-  const _TeacherDetailLines({required this.lines});
-
-  final List<String> lines;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
         for (var i = 0; i < lines.length; i++) ...[
-          _TeacherDetailLine(line: lines[i]),
-          if (i < lines.length - 1) SizedBox(height: ui(4)),
+          if (i > 0) const SizedBox(height: AppSpace.s4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 64,
+                child: Text(lines[i].$1, style: AppText.caption12),
+              ),
+              Expanded(
+                child: Text(
+                  lines[i].$2,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption12.copyWith(color: AppColors.ink),
+                ),
+              ),
+            ],
+          ),
         ],
-      ],
-    );
-  }
-}
-
-class _TeacherDetailLine extends StatelessWidget {
-  const _TeacherDetailLine({required this.line});
-
-  final String line;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final idx = line.indexOf('：');
-    final label = idx >= 0 ? line.substring(0, idx + 1) : '';
-    final value = idx >= 0 ? line.substring(idx + 1) : line;
-    return Row(
-      children: [
-        if (label.isNotEmpty)
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: ui(12),
-              height: 1.2,
-              color: const Color(0xFFB6B5BB),
-              fontFamily: 'PingFang SC',
-            ),
-          ),
-        Expanded(
-          child: Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: ui(12),
-              height: 1.2,
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -1552,74 +1345,15 @@ class _TeacherRoleTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      children: [
-        Expanded(
-          child: _TeacherRoleTabButton(
-            label: '任课老师',
-            active: selected == SmartCampusRole.teacher,
-            onTap: () => onChanged(SmartCampusRole.teacher),
-          ),
-        ),
-        SizedBox(width: ui(12)),
-        Expanded(
-          child: _TeacherRoleTabButton(
-            label: '班主任',
-            active: selected == SmartCampusRole.headTeacher,
-            onTap: () => onChanged(SmartCampusRole.headTeacher),
-          ),
-        ),
+    return AppSegmented<SmartCampusRole>(
+      expand: true,
+      size: AppControlSize.sm,
+      segments: const [
+        AppSegment(value: SmartCampusRole.teacher, label: '任课老师'),
+        AppSegment(value: SmartCampusRole.headTeacher, label: '班主任'),
       ],
-    );
-  }
-}
-
-class _TeacherRoleTabButton extends StatelessWidget {
-  const _TeacherRoleTabButton({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      borderRadius: BorderRadius.circular(ui(8)),
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
-        decoration: BoxDecoration(
-          gradient: active
-              ? const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
-                )
-              : null,
-          color: active ? null : Colors.white,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: const Color(0xFFF3F2F3)),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: ui(11),
-            color: active ? Colors.white : const Color(0xFF0B081A),
-            fontWeight: FontWeight.w400,
-            height: 12 / 11,
-          ),
-        ),
-      ),
+      value: selected,
+      onChanged: onChanged,
     );
   }
 }
@@ -1695,16 +1429,17 @@ class _TeacherNoticePanelState extends ConsumerState<_TeacherNoticePanel> {
   Future<void> _openNoticeDetail(TeacherNoticeListItem item) async {
     final ApiResponse resp;
     if (widget.role == SmartCampusRole.student) {
-      resp = await ref.read(studentRepositoryProvider).noticeDetail(id: item.id);
+      resp = await ref
+          .read(studentRepositoryProvider)
+          .noticeDetail(id: item.id);
     } else {
-      resp = await ref.read(teacherRepositoryProvider).noticeDetail(id: item.id);
+      resp = await ref
+          .read(teacherRepositoryProvider)
+          .noticeDetail(id: item.id);
     }
     if (!mounted) return;
     if (!resp.isSuccess) {
-      AppToast.show(
-        context,
-        resp.msg.isNotEmpty ? resp.msg : '通知详情加载失败',
-      );
+      AppToast.show(context, resp.msg.isNotEmpty ? resp.msg : '通知详情加载失败');
       return;
     }
     final detail = parseTeacherNoticeDetail(resp.data);
@@ -1724,10 +1459,7 @@ class _TeacherNoticePanelState extends ConsumerState<_TeacherNoticePanel> {
   @override
   Widget build(BuildContext context) {
     if (_usesNoticeApi) {
-      return _TeacherNoticeList(
-        items: _notices,
-        onTap: _openNoticeDetail,
-      );
+      return _TeacherNoticeList(items: _notices, onTap: _openNoticeDetail);
     }
     return _TeacherNoticeFallbackList(notices: widget.fallbackNotices);
   }
@@ -1749,8 +1481,7 @@ class _TeacherNoticeFallbackList extends StatelessWidget {
             '暂无已发布通知',
             style: TextStyle(
               fontSize: ui(12),
-              color: const Color(0xFFB6B5BB),
-              fontFamily: 'PingFang SC',
+              color: AppColors.textPlaceholder,
             ),
           ),
         ),
@@ -1770,10 +1501,7 @@ class _TeacherNoticeFallbackList extends StatelessWidget {
 }
 
 class _TeacherNoticeList extends StatelessWidget {
-  const _TeacherNoticeList({
-    required this.items,
-    required this.onTap,
-  });
+  const _TeacherNoticeList({required this.items, required this.onTap});
 
   final List<TeacherNoticeListItem> items;
   final ValueChanged<TeacherNoticeListItem> onTap;
@@ -1789,8 +1517,7 @@ class _TeacherNoticeList extends StatelessWidget {
             '暂无已发布通知',
             style: TextStyle(
               fontSize: ui(12),
-              color: const Color(0xFFB6B5BB),
-              fontFamily: 'PingFang SC',
+              color: AppColors.textPlaceholder,
             ),
           ),
         ),
@@ -1809,8 +1536,7 @@ class _TeacherNoticeList extends StatelessWidget {
               time: items[i].time,
               tagForeground: items[i].tagStyle.foreground,
               tagBackground: items[i].tagStyle.background,
-              unread: items[i].priority.isNotEmpty &&
-                  items[i].priority != '普通',
+              unread: items[i].priority.isNotEmpty && items[i].priority != '普通',
             ),
             onTap: () => onTap(items[i]),
           ),
@@ -1836,9 +1562,8 @@ class _TeacherSchoolNoticeDetailBody extends StatelessWidget {
         Text(
           notice.title,
           style: TextStyle(
-            fontSize: ui(15),
-            color: const Color(0xFF0B081A),
-            fontFamily: 'PingFang SC',
+            fontSize: ui(16),
+            color: AppColors.ink,
             fontWeight: AppFont.w600,
             height: 1.5,
           ),
@@ -1847,10 +1572,7 @@ class _TeacherSchoolNoticeDetailBody extends StatelessWidget {
         Row(
           children: [
             Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: ui(6),
-                vertical: ui(2),
-              ),
+              padding: EdgeInsets.symmetric(horizontal: ui(6), vertical: ui(2)),
               decoration: BoxDecoration(
                 color: tagStyle.background,
                 borderRadius: BorderRadius.circular(ui(4)),
@@ -1860,7 +1582,6 @@ class _TeacherSchoolNoticeDetailBody extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: tagStyle.foreground,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -1875,8 +1596,7 @@ class _TeacherSchoolNoticeDetailBody extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: ui(12),
-                    color: const Color(0xFF6D6B75),
-                    fontFamily: 'PingFang SC',
+                    color: AppColors.textSecondary,
                     fontWeight: AppFont.w400,
                     height: 1.4,
                   ),
@@ -1901,8 +1621,7 @@ class _TeacherSchoolNoticeDetailBody extends StatelessWidget {
           '内容：',
           style: TextStyle(
             fontSize: ui(13),
-            color: const Color(0xFF6D6B75),
-            fontFamily: 'PingFang SC',
+            color: AppColors.textSecondary,
             fontWeight: AppFont.w400,
             height: 1.4,
           ),
@@ -1912,15 +1631,14 @@ class _TeacherSchoolNoticeDetailBody extends StatelessWidget {
           width: double.infinity,
           padding: EdgeInsets.all(ui(12)),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F6FA),
+            color: AppColors.surfaceSubtle,
             borderRadius: BorderRadius.circular(ui(10)),
           ),
           child: Text(
             notice.content.isEmpty ? '（暂无正文）' : notice.content,
             style: TextStyle(
               fontSize: ui(13),
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
+              color: AppColors.ink,
               fontWeight: AppFont.w400,
               height: 22 / 13,
             ),
@@ -1956,8 +1674,7 @@ class _TeacherNoticeDetailRow extends StatelessWidget {
               '$label：',
               style: TextStyle(
                 fontSize: ui(12),
-                color: const Color(0xFFB6B5BB),
-                fontFamily: 'PingFang SC',
+                color: AppColors.textPlaceholder,
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),
@@ -1968,8 +1685,7 @@ class _TeacherNoticeDetailRow extends StatelessWidget {
               value.isEmpty ? '—' : value,
               style: TextStyle(
                 fontSize: ui(12),
-                color: const Color(0xFF0B081A),
-                fontFamily: 'PingFang SC',
+                color: AppColors.ink,
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),
@@ -1989,81 +1705,44 @@ class _TeacherNoticeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(ui(8)),
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.fromLTRB(ui(10), ui(10), ui(16), ui(10)),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F6FA),
-            borderRadius: BorderRadius.circular(ui(8)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: ui(6),
-                      vertical: ui(2),
-                    ),
-                    decoration: BoxDecoration(
-                      color: item.tagBackground,
-                      borderRadius: BorderRadius.circular(ui(4)),
-                    ),
-                    child: Text(
-                      item.tag,
-                      style: TextStyle(
-                        fontSize: ui(10),
-                        height: 1.2,
-                        fontWeight: AppFont.w500,
-                        color: item.tagForeground,
-                        fontFamily: 'PingFang SC',
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: ui(6)),
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        height: 1.4,
-                        color: const Color(0xFF0B081A),
-                        fontFamily: 'Source Han Sans SC',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: ui(6)),
-              Transform.translate(
-                offset: Offset(0, ui(4)),
-                child: SizedBox(
-                  width: double.infinity,
+    final tone = item.tag.trim() == '紧急' ? AppTone.danger : AppTone.neutral;
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpace.s12),
+        decoration: const BoxDecoration(
+          color: AppColors.surfaceSubtle,
+          borderRadius: AppRadius.br8,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppTag(label: item.tag, tone: tone),
+                const SizedBox(width: AppSpace.s8),
+                Expanded(
                   child: Text(
-                    item.time,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      height: 1.2,
-                      color: const Color(0xFFCECED1),
-                      fontFamily: 'Source Han Sans SC',
-                    ),
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body13.copyWith(color: AppColors.ink),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: AppSpace.s4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                campusListTimeOf(item.time, fallback: item.time),
+                style: AppText.caption12,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -2192,7 +1871,8 @@ class _TeacherScheduleSection extends ConsumerStatefulWidget {
       _TeacherScheduleSectionState();
 }
 
-class _TeacherScheduleSectionState extends ConsumerState<_TeacherScheduleSection> {
+class _TeacherScheduleSectionState
+    extends ConsumerState<_TeacherScheduleSection> {
   _LessonScheduleData? _currentLesson;
   List<_LessonScheduleData> _todayLessons = const [];
   int _scheduleLoadGen = 0;
@@ -2251,11 +1931,10 @@ class _TeacherScheduleSectionState extends ConsumerState<_TeacherScheduleSection
     Widget sectionTitle(String title) => Text(
       title,
       style: TextStyle(
-        fontSize: ui(18),
+        fontSize: ui(16),
         height: 1.2,
-        color: const Color(0xFF1A1A1A),
+        color: AppColors.ink,
         fontWeight: AppFont.w500,
-        fontFamily: 'PingFang SC',
       ),
     );
 
@@ -2284,22 +1963,32 @@ class _TeacherScheduleSectionState extends ConsumerState<_TeacherScheduleSection
     return LayoutBuilder(
       builder: (context, constraints) {
         final cw = constraints.maxWidth;
-        final stackVertically = !cw.isFinite || cw < ui(690);
+        // 两块面板并排至少各需约 280 宽；更窄时上下排列。
+        final stackVertically = !cw.isFinite || cw < ui(560);
 
         if (stackVertically) {
-          return Column(
+          final stacked = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               tappableSectionTitle('当前课程'),
               SizedBox(height: ui(12)),
-              currentPanel,
+              _CurrentLessonPanel(
+                lesson: _currentLesson,
+                onOpenSchedule: widget.onOpenSchedule,
+              ),
               SizedBox(height: ui(16)),
               tappableSectionTitle('今日课表'),
               SizedBox(height: ui(12)),
-              todayPanel,
+              _TodaySchedulePanel(
+                lessons: _todayLessons,
+                onOpenSchedule: widget.onOpenSchedule,
+              ),
             ],
           );
+          return widget.fillRemaining
+              ? SingleChildScrollView(child: stacked)
+              : stacked;
         }
 
         final cardsRow = Row(
@@ -2313,7 +2002,9 @@ class _TeacherScheduleSectionState extends ConsumerState<_TeacherScheduleSection
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: widget.fillRemaining ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisSize: widget.fillRemaining
+              ? MainAxisSize.max
+              : MainAxisSize.min,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2481,7 +2172,8 @@ _ResolvedRowTimes _resolveRowTimes(
       ? lineNumRaw
       : (int.tryParse(lineNumRaw?.toString() ?? '') ?? 0);
 
-  var start = pickCourseClock(
+  var start =
+      pickCourseClock(
         _schedulePickString(row, [
           'courseStartTime',
           'timeBegin',
@@ -2491,7 +2183,8 @@ _ResolvedRowTimes _resolveRowTimes(
         ], ''),
       ) ??
       '';
-  var end = pickCourseClock(
+  var end =
+      pickCourseClock(
         _schedulePickString(row, [
           'courseEndTime',
           'timeEnd',
@@ -2598,12 +2291,8 @@ _LessonRowData _lessonRowFromCourse(
       : (teacher.isNotEmpty ? teacher : '—');
   final avatarSeed = teacher.isNotEmpty ? teacher : displayName;
 
-  var courseColor = isSmall
-      ? const Color(0xFF0CAC40)
-      : const Color(0xFF715EFE);
-  var courseBg = isSmall
-      ? const Color(0xFFDFFCF0)
-      : const Color(0xFFE3DFFF);
+  var courseColor = isSmall ? AppColors.success : AppColors.brand;
+  var courseBg = isSmall ? AppColors.successSoft : AppColors.brandTint;
   var tagDotColor = courseColor;
 
   final hex = _schedulePickString(row, ['color'], '');
@@ -2652,12 +2341,7 @@ List<_DashboardTimeConfig> _parseDashboardTimeConfigs(ApiResponse resp) {
       ], ''),
     );
     final end = _trimDashboardHm(
-      _schedulePickString(m, [
-        'timeEnd',
-        'endTime',
-        'finishTime',
-        'end',
-      ], ''),
+      _schedulePickString(m, ['timeEnd', 'endTime', 'finishTime', 'end'], ''),
     );
     if (start.isEmpty || end.isEmpty) continue;
     list.add(_DashboardTimeConfig(lineNum: lineNum, start: start, end: end));
@@ -2776,7 +2460,7 @@ class _CurrentLessonPanel extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(ui(12), ui(12), ui(12), ui(12)),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF95A6C8).withValues(alpha: 0.08),
+          color: AppColors.textTertiary.withValues(alpha: 0.08),
           blurRadius: ui(14),
           offset: Offset(0, ui(6)),
         ),
@@ -2788,10 +2472,7 @@ class _CurrentLessonPanel extends StatelessWidget {
                 text: '暂无当前课程',
                 matchLessonCardHeight: true,
               )
-            : _TappableLessonCard(
-                data: lesson!,
-                onTap: onTap,
-              ),
+            : _TappableLessonCard(data: lesson!, onTap: onTap),
       ),
     );
     return fillHeight ? SizedBox.expand(child: panel) : panel;
@@ -2816,7 +2497,7 @@ class _TodaySchedulePanel extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(ui(12), ui(12), ui(12), ui(12)),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF95A6C8).withValues(alpha: 0.08),
+          color: AppColors.textTertiary.withValues(alpha: 0.08),
           blurRadius: ui(14),
           offset: Offset(0, ui(6)),
         ),
@@ -2857,10 +2538,7 @@ class _TodaySchedulePanel extends StatelessWidget {
 }
 
 class _TappableLessonCard extends StatelessWidget {
-  const _TappableLessonCard({
-    required this.data,
-    this.onTap,
-  });
+  const _TappableLessonCard({required this.data, this.onTap});
 
   final _LessonScheduleData data;
   final VoidCallback? onTap;
@@ -2907,7 +2585,7 @@ class _LessonEmptyHint extends StatelessWidget {
           ? null
           : EdgeInsets.symmetric(vertical: ui(36)),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
+        color: AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       alignment: Alignment.center,
@@ -2915,7 +2593,7 @@ class _LessonEmptyHint extends StatelessWidget {
         text,
         style: TextStyle(
           fontSize: ui(13),
-          color: const Color(0xFF9A99A1),
+          color: AppColors.textTertiary,
           fontWeight: FontWeight.w400,
           height: 1.2,
         ),
@@ -2978,8 +2656,8 @@ class _BoardItemData {
   final Color tagBackground;
 }
 
-const Color _kBoardTagPurple = Color(0xFF715EFE);
-const Color _kBoardTagPurpleSoft = Color(0xFFD7D5FF);
+const Color _kBoardTagPurple = AppColors.brand;
+const Color _kBoardTagPurpleSoft = AppColors.brandTint;
 
 class _HeadTeacherBoardSection extends StatelessWidget {
   const _HeadTeacherBoardSection({
@@ -3002,18 +2680,18 @@ class _HeadTeacherBoardSection extends StatelessWidget {
     Widget sectionTitle(String title) => Text(
       title,
       style: TextStyle(
-        fontSize: ui(18),
+        fontSize: ui(16),
         height: 1.2,
-        color: const Color(0xFF1A1A1A),
+        color: AppColors.ink,
         fontWeight: AppFont.w500,
-        fontFamily: 'PingFang SC',
       ),
     );
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final cw = constraints.maxWidth;
-        final stackVertically = !cw.isFinite || cw < ui(690);
+        // 两块面板并排至少各需约 280 宽；更窄时上下排列。
+        final stackVertically = !cw.isFinite || cw < ui(560);
 
         if (stackVertically) {
           return Column(
@@ -3030,10 +2708,7 @@ class _HeadTeacherBoardSection extends StatelessWidget {
               SizedBox(height: ui(16)),
               sectionTitle('近期动态'),
               SizedBox(height: ui(12)),
-              _BoardPanel(
-                items: recentItems,
-                emptyHint: '暂无近期动态',
-              ),
+              _BoardPanel(items: recentItems, emptyHint: '暂无近期动态'),
             ],
           );
         }
@@ -3050,10 +2725,7 @@ class _HeadTeacherBoardSection extends StatelessWidget {
             ),
             SizedBox(width: ui(16)),
             Expanded(
-              child: _BoardPanel(
-                items: recentItems,
-                emptyHint: '暂无近期动态',
-              ),
+              child: _BoardPanel(items: recentItems, emptyHint: '暂无近期动态'),
             ),
           ],
         );
@@ -3100,7 +2772,7 @@ class _BoardPanel extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(ui(12), ui(12), ui(12), ui(12)),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF95A6C8).withValues(alpha: 0.08),
+          color: AppColors.textTertiary.withValues(alpha: 0.08),
           blurRadius: ui(14),
           offset: Offset(0, ui(6)),
         ),
@@ -3139,7 +2811,7 @@ class _BoardItemCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(ui(16), ui(14), ui(16), ui(16)),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
+        color: AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -3158,7 +2830,7 @@ class _BoardItemCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: ui(14),
-                    color: const Color(0xFF0B081A),
+                    color: AppColors.ink,
                     fontWeight: FontWeight.w600,
                     height: 1.2,
                   ),
@@ -3214,8 +2886,8 @@ List<InlineSpan> _splitBoardTime(String time, double Function(double) ui) {
       TextSpan(
         text: time,
         style: TextStyle(
-          fontSize: ui(18),
-          color: const Color(0xFF1A1A1A),
+          fontSize: ui(16),
+          color: AppColors.ink,
           fontWeight: FontWeight.w600,
           height: 1,
         ),
@@ -3228,8 +2900,8 @@ List<InlineSpan> _splitBoardTime(String time, double Function(double) ui) {
     TextSpan(
       text: '$start ',
       style: TextStyle(
-        fontSize: ui(18),
-        color: const Color(0xFF1A1A1A),
+        fontSize: ui(16),
+        color: AppColors.ink,
         fontWeight: FontWeight.w600,
         height: 1,
       ),
@@ -3237,8 +2909,8 @@ List<InlineSpan> _splitBoardTime(String time, double Function(double) ui) {
     TextSpan(
       text: '- ',
       style: TextStyle(
-        fontSize: ui(18),
-        color: const Color(0xFFB6B5BB),
+        fontSize: ui(16),
+        color: AppColors.textPlaceholder,
         fontWeight: FontWeight.w600,
         height: 1,
       ),
@@ -3246,8 +2918,8 @@ List<InlineSpan> _splitBoardTime(String time, double Function(double) ui) {
     TextSpan(
       text: end,
       style: TextStyle(
-        fontSize: ui(18),
-        color: const Color(0xFF0B081A),
+        fontSize: ui(16),
+        color: AppColors.ink,
         fontWeight: FontWeight.w600,
         height: 1,
       ),

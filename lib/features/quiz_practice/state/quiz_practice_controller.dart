@@ -37,7 +37,7 @@ class QuizPracticeController extends StateNotifier<QuizPracticeState> {
       state = state.copyWith(
         loading: false,
         summaries: _fallbackSummaries(),
-        errorMessage: response.msg.isEmpty ? '加载刷题数据失败' : response.msg,
+        errorMessage: response.msg.isEmpty ? '题库数据加载失败' : response.msg,
       );
       return;
     }
@@ -77,7 +77,7 @@ class QuizPracticeController extends StateNotifier<QuizPracticeState> {
       if (!mounted) return null;
       if (!response.isSuccess) {
         state = state.copyWith(
-          errorMessage: response.msg.isEmpty ? '生成新题库失败' : response.msg,
+          errorMessage: response.msg.isEmpty ? '新一轮题目生成失败，请稍后重试' : response.msg,
         );
         return null;
       }

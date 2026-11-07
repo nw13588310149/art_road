@@ -1,5 +1,6 @@
 import '../demo_backend.dart';
 import 'content_cloud_drive.dart';
+import 'content_ebooks.dart';
 import 'content_favorites.dart';
 import 'content_home.dart';
 import 'content_news.dart';
@@ -17,4 +18,5 @@ void registerContentFixtures(DemoRouter platform) {
   registerContentCloudDriveFixtures(platform);
   registerContentFavoriteFixtures(platform);
   registerContentNoteFixtures(platform);
+  registerEbookFixtures(platform);
 }

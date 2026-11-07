@@ -1,6 +1,6 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../circle/ui/circle_page.dart';
@@ -108,7 +108,8 @@ class SmartCampusCircleEntry extends ConsumerStatefulWidget {
       _SmartCampusCircleEntryState();
 }
 
-class _SmartCampusCircleEntryState extends ConsumerState<SmartCampusCircleEntry> {
+class _SmartCampusCircleEntryState
+    extends ConsumerState<SmartCampusCircleEntry> {
   bool _didOpen = false;
 
   @override
@@ -504,24 +505,16 @@ class _SmartCampusPageBody extends ConsumerWidget {
         return buildSchoolCircleRoute();
       }
       if (state.mainView == SmartCampusMainView.dormCheckByRoom) {
-        return DormManagerCheckByRoomView(
-          onBack: controller.backToDashboard,
-        );
+        return DormManagerCheckByRoomView(onBack: controller.backToDashboard);
       }
       if (state.mainView == SmartCampusMainView.dormHistory) {
-        return DormManagerCheckHistoryView(
-          onBack: controller.backToDashboard,
-        );
+        return DormManagerCheckHistoryView(onBack: controller.backToDashboard);
       }
       if (state.mainView == SmartCampusMainView.dormCheckInManagement) {
-        return DormManagerCheckInView(
-          onBack: controller.backToDashboard,
-        );
+        return DormManagerCheckInView(onBack: controller.backToDashboard);
       }
       if (state.mainView == SmartCampusMainView.dormMakeupAudit) {
-        return DormManagerMakeupAuditView(
-          onBack: controller.backToDashboard,
-        );
+        return DormManagerMakeupAuditView(onBack: controller.backToDashboard);
       }
       // 宿管端「查寝动态」：按班级查看住宿生查寝状态与补卡审核。
       if (state.mainView == SmartCampusMainView.dormDynamic) {
@@ -575,7 +568,7 @@ class _SmartCampusPlaceholder extends StatelessWidget {
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       padding: EdgeInsets.all(ui(24)),
@@ -585,10 +578,9 @@ class _SmartCampusPlaceholder extends StatelessWidget {
           Text(
             '智慧校园',
             style: TextStyle(
-              fontSize: ui(28),
+              fontSize: ui(24),
               fontWeight: AppFont.w600,
-              color: const Color(0xFF0B081A),
-              fontFamily: 'PingFang SC',
+              color: AppColors.ink,
             ),
           ),
           SizedBox(height: ui(12)),
@@ -596,8 +588,7 @@ class _SmartCampusPlaceholder extends StatelessWidget {
             '当前角色暂未接入完整视图，先保留角色切换和基础入口，避免影响其他页面开发。',
             style: TextStyle(
               fontSize: ui(14),
-              color: const Color(0xFF788698),
-              fontFamily: 'PingFang SC',
+              color: AppColors.textSecondary,
               height: 1.5,
             ),
           ),
@@ -620,9 +611,9 @@ class _SmartCampusPlaceholder extends StatelessWidget {
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFFF7F8FC),
+                color: AppColors.surfaceSubtle,
                 borderRadius: BorderRadius.circular(ui(16)),
-                border: Border.all(color: const Color(0xFFE8EBF3)),
+                border: Border.all(color: AppColors.line),
               ),
               padding: EdgeInsets.all(ui(24)),
               child: Column(
@@ -643,10 +634,9 @@ class _SmartCampusPlaceholder extends StatelessWidget {
                   Text(
                     '说明',
                     style: TextStyle(
-                      fontSize: ui(18),
+                      fontSize: ui(16),
                       fontWeight: AppFont.w600,
-                      color: const Color(0xFF0B081A),
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.ink,
                     ),
                   ),
                   SizedBox(height: ui(10)),
@@ -654,8 +644,7 @@ class _SmartCampusPlaceholder extends StatelessWidget {
                     '老师 / 班主任端首页与「班级工作台」已接入完整视图；学生 / 宿管 / 管理员端仍为骨架占位，按 Figma 节点重建后再上线。',
                     style: TextStyle(
                       fontSize: ui(14),
-                      color: const Color(0xFF5F6B7B),
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.textSecondary,
                       height: 1.65,
                     ),
                   ),
@@ -769,8 +758,7 @@ class _RoleChip extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(14),
             fontWeight: AppFont.w500,
-            color: active ? Colors.white : const Color(0xFF5F6B7B),
-            fontFamily: 'PingFang SC',
+            color: active ? AppColors.surface : AppColors.textSecondary,
           ),
         ),
       ),
@@ -793,20 +781,15 @@ class _InfoRow extends StatelessWidget {
           width: ui(84),
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: ui(14),
-              color: const Color(0xFF788698),
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(14), color: AppColors.textSecondary),
           ),
         ),
         Text(
           value,
           style: TextStyle(
-            fontSize: ui(15),
-            color: const Color(0xFF0B081A),
+            fontSize: ui(16),
+            color: AppColors.ink,
             fontWeight: AppFont.w500,
-            fontFamily: 'PingFang SC',
           ),
         ),
       ],

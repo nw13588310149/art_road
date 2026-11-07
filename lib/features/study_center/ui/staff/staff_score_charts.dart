@@ -2,15 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/art/art_subject.dart';
 import '../../../../core/art/art_tokens.dart';
-import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 import '../widgets/study_common.dart';
 
-/// 班级成绩指标：参考人数 / 平均分 / 最高分 / 最低分 / 中位数 / 满分。
+/// 班级成绩指标：参考人数 / 平均分 / 最高分 / 最低分 / 中位数 / 满分，数字统一墨色。
 class StaffStatTiles extends StatelessWidget {
   const StaffStatTiles({
     required this.summary,
@@ -24,35 +22,41 @@ class StaffStatTiles extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tiles = [
-      StudyStatTile(label: '参考人数', value: '${summary.count}', unit: '人'),
-      StudyStatTile(
+      AppStatTile(
+        label: '参考人数',
+        value: '${summary.count}',
+        unit: '人',
+        boxed: true,
+      ),
+      AppStatTile(
         label: '平均分',
         value: formatScore(summary.average),
         unit: '分',
-        color: ArtColors.brandDeep,
+        boxed: true,
       ),
-      StudyStatTile(
+      AppStatTile(
         label: '最高分',
         value: formatScore(summary.max),
         unit: '分',
-        color: ArtColors.up,
+        boxed: true,
       ),
-      StudyStatTile(
+      AppStatTile(
         label: '最低分',
         value: formatScore(summary.min),
         unit: '分',
-        color: ArtColors.down,
+        boxed: true,
       ),
-      StudyStatTile(
+      AppStatTile(
         label: '中位数',
         value: formatScore(summary.median),
         unit: '分',
+        boxed: true,
       ),
-      StudyStatTile(
+      AppStatTile(
         label: '满分',
         value: formatScore(fullScore),
         unit: '分',
-        color: ArtColors.ink2,
+        boxed: true,
       ),
     ];
     return LayoutBuilder(
@@ -60,7 +64,7 @@ class StaffStatTiles extends StatelessWidget {
         final columns = constraints.maxWidth >= 760
             ? 6
             : (constraints.maxWidth >= 460 ? 3 : 2);
-        const gap = 12.0;
+        const gap = AppSpace.s12;
         final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
         return Wrap(
           spacing: gap,
@@ -74,11 +78,11 @@ class StaffStatTiles extends StatelessWidget {
   }
 }
 
-/// 分数段柱状图：按档位着色，柱顶标注人数。
+/// 分数段柱状图：柱顶标注人数，静态绘制。
 class ScoreDistributionChart extends StatelessWidget {
   const ScoreDistributionChart({
     required this.buckets,
-    this.color = ArtColors.brand,
+    this.color = AppColors.brand,
     super.key,
   });
 
@@ -88,67 +92,53 @@ class ScoreDistributionChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (buckets.isEmpty || buckets.every((bucket) => bucket.count == 0)) {
-      return const ArtEmptyState(
-        message: '暂无分数数据',
+      return const AppEmptyState(
         icon: Icons.bar_chart_rounded,
+        title: '暂无分数数据',
+        description: '本场考试出分后会按分数段统计人数',
       );
     }
-    final signature = buckets.map((b) => '${b.label}:${b.count}').join(',');
-    return TweenAnimationBuilder<double>(
-      key: ValueKey<String>(signature),
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 700),
-      curve: Curves.easeOutCubic,
-      builder: (context, progress, _) => CustomPaint(
-        size: Size.infinite,
-        painter: _DistributionPainter(
-          buckets: buckets,
-          color: color,
-          progress: progress,
-        ),
-      ),
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _DistributionPainter(buckets: buckets, color: color),
     );
   }
 }
 
 class _DistributionPainter extends CustomPainter {
-  _DistributionPainter({
-    required this.buckets,
-    required this.color,
-    required this.progress,
-  });
+  _DistributionPainter({required this.buckets, required this.color});
 
   final List<ScoreBucket> buckets;
   final Color color;
-  final double progress;
 
-  static const _padLeft = 30.0;
-  static const _padRight = 6.0;
-  static const _padTop = 24.0;
-  static const _padBottom = 42.0;
+  static const _padLeft = 28.0;
+  static const _padRight = 4.0;
+  static const _padTop = 22.0;
+  static const _labelGap = 6.0;
+  static const _lineHeight = 16.0;
 
-  static const _axisStyle = TextStyle(
-    fontSize: 11,
-    height: 1.2,
-    color: ArtColors.ink3,
-    fontFamily: 'Manrope',
+  static final _axisStyle = AppText.number(
+    size: 12,
+    color: AppColors.textTertiary,
   );
-  static const _rangeStyle = TextStyle(
-    fontSize: 10,
-    height: 1.2,
-    color: ArtColors.ink4,
-    fontFamily: 'Manrope',
+
+  bool get _withRanges => buckets.any(
+    (bucket) => bucket.grade.isNotEmpty && bucket.rangeLabel.isNotEmpty,
   );
 
   @override
   void paint(Canvas canvas, Size size) {
+    final padBottom =
+        _labelGap + _lineHeight + (_withRanges ? _lineHeight : 0) + 2;
     final plot = Rect.fromLTRB(
       _padLeft,
       _padTop,
       size.width - _padRight,
-      size.height - _padBottom,
+      size.height - padBottom,
     );
-    if (plot.width <= 0 || plot.height <= 0) return;
+    if (plot.width <= 0 || plot.height <= 0) {
+      return;
+    }
 
     final maxCount = buckets.fold<int>(0, (m, b) => math.max(m, b.count));
     final axis = niceAxis(
@@ -158,7 +148,7 @@ class _DistributionPainter extends CustomPainter {
       floor: 0,
     );
     final grid = Paint()
-      ..color = ArtColors.line
+      ..color = AppColors.lineSoft
       ..strokeWidth = 1;
     for (final tick in axis.ticks) {
       final y = plot.bottom - axis.fraction(tick) * plot.height;
@@ -172,16 +162,13 @@ class _DistributionPainter extends CustomPainter {
     }
 
     final slot = plot.width / buckets.length;
-    final barWidth = math.min(46.0, slot * 0.58);
-    final radius = Radius.circular(math.min(7.0, barWidth / 3));
+    final barWidth = math.min(44.0, slot * 0.56);
+    final radius = Radius.circular(math.min(4.0, barWidth / 4));
+    final barPaint = Paint()..color = color;
     for (var i = 0; i < buckets.length; i++) {
       final bucket = buckets[i];
       final centerX = plot.left + slot * (i + 0.5);
-      final height =
-          plot.height * axis.fraction(bucket.count.toDouble()) * progress;
-      final barColor = bucket.grade.isEmpty
-          ? color
-          : ArtColors.grade(bucket.grade);
+      final height = plot.height * axis.fraction(bucket.count.toDouble());
       if (height > 0) {
         final rect = Rect.fromLTWH(
           centerX - barWidth / 2,
@@ -191,12 +178,7 @@ class _DistributionPainter extends CustomPainter {
         );
         canvas.drawRRect(
           RRect.fromRectAndCorners(rect, topLeft: radius, topRight: radius),
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [barColor, barColor.withValues(alpha: 0.55)],
-            ).createShader(rect),
+          barPaint,
         );
       }
       _paintText(
@@ -205,18 +187,14 @@ class _DistributionPainter extends CustomPainter {
           children: [
             TextSpan(
               text: '${bucket.count}',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.2,
-                color: bucket.count == 0 ? ArtColors.ink4 : ArtColors.ink,
-                fontFamily: 'Manrope',
-                fontWeight: FontWeight.w500,
+              style: AppText.number(
+                size: 12,
+                color: bucket.count == 0
+                    ? AppColors.textPlaceholder
+                    : AppColors.ink,
               ),
             ),
-            TextSpan(
-              text: '人',
-              style: ArtText.caption(size: 10, color: ArtColors.ink3),
-            ),
+            TextSpan(text: ' 人', style: AppText.caption12),
           ],
         ),
         Offset(centerX, plot.bottom - height - 4),
@@ -227,23 +205,17 @@ class _DistributionPainter extends CustomPainter {
         TextSpan(
           text: bucket.label,
           style: bucket.grade.isEmpty
-              ? _axisStyle.copyWith(color: ArtColors.ink2)
-              : TextStyle(
-                  fontSize: 12,
-                  height: 1.2,
-                  color: barColor,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w600,
-                ),
+              ? _axisStyle.copyWith(color: AppColors.textSecondary)
+              : AppText.caption12Strong,
         ),
-        Offset(centerX, plot.bottom + 8),
+        Offset(centerX, plot.bottom + _labelGap),
         const Alignment(0, -1),
       );
       if (bucket.grade.isNotEmpty && bucket.rangeLabel.isNotEmpty) {
         _paintText(
           canvas,
-          TextSpan(text: bucket.rangeLabel, style: _rangeStyle),
-          Offset(centerX, plot.bottom + 25),
+          TextSpan(text: bucket.rangeLabel, style: _axisStyle),
+          Offset(centerX, plot.bottom + _labelGap + _lineHeight),
           const Alignment(0, -1),
         );
       }
@@ -252,7 +224,7 @@ class _DistributionPainter extends CustomPainter {
       Offset(plot.left, plot.bottom),
       Offset(plot.right, plot.bottom),
       Paint()
-        ..color = ArtColors.ink4
+        ..color = AppColors.line
         ..strokeWidth = 1,
     );
   }
@@ -279,18 +251,17 @@ class _DistributionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DistributionPainter oldDelegate) =>
-      oldDelegate.progress != progress ||
-      oldDelegate.color != color ||
-      !identical(oldDelegate.buckets, buckets);
+      oldDelegate.color != color || !identical(oldDelegate.buckets, buckets);
 }
 
-/// 校区对比：各校区平均分（含与全体均分的差值）。
+/// 校区对比：各校区平均分与全体均分的差值。校区按平均分排序，颜色不随名次变化。
 class StaffCampusCard extends StatelessWidget {
   const StaffCampusCard({
     required this.groups,
     required this.overallAverage,
     required this.fullScore,
     required this.subjectLabel,
+    this.color = AppColors.brand,
     super.key,
   });
 
@@ -298,34 +269,31 @@ class StaffCampusCard extends StatelessWidget {
   final double? overallAverage;
   final double? fullScore;
   final String subjectLabel;
-
-  static const _palette = <Color>[
-    ArtColors.brand,
-    Color(0xFF4A74D6),
-    Color(0xFF3B9A6E),
-    Color(0xFFDE7A34),
-    Color(0xFF1F8FA8),
-  ];
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return StudyCard(
+    return AppCard(
       title: '校区对比',
       subtitle: '$subjectLabel平均分 · 与全体均分对比',
       child: groups.isEmpty
-          ? const ArtEmptyState(
-              message: '暂无校区数据',
-              icon: Icons.apartment_rounded,
+          ? const SizedBox(
+              height: 160,
+              child: AppEmptyState(
+                icon: Icons.apartment_rounded,
+                title: '暂无校区数据',
+                description: '学生档案填写所属校区后会按校区统计',
+              ),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (var i = 0; i < groups.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 18),
+                  if (i > 0) const SizedBox(height: AppSpace.s16),
                   _CampusRow(
                     rank: i + 1,
                     group: groups[i],
-                    color: _palette[i % _palette.length],
+                    color: color,
                     fullScore: fullScore,
                     overallAverage: overallAverage,
                   ),
@@ -368,49 +336,47 @@ class _CampusRow extends StatelessWidget {
               width: 22,
               height: 22,
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(6),
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceSubtle,
+                borderRadius: AppRadius.br4,
               ),
               child: Text(
                 '$rank',
-                style: ArtText.number(size: 12, color: color),
+                style: AppText.number(
+                  size: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpace.s8),
             Expanded(
               child: Text(
                 group.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: ArtText.body(size: 14, weight: AppFont.w500),
+                style: AppText.body14Strong,
               ),
             ),
-            StudyNumberText(
-              formatScore(average),
-              unit: ' 分',
-              size: 18,
-              color: color,
-            ),
+            StudyNumberText(formatScore(average), unit: ' 分', size: 20),
           ],
         ),
-        const SizedBox(height: 8),
-        StudyProgressBar(
+        const SizedBox(height: AppSpace.s8),
+        AppProgressBar(
           value: average == null || full == null || full <= 0
-              ? null
+              ? 0
               : average / full,
           color: color,
-          height: 8,
+          height: 6,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppSpace.s8),
         Row(
           children: [
             Expanded(
               child: Text(
-                '${group.count} 人 · 最高 ${formatScore(group.max)} 分',
+                '${group.count} 人参考 · 最高 ${formatScore(group.max)} 分',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: ArtText.caption(size: 11),
+                style: AppText.caption12,
               ),
             ),
             if (delta != null) StudyDeltaTag(value: delta),
@@ -458,16 +424,16 @@ class StaffSubjectAverages extends StatelessWidget {
           ),
         ),
     ];
-    return StudyCard(
+    return AppCard(
       title: '各科平均分',
-      subtitle: '点击科目查看分布与排名',
+      subtitle: '点击科目查看分布与排名，再次点击回到总分',
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 640) {
             return Column(
               children: [
                 for (var i = 0; i < tiles.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 10),
+                  if (i > 0) const SizedBox(height: AppSpace.s12),
                   tiles[i],
                 ],
               ],
@@ -476,7 +442,7 @@ class StaffSubjectAverages extends StatelessWidget {
           return Row(
             children: [
               for (var i = 0; i < tiles.length; i++) ...[
-                if (i > 0) const SizedBox(width: 12),
+                if (i > 0) const SizedBox(width: AppSpace.s12),
                 Expanded(child: tiles[i]),
               ],
             ],
@@ -505,67 +471,54 @@ class _SubjectAverageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = subject.subjectName;
-    final accent = artSubjectColor(name);
+    final accent = studySubjectColor(name);
     final average = summary.average;
     final full = subject.fullScore;
     final rate = average == null || full == null || full <= 0
         ? null
         : average / full;
-    return Material(
-      color: Colors.transparent,
-      child: Ink(
+    return AppPressable(
+      onTap: onTap,
+      selected: selected,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpace.s12),
         decoration: BoxDecoration(
-          color: selected ? artSubjectSoftColor(name) : ArtColors.subtle,
-          borderRadius: BorderRadius.circular(14),
+          color: selected ? AppColors.brandWash : AppColors.surfaceSubtle,
+          borderRadius: AppRadius.br12,
           border: Border.all(
-            color: selected
-                ? accent.withValues(alpha: 0.45)
-                : Colors.transparent,
+            color: selected ? AppColors.brand : AppColors.surfaceSubtle,
           ),
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    StudySubjectIcon(subjectName: name, size: 30),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: ArtText.body(size: 15, weight: AppFont.w500),
-                      ),
-                    ),
-                    Text(
-                      studyPercentText(rate),
-                      style: ArtText.number(size: 13, color: accent),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                StudyNumberText(
-                  formatScore(average),
-                  unit: ' / ${formatScore(full)}',
-                  size: 22,
-                  color: accent,
-                ),
-                const SizedBox(height: 8),
-                StudyProgressBar(value: rate, color: accent),
-                const SizedBox(height: 8),
+                StudySubjectIcon(subjectName: name, size: 30),
+                const SizedBox(width: AppSpace.s8),
+                Expanded(child: Text(name, style: AppText.body14Strong)),
                 Text(
-                  '最高 ${formatScore(summary.max)} · 最低 ${formatScore(summary.min)} · A 档 $topCount 人',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: ArtText.caption(size: 12),
+                  '得分率 ${studyPercentText(rate)}',
+                  style: AppText.caption12,
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: AppSpace.s12),
+            StudyNumberText(
+              formatScore(average),
+              unit: ' / ${formatScore(full)} 分',
+              size: 24,
+            ),
+            const SizedBox(height: AppSpace.s8),
+            AppProgressBar(value: rate ?? 0, color: accent, height: 6),
+            const SizedBox(height: AppSpace.s8),
+            Text(
+              '最高 ${formatScore(summary.max)} · 最低 ${formatScore(summary.min)} · A 档 $topCount 人',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption12,
+            ),
+          ],
         ),
       ),
     );

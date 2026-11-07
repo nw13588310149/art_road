@@ -26,7 +26,6 @@ class AppPermissionService {
         Permission.microphone,
         Permission.camera,
         Permission.photos,
-        Permission.audio,
         Permission.videos,
         Permission.notification,
         Permission.storage,

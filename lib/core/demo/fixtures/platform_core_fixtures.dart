@@ -1,7 +1,20 @@
+import '../data/demo_campus_data.dart';
+import '../data/demo_marking_data.dart';
 import '../demo_accounts.dart';
 import '../demo_backend.dart';
+import '../demo_clock.dart';
 import '../demo_store.dart';
 import '../media/demo_media.dart';
+import 'content_common.dart';
+
+/// 账号所在校区：学生取阅卷演示数据里的校区，教职工取名册里的校区。
+String demoCampusOf(DemoAccount account) {
+  final index = account.personIndex;
+  if (account.role == DemoRole.student && index != null) {
+    return DemoMarkingData.instance.person(index).organizationName;
+  }
+  return DemoCampusData.staffByUserId(account.userId)?.organizationName ?? '';
+}
 
 /// 演示账号的平台资料（`/app/user/myInfo` 的 user）。
 Map<String, dynamic> demoUserInfo(DemoAccount account) {
@@ -25,6 +38,7 @@ Map<String, dynamic> demoUserInfo(DemoAccount account) {
     'primary': profile['primary'] ?? (isStudent ? '美术' : '美术教育'),
     'secondary': profile['secondary'] ?? (isStudent ? '素描' : '素描'),
     'school': '示范画室',
+    'campus': demoCampusOf(account),
     'targetSchool': profile['targetSchool'] ?? (isStudent ? '西安美术学院' : ''),
     'introduce':
         profile['introduce'] ??
@@ -52,32 +66,39 @@ const _provinces = <String>[
   '重庆', '四川', '贵州', '云南', '西藏', '陕西', '青海', '宁夏', '新疆',
 ];
 
+/// 顶栏铃铛里的平台消息：学情、作品点评与系统消息。
+///
+/// 班级与学校通知属于智慧校园，不放在这里，避免两处未读数重复计算。
 List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
   final student = account.role == DemoRole.student;
+  final reviewer =
+      account.role == DemoRole.teacher || account.role == DemoRole.headTeacher;
+  String at(Duration ago) => ContentDemo.dateTime(DemoClock.ago(ago));
   return <Map<String, dynamic>>[
     {
       'id': 1,
       'targetType': 1,
       'content': student
-          ? '【学情】2026 年 9 月月考成绩已发布：总分 265.5，素描进入 A 档，点击「我的学情」查看原卷与评分标准。'
-          : '【学情】2026 年 9 月月考已出分，可在「班级学情」查看分数分布与校区对比。',
-      'createTime': '2026-11-06 18:20:00',
+          ? '【学情】9 月月考的原卷与评分标准已上线，可在「我的学情」查看各科原卷和档位说明。'
+          : '【学情】9 月月考的原卷已全部上线，可在「班级学情」查看分数分布与校区对比。',
+      'createTime': at(const Duration(hours: 3)),
       'read': false,
     },
-    {
-      'id': 2,
-      'targetType': 2,
-      'content': student
-          ? '【作品】李静老师点评了你的《石膏头像结构练习》：结构交代清楚，暗部再整体一些。'
-          : '【作品】有 7 份学生作品等待你点评。',
-      'createTime': '2026-11-06 09:12:00',
-      'read': false,
-    },
+    if (student || reviewer)
+      {
+        'id': 2,
+        'targetType': 2,
+        'content': student
+            ? '【作品】李静老师点评了你的《石膏头像结构练习》：结构交代清楚，暗部再整体一些。'
+            : '【作品】有学生提交了新作品，可在「作品点评」查看并点评。',
+        'createTime': at(const Duration(hours: 20)),
+        'read': false,
+      },
     {
       'id': 3,
       'targetType': 3,
-      'content': '【通知】本周六 14:00 城东校区进行色彩静物写生，请提前准备水粉工具。',
-      'createTime': '2026-11-05 16:40:00',
+      'content': '【系统】画室工具箱新增「考试倒计时」与「速写计时练习」，可在首页或侧栏打开。',
+      'createTime': at(const Duration(days: 2, hours: 1)),
       'read': false,
     },
   ];

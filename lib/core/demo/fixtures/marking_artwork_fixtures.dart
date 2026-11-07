@@ -557,6 +557,7 @@ Map<String, dynamic> _teacherSummary(
   return <String, dynamic>{
     'id': _text(work['id']),
     'archiveId': person?.archiveId ?? '',
+    'studentNo': person?.studentNo ?? '',
     'studentName': person?.name ?? '学生',
     'organizationName': person?.organizationName ?? '',
     'avatarUrl': DemoMedia.url(person?.avatarRef ?? ''),
@@ -766,7 +767,7 @@ List<Map<String, dynamic>> _normalizeStrokes(
         ? (item['width'] as num).toDouble()
         : 4.0;
     strokes.add(<String, dynamic>{
-      'color': _hexColor.hasMatch(color) ? color : '#D64A62',
+      'color': _hexColor.hasMatch(color) ? color : '#E5323B',
       'width': width.clamp(1.0, 24.0),
       'imageIndex': imageIndex,
       'points': points,

@@ -119,6 +119,7 @@ class _SchoolWebsiteHtmlViewState extends State<SchoolWebsiteHtmlView> {
       htmlElement.style.minWidth = '0';
       htmlElement.style.overflow = 'hidden';
     }
+
     patchElementBox(host.parentElement);
     patchElementBox(host.parentElement?.parentElement);
   }
@@ -163,11 +164,7 @@ class _SchoolWebsiteHtmlViewState extends State<SchoolWebsiteHtmlView> {
         }
 
         return ClipRect(
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: view,
-          ),
+          child: SizedBox(width: width, height: height, child: view),
         );
       },
     );

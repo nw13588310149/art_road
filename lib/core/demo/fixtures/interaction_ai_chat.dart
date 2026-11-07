@@ -3,13 +3,14 @@ import 'dart:math' as math;
 
 import '../demo_accounts.dart';
 import '../demo_backend.dart';
+import '../demo_clock.dart';
 import '../demo_socket_bridge.dart';
 import '../demo_store.dart';
 import '../media/demo_media.dart';
 import 'interaction_ai_tutor.dart';
 import 'interaction_common.dart';
 
-/// 小美同学（AI 美术助教）：会话 / 消息存 [DemoStore]，回复经演示 WebSocket
+/// 小美同学（美术答疑助手）：会话 / 消息存 [DemoStore]，回复经演示 WebSocket
 /// 以 10004 增量帧 + 10005 整包帧推送。
 void registerAiChatFixtures(DemoRouter r) {
   r.post('/app/user/chat-gpt/sessionList', (req) {
@@ -283,16 +284,15 @@ final Map<String, List<_SeedChat>> _seedCache = <String, List<_SeedChat>>{};
 
 List<_SeedChat> _seedsFor(DemoAccount account) {
   return _seedCache.putIfAbsent(account.userId, () {
-    final now = DateTime.now();
     final questions = account.role == DemoRole.student
         ? const <(String, Duration)>[
-            ('素描起形总是不准怎么办？', Duration(hours: 2)),
-            ('色彩画面发灰怎么调整？', Duration(days: 3, hours: 5)),
-            ('联考评分 A–E 档怎么划分？', Duration(days: 12, hours: 3)),
+            ('素描起形总是不准怎么办？', Duration(hours: 2, minutes: 13)),
+            ('色彩画面发灰怎么调整？', Duration(days: 3, hours: 5, minutes: 41)),
+            ('联考评分 A–E 档怎么划分？', Duration(days: 12, hours: 3, minutes: 7)),
           ]
         : const <(String, Duration)>[
-            ('怎样给学生讲清楚明暗五大调子？', Duration(hours: 5)),
-            ('联考评分 A–E 档怎么划分？', Duration(days: 6, hours: 2)),
+            ('怎样给学生讲清楚明暗五大调子？', Duration(hours: 5, minutes: 22)),
+            ('联考评分 A–E 档怎么划分？', Duration(days: 6, hours: 2, minutes: 48)),
           ];
     return [
       for (var i = 0; i < questions.length; i++)
@@ -303,7 +303,7 @@ List<_SeedChat> _seedsFor(DemoAccount account) {
             account: account,
             question: questions[i].$1,
           ).text,
-          time: now.subtract(questions[i].$2),
+          time: DemoClock.ago(questions[i].$2),
         ),
     ];
   });

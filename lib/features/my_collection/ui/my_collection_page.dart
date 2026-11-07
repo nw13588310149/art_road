@@ -1,31 +1,35 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
-import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/anchored_popup_menu.dart';
-import '../../../core/widgets/art_widgets.dart';
+import '../../../core/ui/ui.dart';
 import '../../../core/widgets/class_share_drawer.dart';
-import '../../../core/widgets/course_empty_placeholder.dart';
-import '../../../core/widgets/scaled_dialog.dart';
-import '../../shell/ui/shell_layout.dart';
-import '../../video_tutorial/data/video_publisher_data.dart';
 import '../navigation/collection_return.dart';
 import '../state/my_collection_controller.dart';
 import '../state/my_collection_state.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-/// 我的收藏页：
-/// - 顶部 4 个 Tab（全部 / 范画 / 视频 / 资讯），样式与设计稿分段控件一致：
-///   #F5F6FA 胶囊容器 + 选中态白色卡片+阴影。
-/// - 主体区域根据 [activeType] 渲染三种网格之一：
-///     * 范画：作品卡（173×182、#F4F4FF 卡片，大图封面）
-///     * 全部 / 资讯：横向卡片（220×100、左侧 60×80 封面 + 类型标签）
-///     * 视频：仿视频中心 `_VideoGridCard`（220×180，封面+缩略图+授课老师）
+/// 各收藏类型的打开方式；新增类型时在这里登记，未登记的类型提示暂不支持打开。
+final Map<int, void Function(BuildContext context, String targetId)> _openers =
+    {
+      CollectionType.video: (context, id) => Navigator.pushNamed(
+        context,
+        RoutePaths.videoTutorial,
+        arguments: CollectionReturnNavigator.wrapVideoArgs(id),
+      ),
+      CollectionType.news: (context, id) => Navigator.pushNamed(
+        context,
+        RoutePaths.consultationDetail,
+        arguments: <String, dynamic>{'id': id},
+      ),
+      CollectionType.artwork: (context, id) => Navigator.pushNamed(
+        context,
+        RoutePaths.gallery,
+        arguments: <String, dynamic>{'workId': id},
+      ),
+    };
+
+/// 我的收藏：页头 + 类型筛选 + 收藏卡片网格（整卡可点，右下角分享 / 取消收藏）。
 class MyCollectionPage extends ConsumerWidget {
   const MyCollectionPage({super.key});
 
@@ -33,62 +37,76 @@ class MyCollectionPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(myCollectionControllerProvider);
     final controller = ref.read(myCollectionControllerProvider.notifier);
-    final ui = DashboardScaleScope.of(context).ui;
-    final showPageEmpty =
-        !state.loading && !state.fetchingItems && state.items.isEmpty;
-    final showContentLoading = state.fetchingItems && state.items.isEmpty;
+    final navigator = Navigator.of(context);
+    final loadingItems =
+        (state.loading || state.fetchingItems) && state.items.isEmpty;
+    final label = CollectionType.labelOf(state.activeType);
 
-    return Stack(
+    final Widget body;
+    if (loadingItems) {
+      body = const _CollectionSkeleton();
+    } else if (state.items.isEmpty && state.errorMessage != null) {
+      body = AppErrorState(
+        title: '收藏加载失败',
+        description: state.errorMessage!.isEmpty
+            ? '网络异常，请检查网络后重试'
+            : state.errorMessage,
+        onRetry: controller.refresh,
+      );
+    } else if (state.items.isEmpty) {
+      final all = state.activeType == CollectionType.all;
+      body = AppEmptyState(
+        icon: Icons.bookmark_border_rounded,
+        title: all ? '还没有收藏内容' : '还没有收藏的$label',
+        description: '在范画库、视频中心或资讯里点击收藏，内容会出现在这里',
+      );
+    } else {
+      body = _CollectionGrid(
+        items: state.items,
+        showTypeTag: state.activeType == CollectionType.all,
+        onOpen: (item) => _openItem(context, item),
+        onShare: (item) => _openShare(context, ref, item),
+        onRemove: (item) => _removeItem(context, ref, item),
+      );
+    }
+
+    final tabs = state.tabs;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(ui(16)),
-          ),
-          child: PageInitLoadingShell(
-            loading: state.loading && state.items.isEmpty,
-            child: Stack(
-              children: [
-                // 与笔记 / 云盘一致：空状态按整个页面容器（含顶部 Tab）居中。
-                if (showPageEmpty)
-                  const Positioned.fill(
-                    child: CourseEmptyPlaceholder(
-                      message: '暂无收藏',
-                      imageAsset: AppAssets.emptyCollectionPlaceholder,
-                    ),
-                  ),
-                Positioned(
-                  left: ui(20),
-                  top: ui(20),
-                  child: _CollectionTabs(
-                    tabs: state.tabs,
-                    activeType: state.activeType,
-                    onSelect: controller.selectType,
-                  ),
-                ),
-                Positioned.fill(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(ui(20), ui(82), ui(20), ui(20)),
-                    child: showPageEmpty
-                        ? const SizedBox.shrink()
-                        : showContentLoading
-                        ? const Center(child: AppLoadingIndicator())
-                        : _CollectionGrid(
-                            state: state,
-                            onOpenItem: (item) => _openItem(context, item),
-                            onRemove: (item) => _removeItem(context, ref, item),
-                            onShare: (item) => _openShare(context, ref, item),
+        AppPageHeader(
+          title: '我的收藏',
+          subtitle: loadingItems || state.items.isEmpty
+              ? '范画、视频与资讯收藏'
+              : '共 ${state.items.length} 条收藏',
+          onBack: navigator.canPop() ? navigator.pop : null,
+          bottom: tabs.length < 2
+              ? null
+              : Align(
+                  alignment: Alignment.centerLeft,
+                  child: tabs.length <= 5
+                      ? AppSegmented<int>(
+                          segments: [
+                            for (final tab in tabs)
+                              AppSegment(value: tab.type, label: tab.label),
+                          ],
+                          value: state.activeType,
+                          onChanged: controller.selectType,
+                        )
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: AppTabs<int>(
+                            tabs: [
+                              for (final tab in tabs)
+                                AppTab(value: tab.type, label: tab.label),
+                            ],
+                            value: state.activeType,
+                            onChanged: controller.selectType,
                           ),
-                  ),
+                        ),
                 ),
-              ],
-            ),
-          ),
         ),
-        if (state.busy && state.shareTarget == null)
-          const Positioned.fill(
-            child: AppLoadingOverlay(),
-          ),
+        Expanded(child: body),
       ],
     );
   }
@@ -101,28 +119,12 @@ class MyCollectionPage extends ConsumerWidget {
       AppToast.showError(context, '收藏内容已失效');
       return;
     }
-    switch (item.type) {
-      case CollectionType.video:
-        Navigator.pushNamed(
-          context,
-          RoutePaths.videoTutorial,
-          arguments: CollectionReturnNavigator.wrapVideoArgs(targetId),
-        );
-      case CollectionType.news:
-        Navigator.pushNamed(
-          context,
-          RoutePaths.consultationDetail,
-          arguments: <String, dynamic>{'id': targetId},
-        );
-      case CollectionType.artwork:
-        Navigator.pushNamed(
-          context,
-          RoutePaths.gallery,
-          arguments: <String, dynamic>{'workId': targetId},
-        );
-      default:
-        AppToast.showError(context, '暂不支持的收藏类型');
+    final open = _openers[item.type];
+    if (open == null) {
+      AppToast.showInfo(context, '暂不支持打开该类型的收藏');
+      return;
     }
+    open(context, targetId);
   }
 
   Future<void> _openShare(
@@ -136,16 +138,14 @@ class MyCollectionPage extends ConsumerWidget {
       return;
     }
     if (message != null) {
-      AppToast.show(context, message);
+      AppToast.showError(context, message);
       return;
     }
-    // 复用公共"班级分享"左侧抽屉组件，与课件 / 视频 / 资讯详情等分享 UI 保持一致。
     await showClassShareDrawer<void>(
       context: context,
       child: const _CollectionShareDrawer(),
     );
-    // 抽屉被点击外部关闭或发送完成后，清掉控制器里的分享状态，
-    // 避免下一次点击 "分享" 时复用旧的目标 / 班级勾选。
+    // 抽屉关闭后清掉分享状态，避免下一次分享复用旧的目标与班级勾选。
     controller.closeShare();
   }
 
@@ -154,11 +154,11 @@ class MyCollectionPage extends ConsumerWidget {
     WidgetRef ref,
     CollectionEntry item,
   ) async {
-    final confirmed = await showConfirmDialog(
+    final confirmed = await showAppConfirm(
       context: context,
       title: '取消收藏',
-      content: '确定将“${item.title}”从收藏中移除吗？',
-      confirmLabel: '取消收藏',
+      message: '「${item.title}」将从我的收藏中移除。',
+      danger: true,
     );
     if (!confirmed || !context.mounted) {
       return;
@@ -166,894 +166,277 @@ class MyCollectionPage extends ConsumerWidget {
     final message = await ref
         .read(myCollectionControllerProvider.notifier)
         .removeFavorite(item);
-    if (context.mounted) {
-      AppToast.showSuccess(context, message ?? '已取消收藏');
+    if (!context.mounted) {
+      return;
+    }
+    if (message != null) {
+      AppToast.showError(context, message);
+    } else {
+      AppToast.showSuccess(context, '已取消收藏');
     }
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// 顶部 Tab 分段控件
-// ──────────────────────────────────────────────────────────────────────────────
+int _columnsFor(double width) => width >= 840 ? 3 : (width >= 520 ? 2 : 1);
 
-class _CollectionTabs extends StatelessWidget {
-  const _CollectionTabs({
-    required this.tabs,
-    required this.activeType,
-    required this.onSelect,
-  });
-
-  final List<CollectionTabItem> tabs;
-  final int activeType;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    // 不设固定总高度：固定 44px + 上下 padding 后，留给文字的垂直空间不足，
-    // 中文（尤其 PingFang）笔画底部会被裁切；高度交给 Row + Tab 子项撑开。
-    return Container(
-      padding: EdgeInsets.all(ui(4)),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
-        borderRadius: BorderRadius.circular(ui(8)),
-        border: Border.all(color: const Color(0xFFF3F2F3), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          for (var i = 0; i < tabs.length; i++) ...[
-            if (i > 0) SizedBox(width: ui(16)),
-            _CollectionTabItemView(
-              label: tabs[i].label,
-              active: tabs[i].type == activeType,
-              onTap: () => onSelect(tabs[i].type),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _CollectionTabItemView extends StatelessWidget {
-  const _CollectionTabItemView({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(8)),
-        decoration: active
-            ? BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(ui(6)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x59B5B5B5),
-                    blurRadius: 20,
-                    offset: Offset(0, 0),
-                  ),
-                ],
-              )
-            : BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(ui(8)),
-              ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          maxLines: 1,
-          softWrap: false,
-          textHeightBehavior: const TextHeightBehavior(
-            applyHeightToFirstAscent: false,
-            applyHeightToLastDescent: false,
-          ),
-          style: TextStyle(
-            fontSize: ui(14),
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w500,
-            height: 1.25,
-            leadingDistribution: TextLeadingDistribution.even,
-            color: active ? const Color(0xFF0B081A) : const Color(0xFF6D6B75),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 主体网格（根据当前 Tab 切换三种卡片布局）
-// ──────────────────────────────────────────────────────────────────────────────
+const _cardExtent = 112.0;
+const _coverSize = 88.0;
 
 class _CollectionGrid extends StatelessWidget {
   const _CollectionGrid({
-    required this.state,
-    required this.onOpenItem,
-    required this.onRemove,
+    required this.items,
+    required this.showTypeTag,
+    required this.onOpen,
     required this.onShare,
+    required this.onRemove,
   });
 
-  final MyCollectionState state;
-  final ValueChanged<CollectionEntry> onOpenItem;
-  final ValueChanged<CollectionEntry> onRemove;
+  final List<CollectionEntry> items;
+  final bool showTypeTag;
+  final ValueChanged<CollectionEntry> onOpen;
   final ValueChanged<CollectionEntry> onShare;
+  final ValueChanged<CollectionEntry> onRemove;
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final activeType = state.activeType;
-
-    // 三种卡片的栅格规格：
-    //   - 范画：5 列 / 173×182 / 间距 16,14
-    //   - 全部 / 资讯：4 列 / 220×100 / 间距 16
-    //   - 视频：4 列 / 220×180 / 间距 16
-    if (activeType == CollectionType.artwork) {
-      return GridView.builder(
-        padding: EdgeInsets.zero,
-        physics: const AlwaysScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: ui(189),
-          childAspectRatio: 173 / 182,
-          crossAxisSpacing: ui(16),
-          mainAxisSpacing: ui(14),
-        ),
-        itemCount: state.items.length,
-        itemBuilder: (context, index) {
-          final item = state.items[index];
-          // 范画：右下角图标点击后弹出 "分享 / 取消收藏" 菜单
-          // （样式同 my-notes 左侧分类菜单）。
-          return _ArtworkCollectionCard(
-            item: item,
-            onTap: () => onOpenItem(item),
-            onShare: () => onShare(item),
-            onRemove: () => onRemove(item),
-          );
-        },
-      );
-    }
-
-    if (activeType == CollectionType.video) {
-      return GridView.builder(
-        padding: EdgeInsets.zero,
-        physics: const AlwaysScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: ui(236),
-          childAspectRatio:
-              _kCollectionVideoCardDesignW / _kCollectionVideoCardDesignH,
-          crossAxisSpacing: ui(16),
-          mainAxisSpacing: ui(16),
-        ),
-        itemCount: state.items.length,
-        itemBuilder: (context, index) {
-          final item = state.items[index];
-          return _VideoCollectionCard(
-            item: item,
-            onTap: () => onOpenItem(item),
-            onMenu: () =>
-                _showItemActionSheet(context, item, onRemove, onShare),
-          );
-        },
-      );
-    }
-
-    // 全部 / 资讯
-    return GridView.builder(
-      padding: EdgeInsets.zero,
-      physics: const AlwaysScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: ui(236),
-        mainAxisExtent: ui(100),
-        crossAxisSpacing: ui(16),
-        mainAxisSpacing: ui(16),
-      ),
-      itemCount: state.items.length,
-      itemBuilder: (context, index) {
-        final item = state.items[index];
-        return _CompactCollectionCard(
-          item: item,
-          showTypeTag: activeType == CollectionType.all,
-          onOpen: () => onOpenItem(item),
-          onMenu: () => _showItemActionSheet(context, item, onRemove, onShare),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GridView.builder(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.page,
+            AppSpace.s4,
+            AppSpace.page,
+            AppSpace.s24,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: _columnsFor(
+              constraints.maxWidth - AppSpace.page * 2,
+            ),
+            crossAxisSpacing: AppSpace.s16,
+            mainAxisSpacing: AppSpace.s16,
+            mainAxisExtent: _cardExtent,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return _CollectionCard(
+              item: item,
+              showTypeTag: showTypeTag,
+              onTap: () => onOpen(item),
+              onShare: () => onShare(item),
+              onRemove: () => onRemove(item),
+            );
+          },
         );
       },
     );
   }
 }
 
-Future<void> _showItemActionSheet(
-  BuildContext context,
-  CollectionEntry item,
-  ValueChanged<CollectionEntry> onRemove,
-  ValueChanged<CollectionEntry> onShare,
-) async {
-  final ui = DashboardScaleScope.of(context).ui;
-  await showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) {
-      return SafeArea(
-        top: false,
-        child: Container(
-          margin: EdgeInsets.all(ui(12)),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(ui(16)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.share_outlined),
-                title: const Text('分享给班级'),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  onShare(item);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline_rounded),
-                title: const Text('取消收藏'),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  onRemove(item);
-                },
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 范画卡片：173×182，大图封面 + 标题 + 科目 / 作者
-// ──────────────────────────────────────────────────────────────────────────────
-
-class _ArtworkCollectionCard extends StatefulWidget {
-  const _ArtworkCollectionCard({
+class _CollectionCard extends StatelessWidget {
+  const _CollectionCard({
     required this.item,
+    required this.showTypeTag,
     required this.onTap,
     required this.onShare,
     required this.onRemove,
   });
 
   final CollectionEntry item;
+  final bool showTypeTag;
   final VoidCallback onTap;
   final VoidCallback onShare;
   final VoidCallback onRemove;
 
   @override
-  State<_ArtworkCollectionCard> createState() => _ArtworkCollectionCardState();
-}
-
-class _ArtworkCollectionCardState extends State<_ArtworkCollectionCard> {
-  // 用于把"分享 / 取消收藏"菜单锚定在右下角图标上。
-  final GlobalKey _menuTriggerKey = GlobalKey();
-
-  Future<void> _openActionMenu() async {
-    final action = await _showArtworkCollectionMenu(
-      context: context,
-      triggerKey: _menuTriggerKey,
-    );
-    if (!mounted || action == null) {
-      return;
-    }
-    switch (action) {
-      case _ArtworkMenuAction.share:
-        widget.onShare();
-      case _ArtworkMenuAction.remove:
-        widget.onRemove();
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final item = widget.item;
-
-    return GestureDetector(
-      onTap: widget.onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF4F4FF),
-          borderRadius: BorderRadius.circular(ui(12)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        padding: EdgeInsets.all(ui(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(ui(8)),
-                child: _ArtworkCover(coverUrl: item.coverUrl),
-              ),
-            ),
-            SizedBox(height: ui(10)),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+    final views = int.tryParse(item.metricText) ?? 0;
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s12),
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CollectionCover(item: item),
+          const SizedBox(width: AppSpace.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'PingFang SC',
-                          fontSize: ui(14),
-                          fontWeight: AppFont.w500,
-                          color: const Color(0xFF0B081A),
-                          height: 1.2,
-                        ),
-                      ),
-                      SizedBox(height: ui(7)),
-                      Text(
-                        item.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'PingFang SC',
-                          fontSize: ui(12),
-                          fontWeight: AppFont.w400,
-                          color: const Color(0xFFB6B5BB),
-                          height: 1,
-                        ),
-                      ),
-                    ],
-                  ),
+                Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body14Strong,
                 ),
-                SizedBox(width: ui(8)),
-                _ArtworkActionButton(key: _menuTriggerKey, onTap: _openActionMenu),
+                if (item.subtitle.isNotEmpty)
+                  Text(
+                    item.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption12,
+                  ),
+                const Spacer(),
+                Row(
+                  children: [
+                    if (showTypeTag) ...[
+                      AppTag(
+                        label: CollectionType.labelOf(item.type),
+                        tone: AppTone.brand,
+                      ),
+                      const SizedBox(width: AppSpace.s8),
+                    ],
+                    if (views > 0 && !item.isArtwork)
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.visibility_outlined,
+                              size: 14,
+                              color: AppColors.textTertiary,
+                            ),
+                            const SizedBox(width: AppSpace.s4),
+                            Flexible(
+                              child: Text(
+                                '$views',
+                                maxLines: 1,
+                                style: AppText.number(
+                                  size: 12,
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const Spacer(),
+                    AppIconButton(
+                      icon: Icons.share_outlined,
+                      semanticLabel: '分享给班级',
+                      size: AppButtonSize.sm,
+                      filled: false,
+                      color: AppColors.textSecondary,
+                      onTap: onShare,
+                    ),
+                    AppIconButton(
+                      icon: Icons.bookmark_remove_outlined,
+                      semanticLabel: '取消收藏',
+                      size: AppButtonSize.sm,
+                      filled: false,
+                      color: AppColors.textSecondary,
+                      onTap: onRemove,
+                    ),
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ArtworkCover extends StatelessWidget {
-  const _ArtworkCover({required this.coverUrl});
+class _CollectionCover extends StatelessWidget {
+  const _CollectionCover({required this.item});
 
-  final String coverUrl;
+  final CollectionEntry item;
 
   @override
   Widget build(BuildContext context) {
-    final resolved = _resolveRemoteUrl(coverUrl);
-    if (resolved != null) {
-      return CachedNetworkImage(
-        imageUrl: resolved,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        placeholder: (_, _) => _fallback(),
-        errorWidget: (_, _, _) => _fallback(),
-      );
-    }
-    return _fallback();
+    final raw = item.coverUrl.trim();
+    final src = raw.isEmpty || raw.toLowerCase() == 'string'
+        ? ''
+        : MediaUrl.resolve(raw);
+    final duration = item.durationText.trim();
+    return SizedBox.square(
+      dimension: _coverSize,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          AppImage(
+            src: src,
+            borderRadius: AppRadius.br8,
+            error: _fallback(),
+            placeholder: src.isEmpty ? _fallback() : null,
+          ),
+          if (item.isVideo && duration.isNotEmpty && duration != '00:00')
+            Positioned(
+              right: AppSpace.s4,
+              bottom: AppSpace.s4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
+                decoration: BoxDecoration(
+                  color: AppColors.ink.withValues(alpha: 0.6),
+                  borderRadius: AppRadius.br4,
+                ),
+                child: Text(
+                  duration,
+                  style: AppText.number(size: 12, color: AppColors.onBrand),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _fallback() {
     return Container(
-      width: double.infinity,
-      color: const Color(0xFFEDEDF2),
-      alignment: Alignment.center,
-      child: const Icon(
-        Icons.palette_outlined,
-        color: Color(0xFFB6B5BB),
-        size: 28,
-      ),
-    );
-  }
-}
-
-/// 卡片右下角 20×20 操作图标。设计稿要求此处展示
-/// `assets/images/note/1.png`，点击后弹出"分享 / 取消收藏"菜单。
-///
-/// 图标尺寸 20×20 与「我的云盘」**文件夹卡片**右上角的「⋯」
-/// （[AppAssets.cloudActionMore]，统一 ui(20)×ui(20)）保持一致，避免
-/// 不同列表里"三个点"忽大忽小。资源仍用 `note/1.png` —— 收藏卡片是
-/// 浅色填充小圆图标的另一种视觉，与云盘文件夹的纯线性 ⋯ 是不同图，
-/// 这次只统一**尺寸**而不换图。
-class _ArtworkActionButton extends StatelessWidget {
-  const _ArtworkActionButton({super.key, required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: ui(20),
-        height: ui(20),
-        child: Image.asset(
-          'assets/images/note/1.png',
-          width: ui(20),
-          height: ui(20),
-          fit: BoxFit.contain,
-        ),
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 全部 / 资讯 卡片：220×100，左侧 60×80 封面 + 标题 / 副标题 + 「去查看」
-// ──────────────────────────────────────────────────────────────────────────────
-
-class _CompactCollectionCard extends StatelessWidget {
-  const _CompactCollectionCard({
-    required this.item,
-    required this.showTypeTag,
-    required this.onOpen,
-    required this.onMenu,
-  });
-
-  final CollectionEntry item;
-
-  /// 「全部」页签下在封面左上角标出类型（范画 / 视频 / 资讯）。
-  final bool showTypeTag;
-  final VoidCallback onOpen;
-  final VoidCallback onMenu;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-
-    return GestureDetector(
-      onTap: onOpen,
-      onLongPress: onMenu,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: EdgeInsets.all(ui(10)),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F6FA),
-          borderRadius: BorderRadius.circular(ui(12)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _CompactCover(item: item, showTypeTag: showTypeTag),
-            SizedBox(width: ui(8)),
-            Expanded(
-              child: SizedBox(
-                height: ui(80),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      right: 0,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: ui(13),
-                              fontWeight: AppFont.w500,
-                              color: const Color(0xFF0B081A),
-                              fontFamily: 'PingFang SC',
-                              height: 1.2,
-                            ),
-                          ),
-                          if (item.subtitle.isNotEmpty) ...[
-                            SizedBox(height: ui(6)),
-                            Text(
-                              item.subtitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: ui(11),
-                                color: const Color(0xFFB6B5BB),
-                                fontFamily: 'PingFang SC',
-                                height: 1.3,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: _CompactOpenButton(onTap: onOpen),
-                    ),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: GestureDetector(
-                        onTap: onMenu,
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: EdgeInsets.only(left: ui(6), bottom: ui(6)),
-                          child: Icon(
-                            Icons.more_horiz_rounded,
-                            size: ui(16),
-                            color: const Color(0xFFB6B5BB),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CompactOpenButton extends StatelessWidget {
-  const _CompactOpenButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: ui(28),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        decoration: BoxDecoration(
-          color: const Color(0xFF292151),
-          borderRadius: BorderRadius.circular(ui(8)),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          '去查看',
-          style: TextStyle(
-            fontSize: ui(11),
-            color: Colors.white,
-            fontWeight: AppFont.w500,
-            fontFamily: 'PingFang SC',
-            height: 12 / 11,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 60×80 封面：收藏快照里的封面图；没有封面时用品牌渐变 + 两行类型文字。
-class _CompactCover extends StatelessWidget {
-  const _CompactCover({required this.item, required this.showTypeTag});
-
-  final CollectionEntry item;
-  final bool showTypeTag;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final resolved = _resolveRemoteUrl(item.coverUrl);
-    final fallback = DecoratedBox(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFE6E0FF), Color(0xFFC9BEFF)],
-        ),
+        color: AppColors.surfaceSubtle,
+        borderRadius: AppRadius.br8,
       ),
-      child: Center(
-        child: Text(
-          switch (item.type) {
-            CollectionType.video => '美术\n视频',
-            CollectionType.news => '美术\n资讯',
-            CollectionType.artwork => '范画\n作品',
-            _ => '收藏\n内容',
-          },
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: ui(12),
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF715EFE),
-            fontFamily: 'Alimama ShuHeiTi',
-            height: 1.2,
-          ),
-        ),
-      ),
-    );
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: SizedBox(
-        width: ui(60),
-        height: ui(80),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (resolved == null)
-              fallback
-            else
-              CachedNetworkImage(
-                imageUrl: resolved,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => fallback,
-                errorWidget: (_, _, _) => fallback,
-              ),
-            if (showTypeTag)
-              Positioned(
-                left: ui(4),
-                top: ui(4),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ui(4),
-                    vertical: ui(2),
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF715EFE).withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(ui(4)),
-                  ),
-                  child: Text(
-                    CollectionType.labelOf(item.type),
-                    style: TextStyle(
-                      fontSize: ui(9),
-                      color: Colors.white,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w500,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+      alignment: Alignment.center,
+      child: Icon(
+        switch (item.type) {
+          CollectionType.video => Icons.play_circle_outline_rounded,
+          CollectionType.news => Icons.feed_outlined,
+          CollectionType.artwork => Icons.palette_outlined,
+          _ => Icons.bookmark_border_rounded,
+        },
+        color: AppColors.textPlaceholder,
       ),
     );
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// 视频 卡片：220×180，对齐视频中心 _VideoGridCard 设计
-// ──────────────────────────────────────────────────────────────────────────────
-
-// 视频卡片设计尺寸（与视频中心 _VideoGridCard 一致）
-const double _kCollectionVideoCardDesignW = 220;
-const double _kCollectionVideoCardDesignH = 180;
-const double _kCollectionVideoCoverDesignH = 124;
-
-class _VideoCollectionCard extends StatelessWidget {
-  const _VideoCollectionCard({
-    required this.item,
-    required this.onTap,
-    required this.onMenu,
-  });
-
-  final CollectionEntry item;
-  final VoidCallback onTap;
-  final VoidCallback onMenu;
+class _CollectionSkeleton extends StatelessWidget {
+  const _CollectionSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return LayoutBuilder(
-      builder: (context, box) {
-        final cw = box.maxWidth;
-        final ch = box.maxHeight;
-        final s = cw / _kCollectionVideoCardDesignW;
-
-        final coverH =
-            ch * (_kCollectionVideoCoverDesignH / _kCollectionVideoCardDesignH);
-        const thumbInset = 10.0;
-        const thumbDesignW = 52.0;
-        const thumbDesignH = 70.0;
-        final thumbL = thumbInset * s;
-        final thumbTop =
-            (_kCollectionVideoCardDesignH - thumbDesignH - thumbInset) * s;
-        final thumbW = thumbDesignW * s;
-        final thumbH = thumbDesignH * s;
-        final infoLeft = (thumbInset + thumbDesignW + 4.0) * s;
-        final infoTopPad = 9.0 * s;
-        final infoBottomPad = thumbInset * s;
-        final titleLineH = 13.0 * s * 1.3;
-        final metaRowH = 16.0 * s;
-        const titleUpOffset = 2.0;
-        const metaUpOffset = 2.0;
-
-        final coverUrl = MediaUrl.resolve(item.coverUrl);
-        final publisher = videoPublisherFor(
-          item.targetId,
-          name: item.authorName == '美术之路' ? '' : item.authorName,
-          avatarUrl: item.avatarUrl,
-        );
-
-        return Material(
-          color: const Color(0xFFF5F6FA),
-          borderRadius: BorderRadius.circular(ui(12)),
-          clipBehavior: Clip.hardEdge,
-          child: InkWell(
-            onTap: onTap,
-            onLongPress: onMenu,
-            child: Stack(
+      builder: (context, constraints) {
+        final columns = _columnsFor(constraints.maxWidth - AppSpace.page * 2);
+        return GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.page,
+            AppSpace.s4,
+            AppSpace.page,
+            AppSpace.s24,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: AppSpace.s16,
+            mainAxisSpacing: AppSpace.s16,
+            mainAxisExtent: _cardExtent,
+          ),
+          itemCount: columns * 2,
+          itemBuilder: (_, _) => const AppCard(
+            padding: EdgeInsets.all(AppSpace.s12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox.expand(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: coverH,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: _CollectionImage(
-                                url: coverUrl,
-                                fit: BoxFit.cover,
-                                fallbackIconSize: ui(28),
-                              ),
-                            ),
-                            Positioned(
-                              right: 8.0 * s,
-                              bottom: 8.0 * s,
-                              child: Container(
-                                height: 18.0 * s,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8.0 * s,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.24),
-                                  borderRadius: BorderRadius.circular(18.0 * s),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    item.durationText,
-                                    style: TextStyle(
-                                      fontSize: 12.0 * s,
-                                      color: Colors.white,
-                                      fontFamily: 'PingFang SC',
-                                      fontWeight: AppFont.w400,
-                                      height: 1,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            infoLeft,
-                            infoTopPad,
-                            10.0 * s,
-                            infoBottomPad,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Transform.translate(
-                                offset: Offset(0, -titleUpOffset * s),
-                                child: SizedBox(
-                                  height: titleLineH,
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      item.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 13.0 * s,
-                                        color: const Color(0xFF0B081A),
-                                        fontWeight: AppFont.w500,
-                                        fontFamily: 'PingFang SC',
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              Transform.translate(
-                                offset: Offset(0, -metaUpOffset * s),
-                                child: SizedBox(
-                                  height: metaRowH,
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Row(
-                                      children: [
-                                        ArtAvatar(
-                                          name: publisher.nickname,
-                                          url: publisher.avatarUrl,
-                                          size: 16.0 * s,
-                                        ),
-                                        SizedBox(width: 4.0 * s),
-                                        Expanded(
-                                          child: Text(
-                                            publisher.nickname,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 10.0 * s,
-                                              color: const Color(0xFFB6B5BB),
-                                              fontFamily: 'PingFang SC',
-                                              fontWeight: AppFont.w500,
-                                              height: 1,
-                                            ),
-                                          ),
-                                        ),
-                                        Image.asset(
-                                          AppAssets.videoV2CardViews,
-                                          width: 12.0 * s,
-                                          height: 12.0 * s,
-                                        ),
-                                        SizedBox(width: 4.0 * s),
-                                        Text(
-                                          item.metricText,
-                                          style: TextStyle(
-                                            fontSize: 12.0 * s,
-                                            color: const Color(0xFFB6B5BB),
-                                            fontFamily: 'PingFang SC',
-                                            fontWeight: AppFont.w500,
-                                            height: 1,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                AppSkeleton(
+                  width: _coverSize,
+                  height: _coverSize,
+                  radius: AppRadius.control,
                 ),
-                Positioned(
-                  left: thumbL,
-                  top: thumbTop,
-                  width: thumbW,
-                  height: thumbH,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4.0 * s),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4.0 * s),
-                      child: _CollectionImage(
-                        url: coverUrl,
-                        fit: BoxFit.cover,
-                        fallbackColorOnly: true,
-                      ),
-                    ),
-                  ),
-                ),
+                SizedBox(width: AppSpace.s12),
+                Expanded(child: AppSkeletonText(lines: 3)),
               ],
             ),
           ),
@@ -1063,208 +446,7 @@ class _VideoCollectionCard extends StatelessWidget {
   }
 }
 
-class _CollectionImage extends StatelessWidget {
-  const _CollectionImage({
-    required this.url,
-    required this.fit,
-    this.fallbackIconSize,
-    this.fallbackColorOnly = false,
-  });
-
-  final String url;
-  final BoxFit fit;
-  final double? fallbackIconSize;
-  final bool fallbackColorOnly;
-
-  @override
-  Widget build(BuildContext context) {
-    if (url.isEmpty) {
-      return _fallback();
-    }
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: fit,
-      placeholder: (_, _) => _fallback(),
-      errorWidget: (_, _, _) => _fallback(),
-    );
-  }
-
-  Widget _fallback() {
-    if (fallbackColorOnly) {
-      return Container(color: const Color(0xFFEDEDF2));
-    }
-    return Container(
-      color: const Color(0xFFEDEDF2),
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.ondemand_video_rounded,
-        color: const Color(0xFFB6B5BB),
-        size: fallbackIconSize,
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 共用：URL 解析、空态、分享面板
-// ──────────────────────────────────────────────────────────────────────────────
-
-String? _resolveRemoteUrl(String? rawUrl) {
-  final value = rawUrl?.trim() ?? '';
-  if (value.isEmpty || value.toLowerCase() == 'string') {
-    return null;
-  }
-  final resolved = MediaUrl.resolve(value);
-  return resolved.isEmpty ? null : resolved;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 范画卡片右下角图标的弹出菜单：分享 + 取消收藏
-// 视觉与 my_notes_page 左侧分类的省略号菜单一致：
-//   - 142×N 白色面板，圆角 12，浅灰描边 + 双层投影
-//   - 行高 36，左侧 20×20 图标 + 13/20 文字
-//   - "取消收藏" 行使用红色文字 + 删除图标，与"删除"语义统一
-// ──────────────────────────────────────────────────────────────────────────────
-
-enum _ArtworkMenuAction { share, remove }
-
-Future<_ArtworkMenuAction?> _showArtworkCollectionMenu({
-  required BuildContext context,
-  required GlobalKey triggerKey,
-}) {
-  final scale = DashboardScaleScope.of(context);
-  final menuWidth = scale.ui(142);
-  // 估算高度：top padding(8) + 36 + 6(divider) + 36 + bottom padding(8) ≈ 94
-  final approxMenuHeight = scale.ui(96);
-
-  return showAnchoredPopupMenu<_ArtworkMenuAction>(
-    context: context,
-    triggerKey: triggerKey,
-    menuWidth: menuWidth,
-    approxMenuHeight: approxMenuHeight,
-    builder: (dialogContext, _) => _ArtworkMenuPanel(
-      onSelected: (action) => Navigator.of(dialogContext).pop(action),
-    ),
-  );
-}
-
-class _ArtworkMenuPanel extends StatelessWidget {
-  const _ArtworkMenuPanel({required this.onSelected});
-
-  final ValueChanged<_ArtworkMenuAction> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: ui(142),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(12)),
-        border: Border.all(color: const Color(0xFFF3F2F3), width: ui(1.11)),
-        boxShadow: [
-          BoxShadow(color: const Color(0x050B081A), blurRadius: ui(1)),
-          BoxShadow(
-            color: const Color(0x0F0B081A),
-            blurRadius: ui(40),
-            offset: Offset(0, ui(12)),
-          ),
-          BoxShadow(
-            color: const Color(0x050B081A),
-            blurRadius: ui(24),
-            offset: Offset(0, ui(12)),
-            spreadRadius: ui(-16),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: ui(8)),
-          _ArtworkMenuRow(
-            label: '分享',
-            icon: AppAssets.coursewareActionShare,
-            onTap: () => onSelected(_ArtworkMenuAction.share),
-          ),
-          SizedBox(height: ui(2)),
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: ui(8)),
-            height: ui(1),
-            color: const Color(0xFFF3F4F6),
-          ),
-          SizedBox(height: ui(3)),
-          _ArtworkMenuRow(
-            label: '取消收藏',
-            icon: AppAssets.coursewareActionDelete,
-            danger: true,
-            onTap: () => onSelected(_ArtworkMenuAction.remove),
-          ),
-          SizedBox(height: ui(8)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ArtworkMenuRow extends StatelessWidget {
-  const _ArtworkMenuRow({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    this.danger = false,
-  });
-
-  final String label;
-  final String icon;
-  final VoidCallback onTap;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      child: SizedBox(
-        height: ui(36),
-        child: Row(
-          children: [
-            SizedBox(width: ui(14)),
-            Image.asset(
-              icon,
-              width: ui(20),
-              height: ui(20),
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: ui(10)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: ui(13),
-                color: danger
-                    ? const Color(0xFFFF323C)
-                    : const Color(0xFF0B081A),
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w400,
-                height: 20 / 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 收藏分享：复用公共 ClassShareDrawer（左侧抽屉）
-// ──────────────────────────────────────────────────────────────────────────────
-//
-// 数据流：MyCollectionPage._openShare 先 await `controller.openShare(item)` 拉
-// 班级列表，然后通过 `showClassShareDrawer` 把这个 Widget 推入 Navigator。
-// Drawer 内部 watch 控制器状态，把班级勾选 / 发送转交给 controller，由
-// controller 完成与 1.0 后端的交互；用户外部点击关闭后，外层会再调用
-// `controller.closeShare()` 兜底清理状态。
+/// 收藏分享：复用公共班级分享抽屉，班级勾选与发送交给控制器。
 class _CollectionShareDrawer extends ConsumerWidget {
   const _CollectionShareDrawer();
 
@@ -1274,8 +456,7 @@ class _CollectionShareDrawer extends ConsumerWidget {
     final controller = ref.read(myCollectionControllerProvider.notifier);
     final target = state.shareTarget;
     if (target == null) {
-      // 控制器在外部点击关闭抽屉时已经清掉 shareTarget；此时直接渲染
-      // 一个空抽屉避免崩溃，Navigator 会立即被外部关闭流程出栈。
+      // 外部关闭抽屉时控制器已清掉分享目标，这里渲染空抽屉等待出栈。
       return const ClassShareDrawer(
         title: '分享收藏',
         targetCard: SizedBox.shrink(),
@@ -1290,7 +471,7 @@ class _CollectionShareDrawer extends ConsumerWidget {
     return ClassShareDrawer(
       title: '分享收藏',
       targetCard: ShareTargetCard(
-        label: '您将分享的内容',
+        label: '你将分享的内容',
         title: target.title,
         coverUrl: target.coverUrl,
         resolveUrl: MediaUrl.resolve,
@@ -1305,8 +486,6 @@ class _CollectionShareDrawer extends ConsumerWidget {
             ),
           )
           .toList(growable: false),
-      // openShare 完成前类列表必为空 + busy=true → loading；
-      // 已有班级数据后再点 "发送" 期间 busy=true → sending。
       loading: state.busy && !hasClasses,
       sending: state.busy && hasClasses,
       onToggleClass: (id) {
@@ -1322,7 +501,7 @@ class _CollectionShareDrawer extends ConsumerWidget {
           return;
         }
         Navigator.of(context).pop();
-        AppToast.showSuccess(context, '分享成功');
+        AppToast.showSuccess(context, '已分享到班级群');
       },
     );
   }

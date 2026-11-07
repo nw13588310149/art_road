@@ -1,5 +1,6 @@
 // 校长端「校长信箱」收件箱：查看来信并按状态筛选、回复。
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -7,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../../core/constants/app_assets.dart';
@@ -15,13 +15,13 @@ import '../data/principal_inbox_data.dart';
 import '../data/principal_mailbox_repository.dart';
 import 'mailbox_attachment_widgets.dart';
 
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kInnerGray = Color(0xFFF5F6FA);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kGreen = Color(0xFF35BD7C);
+const Color _kPageBg = AppColors.page;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kInnerGray = AppColors.surfaceSubtle;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kGreen = AppColors.success;
 
 class PrincipalInboxView extends ConsumerStatefulWidget {
   const PrincipalInboxView({super.key, required this.onBack});
@@ -148,7 +148,7 @@ class _PrincipalInboxViewState extends ConsumerState<PrincipalInboxView> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(ui(16)),
         child: Container(
-          color: Colors.white,
+          color: AppColors.surface,
           child: Column(
             children: [
               _Banner(onBack: widget.onBack),
@@ -238,7 +238,7 @@ class _Banner extends StatelessWidget {
                 width: ui(32),
                 height: ui(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(8)),
                   border: Border.all(color: _kBorderSoft),
                 ),
@@ -246,7 +246,7 @@ class _Banner extends StatelessWidget {
                 child: Icon(
                   Icons.chevron_left_rounded,
                   size: ui(20),
-                  color: const Color(0xFF1C274C),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -260,18 +260,13 @@ class _Banner extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(16),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                   ),
                 ),
                 SizedBox(height: ui(4)),
                 Text(
                   '查看师生来信，按状态筛选并回复',
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: _kTextHint,
-                    fontFamily: 'PingFang SC',
-                  ),
+                  style: TextStyle(fontSize: ui(12), color: _kTextHint),
                 ),
               ],
             ),
@@ -333,8 +328,7 @@ class _StatusChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(13),
-            color: selected ? Colors.white : _kTextDark,
-            fontFamily: 'PingFang SC',
+            color: selected ? AppColors.surface : _kTextDark,
             fontWeight: AppFont.w500,
           ),
         ),
@@ -369,7 +363,7 @@ class _InboxCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(ui(14)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
         border: Border.all(color: _kBorderSoft),
       ),
@@ -407,7 +401,6 @@ class _InboxCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                   ),
                 ),
@@ -424,12 +417,7 @@ class _InboxCard extends StatelessWidget {
           SizedBox(height: ui(10)),
           Text(
             item.content,
-            style: TextStyle(
-              fontSize: ui(14),
-              color: _kTextDark,
-              fontFamily: 'PingFang SC',
-              height: 1.5,
-            ),
+            style: TextStyle(fontSize: ui(14), color: _kTextDark, height: 1.5),
           ),
           if (item.attachments.isNotEmpty) ...[
             SizedBox(height: ui(10)),
@@ -474,7 +462,7 @@ class _InboxCard extends StatelessWidget {
                     SizedBox(height: ui(4)),
                     Text(
                       item.replyTime,
-                      style: TextStyle(fontSize: ui(11), color: _kTextHint),
+                      style: TextStyle(fontSize: ui(12), color: _kTextHint),
                     ),
                   ],
                   SizedBox(height: ui(6)),
@@ -534,18 +522,14 @@ class _InboxPaginationBar extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(ui(16), ui(10), ui(16), ui(14)),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         border: Border(top: BorderSide(color: _kBorderSoft)),
       ),
       child: Row(
         children: [
           Text(
             '共 $total 条',
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(12), color: _kTextHint),
           ),
           const Spacer(),
           _PaginationArrow(
@@ -559,7 +543,6 @@ class _InboxPaginationBar extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
             ),
           ),
@@ -603,7 +586,7 @@ class _PaginationArrow extends StatelessWidget {
             border: Border.all(color: _kBorderSoft),
           ),
           alignment: Alignment.center,
-          child: Icon(icon, size: ui(18), color: const Color(0xFF1C274C)),
+          child: Icon(icon, size: ui(18), color: AppColors.ink),
         ),
       ),
     );
@@ -634,7 +617,7 @@ class _ReplyButton extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
-              colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+              colors: [AppColors.brandSoft, AppColors.brand],
             ),
             borderRadius: BorderRadius.circular(ui(6)),
           ),
@@ -644,8 +627,7 @@ class _ReplyButton extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: ui(12),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
+                color: AppColors.surface,
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -672,7 +654,7 @@ class _SubmitterAvatar extends StatelessWidget {
       height: ui(36),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFD7D5FF),
+        color: AppColors.brandTint,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Text(
@@ -682,7 +664,6 @@ class _SubmitterAvatar extends StatelessWidget {
           height: 1.0,
           fontWeight: AppFont.w600,
           color: _kPurple,
-          fontFamily: 'PingFang SC',
         ),
       ),
     );
@@ -719,9 +700,8 @@ class _Badge extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: ui(11),
+          fontSize: ui(12),
           color: color,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
         ),
       ),

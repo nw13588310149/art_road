@@ -69,7 +69,8 @@ int countUnsignedTeacherCourses(List<Map<String, dynamic>> courses) {
 
 String formatTeacherNextCourseTime(Map<String, dynamic>? course) {
   if (course == null) return '0';
-  final raw = course['courseStartTime'] ??
+  final raw =
+      course['courseStartTime'] ??
       course['startTime'] ??
       course['timeBegin'] ??
       course['beginTime'];
@@ -98,26 +99,14 @@ List<SmartCampusStatCardData> buildCourseTeacherStats({
   final pendingTodo = index.pendingHomeworkCount + unsigned;
 
   return [
-    SmartCampusStatCardData(
-      label: '今日授课',
-      value: '${index.todayCourseCount}',
-    ),
+    SmartCampusStatCardData(label: '今日授课', value: '${index.todayCourseCount}'),
     SmartCampusStatCardData(
       label: '待批改',
       value: '${index.pendingHomeworkCount}',
     ),
-    SmartCampusStatCardData(
-      label: '待签课',
-      value: '$unsigned',
-    ),
-    SmartCampusStatCardData(
-      label: '待办事项',
-      value: '$pendingTodo',
-    ),
-    SmartCampusStatCardData(
-      label: '本周课时',
-      value: '${weekCourseCount ?? 0}',
-    ),
+    SmartCampusStatCardData(label: '待签课', value: '$unsigned'),
+    SmartCampusStatCardData(label: '待办事项', value: '$pendingTodo'),
+    SmartCampusStatCardData(label: '本周课时', value: '${weekCourseCount ?? 0}'),
     SmartCampusStatCardData(
       label: '下一节',
       value: formatTeacherNextCourseTime(index.nextCourse),

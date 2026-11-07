@@ -1,17 +1,17 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/media_url.dart';
 import '../../../core/theme/app_font.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../courseware/ui/courseware_url_opener.dart';
 import '../../shell/ui/shell_layout.dart';
 
-const Color _kBorderDash = Color(0xFFCECED1);
-const Color _kInnerGray = Color(0xFFF5F6FA);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
+const Color _kBorderDash = AppColors.textTertiary;
+const Color _kInnerGray = AppColors.surfaceSubtle;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
 
 /// 校长信箱附件 chip：图片 / 文件统一样式，点击可预览或打开。
 class MailboxAttachmentChip extends StatelessWidget {
@@ -53,7 +53,6 @@ class MailboxAttachmentChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),

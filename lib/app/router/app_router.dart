@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/ai_chat/ui/ai_chat_page.dart';
 import '../../features/art_toolbox/ui/art_toolbox_page.dart';
+import '../../features/ebooks/ui/ebooks_page.dart';
 import '../../features/artworks/ui/artworks_page.dart';
 import '../../features/auth/ui/forget_password_page.dart';
 import '../../features/auth/ui/login_page.dart';
@@ -20,6 +21,7 @@ import '../../features/my_notes/ui/my_notes_page.dart' as my_notes;
 import '../../features/consultation/ui/consultation_detail_page.dart';
 import '../../features/consultation/ui/consultation_page.dart';
 import '../../features/personal_center/ui/info_page.dart';
+import '../../features/personal_center/ui/my_qr_code_page.dart';
 import '../../features/personal_center/ui/personal_center_page.dart';
 import '../../features/quiz_practice/ui/quiz_practice_page.dart';
 import '../../features/quiz_practice/ui/quiz_session_page.dart';
@@ -95,6 +97,8 @@ class AppRouter {
         return const GalleryPage();
       case RoutePaths.artToolbox:
         return const ArtToolboxPage();
+      case RoutePaths.ebooks:
+        return const EbooksPage();
       case RoutePaths.school:
         return const SchoolCoursewareV2Page();
       case RoutePaths.circle:
@@ -118,6 +122,8 @@ class AppRouter {
         return const PersonalCenterPage();
       case RoutePaths.info:
         return const InfoPage();
+      case RoutePaths.qrcode:
+        return const MyQrCodePage();
       case RoutePaths.fankui:
       case RoutePaths.helpFeedback:
         return const AppFeedbackPage();
@@ -178,7 +184,6 @@ class AppRouter {
       RoutePaths.noteBg: '笔记背景',
       RoutePaths.detail: '课件详情',
       RoutePaths.detail2: '课件详情',
-      RoutePaths.qrcode: '我的二维码',
       RoutePaths.chat: '班级聊天',
       RoutePaths.noteDetail: '笔记详情',
       RoutePaths.verifie: '实名认证',
@@ -186,6 +191,6 @@ class AppRouter {
       RoutePaths.xieyi: '服务协议',
       RoutePaths.email: '邮箱绑定',
     };
-    return legacyRoutes[routeName] ?? '待迁移页面';
+    return legacyRoutes[routeName] ?? '该功能';
   }
 }

@@ -25,18 +25,17 @@
 // 后端返回的可保存 path（_AttachmentSlot.uploadedPath），提交时一并带出。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/app_providers.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../courseware/state/cloud_drive_controller.dart';
 import '../../courseware/ui/courseware_file_picker.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -45,15 +44,15 @@ import '../data/principal_mailbox_repository.dart';
 import 'mailbox_attachment_widgets.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardBg = Colors.white;
-const Color _kInnerGray = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kBorderDash = Color(0xFFCECED1);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPlaceholder = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF715EFE);
+const Color _kPageBg = AppColors.page;
+const Color _kCardBg = AppColors.surface;
+const Color _kInnerGray = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kBorderDash = AppColors.textTertiary;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPlaceholder = AppColors.textTertiary;
+const Color _kPurple = AppColors.brand;
 
 enum _MailboxMode { compose, submitted }
 
@@ -92,11 +91,11 @@ extension _MailboxStatusX on _MailboxStatus {
   Color get color {
     switch (this) {
       case _MailboxStatus.sent:
-        return const Color(0xFF715EFE);
+        return AppColors.brand;
       case _MailboxStatus.replied:
-        return const Color(0xFF35BD7C);
+        return AppColors.success;
       case _MailboxStatus.closed:
-        return const Color(0xFFB6B5BB);
+        return AppColors.textPlaceholder;
     }
   }
 }
@@ -483,7 +482,6 @@ class _HeaderGradientBar extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(16),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                     height: 1.2,
                   ),
@@ -495,7 +493,6 @@ class _HeaderGradientBar extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -534,14 +531,14 @@ class _BackChip extends StatelessWidget {
         height: ui(32),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderSoft),
         ),
         child: Icon(
           Icons.chevron_left_rounded,
           size: ui(20),
-          color: const Color(0xFF1C274C),
+          color: AppColors.ink,
         ),
       ),
     );
@@ -566,7 +563,7 @@ class _MailboxModeSegment extends StatelessWidget {
       height: ui(32),
       padding: EdgeInsets.all(ui(2)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Row(
@@ -620,8 +617,7 @@ class _SegmentItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(12),
-            color: selected ? Colors.white : _kTextHint,
-            fontFamily: 'PingFang SC',
+            color: selected ? AppColors.surface : _kTextHint,
             fontWeight: weight,
             height: 1,
           ),
@@ -680,7 +676,6 @@ class _ComposeForm extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 20 / 13,
                 ),
@@ -732,7 +727,6 @@ class _SectionTitle extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(16),
         color: _kTextDark,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w500,
         height: 28 / 16,
       ),
@@ -766,7 +760,6 @@ class _BodyField extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: _kTextDark,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 20 / 12,
         ),
@@ -775,7 +768,6 @@ class _BodyField extends StatelessWidget {
           hintStyle: TextStyle(
             fontSize: ui(12),
             color: _kPlaceholder,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 20 / 12,
           ),
@@ -850,8 +842,7 @@ class _KindChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: selected ? Colors.white : _kTextDark,
-            fontFamily: 'PingFang SC',
+            color: selected ? AppColors.surface : _kTextDark,
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -887,7 +878,7 @@ class _AnonymousSwitch extends StatelessWidget {
           width: ui(20),
           height: ui(20),
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             shape: BoxShape.circle,
           ),
         ),
@@ -992,18 +983,13 @@ class _UploadTile extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.upload_file_rounded,
-          size: ui(18),
-          color: const Color(0xFF1C274C),
-        ),
+        Icon(Icons.upload_file_rounded, size: ui(18), color: AppColors.ink),
         SizedBox(width: ui(4)),
         Text(
           '上传文件',
           style: TextStyle(
             fontSize: ui(14),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w500,
             height: 20 / 14,
           ),
@@ -1026,7 +1012,7 @@ class _UploadTile extends StatelessWidget {
       statusIcon = Icon(
         Icons.error_outline_rounded,
         size: ui(16),
-        color: const Color(0xFFF04545),
+        color: AppColors.danger,
       );
     }
 
@@ -1040,7 +1026,7 @@ class _UploadTile extends StatelessWidget {
       statusColor = _kTextHint;
     } else {
       statusLabel = s.error ?? '上传失败，点击重试';
-      statusColor = const Color(0xFFF04545);
+      statusColor = AppColors.danger;
     }
 
     return Column(
@@ -1060,7 +1046,6 @@ class _UploadTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1.2,
                 ),
@@ -1086,9 +1071,8 @@ class _UploadTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: ui(11),
+              fontSize: ui(12),
               color: statusColor,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -1126,7 +1110,7 @@ class _SubmitButton extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
-              colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+              colors: [AppColors.brandSoft, AppColors.brand],
             ),
             borderRadius: BorderRadius.circular(ui(12)),
             boxShadow: [
@@ -1142,16 +1126,19 @@ class _SubmitButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (busy)
-                const AppLoadingIndicator(size: 16, color: Colors.white)
+                const AppLoadingIndicator(size: 16, color: AppColors.surface)
               else
-                Icon(Icons.send_rounded, color: Colors.white, size: ui(22)),
+                Icon(
+                  Icons.send_rounded,
+                  color: AppColors.surface,
+                  size: ui(22),
+                ),
               SizedBox(width: ui(8)),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: ui(16),
-                  color: Colors.white,
-                  fontFamily: 'PingFang SC',
+                  color: AppColors.surface,
                   fontWeight: AppFont.w500,
                   height: 28 / 16,
                 ),
@@ -1195,9 +1182,7 @@ class _SubmittedList extends StatelessWidget {
           SizedBox(height: ui(12)),
           Expanded(
             child: loading
-                ? const Center(
-                    child: AppLoadingIndicator(),
-                  )
+                ? const Center(child: AppLoadingIndicator())
                 : (records.isEmpty
                       ? _EmptyHint(status: status, onWriteNew: onWriteNew)
                       : ListView.separated(
@@ -1270,8 +1255,7 @@ class _StatusFilterChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(13),
-            color: selected ? Colors.white : _kTextDark,
-            fontFamily: 'PingFang SC',
+            color: selected ? AppColors.surface : _kTextDark,
             fontWeight: AppFont.w500,
             height: 1,
           ),
@@ -1317,7 +1301,6 @@ class _EmptyHint extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -1335,7 +1318,7 @@ class _EmptyHint extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                  colors: [AppColors.brandSoft, AppColors.brand],
                 ),
                 borderRadius: BorderRadius.circular(ui(8)),
               ),
@@ -1343,8 +1326,7 @@ class _EmptyHint extends StatelessWidget {
                 '写一封新信',
                 style: TextStyle(
                   fontSize: ui(13),
-                  color: Colors.white,
-                  fontFamily: 'PingFang SC',
+                  color: AppColors.surface,
                   fontWeight: AppFont.w500,
                   height: 1.2,
                 ),
@@ -1370,7 +1352,7 @@ class _MailboxRecordTile extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(ui(14)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
         border: Border.all(color: _kBorderSoft),
       ),
@@ -1381,8 +1363,7 @@ class _MailboxRecordTile extends StatelessWidget {
             children: [
               _StatusBadge(status: record.status),
               SizedBox(width: ui(8)),
-              if (record.msgType.isNotEmpty)
-                _KindBadge(label: record.msgType),
+              if (record.msgType.isNotEmpty) _KindBadge(label: record.msgType),
               if (record.isAnonymous) ...[
                 SizedBox(width: ui(8)),
                 _KindBadge(
@@ -1398,7 +1379,6 @@ class _MailboxRecordTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -1411,7 +1391,6 @@ class _MailboxRecordTile extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 22 / 14,
             ),
@@ -1459,7 +1438,6 @@ class _MailboxRecordTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kPurple,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w500,
                           height: 1.2,
                         ),
@@ -1469,9 +1447,8 @@ class _MailboxRecordTile extends StatelessWidget {
                         Text(
                           record.replyTime,
                           style: TextStyle(
-                            fontSize: ui(11),
+                            fontSize: ui(12),
                             color: _kTextHint,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.2,
                           ),
@@ -1484,7 +1461,6 @@ class _MailboxRecordTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(13),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 20 / 13,
                     ),
@@ -1516,9 +1492,8 @@ class _StatusBadge extends StatelessWidget {
       child: Text(
         status.label,
         style: TextStyle(
-          fontSize: ui(11),
+          fontSize: ui(12),
           color: status.color,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1.4,
         ),
@@ -1550,9 +1525,8 @@ class _KindBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: ui(11),
+          fontSize: ui(12),
           color: textColor,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1.4,
         ),
@@ -1648,4 +1622,3 @@ String _pickString(Map<String, dynamic> m, List<String> keys) {
   }
   return '';
 }
-

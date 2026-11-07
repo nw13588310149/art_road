@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:the_road_of_art_flutter/core/demo/data/demo_artwork_data.dart';
+import 'package:the_road_of_art_flutter/core/demo/data/demo_marking_data.dart';
 import 'package:the_road_of_art_flutter/features/artworks/data/artwork_models.dart';
 import 'package:the_road_of_art_flutter/features/artworks/data/artwork_rules.dart';
 
@@ -96,6 +97,46 @@ void main() {
       expect((suggestions.first as Map)['galleryKeyword'], '结构');
       expect(suggestions.any((s) => (s as Map)['tag'] == '细节出彩'), isFalse);
       expect(insights['averageScore'], 84.67);
+      final praise = topTags.cast<Map>().firstWhere((t) => t['name'] == '细节出彩');
+      expect(praise['positive'], isTrue);
+    });
+
+    test('林小雨 daily works rank subjects the same way as her 9 月月考', () {
+      final insights = DemoArtworkData.insightsOf(
+        works.where((w) => w['personIndex'] == 1).toList(),
+      );
+      final exam = DemoMarkingData.instance.entryOf(1, '26')!;
+      final bySubject = [...exam.subjects!]
+        ..sort((a, b) => b.score.compareTo(a.score));
+      expect(insights['bestSubject'], bySubject.first.def.subjectName);
+      expect(insights['weakestSubject'], bySubject.last.def.subjectName);
+    });
+
+    test('submissions spread over the evening and reviews come later', () {
+      final times = <String>{};
+      for (final work in works) {
+        final created = work['createTime'] as String;
+        final clock = created.substring(11, 16);
+        times.add(clock);
+        expect(clock.compareTo('18:30') >= 0, isTrue, reason: created);
+        expect(clock.compareTo('21:30') <= 0, isTrue, reason: created);
+        for (final review in DemoArtworkData.reviewsOf(work)) {
+          final reviewed = review['reviewedTime'] as String;
+          expect(reviewed.compareTo(created) > 0, isTrue, reason: reviewed);
+          final hour = int.parse(reviewed.substring(11, 13));
+          expect(hour >= 8 && hour <= 21, isTrue, reason: reviewed);
+        }
+      }
+      expect(times.length, greaterThan(8));
+    });
+
+    test('only 细节出彩 is a highlight tag', () {
+      final tags = DemoArtworkData.seedTags('t-1');
+      final highlights = tags
+          .where((t) => ArtworkRules.isHighlightTag(t['color'] as String))
+          .map((t) => t['name'])
+          .toList();
+      expect(highlights, ['细节出彩']);
     });
   });
 
@@ -182,7 +223,21 @@ void main() {
       ], (date) => date);
       expect(groups.map((g) => g.$1), ['2026-11', '2026-10', '2026-08']);
       expect(groups.first.$2, hasLength(2));
-      expect(ArtworkRules.monthLabel('2026-10'), '【2026 年 10 月】');
+      expect(ArtworkRules.monthLabel('2026-10'), '2026 年 10 月');
+      expect(ArtworkRules.dateText('2026-11-04 19:20:00'), '2026-11-04');
+    });
+
+    test('display scores keep at most one decimal', () {
+      expect(ArtworkRules.displayScore(84.67), '84.7');
+      expect(ArtworkRules.displayScore(86), '86');
+      expect(ArtworkRules.displayScore(null), '—');
+    });
+
+    test('tags are either problems or highlights', () {
+      expect(ArtworkRules.isHighlightTag('#3b9a6e'), isTrue);
+      expect(ArtworkRules.isHighlightTag(ArtworkRules.problemTagColor), isFalse);
+      expect(ArtworkRules.isHighlightTag('#4A74D6'), isFalse);
+      expect(ArtworkRules.isHighlightTag('#4A74D6', positive: true), isTrue);
     });
 
     test('recognizes image signatures', () {

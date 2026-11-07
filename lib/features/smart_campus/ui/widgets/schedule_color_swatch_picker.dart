@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shell/ui/shell_layout.dart';
@@ -18,8 +19,8 @@ class ScheduleColorSwatchPicker extends StatelessWidget {
   final ValueChanged<Color> onSelect;
   final int columnsPerRow;
 
-  static const Color _borderColor = Color(0xFFF5F6FA);
-  static const Color _selectionRing = Color(0xFF715EFE);
+  static const Color _borderColor = AppColors.surfaceSubtle;
+  static const Color _selectionRing = AppColors.brand;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +31,7 @@ class ScheduleColorSwatchPicker extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(14)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
         border: Border.all(color: _borderColor, width: 1),
       ),
@@ -130,8 +131,8 @@ class _ScheduleColorSwatch extends StatelessWidget {
                 color: color,
                 border: Border.all(
                   color: isSelected
-                      ? Colors.white.withValues(alpha: 0.92)
-                      : Colors.black.withValues(alpha: 0.08),
+                      ? AppColors.surface.withValues(alpha: 0.92)
+                      : AppColors.ink.withValues(alpha: 0.08),
                   width: scaleUi(isSelected ? 1.5 : 1),
                 ),
                 boxShadow: isSelected ? _glowShadows(scaleUi) : null,

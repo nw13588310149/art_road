@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/art/art_tokens.dart';
-import '../../../core/theme/app_font.dart';
-import '../../../core/widgets/art_widgets.dart';
+import '../../../core/ui/ui.dart';
 
 const _samplesBySubject = <String, List<String>>{
   '素描': [
@@ -27,6 +25,10 @@ const _samplesBySubject = <String, List<String>>{
   ],
 };
 
+/// 深色对比页上的次级文字、分栏底色与选中描边。
+final _onDarkMuted = AppColors.onBrand.withValues(alpha: 0.64);
+final _paneColor = AppColors.onBrand.withValues(alpha: 0.06);
+
 /// 同科目范画；排除与学生作品同一张的演示图，其他科目三科各取一张。
 List<String> _samplesFor(String subject, List<String> myImages) {
   final pool =
@@ -50,8 +52,8 @@ Future<void> openArtworkCompare(
   return Navigator.of(context, rootNavigator: true).push(
     PageRouteBuilder<void>(
       fullscreenDialog: true,
-      transitionDuration: const Duration(milliseconds: 200),
-      reverseTransitionDuration: const Duration(milliseconds: 160),
+      transitionDuration: AppMotion.overlay,
+      reverseTransitionDuration: AppMotion.overlay,
       pageBuilder: (_, _, _) => ArtworkComparePage(
         images: images,
         subject: subject,
@@ -95,30 +97,39 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
         ? widget.subject
         : '示范';
     return Scaffold(
-      backgroundColor: const Color(0xFF15141A),
+      backgroundColor: AppColors.ink,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.s12,
+                AppSpace.s8,
+                AppSpace.s16,
+                AppSpace.s8,
+              ),
               child: Row(
                 children: [
-                  IconButton(
-                    tooltip: '关闭',
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  AppIconButton(
+                    icon: Icons.close_rounded,
+                    semanticLabel: '关闭',
+                    size: AppButtonSize.sm,
+                    filled: false,
+                    color: AppColors.onBrand,
+                    onTap: () => Navigator.of(context).maybePop(),
                   ),
+                  const SizedBox(width: AppSpace.s8),
                   Text(
                     '对比范画',
-                    style: ArtText.title(size: 17, color: Colors.white),
+                    style: AppText.title16.copyWith(color: AppColors.onBrand),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppSpace.s12),
                   Expanded(
                     child: Text(
                       '拖动中间分隔条调整比例，双击恢复一半；双指可缩放细看',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: ArtText.caption(color: Colors.white54),
+                      style: AppText.caption12.copyWith(color: _onDarkMuted),
                     ),
                   ),
                 ],
@@ -126,7 +137,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final available = constraints.maxWidth - _handleWidth;
@@ -138,9 +149,10 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                             label: '我的作品',
                             child: widget.images.isEmpty
                                 ? const SizedBox.shrink()
-                                : ArtNetworkImage(
-                                    widget.images[_mine],
+                                : AppImage(
+                                    src: widget.images[_mine],
                                     fit: BoxFit.contain,
+                                    placeholder: const SizedBox.shrink(),
                                   ),
                           ),
                         ),
@@ -155,11 +167,13 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                             width: _handleWidth,
                             child: Center(
                               child: Container(
-                                width: 5,
+                                width: 4,
                                 height: 64,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                  borderRadius: BorderRadius.circular(3),
+                                  color: AppColors.onBrand.withValues(
+                                    alpha: 0.72,
+                                  ),
+                                  borderRadius: AppRadius.brPill,
                                 ),
                               ),
                             ),
@@ -168,10 +182,10 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                         Expanded(
                           child: _ComparePane(
                             label: '范画 · $subjectLabel',
-                            child: Image.asset(
-                              _samples[_sample],
+                            child: AppImage(
+                              src: _samples[_sample],
                               fit: BoxFit.contain,
-                              filterQuality: FilterQuality.medium,
+                              placeholder: const SizedBox.shrink(),
                             ),
                           ),
                         ),
@@ -182,28 +196,25 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              padding: const EdgeInsets.all(AppSpace.s12),
               child: Row(
                 children: [
                   if (widget.images.length > 1)
                     Flexible(
                       child: _ThumbRow(
                         title: '我的作品',
-                        count: widget.images.length,
+                        images: widget.images,
                         selected: _mine,
                         onSelect: (i) => setState(() => _mine = i),
-                        builder: (i) => ArtNetworkImage(widget.images[i]),
                       ),
                     ),
                   const Spacer(),
                   Flexible(
                     child: _ThumbRow(
                       title: '换一张范画',
-                      count: _samples.length,
+                      images: _samples,
                       selected: _sample,
                       onSelect: (i) => setState(() => _sample = i),
-                      builder: (i) =>
-                          Image.asset(_samples[i], fit: BoxFit.cover),
                     ),
                   ),
                 ],
@@ -225,9 +236,9 @@ class _ComparePane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: AppRadius.br12,
       child: ColoredBox(
-        color: const Color(0xFF232229),
+        color: _paneColor,
         child: Stack(
           children: [
             Positioned.fill(
@@ -238,26 +249,22 @@ class _ComparePane extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 10,
-              top: 10,
+              left: AppSpace.s8,
+              top: AppSpace.s8,
               child: IgnorePointer(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+                    horizontal: AppSpace.s8,
+                    vertical: AppSpace.s4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(999),
+                    color: AppColors.ink.withValues(alpha: 0.72),
+                    borderRadius: AppRadius.brPill,
                   ),
                   child: Text(
                     label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.3,
-                      color: Colors.white,
-                      fontWeight: AppFont.w500,
-                      fontFamily: 'PingFang SC',
+                    style: AppText.caption12Strong.copyWith(
+                      color: AppColors.onBrand,
                     ),
                   ),
                 ),
@@ -273,51 +280,50 @@ class _ComparePane extends StatelessWidget {
 class _ThumbRow extends StatelessWidget {
   const _ThumbRow({
     required this.title,
-    required this.count,
+    required this.images,
     required this.selected,
     required this.onSelect,
-    required this.builder,
   });
 
   final String title;
-  final int count;
+  final List<String> images;
   final int selected;
   final ValueChanged<int> onSelect;
-  final Widget Function(int index) builder;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(title, style: ArtText.caption(color: Colors.white70)),
-        const SizedBox(width: 10),
+        Text(title, style: AppText.caption12.copyWith(color: _onDarkMuted)),
+        const SizedBox(width: AppSpace.s12),
         Flexible(
           child: SizedBox(
             height: 48,
             child: ListView.separated(
               shrinkWrap: true,
               scrollDirection: Axis.horizontal,
-              itemCount: count,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) => GestureDetector(
-                behavior: HitTestBehavior.opaque,
+              itemCount: images.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpace.s8),
+              itemBuilder: (context, index) => AppPressable(
                 onTap: () => onSelect(index),
+                selected: index == selected,
+                semanticLabel: '$title第 ${index + 1} 张',
                 child: Container(
                   width: 48,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: AppRadius.br8,
                     border: Border.all(
                       color: index == selected
-                          ? ArtColors.brandSoft
-                          : Colors.transparent,
+                          ? AppColors.brandSoft
+                          : _paneColor,
                       width: 2,
                     ),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: builder(index),
+                  child: AppImage(
+                    src: images[index],
+                    borderRadius: AppRadius.br4,
                   ),
                 ),
               ),

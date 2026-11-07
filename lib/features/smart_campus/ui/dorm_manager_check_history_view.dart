@@ -29,13 +29,13 @@
 // 数据流：按日期、宿舍楼和楼层调用 dormitoryCheckHistory + dormitoryCheckStat。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/dormitory_check_data.dart';
@@ -49,18 +49,18 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardGreyBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextDarker = Color(0xFF1A1A1A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextMuted = Color(0xFF71717A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kCalendarHint = Color(0xFFE6E9F1);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleSolid = Color(0xFF8E7FFF);
-const Color _kRed = Color(0xFFFF323C);
+const Color _kPageBg = AppColors.page;
+const Color _kCardGreyBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextDarker = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextMuted = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kCalendarHint = AppColors.line;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSolid = AppColors.brandSoft;
+const Color _kRed = AppColors.danger;
 const Color _kBlue = Color(0xFF325BFF);
 const Color _kGreen = Color(0xFF1CD097);
 
@@ -377,7 +377,7 @@ class _Banner extends StatelessWidget {
                 width: ui(32),
                 height: ui(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(8)),
                   border: Border.all(color: _kBorderSoft, width: 1),
                 ),
@@ -385,7 +385,7 @@ class _Banner extends StatelessWidget {
                 child: Icon(
                   Icons.chevron_left_rounded,
                   size: ui(20),
-                  color: const Color(0xFF1C274C),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -401,7 +401,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -423,7 +422,7 @@ class _Banner extends StatelessWidget {
                     height: ui(32),
                     padding: EdgeInsets.symmetric(horizontal: ui(12)),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(ui(8)),
                       border: Border.all(color: _kBorderSoft),
                     ),
@@ -433,7 +432,6 @@ class _Banner extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kPurple,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w600,
                       ),
                     ),
@@ -550,7 +548,7 @@ class _DormitorySelectFieldState<T> extends State<_DormitorySelectField<T>> {
         width: widget.width,
         height: ui(44),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft, width: 1),
         ),
@@ -566,7 +564,6 @@ class _DormitorySelectFieldState<T> extends State<_DormitorySelectField<T>> {
                   fontSize: ui(14),
                   height: 1.2,
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                 ),
               ),
             ),
@@ -576,7 +573,7 @@ class _DormitorySelectFieldState<T> extends State<_DormitorySelectField<T>> {
               child: Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: ui(18),
-                color: const Color(0xFFC6C6C6),
+                color: AppColors.textPlaceholder,
               ),
             ),
           ],
@@ -599,7 +596,7 @@ class _LoadErrorHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(32), horizontal: ui(16)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -607,11 +604,7 @@ class _LoadErrorHint extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: ui(13),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(13), color: _kTextHint),
           ),
           SizedBox(height: ui(12)),
           InkWell(
@@ -621,7 +614,6 @@ class _LoadErrorHint extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(13),
                 color: _kPurple,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
               ),
             ),
@@ -657,7 +649,7 @@ class _DateStripCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(12)),
@@ -672,7 +664,6 @@ class _DateStripCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1.2,
                 ),
@@ -689,7 +680,6 @@ class _DateStripCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -744,7 +734,7 @@ class _CalendarCell extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final bg = selected ? _kPurple : _kCardGreyBg;
     final weekdayColor = selected ? _kCalendarHint : _kTextHint;
-    final dayColor = selected ? Colors.white : _kTextDark;
+    final dayColor = selected ? AppColors.surface : _kTextDark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ui(8)),
@@ -762,7 +752,6 @@ class _CalendarCell extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: weekdayColor,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.2,
               ),
@@ -865,7 +854,7 @@ class _HistoryTable extends StatelessWidget {
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -930,7 +919,7 @@ class _HistoryTableRow extends StatelessWidget {
         ? item.statusLabel
         : status.label;
     return Material(
-      color: zebra ? const Color(0xFFFAFAFC) : Colors.white,
+      color: zebra ? const Color(0xFFFAFAFC) : AppColors.surface,
       child: InkWell(
         onTap: item.id.isEmpty ? null : () => onTapDetail(item),
         child: Padding(
@@ -942,10 +931,7 @@ class _HistoryTableRow extends StatelessWidget {
                 flex: 22,
                 child: Row(
                   children: [
-                    _StudentAvatar(
-                      name: item.studentName,
-                      url: item.avatarUrl,
-                    ),
+                    _StudentAvatar(name: item.studentName, url: item.avatarUrl),
                     SizedBox(width: ui(8)),
                     Expanded(
                       child: _TwoLineCell(
@@ -979,7 +965,6 @@ class _HistoryTableRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                   ),
@@ -991,7 +976,6 @@ class _HistoryTableRow extends StatelessWidget {
                   item.checkTime.isEmpty ? '—' : item.checkTime,
                   style: TextStyle(
                     fontSize: ui(12),
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                     color: item.status == DormitoryStudentCheckStatus.lateReturn
@@ -1036,7 +1020,6 @@ class _TwoLineCell extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1050,7 +1033,6 @@ class _TwoLineCell extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -1079,7 +1061,7 @@ class _StudentAvatar extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: const Color(0xFFE3DFFF),
+          color: AppColors.brandTint,
           borderRadius: BorderRadius.circular(radius),
         ),
         alignment: Alignment.center,
@@ -1088,7 +1070,6 @@ class _StudentAvatar extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kPurple,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1130,8 +1111,7 @@ class _StatusBadge extends StatelessWidget {
         text,
         style: TextStyle(
           fontSize: ui(12),
-          color: Colors.white,
-          fontFamily: 'PingFang SC',
+          color: AppColors.surface,
           fontWeight: AppFont.w400,
           height: 1,
         ),
@@ -1169,7 +1149,6 @@ class _RowActions extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kPurple,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1181,7 +1160,6 @@ class _RowActions extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: _kGreen,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1,
         ),
@@ -1200,17 +1178,13 @@ class _RowActions extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
         ),
       );
     }
-    return Align(
-      alignment: Alignment.centerRight,
-      child: action,
-    );
+    return Align(alignment: Alignment.centerRight, child: action);
   }
 }
 
@@ -1232,7 +1206,6 @@ class _HeaderText extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: _kTextMuted,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1,
         ),
@@ -1299,7 +1272,7 @@ class _EmptyState extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(48)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -1310,7 +1283,6 @@ class _EmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.5,
             ),

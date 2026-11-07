@@ -14,10 +14,7 @@ DateTime scheduleMondayOf(DateTime date) {
 }
 
 /// 由任意周一对应该学期的教学周序号（1-based）。
-int scheduleTeachingWeekOf(
-  DateTime weekStart, {
-  DateTime? referenceNow,
-}) {
+int scheduleTeachingWeekOf(DateTime weekStart, {DateTime? referenceNow}) {
   final monday = scheduleMondayOf(weekStart);
   final todayMonday = scheduleMondayOf(referenceNow ?? DateTime.now());
   final deltaWeeks = monday.difference(todayMonday).inDays ~/ 7;

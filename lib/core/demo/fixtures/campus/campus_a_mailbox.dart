@@ -41,9 +41,11 @@ abstract final class CampusAMailbox {
         'isAnonymous': anonymous ? 1 : 0,
         'attachments': attachments,
         'status': status,
-        'createTime': CampusA.ago(hours: hoursAgo),
+        'createTime': CampusA.ago(hours: hoursAgo, minutes: int.parse(id) % 47),
         'replyContent': reply,
-        'replyTime': reply.isEmpty ? '' : CampusA.ago(hours: replyHoursAgo),
+        'replyTime': reply.isEmpty
+            ? ''
+            : CampusA.ago(hours: replyHoursAgo, minutes: int.parse(id) % 29),
       };
     }
 
@@ -71,9 +73,11 @@ abstract final class CampusAMailbox {
         'isAnonymous': 0,
         'attachments': attachments,
         'status': status,
-        'createTime': CampusA.ago(hours: hoursAgo),
+        'createTime': CampusA.ago(hours: hoursAgo, minutes: int.parse(id) % 47),
         'replyContent': reply,
-        'replyTime': reply.isEmpty ? '' : CampusA.ago(hours: replyHoursAgo),
+        'replyTime': reply.isEmpty
+            ? ''
+            : CampusA.ago(hours: replyHoursAgo, minutes: int.parse(id) % 29),
       };
     }
 
@@ -82,7 +86,7 @@ abstract final class CampusAMailbox {
         '4108',
         15,
         type: '建议',
-        content: '每次模考后希望能展示更多高分卷，最好附上阅卷老师的点评，方便我们对照找差距。',
+        content: '每次模考后希望能展示更多高分卷，并附上阅卷老师的点评，方便我们对照找差距。',
         hoursAgo: 5,
         anonymous: true,
         attachments: 'asset:assets/demo/papers/color.jpg',
@@ -201,7 +205,7 @@ abstract final class CampusAMailbox {
       if (submitted != null &&
           now - submitted >= _feedbackReplyDelay.inMilliseconds) {
         item
-          ..['replyContent'] = '感谢你的反馈！美术之路产品团队已记录，会在后续版本中评估优化，有进展会第一时间告诉你。'
+          ..['replyContent'] = '已收到你的反馈，我们会在后续版本中评估。'
           ..['replyTime'] = CampusA.dateTime(
             DateTime.fromMillisecondsSinceEpoch(
               submitted + _feedbackReplyDelay.inMilliseconds,
@@ -225,7 +229,7 @@ abstract final class CampusAMailbox {
         'content': student
             ? '希望学情中心的原卷可以放大后对比两次考试的同一科，方便看出进步。'
             : '作品点评希望支持在原图上直接圈画标注，语音点评再长一点就更好了。',
-        'createTime': CampusA.ago(days: 2, hours: 3),
+        'createTime': CampusA.ago(days: 2, hours: 3, minutes: 17),
         'replyContent': '',
         'replyTime': '',
       },
@@ -234,11 +238,11 @@ abstract final class CampusAMailbox {
         'content': student
             ? '课堂签到页能不能显示离下课还有多久？经常不知道什么时候该签退。'
             : '查寝记录导出希望能按班级筛选，方便发给班主任。',
-        'createTime': CampusA.ago(days: 9, hours: 1),
+        'createTime': CampusA.ago(days: 9, hours: 1, minutes: 42),
         'replyContent': student
-            ? '已在新版本中加入「距下课」倒计时，签到页右上角即可查看，感谢建议！'
-            : '已支持按宿舍楼与楼层筛选导出，按班级导出正在开发中，感谢建议！',
-        'replyTime': CampusA.ago(days: 7, hours: 4),
+            ? '已在新版本中加入「距下课」倒计时，签到页右上角即可查看，感谢建议。'
+            : '已支持按宿舍楼与楼层筛选导出，按班级导出正在开发中，感谢建议。',
+        'replyTime': CampusA.ago(days: 7, hours: 4, minutes: 8),
       },
     ];
   }

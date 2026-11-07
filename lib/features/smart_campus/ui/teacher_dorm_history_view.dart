@@ -26,13 +26,13 @@
 //        H50 居中两列：规定时间 / 打卡时间；底部 备注。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/media_url.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import '../data/student_dormitory_data.dart' show DormitoryDetailStudentProfile;
@@ -46,18 +46,18 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardGreyBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleSoftBg = Color(0xFFD7D5FF);
-const Color _kRed = Color(0xFFFF323C);
-const Color _kRedSoftBg = Color(0xFFFEE4E8);
+const Color _kPageBg = AppColors.page;
+const Color _kCardGreyBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSoftBg = AppColors.brandTint;
+const Color _kRed = AppColors.danger;
+const Color _kRedSoftBg = AppColors.dangerSoft;
 const Color _kBlue = Color(0xFF325BFF);
-const Color _kCalendarHint = Color(0xFFE6E9F1);
+const Color _kCalendarHint = AppColors.line;
 
 // —— 学生口径状态（仅出现 正常 / 未打卡 两种） ——————————————————————
 enum _StudentStatus {
@@ -72,7 +72,7 @@ enum _StudentStatus {
 
 // —— 宿舍口径状态（实色徽章）—————————————————————————————————————
 enum _DormStatus {
-  normal('正常', Color(0xFF8E7FFF)),
+  normal('正常', AppColors.brandSoft),
   absent('未打卡', _kRed),
   late_('迟到', _kBlue);
 
@@ -191,8 +191,7 @@ class _TeacherDormHistoryViewState
       config: checkConfig,
     );
     final rawAvatar = record.headUrl.trim();
-    final avatarUrl =
-        rawAvatar.isNotEmpty ? MediaUrl.resolve(rawAvatar) : '';
+    final avatarUrl = rawAvatar.isNotEmpty ? MediaUrl.resolve(rawAvatar) : '';
     final subtitle = record.studentNo.isNotEmpty && record.studentNo != '--'
         ? record.studentNo
         : record.dormName;
@@ -333,7 +332,7 @@ class _Banner extends StatelessWidget {
                 width: ui(32),
                 height: ui(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(8)),
                   border: Border.all(color: _kBorderSoft, width: 1),
                 ),
@@ -341,7 +340,7 @@ class _Banner extends StatelessWidget {
                 child: Icon(
                   Icons.chevron_left_rounded,
                   size: ui(20),
-                  color: const Color(0xFF1C274C),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -357,7 +356,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -368,7 +366,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.4,
                     ),
@@ -408,7 +405,7 @@ class _DateStripCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(12)),
@@ -423,7 +420,6 @@ class _DateStripCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1.2,
                 ),
@@ -432,7 +428,7 @@ class _DateStripCard extends StatelessWidget {
               Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: ui(16),
-                color: const Color(0xFF1A1A1A),
+                color: AppColors.ink,
               ),
               const Spacer(),
               Text(
@@ -440,7 +436,6 @@ class _DateStripCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -500,7 +495,7 @@ class _CalendarCell extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final bg = selected ? _kPurple : _kCardGreyBg;
     final weekdayColor = selected ? _kCalendarHint : _kTextHint;
-    final dayColor = selected ? Colors.white : _kTextDark;
+    final dayColor = selected ? AppColors.surface : _kTextDark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ui(8)),
@@ -519,7 +514,6 @@ class _CalendarCell extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: weekdayColor,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.2,
               ),
@@ -545,10 +539,7 @@ class _CalendarCell extends StatelessWidget {
 // —— 4 张统计卡 ————————————————————————————————————————————————
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow({
-    required this.eveningReturned,
-    required this.eveningWatch,
-  });
+  const _StatsRow({required this.eveningReturned, required this.eveningWatch});
 
   final int eveningReturned;
   final int eveningWatch;
@@ -596,7 +587,7 @@ class _StatCard extends StatelessWidget {
       height: ui(88),
       padding: EdgeInsets.fromLTRB(ui(16), ui(16), ui(16), ui(14)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -609,7 +600,6 @@ class _StatCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1.2,
             ),
@@ -618,10 +608,7 @@ class _StatCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                '$value',
-                style: smartCampusStatValueTextStyle(ui),
-              ),
+              Text('$value', style: smartCampusStatValueTextStyle(ui)),
               SizedBox(width: ui(8)),
               Expanded(
                 child: Padding(
@@ -633,7 +620,6 @@ class _StatCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.0,
                     ),
@@ -673,7 +659,6 @@ class _CardsGrid extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
             ),
           ),
@@ -735,7 +720,7 @@ class _DormCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(ui(12)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -747,8 +732,8 @@ class _DormCard extends StatelessWidget {
               Text(
                 record.titleText,
                 style: TextStyle(
-                  fontSize: ui(18),
-                  color: const Color(0xFF1A1A1A),
+                  fontSize: ui(16),
+                  color: AppColors.ink,
                   fontFamily: 'Barlow',
                   fontWeight: FontWeight.w600,
                   height: 1.2,
@@ -767,7 +752,6 @@ class _DormCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.4,
                   ),
@@ -778,7 +762,6 @@ class _DormCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -796,7 +779,6 @@ class _DormCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -825,8 +807,7 @@ class _DormStatusBadge extends StatelessWidget {
         status.label,
         style: TextStyle(
           fontSize: ui(12),
-          color: Colors.white,
-          fontFamily: 'PingFang SC',
+          color: AppColors.surface,
           fontWeight: AppFont.w400,
           height: 1.2,
         ),
@@ -880,7 +861,7 @@ class _DormStudentAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFF8E7FFF),
+        color: AppColors.brandSoft,
         borderRadius: BorderRadius.circular(radius),
       ),
       alignment: Alignment.center,
@@ -889,13 +870,16 @@ class _DormStudentAvatar extends StatelessWidget {
               initial,
               style: TextStyle(
                 fontSize: ui(size * 0.38),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
+                color: AppColors.surface,
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
             )
-          : Icon(Icons.person_rounded, size: ui(size * 0.5), color: Colors.white),
+          : Icon(
+              Icons.person_rounded,
+              size: ui(size * 0.5),
+              color: AppColors.surface,
+            ),
     );
   }
 }
@@ -913,126 +897,120 @@ class _StudentCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(ui(16)),
       child: Container(
-      padding: EdgeInsets.all(ui(12)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(16)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _DormStudentAvatar(
-                rawHeadUrl: record.headUrl,
-                name: record.studentName,
-                size: ui(40),
-              ),
-              SizedBox(width: ui(8)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  record.studentName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+        padding: EdgeInsets.all(ui(12)),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(ui(16)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DormStudentAvatar(
+                  rawHeadUrl: record.headUrl,
+                  name: record.studentName,
+                  size: ui(40),
+                ),
+                SizedBox(width: ui(8)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    record.studentName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: ui(14),
+                                      color: _kTextDark,
+                                      fontWeight: AppFont.w500,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: ui(4)),
+                                Text(
+                                  record.studentNo,
                                   style: TextStyle(
-                                    fontSize: ui(14),
-                                    color: _kTextDark,
-                                    fontFamily: 'PingFang SC',
-                                    fontWeight: AppFont.w500,
+                                    fontSize: ui(12),
+                                    color: _kTextHint,
+                                    fontWeight: AppFont.w400,
                                     height: 1.2,
                                   ),
                                 ),
-                              ),
-                              SizedBox(width: ui(4)),
-                              Text(
-                                record.studentNo,
-                                style: TextStyle(
-                                  fontSize: ui(12),
-                                  color: _kTextHint,
-                                  fontFamily: 'PingFang SC',
-                                  fontWeight: AppFont.w400,
-                                  height: 1.2,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          '查寝',
-                          style: TextStyle(
-                            fontSize: ui(12),
-                            color: _kTextSecondary,
-                            fontFamily: 'PingFang SC',
-                            fontWeight: AppFont.w400,
-                            height: 1.2,
-                          ),
-                        ),
-                        SizedBox(width: ui(8)),
-                        _StudentStatusBadge(status: record.status),
-                      ],
-                    ),
-                    SizedBox(height: ui(6)),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            record.dormName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Text(
+                            '查寝',
                             style: TextStyle(
                               fontSize: ui(12),
-                              color: _kTextDark,
-                              fontFamily: 'PingFang SC',
+                              color: _kTextSecondary,
                               fontWeight: AppFont.w400,
                               height: 1.2,
                             ),
                           ),
-                        ),
-                        Text(
-                          record.date,
-                          style: TextStyle(
-                            fontSize: ui(12),
-                            color: _kTextHint,
-                            fontFamily: 'PingFang SC',
-                            fontWeight: AppFont.w400,
-                            height: 1.2,
+                          SizedBox(width: ui(8)),
+                          _StudentStatusBadge(status: record.status),
+                        ],
+                      ),
+                      SizedBox(height: ui(6)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              record.dormName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: ui(12),
+                                color: _kTextDark,
+                                fontWeight: AppFont.w400,
+                                height: 1.2,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          Text(
+                            record.date,
+                            style: TextStyle(
+                              fontSize: ui(12),
+                              color: _kTextHint,
+                              fontWeight: AppFont.w400,
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: ui(12)),
-          _TimeBlock(
-            requiredTime: record.requiredTime,
-            punchTime: record.punchTime,
-          ),
-          SizedBox(height: ui(10)),
-          Text(
-            '备注：${record.note}',
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1.2,
+              ],
             ),
-          ),
-        ],
-      ),
+            SizedBox(height: ui(12)),
+            _TimeBlock(
+              requiredTime: record.requiredTime,
+              punchTime: record.punchTime,
+            ),
+            SizedBox(height: ui(10)),
+            Text(
+              '备注：${record.note}',
+              style: TextStyle(
+                fontSize: ui(12),
+                color: _kTextHint,
+                fontWeight: AppFont.w400,
+                height: 1.2,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1057,7 +1035,6 @@ class _StudentStatusBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: status.fg,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1.2,
         ),
@@ -1114,7 +1091,6 @@ class _TimeColumn extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),
@@ -1125,7 +1101,6 @@ class _TimeColumn extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),

@@ -2,9 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import '../../../core/ui/app_colors.dart';
+import '../../../core/ui/app_section_header.dart';
 
 abstract final class ShellLayoutSpec {
   static const designWidth = 1024.0;
@@ -100,7 +99,7 @@ class DashboardScaleScope extends InheritedWidget {
 class ShellDesignCanvas extends StatelessWidget {
   const ShellDesignCanvas({
     required this.child,
-    this.backgroundColor = const Color(0xFFEFF3FC),
+    this.backgroundColor = AppColors.page,
     super.key,
   });
 
@@ -129,7 +128,7 @@ class ShellPageSurface extends StatelessWidget {
     this.width,
     this.height,
     this.padding = EdgeInsets.zero,
-    this.color = Colors.white,
+    this.color = AppColors.surface,
     this.gradient,
     this.border,
     this.borderRadius,
@@ -171,6 +170,7 @@ class ShellPageSurface extends StatelessWidget {
   }
 }
 
+/// 区块标题旧组件：样式已与组件库 [AppSectionHeader] 一致（title16 +「更多 ›」）。
 class ShellSectionTitleBar extends StatelessWidget {
   const ShellSectionTitleBar({
     required this.title,
@@ -187,61 +187,12 @@ class ShellSectionTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scale = DashboardScaleScope.of(context);
-    final ui = scale.ui;
     return SizedBox(
       width: width,
-      height: ui(30),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: ui(20),
-                color: Color(0xFF1A1A1A),
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1,
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: onMoreTap,
-            child: Container(
-              width: ui(58),
-              height: ui(26),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(
-                  ui(ShellLayoutSpec.smallRadius),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    moreLabel,
-                    style: TextStyle(
-                      fontSize: ui(14),
-                      color: const Color(0xFFA9A9A9),
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 1,
-                    ),
-                  ),
-                  SizedBox(width: ui(2)),
-                  AppAssetGraphic(
-                    AppAssets.shellV2MoreArrow,
-                    width: ui(10),
-                    height: ui(10),
-                    fit: BoxFit.contain,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+      child: AppSectionHeader(
+        title: title,
+        onMore: onMoreTap,
+        moreLabel: moreLabel,
       ),
     );
   }

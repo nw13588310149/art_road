@@ -23,6 +23,7 @@
 // 字体：PingFang SC（标题 18 / 正文 12~14 / 提示 11）+ Barlow（数字 24，紫色）
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,29 +32,25 @@ import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart'
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/student_repository.dart';
-import '../data/teacher_notice_data.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardBg = Colors.white;
-const Color _kInnerGray = Color(0xFFF5F6FA);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSection = Color(0xFF1A1A1A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleAvatar = Color(0xFFB98FFF);
-const Color _kAnnounceBg = Color(0xFFF0E8FC);
-const Color _kCoursePink = Color(0xFFFFC8D9);
-const Color _kSelfTagBg = Color(0xFFF7F2FF);
-const Color _kPlaceholder = Color(0xFFD1D1D1);
+const Color _kPageBg = AppColors.page;
+const Color _kCardBg = AppColors.surface;
+const Color _kInnerGray = AppColors.surfaceSubtle;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSection = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleAvatar = AppColors.brandSoft;
+const Color _kSelfTagBg = AppColors.brandWash;
+const Color _kPlaceholder = AppColors.textPlaceholder;
 
 class StudentMyClassView extends ConsumerStatefulWidget {
   const StudentMyClassView({super.key, required this.onBack});
@@ -138,9 +135,19 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
     final ui = DashboardScaleScope.of(context).ui;
     final pageLoading = _loading;
 
+    final info = _classInfo;
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
-      header: _MyClassBanner(onBack: widget.onBack),
+      header: AppPageHeader(
+        title: '我的班级',
+        subtitle: info == null
+            ? '班级信息、班级通知、师资与同学'
+            : [
+                info.name,
+                info.subtitle,
+              ].where((s) => s.isNotEmpty).join(' · '),
+        onBack: widget.onBack,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -171,7 +178,8 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
                     _ClassmateSection(
                       classmates: _classmates,
                       query: _classmateQuery,
-                      onQueryChanged: (v) => setState(() => _classmateQuery = v),
+                      onQueryChanged: (v) =>
+                          setState(() => _classmateQuery = v),
                     ),
                   ],
                 );
@@ -191,7 +199,7 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
       context: context,
       barrierLabel: '关闭',
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.18),
+      barrierColor: AppColors.ink.withValues(alpha: 0.18),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, animation, secondary) {
         return DashboardScaleScope(
@@ -231,10 +239,7 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
         .schoolClassNoticeDetail(id: item.id);
     if (!mounted) return;
     if (!resp.isSuccess) {
-      AppToast.show(
-        context,
-        resp.msg.isNotEmpty ? resp.msg : '通知详情加载失败',
-      );
+      AppToast.show(context, resp.msg.isNotEmpty ? resp.msg : '通知详情加载失败');
       return;
     }
     final detail = _parseClassNoticeDetail(resp.data) ?? item;
@@ -254,7 +259,6 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 22 / 13,
                 ),
@@ -265,7 +269,6 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 22 / 13,
                 ),
@@ -277,7 +280,6 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.4,
                 ),
@@ -308,11 +310,7 @@ class _EmptyHintCard extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         message,
-        style: TextStyle(
-          fontSize: ui(14),
-          color: _kTextHint,
-          fontFamily: 'PingFang SC',
-        ),
+        style: TextStyle(fontSize: ui(14), color: _kTextHint),
       ),
     );
   }
@@ -632,68 +630,6 @@ _ClassNoticeItem? _parseClassNoticeDetail(dynamic raw) {
 // 顶部 banner：xiaoquanHeaderBg 背景图，左返回按钮 + 居中标题
 // =============================================================================
 
-class _MyClassBanner extends StatelessWidget {
-  const _MyClassBanner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: const Color(0xFF1C274C),
-                ),
-              ),
-            ),
-          ),
-          Center(
-            child: Text(
-              '我的班级',
-              style: TextStyle(
-                fontSize: ui(16),
-                color: _kTextDark,
-                fontWeight: AppFont.w600,
-                fontFamily: 'PingFang SC',
-                height: 1,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // =============================================================================
 // 班级信息卡（高 163）
 // =============================================================================
@@ -733,112 +669,70 @@ class _ClassInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(163),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.studentMyClassInfoBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 标题
-          Positioned(
-            left: ui(16),
-            top: ui(12),
-            child: Text(
-              data.name,
-              style: TextStyle(
-                fontSize: ui(18),
-                color: _kTextDark,
-                fontWeight: AppFont.w500,
-                fontFamily: 'PingFang SC',
-                height: 1,
-              ),
-            ),
-          ),
-          // 副标题
-          Positioned(
-            left: ui(16),
-            top: ui(41),
-            child: Text(
-              data.subtitle,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kTextHint,
-                fontWeight: AppFont.w400,
-                fontFamily: 'PingFang SC',
-                height: 1,
-              ),
-            ),
-          ),
-          // 三列信息（班主任 / 宿管老师 / 教室）
-          // 不再外包 SizedBox(height: 40)：固定 40 在系统 textScaler > 1.0
-          // 时（label 14 + gap 8 + value 14 都按比例放大）会触发
-          // "BOTTOM OVERFLOWED BY 8.0 PIXELS"。
-          // 让 Row 自适应即可——_VDivider 自带 height:31，不依赖父级。
-          Positioned(
-            left: ui(16),
-            top: ui(70),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _InfoPair(label: '班主任', value: data.headTeacher),
-                SizedBox(width: ui(12)),
-                _VDivider(),
-                SizedBox(width: ui(12)),
-                _InfoPair(label: '宿管老师', value: data.counselor),
-                SizedBox(width: ui(12)),
-                _VDivider(),
-                SizedBox(width: ui(12)),
-                _InfoPair(label: '教室', value: data.classroom),
-              ],
-            ),
-          ),
-          // 班级群公告 / 占位 footer
-          Positioned(
-            left: ui(16),
-            right: ui(16),
-            top: ui(134),
-            child: data.announcement.isNotEmpty
-                ? _ClassGroupAnnouncementRow(text: data.announcement)
-                : Text(
-                    data.footer,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontWeight: AppFont.w400,
-                      fontFamily: 'PingFang SC',
-                      height: 1.2,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(data.name, style: AppText.title16),
+                    if (data.subtitle.isNotEmpty)
+                      Text(data.subtitle, style: AppText.body13),
+                    const SizedBox(height: AppSpace.s16),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _InfoPair(
+                            label: '班主任',
+                            value: data.headTeacher,
+                          ),
+                        ),
+                        Expanded(
+                          child: _InfoPair(
+                            label: '宿管老师',
+                            value: data.counselor,
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: _InfoPair(
+                            label: '教室',
+                            value: data.classroom,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpace.s16),
+              _StatBox(label: '全班', value: data.totalCount),
+              const SizedBox(width: AppSpace.s8),
+              _StatBox(label: '男生', value: data.boyCount),
+              const SizedBox(width: AppSpace.s8),
+              _StatBox(label: '女生', value: data.girlCount),
+            ],
           ),
-          // 右上：三个数字盒
-          Positioned(
-            right: ui(20),
-            top: ui(31),
-            child: Row(
-              children: [
-                _StatBox(label: '全班', value: data.totalCount),
-                SizedBox(width: ui(16)),
-                _StatBox(label: '男生', value: data.boyCount),
-                SizedBox(width: ui(16)),
-                _StatBox(label: '女生', value: data.girlCount),
-              ],
-            ),
-          ),
+          const SizedBox(height: AppSpace.s12),
+          const Divider(height: 1, thickness: 1, color: AppColors.lineSoft),
+          const SizedBox(height: AppSpace.s12),
+          if (data.announcement.isNotEmpty)
+            _ClassGroupAnnouncementRow(text: data.announcement)
+          else
+            Text(data.footer, style: AppText.caption12),
         ],
       ),
     );
   }
 }
 
-/// 班级信息卡底部群公告：与首页右侧通知列表一致的「通知」色块 + 黑色正文。
+/// 班级信息卡底部的群公告：「群公告」标签 + 正文（最多两行）。
 class _ClassGroupAnnouncementRow extends StatelessWidget {
   const _ClassGroupAnnouncementRow({required this.text});
 
@@ -846,41 +740,17 @@ class _ClassGroupAnnouncementRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final tagStyle = teacherNoticeTagStyle('通知');
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: ui(6), vertical: ui(2)),
-          decoration: BoxDecoration(
-            color: tagStyle.background,
-            borderRadius: BorderRadius.circular(ui(4)),
-          ),
-          child: Text(
-            '群公告',
-            style: TextStyle(
-              fontSize: ui(10),
-              height: 1.2,
-              fontWeight: AppFont.w500,
-              color: tagStyle.foreground,
-              fontFamily: 'PingFang SC',
-            ),
-          ),
-        ),
-        SizedBox(width: ui(6)),
+        const AppTag(label: '群公告'),
+        const SizedBox(width: AppSpace.s8),
         Expanded(
           child: Text(
             text,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextDark,
-              fontWeight: AppFont.w400,
-              fontFamily: 'PingFang SC',
-              height: 1.2,
-            ),
+            style: AppText.body13.copyWith(color: AppColors.ink),
           ),
         ),
       ],
@@ -896,35 +766,18 @@ class _InfoPair extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return SizedBox(
-      width: ui(160),
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpace.s12),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: ui(14),
-              color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1,
-            ),
-          ),
-          SizedBox(height: ui(8)),
+          Text(label, style: AppText.caption12),
+          const SizedBox(height: AppSpace.s4),
           Text(
             value,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: ui(14),
-              color: _kTextDark,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1,
-            ),
+            style: AppText.body14,
           ),
         ],
       ),
@@ -932,14 +785,7 @@ class _InfoPair extends StatelessWidget {
   }
 }
 
-class _VDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(width: 1, height: ui(31), color: _kBorderSoft);
-  }
-}
-
+/// 班级人数（全班 / 男生 / 女生），与班级名册同一个数据源。
 class _StatBox extends StatelessWidget {
   const _StatBox({required this.label, required this.value});
 
@@ -948,39 +794,13 @@ class _StatBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: ui(100),
-      height: ui(100),
-      decoration: BoxDecoration(
-        color: _kInnerGray,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: ui(14),
-              color: Colors.black,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1,
-            ),
-          ),
-          SizedBox(height: ui(10)),
-          Text(
-            '$value',
-            style: TextStyle(
-              fontSize: ui(24),
-              color: _kPurple,
-              fontFamily: 'Barlow',
-              fontWeight: FontWeight.w700,
-              height: 1,
-            ),
-          ),
-        ],
+    return SizedBox(
+      width: 88,
+      child: AppStatTile(
+        label: label,
+        value: '$value',
+        unit: '人',
+        boxed: true,
       ),
     );
   }
@@ -1003,56 +823,34 @@ class _AnnouncementSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
+    final shown = notices.take(3).toList();
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SectionHeader(title: '班级通知', actionLabel: '查看全部', onAction: onViewAll),
-        SizedBox(height: ui(12)),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(ui(12)),
-          decoration: BoxDecoration(
-            color: _kCardBg,
-            borderRadius: BorderRadius.circular(ui(16)),
-          ),
+        AppSectionHeader(
+          title: '班级通知',
+          subtitle: notices.isEmpty ? null : '共 ${notices.length} 条',
+          onMore: notices.length > shown.length ? onViewAll : null,
+          moreLabel: '查看全部',
+        ),
+        const SizedBox(height: AppSpace.s12),
+        AppCard(
+          padding: EdgeInsets.zero,
           child: notices.isEmpty
-              ? Padding(
-                  padding: EdgeInsets.symmetric(vertical: ui(20)),
-                  child: Center(
-                    child: Text(
-                      '暂无通知',
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        color: _kTextHint,
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w400,
-                        height: 20 / 13,
-                      ),
-                    ),
-                  ),
+              ? const AppEmptyState(
+                  icon: Icons.campaign_outlined,
+                  title: '暂无班级通知',
+                  description: '班主任发布的通知会出现在这里',
                 )
-              : LayoutBuilder(
-                  builder: (ctx, c) {
-                    final w = c.maxWidth;
-                    final cols = w >= ui(820) ? 3 : w >= ui(560) ? 2 : 1;
-                    final gap = ui(8);
-                    final cardWidth = (w - gap * (cols - 1)) / cols;
-                    return Wrap(
-                      spacing: gap,
-                      runSpacing: gap,
-                      children: [
-                        for (final item in notices)
-                          SizedBox(
-                            width: cardWidth,
-                            child: _ClassNoticeCard(
-                              item: item,
-                              onTap: () => onNoticeTap(item),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+              : Column(
+                  children: [
+                    for (var i = 0; i < shown.length; i++)
+                      _ClassNoticeCard(
+                        item: shown[i],
+                        divider: i < shown.length - 1,
+                        onTap: () => onNoticeTap(shown[i]),
+                      ),
+                  ],
                 ),
         ),
       ],
@@ -1060,97 +858,56 @@ class _AnnouncementSection extends StatelessWidget {
   }
 }
 
-/// 与班主任端「班级工作台 → 班级通知」卡片样式一致（学生端可点击查看详情）。
+/// 班级通知列表行：白底，标题 + 正文两行 + 日期，行间细分隔线。
 class _ClassNoticeCard extends StatelessWidget {
-  const _ClassNoticeCard({required this.item, required this.onTap});
+  const _ClassNoticeCard({
+    required this.item,
+    required this.onTap,
+    this.divider = false,
+  });
 
   final _ClassNoticeItem item;
   final VoidCallback onTap;
+  final bool divider;
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(ui(8)),
-        child: Container(
-          padding: EdgeInsets.all(ui(8)),
-          decoration: BoxDecoration(
-            color: _kAnnounceBg,
-            borderRadius: BorderRadius.circular(ui(8)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: ui(12),
-                    height: ui(20),
-                    child: Center(
-                      child: Container(
-                        width: ui(8),
-                        height: ui(8),
-                        decoration: const BoxDecoration(
-                          color: _kPurple,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: ui(6)),
-                  Expanded(
-                    child: Text(
-                      item.title.isNotEmpty ? item.title : item.content,
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        color: _kTextDark,
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w500,
-                        height: 20 / 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (item.title.isNotEmpty && item.content.isNotEmpty) ...[
-                SizedBox(height: ui(4)),
-                Padding(
-                  padding: EdgeInsets.only(left: ui(18)),
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpace.s16),
+        decoration: BoxDecoration(
+          border: divider
+              ? const Border(bottom: BorderSide(color: AppColors.lineSoft))
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
                   child: Text(
-                    item.content,
-                    maxLines: 2,
+                    item.title.isNotEmpty ? item.title : item.content,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 16 / 12,
-                    ),
+                    style: AppText.title16,
                   ),
                 ),
+                const SizedBox(width: AppSpace.s12),
+                Text(item.date, style: AppText.caption12),
               ],
-              SizedBox(height: ui(4)),
-              Padding(
-                padding: EdgeInsets.only(left: ui(18)),
-                child: Text(
-                  item.date,
-                  style: TextStyle(
-                    fontSize: ui(11),
-                    color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 12 / 11,
-                  ),
-                ),
+            ),
+            if (item.title.isNotEmpty && item.content.isNotEmpty) ...[
+              const SizedBox(height: AppSpace.s4),
+              Text(
+                item.content,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.body13,
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -1216,7 +973,7 @@ class _ClassNoticeListDrawerState
     return Container(
       width: ui(520),
       height: double.infinity,
-      decoration: const BoxDecoration(color: Colors.white),
+      decoration: const BoxDecoration(color: AppColors.surface),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1226,22 +983,14 @@ class _ClassNoticeListDrawerState
                 ? Center(
                     child: Text(
                       '加载中…',
-                      style: TextStyle(
-                        fontSize: ui(14),
-                        color: _kTextHint,
-                        fontFamily: 'PingFang SC',
-                      ),
+                      style: TextStyle(fontSize: ui(14), color: _kTextHint),
                     ),
                   )
                 : _notices.isEmpty
                 ? Center(
                     child: Text(
                       '暂无通知',
-                      style: TextStyle(
-                        fontSize: ui(14),
-                        color: _kTextHint,
-                        fontFamily: 'PingFang SC',
-                      ),
+                      style: TextStyle(fontSize: ui(14), color: _kTextHint),
                     ),
                   )
                 : ListView.separated(
@@ -1299,7 +1048,6 @@ class _ClassNoticeDrawerHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w600,
               height: 1.2,
             ),
@@ -1403,7 +1151,6 @@ class _FacultyGroupCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -1464,9 +1211,9 @@ class _FacultyCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _UserAvatarBox(
+              AppAvatar(
                 name: member.name,
-                avatarUrl: member.avatarUrl,
+                url: member.avatarUrl,
                 size: ui(40),
               ),
               SizedBox(width: ui(8)),
@@ -1484,23 +1231,13 @@ class _FacultyCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: ui(14),
                               color: _kTextDark,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w500,
                               height: 1,
                             ),
                           ),
                         ),
                         SizedBox(width: ui(8)),
-                        Text(
-                          member.role,
-                          style: TextStyle(
-                            fontSize: ui(12),
-                            color: _kPurple,
-                            fontFamily: 'PingFang SC',
-                            fontWeight: AppFont.w400,
-                            height: 1,
-                          ),
-                        ),
+                        Text(member.role, style: AppText.caption12),
                       ],
                     ),
                     SizedBox(height: ui(8)),
@@ -1511,7 +1248,6 @@ class _FacultyCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextDark,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -1521,26 +1257,7 @@ class _FacultyCard extends StatelessWidget {
               ),
               if (member.courseTag != null) ...[
                 SizedBox(width: ui(8)),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ui(4),
-                    vertical: ui(2),
-                  ),
-                  decoration: BoxDecoration(
-                    color: _kCoursePink,
-                    borderRadius: BorderRadius.circular(ui(4)),
-                  ),
-                  child: Text(
-                    member.courseTag!,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextDark,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 15.24 / 12,
-                    ),
-                  ),
-                ),
+                AppTag.subject(member.courseTag!),
               ],
             ],
           ),
@@ -1550,23 +1267,14 @@ class _FacultyCard extends StatelessWidget {
               member.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kTextHint,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w400,
-                height: 1.4,
-              ),
+              style: AppText.body13,
             ),
           ),
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(
-              horizontal: ui(2),
-              vertical: ui(12),
-            ),
+            padding: EdgeInsets.symmetric(horizontal: ui(2), vertical: ui(12)),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(ui(8)),
             ),
             child: Row(
@@ -1603,7 +1311,6 @@ class _ContactCol extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1616,7 +1323,6 @@ class _ContactCol extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1690,11 +1396,7 @@ class _ClassmateSection extends StatelessWidget {
                   child: Center(
                     child: Text(
                       '没有匹配的同学',
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        color: _kTextHint,
-                        fontFamily: 'PingFang SC',
-                      ),
+                      style: TextStyle(fontSize: ui(13), color: _kTextHint),
                     ),
                   ),
                 )
@@ -1750,7 +1452,7 @@ class _ClassmateSearchBoxState extends State<_ClassmateSearchBox> {
       height: ui(40),
       padding: EdgeInsets.symmetric(horizontal: ui(16)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Row(
@@ -1777,14 +1479,12 @@ class _ClassmateSearchBoxState extends State<_ClassmateSearchBox> {
                 hintStyle: TextStyle(
                   fontSize: ui(14),
                   color: _kPlaceholder,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                 ),
               ),
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
               ),
             ),
@@ -1826,7 +1526,6 @@ class _ClassmateCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 20 / 14,
             ),
@@ -1838,7 +1537,6 @@ class _ClassmateCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 20 / 12,
             ),
@@ -1858,9 +1556,8 @@ class _ClassmateCard extends StatelessWidget {
                 child: Text(
                   item.isSelf ? '自己' : item.role!,
                   style: TextStyle(
-                    fontSize: ui(11),
+                    fontSize: ui(12),
                     color: _kPurple,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                   ),
@@ -1895,7 +1592,7 @@ class _UserAvatarBox extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: useInitial ? _kPurpleAvatar : Colors.white,
+        color: useInitial ? _kPurpleAvatar : AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       clipBehavior: Clip.antiAlias,
@@ -1905,8 +1602,7 @@ class _UserAvatarBox extends StatelessWidget {
               firstChar,
               style: TextStyle(
                 fontSize: ui(13),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
+                color: AppColors.surface,
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -1920,8 +1616,7 @@ class _UserAvatarBox extends StatelessWidget {
                 firstChar,
                 style: TextStyle(
                   fontSize: ui(13),
-                  color: Colors.white,
-                  fontFamily: 'PingFang SC',
+                  color: AppColors.surface,
                   fontWeight: AppFont.w500,
                   height: 1,
                 ),
@@ -1946,61 +1641,11 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        fontSize: ui(18),
+        fontSize: ui(16),
         color: _kTextSection,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w500,
         height: 1,
       ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    required this.actionLabel,
-    required this.onAction,
-  });
-
-  final String title;
-  final String actionLabel;
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      children: [
-        Expanded(child: _SectionTitle(title)),
-        InkWell(
-          onTap: onAction,
-          borderRadius: BorderRadius.circular(ui(4)),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: ui(2), vertical: ui(2)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  actionLabel,
-                  style: TextStyle(
-                    fontSize: ui(14),
-                    color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 1,
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: ui(16),
-                  color: _kTextSecondary,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

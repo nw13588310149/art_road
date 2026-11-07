@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/snowflake_id.dart';
@@ -29,9 +30,9 @@ class HeadTeacherClassScoreOverview {
           .map(HeadTeacherScoreExamAxis.fromJson)
           .where((item) => item.examId.isNotEmpty)
           .toList(),
-      trendLines: _mapList(map['trendLines'])
-          .map(HeadTeacherScoreTrendLine.fromJson)
-          .toList(),
+      trendLines: _mapList(
+        map['trendLines'],
+      ).map(HeadTeacherScoreTrendLine.fromJson).toList(),
       examTabs: _mapList(map['examTabs'])
           .map(HeadTeacherScoreExamTab.fromJson)
           .where((item) => item.examId.isNotEmpty)
@@ -45,13 +46,14 @@ class HeadTeacherClassScoreOverview {
     );
   }
 
-  static const HeadTeacherClassScoreOverview zero = HeadTeacherClassScoreOverview(
-    examAxis: [],
-    trendLines: [],
-    examTabs: [],
-    currentExamId: '',
-    studentScores: HeadTeacherStudentScoresPage.zero,
-  );
+  static const HeadTeacherClassScoreOverview zero =
+      HeadTeacherClassScoreOverview(
+        examAxis: [],
+        trendLines: [],
+        examTabs: [],
+        currentExamId: '',
+        studentScores: HeadTeacherStudentScoresPage.zero,
+      );
 
   bool get hasChartData =>
       examAxis.length >= 2 &&
@@ -172,12 +174,14 @@ class HeadTeacherStudentScoresPage {
     final recordsRaw = json['records'] ?? json['list'];
     final records = recordsRaw is List
         ? recordsRaw
-            .whereType<Map>()
-            .map((item) => HeadTeacherStudentScoreRecord.fromJson(
+              .whereType<Map>()
+              .map(
+                (item) => HeadTeacherStudentScoreRecord.fromJson(
                   Map<String, dynamic>.from(item),
-                ))
-            .where((item) => item.studentId.isNotEmpty)
-            .toList()
+                ),
+              )
+              .where((item) => item.studentId.isNotEmpty)
+              .toList()
         : const <HeadTeacherStudentScoreRecord>[];
     return HeadTeacherStudentScoresPage(
       records: records,
@@ -255,9 +259,9 @@ class HeadTeacherStudentScoreRecord {
 }
 
 const List<Color> kHeadTeacherScoreTrendColors = [
-  Color(0xFF715EFE),
+  AppColors.brand,
   Color(0xFF325BFF),
-  Color(0xFFFF323C),
+  AppColors.danger,
   Color(0xFFDBEE49),
   Color(0xFF00B578),
   Color(0xFFFF8F1F),
@@ -265,16 +269,15 @@ const List<Color> kHeadTeacherScoreTrendColors = [
 
 List<Map<String, dynamic>> _mapList(dynamic raw) {
   if (raw is List) {
-    return raw.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+    return raw
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
   }
   return const [];
 }
 
-int _pickInt(
-  Map<String, dynamic> json,
-  List<String> keys, {
-  int fallback = 0,
-}) {
+int _pickInt(Map<String, dynamic> json, List<String> keys, {int fallback = 0}) {
   for (final key in keys) {
     final value = json[key];
     if (value == null) continue;

@@ -6,10 +6,7 @@ import 'geo_locator_types.dart';
 Future<GeoPosition> getCurrentLocation({Duration? timeout}) async {
   final serviceEnabled = await Geolocator.isLocationServiceEnabled();
   if (!serviceEnabled) {
-    throw const GeoException(
-      GeoErrorKind.positionUnavailable,
-      '系统定位服务未开启',
-    );
+    throw const GeoException(GeoErrorKind.positionUnavailable, '系统定位服务未开启');
   }
 
   var permission = await Geolocator.checkPermission();
@@ -40,10 +37,7 @@ Future<GeoPosition> getCurrentLocation({Duration? timeout}) async {
       timestamp: pos.timestamp,
     );
   } on LocationServiceDisabledException {
-    throw const GeoException(
-      GeoErrorKind.positionUnavailable,
-      '系统定位服务未开启',
-    );
+    throw const GeoException(GeoErrorKind.positionUnavailable, '系统定位服务未开启');
   } catch (e) {
     final msg = e.toString();
     if (msg.contains('timeout') || msg.contains('Timeout')) {

@@ -28,6 +28,7 @@
 //        宿舍 13/#6D6B75 + 日期；灰底块同；底部 备注。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -36,7 +37,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
@@ -53,19 +53,19 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardGreyBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextPlaceholder = Color(0xFFD1D1D1);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleSoftBg = Color(0xFFD7D5FF);
-const Color _kRed = Color(0xFFFF323C);
-const Color _kRedSoftBg = Color(0xFFFEE4E8);
+const Color _kPageBg = AppColors.page;
+const Color _kCardGreyBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextPlaceholder = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSoftBg = AppColors.brandTint;
+const Color _kRed = AppColors.danger;
+const Color _kRedSoftBg = AppColors.dangerSoft;
 const Color _kBlue = Color(0xFF325BFF);
-const Color _kBadgeRed = Color(0xFFF04545);
+const Color _kBadgeRed = AppColors.danger;
 
 // —— 顶部 tab 枚举 ——————————————————————————————————————————————
 enum _TopTab {
@@ -103,7 +103,7 @@ enum _StudentStatus {
 
 // —— 宿舍口径状态（实色徽章）—————————————————————————————————————
 enum _DormStatus {
-  normal('正常', Color(0xFF8E7FFF)),
+  normal('正常', AppColors.brandSoft),
   absent('未打卡', _kRed),
   late_('迟到', _kBlue);
 
@@ -116,15 +116,15 @@ enum _DormStatus {
 
 // —— 补卡审核状态 —————————————————————————————————————————————
 // 待审核 / 已通过 / 已驳回；徽章为柔和底 + 实色字。
-const Color _kOrange = Color(0xFFFF6A00);
-const Color _kOrangeSoftBg = Color(0xFFFFEDD3);
-const Color _kGreenAudit = Color(0xFF12CE51);
-const Color _kGreenAuditSoftBg = Color(0xFFE4FFED);
+const Color _kOrange = AppColors.warning;
+const Color _kOrangeSoftBg = AppColors.warningSoft;
+const Color _kGreenAudit = AppColors.success;
+const Color _kGreenAuditSoftBg = AppColors.successSoft;
 
 enum _PunchAuditStatus {
   pending('待审核', _kOrangeSoftBg, _kOrange),
   approved('已通过', _kGreenAuditSoftBg, _kGreenAudit),
-  rejected('已驳回', Color(0xFFFFE4E5), _kRed);
+  rejected('已驳回', AppColors.dangerSoft, _kRed);
 
   const _PunchAuditStatus(this.label, this.bg, this.fg);
   final String label;
@@ -220,8 +220,9 @@ class _TeacherDormDynamicViewState
   @override
   void initState() {
     super.initState();
-    final initialTab =
-        ref.read(smartCampusControllerProvider).teacherDormDynamicInitialTab;
+    final initialTab = ref
+        .read(smartCampusControllerProvider)
+        .teacherDormDynamicInitialTab;
     if (initialTab == TeacherDormDynamicInitialTab.punchAudit) {
       _topTab = _TopTab.punchAudit;
     }
@@ -231,7 +232,8 @@ class _TeacherDormDynamicViewState
           .clearTeacherDormDynamicInitialTab();
     });
     Future.microtask(
-      () => ref.read(dormClassDormitoryControllerProvider.notifier).initialize(),
+      () =>
+          ref.read(dormClassDormitoryControllerProvider.notifier).initialize(),
     );
   }
 
@@ -315,7 +317,8 @@ class _TeacherDormDynamicViewState
               _CardsGrid(
                 students: _filteredStudents(students),
                 dormRecords: _filteredDormRecords(dormRecords),
-                emptyMessage: _searchQuery.trim().isNotEmpty &&
+                emptyMessage:
+                    _searchQuery.trim().isNotEmpty &&
                         (students.isNotEmpty || dormRecords.isNotEmpty)
                     ? '未找到匹配记录'
                     : '暂无相关记录',
@@ -323,8 +326,8 @@ class _TeacherDormDynamicViewState
             ] else ...[
               _PunchAuditGrid(
                 records: _filteredPunchAudits(punchAudits),
-                emptyMessage: _searchQuery.trim().isNotEmpty &&
-                        punchAudits.isNotEmpty
+                emptyMessage:
+                    _searchQuery.trim().isNotEmpty && punchAudits.isNotEmpty
                     ? '未找到匹配记录'
                     : '暂无补卡申请',
                 onDetail: (record) => unawaited(_showMakeupDetail(record)),
@@ -381,13 +384,7 @@ class _TeacherDormDynamicViewState
       result = result.where((r) => r.status.isException).toList();
     }
     return result
-        .where(
-          (r) => _matchesSearch([
-            r.title,
-            r.dormName,
-            r.note,
-          ]),
-        )
+        .where((r) => _matchesSearch([r.title, r.dormName, r.note]))
         .toList();
   }
 
@@ -510,7 +507,7 @@ class _Banner extends StatelessWidget {
                 width: ui(32),
                 height: ui(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(8)),
                   border: Border.all(color: _kBorderSoft, width: 1),
                 ),
@@ -518,7 +515,7 @@ class _Banner extends StatelessWidget {
                 child: Icon(
                   Icons.chevron_left_rounded,
                   size: ui(20),
-                  color: const Color(0xFF1C274C),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -534,7 +531,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -545,7 +541,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.4,
                     ),
@@ -653,7 +648,7 @@ class _TabsRow extends StatelessWidget {
         Container(
           padding: EdgeInsets.fromLTRB(ui(4), ui(4), ui(3), ui(4)),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorderSoft, width: 1),
           ),
@@ -675,7 +670,7 @@ class _TabsRow extends StatelessWidget {
         Container(
           width: ui(324),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(12)),
           ),
           padding: EdgeInsets.symmetric(horizontal: ui(24), vertical: ui(12)),
@@ -703,16 +698,14 @@ class _TabsRow extends StatelessWidget {
 }
 
 class _DormDynamicSearchField extends StatefulWidget {
-  const _DormDynamicSearchField({
-    required this.value,
-    required this.onChanged,
-  });
+  const _DormDynamicSearchField({required this.value, required this.onChanged});
 
   final String value;
   final ValueChanged<String> onChanged;
 
   @override
-  State<_DormDynamicSearchField> createState() => _DormDynamicSearchFieldState();
+  State<_DormDynamicSearchField> createState() =>
+      _DormDynamicSearchFieldState();
 }
 
 class _DormDynamicSearchFieldState extends State<_DormDynamicSearchField> {
@@ -753,7 +746,6 @@ class _DormDynamicSearchFieldState extends State<_DormDynamicSearchField> {
       style: TextStyle(
         fontSize: ui(14),
         color: _kTextDark,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 1.2,
       ),
@@ -762,7 +754,6 @@ class _DormDynamicSearchFieldState extends State<_DormDynamicSearchField> {
         hintStyle: TextStyle(
           fontSize: ui(14),
           color: _kTextPlaceholder,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1.2,
         ),
@@ -806,17 +797,14 @@ class _TabPill extends StatelessWidget {
               tab.label,
               style: TextStyle(
                 fontSize: ui(14),
-                color: active ? Colors.white : _kTextSecondary,
-                fontFamily: 'PingFang SC',
+                color: active ? AppColors.surface : _kTextSecondary,
                 fontWeight: AppFont.w500,
                 height: 1.2,
               ),
             ),
             if (tab == _TopTab.punchAudit && pendingPunchCount > 0) ...[
               SizedBox(width: ui(4)),
-              _RedBadge(
-                text: smartCampusCountBadgeLabel(pendingPunchCount)!,
-              ),
+              _RedBadge(text: smartCampusCountBadgeLabel(pendingPunchCount)!),
             ],
           ],
         ),
@@ -844,8 +832,8 @@ class _RedBadge extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: ui(10),
-          color: Colors.white,
+          fontSize: ui(12),
+          color: AppColors.surface,
           fontFamily: 'Manrope',
           fontWeight: FontWeight.w800,
           height: 1.0,
@@ -879,7 +867,6 @@ class _FilterToolbar extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
               ),
               children: [
@@ -897,7 +884,7 @@ class _FilterToolbar extends StatelessWidget {
         Container(
           padding: EdgeInsets.fromLTRB(ui(4), ui(4), ui(3), ui(4)),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorderSoft, width: 1),
           ),
@@ -947,8 +934,7 @@ class _FilterPill extends StatelessWidget {
           tab.label,
           style: TextStyle(
             fontSize: ui(14),
-            color: active ? Colors.white : _kTextSecondary,
-            fontFamily: 'PingFang SC',
+            color: active ? AppColors.surface : _kTextSecondary,
             fontWeight: AppFont.w500,
             height: 1.2,
           ),
@@ -984,7 +970,6 @@ class _CardsGrid extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
             ),
           ),
@@ -1024,7 +1009,7 @@ class _CardsGrid extends StatelessWidget {
 // —— 卡片背景（共用）—————————————————————————————————————————————
 
 BoxDecoration _cardDecoration(double radius) => BoxDecoration(
-  color: Colors.white,
+  color: AppColors.surface,
   borderRadius: BorderRadius.circular(radius),
 );
 
@@ -1071,7 +1056,7 @@ class _DormStudentAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFF8E7FFF),
+        color: AppColors.brandSoft,
         borderRadius: BorderRadius.circular(radius),
       ),
       alignment: Alignment.center,
@@ -1080,13 +1065,16 @@ class _DormStudentAvatar extends StatelessWidget {
               initial,
               style: TextStyle(
                 fontSize: ui(size * 0.38),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
+                color: AppColors.surface,
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
             )
-          : Icon(Icons.person_rounded, size: ui(size * 0.5), color: Colors.white),
+          : Icon(
+              Icons.person_rounded,
+              size: ui(size * 0.5),
+              color: AppColors.surface,
+            ),
     );
   }
 }
@@ -1135,7 +1123,6 @@ class _StudentCard extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: ui(14),
                                     color: _kTextDark,
-                                    fontFamily: 'PingFang SC',
                                     fontWeight: AppFont.w500,
                                     height: 1.0,
                                   ),
@@ -1146,7 +1133,6 @@ class _StudentCard extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: ui(12),
                                     color: _kTextHint,
-                                    fontFamily: 'PingFang SC',
                                     fontWeight: AppFont.w400,
                                     height: 1.0,
                                   ),
@@ -1161,7 +1147,6 @@ class _StudentCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextSecondary,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.0,
                           ),
@@ -1179,7 +1164,6 @@ class _StudentCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: ui(12),
                               color: _kTextDark,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w400,
                               height: 1.0,
                             ),
@@ -1193,7 +1177,6 @@ class _StudentCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextHint,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.0,
                           ),
@@ -1216,7 +1199,6 @@ class _StudentCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.0,
             ),
@@ -1248,7 +1230,6 @@ class _StudentStatusBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: status.fg,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1.2,
         ),
@@ -1279,8 +1260,8 @@ class _DormCard extends StatelessWidget {
               Text(
                 record.title,
                 style: TextStyle(
-                  fontSize: ui(18),
-                  color: const Color(0xFF1A1A1A),
+                  fontSize: ui(16),
+                  color: AppColors.ink,
                   fontFamily: 'Barlow',
                   fontWeight: FontWeight.w600,
                   height: 1.0,
@@ -1298,7 +1279,6 @@ class _DormCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.4,
                   ),
@@ -1312,7 +1292,6 @@ class _DormCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.0,
                 ),
@@ -1330,7 +1309,6 @@ class _DormCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.0,
             ),
@@ -1361,8 +1339,7 @@ class _DormStatusBadge extends StatelessWidget {
         status.label,
         style: TextStyle(
           fontSize: ui(12),
-          color: Colors.white,
-          fontFamily: 'PingFang SC',
+          color: AppColors.surface,
           fontWeight: AppFont.w400,
           height: 1.2,
         ),
@@ -1422,7 +1399,6 @@ class _TimeColumn extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),
@@ -1433,7 +1409,6 @@ class _TimeColumn extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),
@@ -1472,7 +1447,6 @@ class _PunchAuditGrid extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
             ),
           ),
@@ -1560,7 +1534,6 @@ class _PunchAuditCard extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: ui(14),
                                     color: _kTextDark,
-                                    fontFamily: 'PingFang SC',
                                     fontWeight: AppFont.w500,
                                     height: 1.2,
                                   ),
@@ -1573,7 +1546,6 @@ class _PunchAuditCard extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: ui(12),
                                       color: _kTextHint,
-                                      fontFamily: 'PingFang SC',
                                       fontWeight: AppFont.w400,
                                       height: 1.2,
                                     ),
@@ -1589,7 +1561,6 @@ class _PunchAuditCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextSecondary,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.2,
                           ),
@@ -1607,7 +1578,6 @@ class _PunchAuditCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: ui(12),
                               color: _kTextDark,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w400,
                               height: 1.2,
                             ),
@@ -1621,7 +1591,6 @@ class _PunchAuditCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextHint,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.2,
                           ),
@@ -1689,7 +1658,6 @@ class _ReasonBlock extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -1702,7 +1670,6 @@ class _ReasonBlock extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.5,
             ),
@@ -1735,7 +1702,6 @@ class _DetailLink extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kPurple,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1.2,
               ),
@@ -1769,7 +1735,6 @@ class _PunchAuditStatusBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: status.fg,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1.2,
         ),
@@ -1806,7 +1771,7 @@ class _PunchActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                  colors: [AppColors.brandSoft, AppColors.brand],
                 )
               : null,
           borderRadius: BorderRadius.circular(ui(8)),
@@ -1815,8 +1780,7 @@ class _PunchActionButton extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(12),
-            color: isPrimary ? Colors.white : _kTextDark,
-            fontFamily: 'PingFang SC',
+            color: isPrimary ? AppColors.surface : _kTextDark,
             fontWeight: isPrimary ? AppFont.w600 : AppFont.w500,
             height: 16 / 12,
           ),

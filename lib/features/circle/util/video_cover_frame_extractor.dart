@@ -13,9 +13,8 @@ Future<Uint8List?> extractVideoCoverFrame({
   required String? filePath,
   required Uint8List? fileBytes,
   int frameIndex = 10,
-}) =>
-    extractVideoCoverFrameImpl(
-      filePath: filePath,
-      fileBytes: fileBytes,
-      frameIndex: frameIndex,
-    );
+}) => extractVideoCoverFrameImpl(
+  filePath: filePath,
+  fileBytes: fileBytes,
+  frameIndex: frameIndex,
+);

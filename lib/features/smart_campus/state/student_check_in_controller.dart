@@ -110,7 +110,8 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
         recent,
       );
 
-      final hasSelected = state.selectedCourseId != null &&
+      final hasSelected =
+          state.selectedCourseId != null &&
           courses.any((c) => c.courseId == state.selectedCourseId);
       final selectedId = hasSelected
           ? state.selectedCourseId
@@ -158,7 +159,8 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
       if (map is Map) {
         final schoolClass = map['schoolClass'];
         if (schoolClass is Map) {
-          classId = schoolClass['id']?.toString() ??
+          classId =
+              schoolClass['id']?.toString() ??
               schoolClass['classId']?.toString();
         }
       }
@@ -273,8 +275,9 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
       if (signRecordId == null || signRecordId.isEmpty) return;
       _signRecordIdCache[courseId] = signRecordId;
 
-      final response =
-          await _studentRepository.courseSignDetail(id: signRecordId);
+      final response = await _studentRepository.courseSignDetail(
+        id: signRecordId,
+      );
       if (!response.isSuccess) return;
 
       final detail = StudentCourseSignDetail.fromJson(response.data);
@@ -284,10 +287,7 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
       state = state.copyWith(
         todayCourses: [
           for (final course in state.todayCourses)
-            if (course.courseId == courseId)
-              detail.applyTo(course)
-            else
-              course,
+            if (course.courseId == courseId) detail.applyTo(course) else course,
         ],
       );
     } finally {
@@ -421,7 +421,9 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
     );
   }
 
-  Future<List<({String label, String value})>> loadMakeupDetail(String id) async {
+  Future<List<({String label, String value})>> loadMakeupDetail(
+    String id,
+  ) async {
     if (id.isEmpty) return const [];
     final response = await _studentRepository.courseSignMakeupDetail(id: id);
     if (!response.isSuccess) return const [];

@@ -25,13 +25,12 @@
 //        HH:MM" + "打卡位置：教学楼A区"（label #B6B5BB / value #0B081A）。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../services/baidu_geo_service.dart';
 import '../services/geo_locator.dart';
@@ -40,16 +39,16 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardGreyBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kBorderLine = Color(0xFFCECED1);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextDarker = Color(0xFF1A1A1A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kGreen = Color(0xFF12CE51);
-const Color _kGreenSoftBg = Color(0xFFE4FFED);
-const Color _kPurple = Color(0xFF715EFE);
+const Color _kPageBg = AppColors.page;
+const Color _kCardGreyBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kBorderLine = AppColors.textTertiary;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextDarker = AppColors.ink;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kGreen = AppColors.success;
+const Color _kGreenSoftBg = AppColors.successSoft;
+const Color _kPurple = AppColors.brand;
 const Color _kPurpleLight = Color(0xFFB68BFF);
 const Color _kPurpleGlow = Color(0xFFD7D2FF);
 
@@ -63,7 +62,7 @@ Color _statusColor(_LocationStatusKind k) {
     case _LocationStatusKind.success:
       return _kGreen;
     case _LocationStatusKind.error:
-      return const Color(0xFFFF323C);
+      return AppColors.danger;
   }
 }
 
@@ -181,8 +180,7 @@ class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
       setState(() {
         _position = pos;
         _resolvedAddress = null; // 等反编码回填
-        _locationStatus =
-            '已定位 · 精度 ${pos.accuracyMeters.toStringAsFixed(0)}m';
+        _locationStatus = '已定位 · 精度 ${pos.accuracyMeters.toStringAsFixed(0)}m';
         _locationStatusKind = _LocationStatusKind.success;
       });
       unawaited(_resolveAddress(pos));
@@ -335,9 +333,8 @@ class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
             Text(
               '我的打卡记录',
               style: TextStyle(
-                fontSize: ui(18),
+                fontSize: ui(16),
                 color: _kTextDarker,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1.2,
               ),
@@ -380,7 +377,7 @@ class _Banner extends StatelessWidget {
                 width: ui(32),
                 height: ui(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(8)),
                   border: Border.all(color: _kBorderSoft, width: 1),
                 ),
@@ -388,7 +385,7 @@ class _Banner extends StatelessWidget {
                 child: Icon(
                   Icons.chevron_left_rounded,
                   size: ui(20),
-                  color: const Color(0xFF1C274C),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -404,7 +401,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -415,7 +411,6 @@ class _Banner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.4,
                     ),
@@ -471,10 +466,7 @@ class _PunchPanel extends StatelessWidget {
       width: double.infinity,
       height: ui(439),
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: radius,
-      ),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: radius),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -500,9 +492,9 @@ class _PunchPanel extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.white.withValues(alpha: 0.94),
-                    Colors.white.withValues(alpha: 0.72),
-                    Colors.white.withValues(alpha: 0.0),
+                    AppColors.surface.withValues(alpha: 0.94),
+                    AppColors.surface.withValues(alpha: 0.72),
+                    AppColors.surface.withValues(alpha: 0.0),
                   ],
                   stops: const [0, 0.55, 1],
                 ),
@@ -530,7 +522,6 @@ class _PunchPanel extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: ui(14),
                                 color: _kTextDark,
-                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w500,
                                 height: 1.35,
                               ),
@@ -542,9 +533,8 @@ class _PunchPanel extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: ui(11),
+                                  fontSize: ui(12),
                                   color: _kTextHint,
-                                  fontFamily: 'PingFang SC',
                                   height: 1.2,
                                 ),
                               ),
@@ -557,7 +547,6 @@ class _PunchPanel extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: ui(12),
                                 color: locationStatusColor,
-                                fontFamily: 'PingFang SC',
                                 height: 1.2,
                               ),
                             ),
@@ -587,8 +576,8 @@ class _PunchPanel extends StatelessWidget {
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                   colors: [
-                    Colors.white.withValues(alpha: 0.85),
-                    Colors.white.withValues(alpha: 0.0),
+                    AppColors.surface.withValues(alpha: 0.85),
+                    AppColors.surface.withValues(alpha: 0.0),
                   ],
                 ),
               ),
@@ -621,12 +610,9 @@ class _RefreshLocationButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(ui(12)),
       onTap: busy ? null : onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: ui(12),
-          vertical: ui(4),
-        ),
+        padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(4)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderLine, width: 1),
         ),
@@ -639,7 +625,7 @@ class _RefreshLocationButton extends StatelessWidget {
               Icon(
                 Icons.my_location_rounded,
                 size: ui(14),
-                color: const Color(0xFF1C274C),
+                color: AppColors.ink,
               ),
             SizedBox(width: ui(4)),
             Text(
@@ -647,7 +633,6 @@ class _RefreshLocationButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),
@@ -747,8 +732,7 @@ class _BigPunchButton extends StatelessWidget {
                     label,
                     style: TextStyle(
                       fontSize: ui(16),
-                      color: Colors.white,
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.surface,
                       fontWeight: AppFont.w600,
                       height: 1.0,
                     ),
@@ -758,8 +742,7 @@ class _BigPunchButton extends StatelessWidget {
                     clock,
                     style: TextStyle(
                       fontSize: ui(20),
-                      color: Colors.white,
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.surface,
                       fontWeight: AppFont.w600,
                       height: 1.0,
                     ),
@@ -795,7 +778,6 @@ class _RecordsGrid extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
             ),
           ),
@@ -811,7 +793,10 @@ class _RecordsGrid extends StatelessWidget {
           runSpacing: ui(12),
           children: [
             for (final r in records)
-              SizedBox(width: cardW, child: _RecordCard(record: r)),
+              SizedBox(
+                width: cardW,
+                child: _RecordCard(record: r),
+              ),
           ],
         );
       },
@@ -850,8 +835,7 @@ class _RecordCard extends StatelessWidget {
                 record.kind.label,
                 style: TextStyle(
                   fontSize: ui(16),
-                  color: Colors.black,
-                  fontFamily: 'PingFang SC',
+                  color: AppColors.ink,
                   fontWeight: AppFont.w500,
                   height: 1.2,
                 ),
@@ -878,11 +862,10 @@ class _RecordCard extends StatelessWidget {
                   SizedBox(height: ui(6)),
                   _RecordKeyValue(
                     label: 'GPS 坐标：',
-                    value: '${record.lat!.toStringAsFixed(6)}, '
+                    value:
+                        '${record.lat!.toStringAsFixed(6)}, '
                         '${record.lng!.toStringAsFixed(6)}'
-                        '${record.accuracyMeters != null
-                            ? ' (±${record.accuracyMeters!.toStringAsFixed(0)}m)'
-                            : ''}',
+                        '${record.accuracyMeters != null ? ' (±${record.accuracyMeters!.toStringAsFixed(0)}m)' : ''}',
                   ),
                 ],
               ],
@@ -903,10 +886,7 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: ui(4),
-        vertical: ui(2),
-      ),
+      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
       decoration: BoxDecoration(
         color: status.bg,
         borderRadius: BorderRadius.circular(ui(4)),
@@ -916,7 +896,6 @@ class _StatusBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: status.fg,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1.27,
         ),
@@ -942,7 +921,6 @@ class _RecordKeyValue extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -952,7 +930,6 @@ class _RecordKeyValue extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),

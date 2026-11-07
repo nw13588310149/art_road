@@ -1,9 +1,9 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -16,13 +16,7 @@ import '../../shell/ui/shell_layout.dart';
 
 /// 与课件内嵌预览一致的后缀分流（仅用于原生端在 [CoursewareInlinePreview] 不覆盖
 /// 音视频时走 `media_kit`）。
-enum StudentSubmissionPreviewKind {
-  image,
-  pdf,
-  audio,
-  video,
-  unknown,
-}
+enum StudentSubmissionPreviewKind { image, pdf, audio, video, unknown }
 
 StudentSubmissionPreviewKind inferStudentSubmissionPreviewKind(
   String url, {
@@ -35,7 +29,8 @@ StudentSubmissionPreviewKind inferStudentSubmissionPreviewKind(
   final fromName = _kindFromPath(attachmentName);
   if (fromName != StudentSubmissionPreviewKind.unknown) return fromName;
 
-  final hints = '${typeTag.toLowerCase()} ${mediumLabel.toLowerCase()} '
+  final hints =
+      '${typeTag.toLowerCase()} ${mediumLabel.toLowerCase()} '
       '${attachmentName.toLowerCase()}';
   if (hints.contains('视频') || hints.contains('mp4') || hints.contains('mov')) {
     return StudentSubmissionPreviewKind.video;
@@ -100,7 +95,8 @@ Future<void> showStudentHomeworkSubmissionPreview(
 
   // `showDialog` 的 builder 拿到的 context 在根 Navigator 的 overlay 上，
   // 通常不是 Shell 里 [DashboardScaleScope] 的子节点，不能在里面 `of(ctx)`。
-  final scaleData = DashboardScaleScope.maybeOf(context) ??
+  final scaleData =
+      DashboardScaleScope.maybeOf(context) ??
       DashboardScaleData(
         viewportScale: 1,
         availableSize: MediaQuery.sizeOf(context),
@@ -203,7 +199,7 @@ class _PreviewTitleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(4)),
         child: Row(
@@ -214,17 +210,16 @@ class _PreviewTitleBar extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: ui(15),
+                  fontSize: ui(16),
                   fontWeight: FontWeight.w600,
-                  fontFamily: 'PingFang SC',
-                  color: const Color(0xFF0B081A),
+                  color: AppColors.ink,
                 ),
               ),
             ),
             IconButton(
               onPressed: onClose,
               icon: Icon(Icons.close_rounded, size: ui(22)),
-              color: const Color(0xFF6D6B75),
+              color: AppColors.textSecondary,
             ),
           ],
         ),
@@ -260,14 +255,24 @@ class _NativeSubmissionBody extends StatelessWidget {
     );
     return switch (kind) {
       StudentSubmissionPreviewKind.image => _NativeImagePreview(url: fileUrl),
-      StudentSubmissionPreviewKind.pdf =>
-        _NativePdfPreview(url: fileUrl, authToken: authToken),
-      StudentSubmissionPreviewKind.audio =>
-        _HomeworkMediaKitPlayer(url: fileUrl, isVideo: false, ui: ui),
-      StudentSubmissionPreviewKind.video =>
-        _HomeworkMediaKitPlayer(url: fileUrl, isVideo: true, ui: ui),
-      StudentSubmissionPreviewKind.unknown =>
-        _NativeUnsupportedFallback(url: fileUrl, ui: ui),
+      StudentSubmissionPreviewKind.pdf => _NativePdfPreview(
+        url: fileUrl,
+        authToken: authToken,
+      ),
+      StudentSubmissionPreviewKind.audio => _HomeworkMediaKitPlayer(
+        url: fileUrl,
+        isVideo: false,
+        ui: ui,
+      ),
+      StudentSubmissionPreviewKind.video => _HomeworkMediaKitPlayer(
+        url: fileUrl,
+        isVideo: true,
+        ui: ui,
+      ),
+      StudentSubmissionPreviewKind.unknown => _NativeUnsupportedFallback(
+        url: fileUrl,
+        ui: ui,
+      ),
     };
   }
 }
@@ -285,9 +290,7 @@ class _NativeImagePreview extends StatelessWidget {
         imageUrl: url,
         fit: BoxFit.contain,
         alignment: Alignment.center,
-        placeholder: (context, _) => const Center(
-          child: AppLoadingIndicator(),
-        ),
+        placeholder: (context, _) => const Center(child: AppLoadingIndicator()),
         errorWidget: (context, _, _) => const Center(
           child: Icon(
             Icons.broken_image_outlined,
@@ -334,9 +337,8 @@ class _NativePdfPreview extends StatelessWidget {
                       ? 'PDF 加载中…'
                       : 'PDF 加载中…${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
                   style: const TextStyle(
-                    color: Color(0xFF6D6B75),
+                    color: AppColors.textSecondary,
                     fontSize: 12,
-                    fontFamily: 'PingFang SC',
                   ),
                 ),
               ],
@@ -351,9 +353,8 @@ class _NativePdfPreview extends StatelessWidget {
                 'PDF 加载失败：$error',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Color(0xFF6D6B75),
+                  color: AppColors.textSecondary,
                   fontSize: 13,
-                  fontFamily: 'PingFang SC',
                 ),
               ),
             ),
@@ -385,7 +386,6 @@ class _NativeUnsupportedFallback extends StatelessWidget {
               style: TextStyle(
                 color: const Color(0xFF8F86A8),
                 fontSize: ui(13),
-                fontFamily: 'PingFang SC',
                 height: 1.4,
               ),
             ),
@@ -395,10 +395,7 @@ class _NativeUnsupportedFallback extends StatelessWidget {
                 Navigator.pop(context);
                 openCoursewareUrl(url);
               },
-              child: Text(
-                '在浏览器中打开',
-                style: TextStyle(fontSize: ui(14), fontFamily: 'PingFang SC'),
-              ),
+              child: Text('在浏览器中打开', style: TextStyle(fontSize: ui(14))),
             ),
           ],
         ),
@@ -419,7 +416,8 @@ class _HomeworkMediaKitPlayer extends StatefulWidget {
   final double Function(double) ui;
 
   @override
-  State<_HomeworkMediaKitPlayer> createState() => _HomeworkMediaKitPlayerState();
+  State<_HomeworkMediaKitPlayer> createState() =>
+      _HomeworkMediaKitPlayerState();
 }
 
 class _HomeworkMediaKitPlayerState extends State<_HomeworkMediaKitPlayer> {
@@ -504,12 +502,12 @@ class _HomeworkMediaKitPlayerState extends State<_HomeworkMediaKitPlayer> {
       final vc = _videoController;
       if (vc == null) {
         return const ColoredBox(
-          color: Color(0xFF0B081A),
-          child: Center(child: AppLoadingIndicator(color: Colors.white)),
+          color: AppColors.ink,
+          child: Center(child: AppLoadingIndicator(color: AppColors.surface)),
         );
       }
       return ColoredBox(
-        color: const Color(0xFF0B081A),
+        color: AppColors.ink,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -557,7 +555,7 @@ class _HomeworkMediaKitPlayerState extends State<_HomeworkMediaKitPlayer> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF3A1E66), Color(0xFF0B081A)],
+          colors: [Color(0xFF3A1E66), AppColors.ink],
         ),
       ),
       child: Column(
@@ -600,16 +598,16 @@ class _HomeworkPlayDisc extends StatelessWidget {
       width: ui(72),
       height: ui(72),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
+        color: AppColors.ink.withValues(alpha: 0.45),
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.55),
+          color: AppColors.surface.withValues(alpha: 0.55),
           width: 1,
         ),
       ),
       child: Icon(
         playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-        color: Colors.white,
+        color: AppColors.surface,
         size: ui(40),
       ),
     );
@@ -638,13 +636,15 @@ class _HomeworkProgressStrip extends StatelessWidget {
     final total = duration.inMilliseconds <= 0 ? 1 : duration.inMilliseconds;
     final ratio = (position.inMilliseconds / total).clamp(0.0, 1.0);
     final track = lightStyle
-        ? Colors.white.withValues(alpha: 0.28)
-        : Colors.white.withValues(alpha: 0.22);
-    final fill = lightStyle ? Colors.white : Colors.white.withValues(alpha: 0.9);
-    final textPri = lightStyle ? Colors.white : Colors.white;
+        ? AppColors.surface.withValues(alpha: 0.28)
+        : AppColors.surface.withValues(alpha: 0.22);
+    final fill = lightStyle
+        ? AppColors.surface
+        : AppColors.surface.withValues(alpha: 0.9);
+    final textPri = lightStyle ? AppColors.surface : AppColors.surface;
     final textSec = lightStyle
-        ? Colors.white.withValues(alpha: 0.72)
-        : Colors.white.withValues(alpha: 0.65);
+        ? AppColors.surface.withValues(alpha: 0.72)
+        : AppColors.surface.withValues(alpha: 0.65);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -690,19 +690,11 @@ class _HomeworkProgressStrip extends StatelessWidget {
           children: [
             Text(
               fmt(position),
-              style: TextStyle(
-                color: textPri,
-                fontSize: ui(12),
-                fontFamily: 'PingFang SC',
-              ),
+              style: TextStyle(color: textPri, fontSize: ui(12)),
             ),
             Text(
               fmt(duration),
-              style: TextStyle(
-                color: textSec,
-                fontSize: ui(12),
-                fontFamily: 'PingFang SC',
-              ),
+              style: TextStyle(color: textSec, fontSize: ui(12)),
             ),
           ],
         ),
@@ -713,10 +705,6 @@ class _HomeworkProgressStrip extends StatelessWidget {
   void _emitSeek(double dx, double width) {
     if (width <= 0 || duration.inMilliseconds <= 0) return;
     final r = (dx / width).clamp(0.0, 1.0);
-    onSeek(
-      Duration(
-        milliseconds: (duration.inMilliseconds * r).round(),
-      ),
-    );
+    onSeek(Duration(milliseconds: (duration.inMilliseconds * r).round()));
   }
 }

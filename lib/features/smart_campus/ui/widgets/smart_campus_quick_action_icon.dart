@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shell/ui/shell_layout.dart';
@@ -44,10 +45,7 @@ class SmartCampusQuickActionIcon extends StatelessWidget {
             top: 0,
             width: slot,
             height: slot,
-            child: Image.asset(
-              assetPath,
-              fit: BoxFit.contain,
-            ),
+            child: Image.asset(assetPath, fit: BoxFit.contain),
           ),
           if (showBadge)
             Positioned(
@@ -76,14 +74,14 @@ class SmartCampusQuickActionBadge extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: ui(4)),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFF04545),
+        color: AppColors.danger,
         borderRadius: BorderRadius.circular(ui(20)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: Colors.white,
-          fontSize: ui(10),
+          color: AppColors.surface,
+          fontSize: ui(12),
           height: 1.0,
           fontWeight: FontWeight.w800,
           fontFamily: 'Manrope',

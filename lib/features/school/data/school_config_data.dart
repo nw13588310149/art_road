@@ -88,10 +88,7 @@ class _ConfigEntry {
 
 List<_ConfigEntry> _flattenConfigEntries(dynamic raw) {
   if (raw is List) {
-    return [
-      for (final item in raw)
-        ..._flattenConfigEntries(item),
-    ];
+    return [for (final item in raw) ..._flattenConfigEntries(item)];
   }
   if (raw is! Map) return const [];
 
@@ -114,9 +111,7 @@ List<_ConfigEntry> _flattenConfigEntries(dynamic raw) {
   final typeField = _pickString(map, ['type', 'configType', 'scene']);
 
   if (keyField.isNotEmpty && valueField.isNotEmpty) {
-    return [
-      _ConfigEntry(key: keyField, value: valueField, type: typeField),
-    ];
+    return [_ConfigEntry(key: keyField, value: valueField, type: typeField)];
   }
 
   final entries = <_ConfigEntry>[];

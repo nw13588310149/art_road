@@ -187,10 +187,7 @@ Map<String, dynamic> _pickNestedUserMap(Map<String, dynamic> map) {
   return const {};
 }
 
-String _pickSubmitterName(
-  Map<String, dynamic> map,
-  Map<String, dynamic> user,
-) {
+String _pickSubmitterName(Map<String, dynamic> map, Map<String, dynamic> user) {
   final topLevel = _pickString(map, const [
     'studentName',
     'realname',

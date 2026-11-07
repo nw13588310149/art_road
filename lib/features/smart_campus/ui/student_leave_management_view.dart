@@ -36,6 +36,7 @@
 //   状态徽章配色见上；字体 PingFang SC，数字 32 用 Barlow（与 Figma 一致）。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -45,7 +46,6 @@ import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -57,22 +57,22 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kBoardBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kBorderHair = Color(0xFFE6E9F1);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleSoftBg = Color(0xFFD7D5FF);
-const Color _kGreen = Color(0xFF12CE51);
-const Color _kGreenSoftBg = Color(0xFFE4FFED);
-const Color _kRed = Color(0xFFFF323C);
-const Color _kRedSoftBg = Color(0xFFFFE4E5);
-const Color _kOrange = Color(0xFFFF6A00);
-const Color _kOrangeSoftBg = Color(0xFFFFEDD3);
+const Color _kPageBg = AppColors.page;
+const Color _kBoardBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kBorderHair = AppColors.line;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextDivider = AppColors.textTertiary;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSoftBg = AppColors.brandTint;
+const Color _kGreen = AppColors.success;
+const Color _kGreenSoftBg = AppColors.successSoft;
+const Color _kRed = AppColors.danger;
+const Color _kRedSoftBg = AppColors.dangerSoft;
+const Color _kOrange = AppColors.warning;
+const Color _kOrangeSoftBg = AppColors.warningSoft;
 
 // —— 顶级视图 ——————————————————————————————————————————————————————
 
@@ -108,10 +108,9 @@ class _StudentLeaveManagementViewState
     });
 
     try {
-      final resp = await ref.read(studentRepositoryProvider).studentLeaveList(
-            current: 1,
-            size: 200,
-          );
+      final resp = await ref
+          .read(studentRepositoryProvider)
+          .studentLeaveList(current: 1, size: 200);
       if (!mounted) return;
 
       if (!resp.isSuccess) {
@@ -140,8 +139,9 @@ class _StudentLeaveManagementViewState
   }
 
   Future<void> _showDetail(String id) async {
-    final resp =
-        await ref.read(studentRepositoryProvider).studentLeaveDetail(id: id);
+    final resp = await ref
+        .read(studentRepositoryProvider)
+        .studentLeaveDetail(id: id);
     if (!mounted) return;
     if (!resp.isSuccess) {
       AppToast.show(context, resp.displayMsg);
@@ -156,7 +156,7 @@ class _StudentLeaveManagementViewState
     final ui = DashboardScaleScope.of(context).ui;
     await showScaledDialog<void>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.18),
+      barrierColor: AppColors.ink.withValues(alpha: 0.18),
       builder: (ctx) => GradientHeaderDialog(
         title: '${record.type} · ${record.statusLabel}',
         width: 460,
@@ -198,7 +198,7 @@ class _StudentLeaveManagementViewState
       context: context,
       barrierLabel: '关闭',
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.18),
+      barrierColor: AppColors.ink.withValues(alpha: 0.18),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, animation, secondary) {
         return DashboardScaleScope(
@@ -232,7 +232,9 @@ class _StudentLeaveManagementViewState
     final reason = result.note.isEmpty
         ? result.reason
         : '${result.reason}\n${result.note}';
-    final resp = await ref.read(studentRepositoryProvider).studentLeaveSave(
+    final resp = await ref
+        .read(studentRepositoryProvider)
+        .studentLeaveSave(
           startTime: result.start,
           endTime: result.end,
           leaveDuration: result.durationLabel,
@@ -355,7 +357,6 @@ class _LeaveBanner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.1,
                     ),
@@ -369,7 +370,6 @@ class _LeaveBanner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.1,
                     ),
@@ -400,14 +400,14 @@ class _BackButton extends StatelessWidget {
         height: ui(32),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderSoft),
         ),
         child: Icon(
           Icons.chevron_left_rounded,
           size: ui(20),
-          color: const Color(0xFF1C274C),
+          color: AppColors.ink,
         ),
       ),
     );
@@ -505,7 +505,7 @@ class _TabsAndCreateRow extends StatelessWidget {
           height: ui(44),
           padding: EdgeInsets.all(ui(4)),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           child: Row(
@@ -561,8 +561,7 @@ class _TabPill extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: active ? Colors.white : _kTextSecondary,
-            fontFamily: 'PingFang SC',
+            color: active ? AppColors.surface : _kTextSecondary,
             fontWeight: AppFont.w500,
             height: 1,
           ),
@@ -588,7 +587,7 @@ class _CreateApplyButton extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.fromLTRB(ui(12), ui(8), ui(13), ui(8)),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorderSoft, width: 1),
           ),
@@ -607,7 +606,6 @@ class _CreateApplyButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1,
                 ),
@@ -634,7 +632,7 @@ class _ErrorState extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: ui(40), horizontal: ui(16)),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -645,7 +643,6 @@ class _ErrorState extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
             ),
           ),
@@ -677,10 +674,7 @@ class _LeaveCardsGrid extends StatelessWidget {
       spacing: 16,
       itemBuilder: (context, index) {
         final r = records[index];
-        return _LeaveCard(
-          record: r,
-          onTap: () => onTap(r.id),
-        );
+        return _LeaveCard(record: r, onTap: () => onTap(r.id));
       },
     );
   }
@@ -695,7 +689,7 @@ class _EmptyState extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: ui(40)),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -707,7 +701,6 @@ class _EmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -735,9 +728,9 @@ class _LeaveCard extends StatelessWidget {
         child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(12)),
-            border: Border.all(color: Colors.white),
+            border: Border.all(color: AppColors.surface),
           ),
           child: Stack(
             clipBehavior: Clip.none,
@@ -799,8 +792,7 @@ class _CardHeaderRow extends StatelessWidget {
           record.type,
           style: TextStyle(
             fontSize: ui(16),
-            color: Colors.black,
-            fontFamily: 'PingFang SC',
+            color: AppColors.ink,
             fontWeight: AppFont.w500,
             height: 1.1,
           ),
@@ -811,7 +803,6 @@ class _CardHeaderRow extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.1,
           ),
@@ -848,7 +839,6 @@ class _StatusBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: fg,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 15.24 / 12,
         ),
@@ -913,7 +903,6 @@ class _LabelRow extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.4,
           ),
@@ -927,7 +916,6 @@ class _LabelRow extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -997,7 +985,7 @@ class _ApprovalNodeView extends StatelessWidget {
       _StepState.passed => (
         _kGreen,
         const Color(0xFFEFFFE7),
-        Colors.white,
+        AppColors.surface,
         _kTextHint,
       ),
       _StepState.rejected => (
@@ -1009,7 +997,7 @@ class _ApprovalNodeView extends StatelessWidget {
       _StepState.dim => (
         _kTextDivider,
         Colors.transparent,
-        Colors.white,
+        AppColors.surface,
         _kTextHint,
       ),
     };
@@ -1039,12 +1027,12 @@ class _ApprovalNodeView extends StatelessWidget {
                 width: ui(9),
                 height: ui(9),
                 decoration: BoxDecoration(
-                  color: step.state == _StepState.dim ? Colors.white : dot,
+                  color: step.state == _StepState.dim ? AppColors.surface : dot,
                   borderRadius: BorderRadius.circular(ui(5)),
                   border: Border.all(
                     color: step.state == _StepState.dim
                         ? _kTextDivider
-                        : Colors.white,
+                        : AppColors.surface,
                     width: 1,
                   ),
                 ),
@@ -1058,7 +1046,6 @@ class _ApprovalNodeView extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1075,7 +1062,6 @@ class _ApprovalNodeView extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: labelFg,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -1182,11 +1168,7 @@ _LeaveRecord _mapLeaveRecord(StudentLeaveRecord source) {
 /// 审批进度节点：首位固定「发起」，其余按 [StudentLeaveRecord.path] 解析。
 List<_ApprovalStep> _buildLeaveApprovalSteps(StudentLeaveRecord source) {
   final steps = <_ApprovalStep>[
-    const _ApprovalStep(
-      title: '发起',
-      label: '已发起',
-      state: _StepState.passed,
-    ),
+    const _ApprovalStep(title: '发起', label: '已发起', state: _StepState.passed),
   ];
 
   final segments = _parseLeaveFlowPathSegments(source.path);
@@ -1234,7 +1216,9 @@ List<String> _parseLeaveFlowPathSegments(String path) {
   return trimmed
       .split(RegExp(r'[→➔\->\-—]+'))
       .map((segment) => segment.trim())
-      .where((segment) => segment.isNotEmpty && !_isInitiateFlowSegment(segment))
+      .where(
+        (segment) => segment.isNotEmpty && !_isInitiateFlowSegment(segment),
+      )
       .toList();
 }
 
@@ -1269,22 +1253,16 @@ _ApprovalStep? _approvalStepForFlowSegment(
     );
   }
 
-  return _ApprovalStep(
-    title: normalized,
-    label: '待处理',
-    state: _StepState.dim,
-  );
+  return _ApprovalStep(title: normalized, label: '待处理', state: _StepState.dim);
 }
 
 _LeaveStatus _leaveStatusFromApi(StudentLeaveStatus status) {
   return switch (status) {
     StudentLeaveStatus.waitingParent ||
-    StudentLeaveStatus.waitingTeacher =>
-      _LeaveStatus.reviewing,
+    StudentLeaveStatus.waitingTeacher => _LeaveStatus.reviewing,
     StudentLeaveStatus.approved => _LeaveStatus.approved,
     StudentLeaveStatus.parentRejected ||
-    StudentLeaveStatus.teacherRejected =>
-      _LeaveStatus.rejected,
+    StudentLeaveStatus.teacherRejected => _LeaveStatus.rejected,
   };
 }
 
@@ -1484,7 +1462,7 @@ class _LeaveApplyDrawerState extends State<_LeaveApplyDrawer> {
       width: ui(600),
       height: double.infinity,
       child: Container(
-        color: Colors.white,
+        color: AppColors.surface,
         child: Column(
           children: [
             _DrawerHeader(onClose: widget.onCancel),
@@ -1604,7 +1582,6 @@ class _DrawerHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w600,
               height: 1.2,
             ),
@@ -1640,7 +1617,7 @@ class _DrawerFooter extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(ui(20), ui(12), ui(20), ui(20)),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         border: Border(top: BorderSide(color: _kBorderSoft)),
       ),
       child: Row(
@@ -1661,7 +1638,6 @@ class _DrawerFooter extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 24 / 14,
                   ),
@@ -1681,7 +1657,7 @@ class _DrawerFooter extends StatelessWidget {
                   gradient: const LinearGradient(
                     begin: Alignment.centerRight,
                     end: Alignment.centerLeft,
-                    colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                    colors: [AppColors.brandSoft, AppColors.brand],
                   ),
                   borderRadius: BorderRadius.circular(ui(12)),
                 ),
@@ -1689,8 +1665,7 @@ class _DrawerFooter extends StatelessWidget {
                   '提交申请',
                   style: TextStyle(
                     fontSize: ui(14),
-                    color: Colors.white,
-                    fontFamily: 'PingFang SC',
+                    color: AppColors.surface,
                     fontWeight: AppFont.w500,
                     height: 24 / 14,
                   ),
@@ -1716,8 +1691,7 @@ class _FieldLabel extends StatelessWidget {
       text,
       style: TextStyle(
         fontSize: ui(14),
-        color: Colors.black,
-        fontFamily: 'PingFang SC',
+        color: AppColors.ink,
         fontWeight: AppFont.w500,
         height: 20 / 14,
       ),
@@ -1763,7 +1737,6 @@ class _DateField extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: filled ? _kTextDark : _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 20 / 14,
                 ),
@@ -1811,7 +1784,6 @@ class _TextInputField extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(14),
           color: _kTextDark,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 20 / 14,
         ),
@@ -1820,7 +1792,6 @@ class _TextInputField extends StatelessWidget {
           hintStyle: TextStyle(
             fontSize: ui(14),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 20 / 14,
           ),
@@ -1860,7 +1831,6 @@ class _TextAreaField extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(14),
           color: _kTextDark,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 20 / 14,
         ),
@@ -1869,7 +1839,6 @@ class _TextAreaField extends StatelessWidget {
           hintStyle: TextStyle(
             fontSize: ui(14),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 20 / 14,
           ),

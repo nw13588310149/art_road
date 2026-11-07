@@ -1,37 +1,14 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
-import '../../../core/art/art_subject.dart';
-import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/art_subject_card.dart';
-import '../../../core/network/media_url.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
+import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
-import '../../../core/widgets/seamless_banner_carousel.dart';
-import '../../shell/ui/shell_layout.dart';
+import '../../consultation/state/consultation_state.dart';
 import '../state/school_page_controller.dart';
 import '../state/school_page_state.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-/// iPad Pro 12.9 横屏常见逻辑分辨率 1366×1024；此宽度下左列 Banner/三科卡
-/// 会挤占快捷按钮区高度，需单独收紧图标与内边距。
-abstract final class _SchoolIpadProLayout {
-  static bool matches(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final w = size.width.round();
-    final h = size.height.round();
-    bool near(int a, int target) => (a - target).abs() <= 2;
-    return (near(w, 1366) && near(h, 1024)) || (near(w, 1024) && near(h, 1366));
-  }
-
-  /// 快捷区内容（图标 + 文案 + 上下 padding）在常规样式下约需 104px。
-  static const quickActionsMinHeight = 104.0;
-}
-
-// ── Page entry ────────────────────────────────────────────────────────────────
+/// 校园课件：画室自己的课程视频（课件目录）+ 学习进度 + 校园资源入口 + 校园资讯。
 class SchoolCoursewareV2Page extends ConsumerWidget {
   const SchoolCoursewareV2Page({super.key});
 
@@ -39,798 +16,365 @@ class SchoolCoursewareV2Page extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(schoolPageControllerProvider);
     final ctrl = ref.read(schoolPageControllerProvider.notifier);
-    return _SchoolView(state: state, onRefresh: ctrl.refresh);
+    final navigator = Navigator.of(context);
+    final empty =
+        state.courseVideos.isEmpty &&
+        state.learningItems.isEmpty &&
+        state.newsItems.isEmpty;
+
+    final Widget body;
+    if (state.loading && empty) {
+      body = const _SchoolSkeleton();
+    } else if (empty && state.errorMessage.isNotEmpty) {
+      body = AppErrorState(
+        title: '校园课件加载失败',
+        description: state.errorMessage,
+        onRetry: ctrl.refresh,
+      );
+    } else {
+      body = _SchoolBody(state: state, onRefresh: ctrl.refresh);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: '校园课件',
+          subtitle: state.schoolName.isEmpty
+              ? '画室的课程视频、练习与资讯'
+              : '${state.schoolName}的课程视频、练习与资讯',
+          onBack: navigator.canPop() ? navigator.pop : null,
+        ),
+        Expanded(child: body),
+      ],
+    );
   }
 }
 
-// ── Main view ─────────────────────────────────────────────────────────────────
-class _SchoolView extends StatelessWidget {
-  const _SchoolView({required this.state, required this.onRefresh});
+/// 进入校园专属页面时透传的学校标记：二级页按 truthy 解析为校园模式。
+Map<String, dynamic> _schoolArgs(SchoolPageState state) => <String, dynamic>{
+  'school': state.schoolId != '0' ? state.schoolId : true,
+  if (state.schoolName.isNotEmpty) 'sourceName': state.schoolName,
+};
+
+class _SchoolBody extends StatelessWidget {
+  const _SchoolBody({required this.state, required this.onRefresh});
 
   final SchoolPageState state;
   final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    final actions = _resolveActions(state.quickActions);
-    final learningItems = _resolveLearningItems(state.learningItems);
-    final newsItems = _resolveNews(state.newsItems);
-
+    final videos = _CourseVideosCard(state: state);
+    final side = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _LearningProgressCard(items: state.learningItems),
+        const SizedBox(height: AppSpace.s16),
+        _QuickEntriesCard(state: state),
+      ],
+    );
     return AppRefreshIndicator(
       onRefresh: onRefresh,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-                // ── Main row — LayoutBuilder 精确对齐右侧底部 ────────────
-                LayoutBuilder(
-                  builder: (ctx, bc) {
-                    // 固定参数
-                    const rightW = 307.0;
-                    const gap = 16.0;
-
-                    // ── Right panel 固定 520（按 Figma 学习进度面板设计高度） ─
-                    // 内部布局: 16(top) + 18(标题) + 12(gap) + 146(card) + 8 +
-                    //          146 + 8 + 146 + 16(bottom) = 516 ≈ 520。
-                    // 左列与右栏底部严格对齐，故强制 leftH = 520。
-                    const leftH = 520.0;
-
-                    final leftW = math.max(0.0, bc.maxWidth - gap - rightW);
-
-                    // Banner 高度（647:190 比例）—— 保持响应式比例不变。
-                    final bannerH = leftW * 190.0 / 647.0;
-
-                    // 三科卡行高：(leftW - 16) / 2 × 121/315，与三卡
-                    // 121/210 的卡片比例等高 —— 保持响应式比例不变。
-                    final voiceCardW = math.max(0.0, (leftW - gap) / 2.0);
-                    final voiceH = voiceCardW * 121.0 / 315.0;
-                    final quickAreaH = leftH - bannerH - voiceH - gap * 2;
-                    final compactQuickActions =
-                        _SchoolIpadProLayout.matches(ctx) ||
-                        quickAreaH < _SchoolIpadProLayout.quickActionsMinHeight;
-
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Left column — 固定高度 520，与右栏严格对齐底部。
-                        // Banner / Voice 维持各自 Figma 比例，剩余空间全部
-                        // 给快捷按钮区域（用 Expanded 自动吸收）。
-                        SizedBox(
-                          width: leftW,
-                          height: leftH,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                height: bannerH,
-                                child: _HeroBanner(
-                                  height: bannerH,
-                                  bannerItems: state.bannerItems,
-                                ),
-                              ),
-                              const SizedBox(height: gap),
-                              // 快捷按钮：高度 = leftH - banner - voice - 2*gap
-                              // —— 由 Expanded 自动撑开。
-                              Expanded(
-                                child: _QuickActionsBoard(
-                                  actions: actions,
-                                  schoolId: state.schoolId,
-                                  compact: compactQuickActions,
-                                ),
-                              ),
-                              const SizedBox(height: gap),
-                              // 三科卡（素描 / 色彩 / 速写）：紧贴底部，与右栏底部对齐。
-                              SizedBox(
-                                height: voiceH,
-                                child: _VoiceInstrumentRow(
-                                  schoolId: state.schoolId,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: gap),
-                        // Right panel — 固定 520 严格还原 Figma 学习进度面板。
-                        SizedBox(
-                          width: rightW,
-                          height: leftH,
-                          child: _LearningProgressPanel(items: learningItems),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-                _buildCampusNewsHeader(context),
-                const SizedBox(height: 10),
-                _NewsGrid(items: newsItems, sourceName: state.schoolName),
-                const SizedBox(height: 16),
-                // Error message
-                if (state.errorMessage.isNotEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        state.errorMessage,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF8B8B8B),
-                        ),
-                      ),
-                    ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 800;
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s4,
+              AppSpace.page,
+              AppSpace.s24,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (wide)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: videos),
+                      const SizedBox(width: AppSpace.s16),
+                      SizedBox(width: 300, child: side),
+                    ],
+                  )
+                else ...[
+                  videos,
+                  const SizedBox(height: AppSpace.s16),
+                  side,
+                ],
+                const SizedBox(height: AppSpace.s24),
+                AppSectionHeader(
+                  title: '校园资讯',
+                  subtitle: '画室发布的通知与动态',
+                  moreLabel: '查看全部',
+                  onMore: () => Navigator.pushNamed(
+                    context,
+                    RoutePaths.consultation,
+                    arguments: _schoolArgs(state),
                   ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCampusNewsHeader(BuildContext context) {
-    return ShellSectionTitleBar(
-      title: '校园资讯',
-      onMoreTap: () => Navigator.pushNamed(
-        context,
-        RoutePaths.consultation,
-        arguments: <String, dynamic>{
-          'school': state.schoolId != '0' ? state.schoolId : true,
-          'sourceName': state.schoolName,
+                ),
+                const SizedBox(height: AppSpace.s12),
+                _NewsGrid(items: state.newsItems, sourceName: state.schoolName),
+              ],
+            ),
+          );
         },
       ),
     );
   }
-
-  List<SchoolQuickAction> _resolveActions(List<SchoolQuickAction> input) {
-    if (input.length >= 6) return input.take(6).toList();
-    final merged = <SchoolQuickAction>[...input];
-    final existing = input.map((e) => e.name).toSet();
-    for (final a in buildSchoolQuickActions()) {
-      if (!existing.contains(a.name)) merged.add(a);
-    }
-    return merged.take(6).toList();
-  }
-
-  List<SchoolLearningItem> _resolveLearningItems(
-    List<SchoolLearningItem> input,
-  ) {
-    if (input.length >= 3) return input.take(3).toList();
-
-    const subjects = <({String text, Color color})>[
-      (text: '素描', color: Color(0xFFB184FF)),
-      (text: '色彩', color: Color(0xFFFF5681)),
-      (text: '速写', color: Color(0xFF13E8BE)),
-    ];
-
-    final byText = {for (final item in input) item.text: item};
-    return subjects
-        .map(
-          (subject) =>
-              byText[subject.text] ??
-              SchoolLearningItem(
-                text: subject.text,
-                completeCount: 0,
-                allCount: 0,
-                progress: 0,
-                color: subject.color,
-                background: const Color(0xFFF0EBFA),
-              ),
-        )
-        .toList();
-  }
-
-  List<SchoolNewsItem> _resolveNews(List<SchoolNewsItem> input) {
-    return input.take(4).toList();
-  }
 }
 
-// ── Hero Banner ───────────────────────────────────────────────────────────────
-/// 校园页轮播 Banner。
-/// 与首页 `_buildBanner` 保持完全一致：使用通用的 [SeamlessBannerCarousel]，
-/// 指示器位置/尺寸与首页严格对齐（right:36, bottom:20, active 21×4，opacity 0.85/1）。
-class _HeroBanner extends StatefulWidget {
-  const _HeroBanner({required this.height, required this.bannerItems});
+class _CourseVideosCard extends StatelessWidget {
+  const _CourseVideosCard({required this.state});
 
-  final double height;
-  final List<SchoolBannerItem> bannerItems;
+  final SchoolPageState state;
 
-  @override
-  State<_HeroBanner> createState() => _HeroBannerState();
-}
-
-class _HeroBannerState extends State<_HeroBanner> {
-  int _bannerIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final images = widget.bannerItems
-        .map((e) => MediaUrl.resolve(e.imageUrl))
-        .where((url) => url.isNotEmpty)
-        .toList();
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Stack(
-        children: [
-          const Positioned.fill(child: ColoredBox(color: Color(0xFFF5F6FA))),
-          Positioned.fill(
-            child: SeamlessBannerCarousel(
-              imageUrls: images,
-              placeholder: const ColoredBox(color: Color(0xFFF5F6FA)),
-              empty: Container(color: const Color(0xFFF5F6FA)),
-              animationDuration: const Duration(milliseconds: 420),
-              animationCurve: Curves.easeInOutCubic,
-              onPageChanged: (index) {
-                if (!mounted || _bannerIndex == index) return;
-                setState(() => _bannerIndex = index);
-              },
-            ),
-          ),
-          Positioned(
-            right: 16,
-            bottom: 12,
-            child: Row(
-              children: List.generate(images.isEmpty ? 3 : images.length, (
-                index,
-              ) {
-                final active = images.isEmpty
-                    ? index == 0
-                    : index == _bannerIndex;
-                return Padding(
-                  padding: EdgeInsets.only(left: index == 0 ? 0 : 4),
-                  child: _SchoolBannerIndicator(
-                    width: active ? 21 : 4,
-                    opacity: active ? 1 : 0.85,
-                  ),
-                );
-              }),
-            ),
-          ),
-        ],
-      ),
+  void _open(BuildContext context, [String? videoId]) {
+    Navigator.pushNamed(
+      context,
+      RoutePaths.schoolVideo,
+      arguments: <String, dynamic>{
+        ..._schoolArgs(state),
+        'openVideoId': ?videoId,
+      },
     );
   }
-}
-
-class _SchoolBannerIndicator extends StatelessWidget {
-  const _SchoolBannerIndicator({required this.width, this.opacity = 1});
-
-  final double width;
-  final double opacity;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: 4,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: opacity),
-        borderRadius: BorderRadius.circular(14),
+    final videos = state.courseVideos;
+    return AppCard(
+      title: '课程视频',
+      subtitle: '老师录制的讲评与示范',
+      trailing: AppButton(
+        label: '全部视频',
+        variant: AppButtonVariant.text,
+        size: AppButtonSize.sm,
+        onTap: () => _open(context),
       ),
-    );
-  }
-}
-
-// ── Quick actions (6 icons in a row) ─────────────────────────────────────────
-class _QuickActionsBoard extends StatelessWidget {
-  const _QuickActionsBoard({
-    required this.actions,
-    required this.schoolId,
-    this.compact = false,
-  });
-
-  final List<SchoolQuickAction> actions;
-  final String schoolId;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final metrics = _QuickActionMetrics.fromCompact(compact);
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: EdgeInsets.symmetric(
-        vertical: metrics.boardPaddingV,
-        horizontal: 16,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: actions
-            .map(
-              (a) => _QuickActionItem(
-                action: a,
-                metrics: metrics,
-                onTap: () => _handleTap(context, a),
+      child: videos.isEmpty
+          ? const SizedBox(
+              height: 220,
+              child: AppEmptyState(
+                icon: Icons.video_library_outlined,
+                title: '画室还没有发布课程视频',
+                description: '老师上传讲评与示范视频后会显示在这里',
               ),
             )
-            .toList(),
-      ),
-    );
-  }
-
-  /// 1.0 `school.vue.onButtonClick` 的 Flutter 等价实现：
-  ///   - comingSoon 按钮（商城/模考）→ 弹出"即将上线"占位
-  ///   - 其他按钮 → 带上 school 标记 + firstMenu(若有) 推入二级页
-  ///     二级页解析 `school` 时使用 truthy 检查，所以传 schoolId（非零 int）也能激活 schoolMode
-  void _handleTap(BuildContext context, SchoolQuickAction action) {
-    if (action.comingSoon) {
-      _showComingSoon(context);
-      return;
-    }
-    final args = <String, dynamic>{};
-    // 1.0 通过 `state:{school:schoolInfo.id}` 传递校园上下文；这里保留 id 透传，
-    // 以便后续若需要按学校做更细粒度的过滤可直接读取；同时它在二级页面会被
-    // truthy 化为 schoolMode=true。
-    if (schoolId != '0') {
-      args['school'] = schoolId;
-    } else {
-      args['school'] = true;
-    }
-    if (action.firstMenu != null) {
-      args['firstMenu'] = action.firstMenu.toString();
-    }
-    Navigator.pushNamed(context, action.route, arguments: args);
-  }
-
-  void _showComingSoon(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
-      barrierDismissible: true,
-      builder: (ctx) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
-                AppAssets.homeComingSoon,
-                width: 520,
-                fit: BoxFit.cover,
-              ),
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                const gap = AppSpace.s16;
+                final columns = constraints.maxWidth >= 520 ? 3 : 2;
+                final width =
+                    (constraints.maxWidth - gap * (columns - 1)) / columns;
+                return Wrap(
+                  spacing: gap,
+                  runSpacing: gap,
+                  children: [
+                    for (final video in videos)
+                      SizedBox(
+                        width: width,
+                        child: _CourseVideoTile(
+                          video: video,
+                          onTap: () => _open(context, video.id),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 15),
-            GestureDetector(
-              onTap: () => Navigator.of(ctx).pop(),
-              child: Image.asset(
-                AppAssets.homeDialogClose,
-                width: 40,
-                height: 40,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
 
-class _QuickActionMetrics {
-  const _QuickActionMetrics({
-    required this.boardPaddingV,
-    required this.iconSlotSize,
-    required this.iconVisualSize,
-    required this.iconVisualSizeVideo,
-    required this.labelGap,
-    required this.labelFontSize,
-  });
+class _CourseVideoTile extends StatelessWidget {
+  const _CourseVideoTile({required this.video, required this.onTap});
 
-  final double boardPaddingV;
-  final double iconSlotSize;
-  final double iconVisualSize;
-  final double iconVisualSizeVideo;
-  final double labelGap;
-  final double labelFontSize;
-
-  factory _QuickActionMetrics.fromCompact(bool compact) {
-    if (compact) {
-      return const _QuickActionMetrics(
-        boardPaddingV: 10,
-        iconSlotSize: 38,
-        iconVisualSize: 38,
-        iconVisualSizeVideo: 32,
-        labelGap: 4,
-        labelFontSize: 13,
-      );
-    }
-    return const _QuickActionMetrics(
-      boardPaddingV: 20,
-      iconSlotSize: 44,
-      iconVisualSize: 44,
-      iconVisualSizeVideo: 36,
-      labelGap: 6,
-      labelFontSize: 14,
-    );
-  }
-}
-
-class _QuickActionItem extends StatelessWidget {
-  const _QuickActionItem({
-    required this.action,
-    required this.metrics,
-    required this.onTap,
-  });
-
-  final SchoolQuickAction action;
-  final _QuickActionMetrics metrics;
+  final SchoolCourseVideo video;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final iconVisualSize = action.route == RoutePaths.videoTutorial
-        ? metrics.iconVisualSizeVideo
-        : metrics.iconVisualSize;
-    return GestureDetector(
+    final meta = <String>[
+      if (video.teacherName.isNotEmpty) video.teacherName,
+      if (video.category.isNotEmpty) video.category,
+    ].join(' · ');
+    return AppPressable(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
+      semanticLabel: video.title,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: metrics.iconSlotSize,
-            height: metrics.iconSlotSize,
-            child: Center(
-              child: action.icon.endsWith('.svg')
-                  ? AppAssetGraphic(
-                      action.icon,
-                      width: iconVisualSize,
-                      height: iconVisualSize,
-                      fit: BoxFit.contain,
-                    )
-                  : Image.asset(
-                      action.icon,
-                      width: iconVisualSize,
-                      height: iconVisualSize,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
+          AspectRatio(
+            aspectRatio: 16 / 10,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                AppImage(src: video.coverUrl, borderRadius: AppRadius.br8),
+                if (video.duration.isNotEmpty)
+                  Positioned(
+                    right: AppSpace.s4,
+                    bottom: AppSpace.s4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpace.s4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.ink.withValues(alpha: 0.6),
+                        borderRadius: AppRadius.br4,
+                      ),
+                      child: Text(
+                        video.duration,
+                        style: AppText.number(
+                          size: 12,
+                          color: AppColors.onBrand,
+                        ),
+                      ),
                     ),
+                  ),
+              ],
             ),
           ),
-          SizedBox(height: metrics.labelGap),
-          Text(
-            action.name,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: metrics.labelFontSize,
-              color: Color(0xFF1A1A1A),
-              fontWeight: AppFont.w500,
-              fontFamily: 'PingFang SC',
-              height: 1,
+          const SizedBox(height: AppSpace.s8),
+          SizedBox(
+            height: 44,
+            child: Text(
+              video.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body14Strong,
             ),
           ),
+          if (meta.isNotEmpty)
+            Text(
+              meta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption12,
+            ),
         ],
       ),
     );
   }
 }
 
-// ── 三科入口行（素描 / 色彩 / 速写）──────────────────────────────────────────
-class _VoiceInstrumentRow extends StatelessWidget {
-  const _VoiceInstrumentRow({required this.schoolId});
-
-  final String schoolId;
-
-  @override
-  Widget build(BuildContext context) {
-    const gap = 16.0;
-    return LayoutBuilder(
-      builder: (_, bc) {
-        final cardW = (bc.maxWidth - gap * 2) / 3.0;
-        final cardH = cardW * 121.0 / 210.0;
-        return SizedBox(
-          height: cardH,
-          child: Row(
-            children: [
-              for (var i = 0; i < ArtSubject.values.length; i++) ...[
-                if (i > 0) const SizedBox(width: gap),
-                Expanded(
-                  child: ArtSubjectCard(
-                    subject: ArtSubject.values[i],
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      RoutePaths.gallery,
-                      arguments: <String, dynamic>{
-                        'subject': ArtSubject.values[i].label,
-                        'school': schoolId != '0' ? schoolId : true,
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ── Learning progress panel ──────────────────────────────────────────────────
-class _LearningProgressPanel extends StatelessWidget {
-  const _LearningProgressPanel({required this.items});
+class _LearningProgressCard extends StatelessWidget {
+  const _LearningProgressCard({required this.items});
 
   final List<SchoolLearningItem> items;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
-      // Column 不设 mainAxisSize.min，让其填满 SizedBox 给定的高度
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '学习进度',
-            style: TextStyle(
-              fontSize: 18,
-              color: Color(0xFF1A1A1A),
-              fontWeight: AppFont.w500,
-              fontFamily: 'PingFang SC',
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 12),
-          // 进度卡占满剩余高度，3 张等分
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      title: '学习进度',
+      subtitle: '按课时统计',
+      child: items.isEmpty
+          ? Text('暂无课时安排', style: AppText.caption12)
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (var i = 0; i < items.length; i++) ...[
-                  Expanded(child: _ProgressCard(item: items[i])),
-                  if (i < items.length - 1) const SizedBox(height: 12),
+                  if (i > 0) const SizedBox(height: AppSpace.s16),
+                  _ProgressRow(item: items[i]),
                 ],
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
 
-class _ProgressCard extends StatelessWidget {
-  const _ProgressCard({required this.item});
+class _ProgressRow extends StatelessWidget {
+  const _ProgressRow({required this.item});
 
   final SchoolLearningItem item;
 
   @override
   Widget build(BuildContext context) {
-    final meta = _ProgressMeta.fromItem(item);
-
-    // 不设固定高度 — 由父级 Expanded 决定高度，内容用 Spacer 撑开
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Subject + completion tip（提示语占剩余宽度自动换行，完整展示不截断）
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.text,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Color(0xFF1A1A1A),
-                  fontWeight: AppFont.w500,
-                  fontFamily: 'PingFang SC',
-                  height: 1,
-                ),
-              ),
-              if (meta.tip.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    meta.tip,
-                    textAlign: TextAlign.end,
-                    softWrap: true,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF0B081A),
-                      fontFamily: 'PingFang SC',
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const Spacer(),
-          // Stats row —— Figma 中三组 _Stat 在卡内（283 宽，左右 16 padding）
-          // 平铺，故使用 spaceBetween 严格均分剩余空间。
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _Stat(value: meta.totalHours, label: '总共'),
-              _Stat(value: meta.completedHours, label: '已上'),
-              _Stat(value: meta.remainingHours, label: '剩余'),
-            ],
-          ),
-          const Spacer(),
-          // Progress bar row
-          Row(
-            children: [
-              // Figma: 10/500/PingFang SC/#B6B5BB（之前 w400 错位）
-              Text(
-                '课程进度',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Color(0xFFB6B5BB),
-                  fontWeight: AppFont.w500,
-                  fontFamily: 'PingFang SC',
-                  height: 1,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, bc) {
-                    final trackW = bc.maxWidth;
-                    final fillW = (trackW * meta.progress / 100).clamp(
-                      0.0,
-                      trackW,
-                    );
-                    const chipW = 31.0;
-                    // 气泡中心贴齐 fill 终点；100% 时 clamp 防止溢出 track。
-                    final chipCenter = fillW;
-                    final chipLeft = (chipCenter - chipW / 2).clamp(
-                      0.0,
-                      trackW - chipW,
-                    );
-
-                    return SizedBox(
-                      height: 16,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        alignment: Alignment.centerLeft,
-                        children: [
-                          // Track（背景 196×8，#F0EBFA，radius 23）
-                          Positioned.fill(
-                            top: 4,
-                            bottom: 4,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0EBFA),
-                                borderRadius: BorderRadius.circular(23),
-                              ),
-                            ),
-                          ),
-                          // Fill（按 progress% 比例填充，gradient）
-                          Positioned(
-                            left: 0,
-                            top: 4,
-                            child: Container(
-                              width: fillW,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    meta.gradientStart,
-                                    meta.gradientEnd,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(23),
-                              ),
-                            ),
-                          ),
-                          // Percentage chip：31×15、chipColor、white 1px outline、radius 7.5
-                          Positioned(
-                            left: chipLeft,
-                            top: 0,
-                            child: Container(
-                              width: chipW,
-                              height: 15,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: meta.chipColor,
-                                borderRadius: BorderRadius.circular(7.5),
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                '${meta.progress.round()}%',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Barlow',
-                                  height: 1,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label});
-
-  final int value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
+    final completed = item.completed;
+    final progress = item.progress.clamp(0, 100);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 数字（20/Barlow）与"课时"（10/PingFang）用 Row.end + 课时上移 2px 抵消字体度量差。
         Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              '$value',
-              style: const TextStyle(
-                fontSize: 20,
-                color: Color(0xFF1A1A1A),
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Barlow',
-                height: 1,
-              ),
-              textHeightBehavior: const TextHeightBehavior(
-                applyHeightToFirstAscent: false,
-                applyHeightToLastDescent: false,
-              ),
-            ),
-            const SizedBox(width: 2),
-            Transform.translate(
-              offset: const Offset(0, -2),
-              child: Text(
-                '课时',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Color(0xFF6D6B75),
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w400,
-                  height: 1,
-                ),
-                textHeightBehavior: const TextHeightBehavior(
-                  applyHeightToFirstAscent: false,
-                  applyHeightToLastDescent: false,
-                ),
-              ),
-            ),
+            AppTag.subject(item.text),
+            const Spacer(),
+            if (completed)
+              const AppTag(label: '已完成', tone: AppTone.success)
+            else
+              Text('$progress%', style: AppText.number(size: 14)),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpace.s8),
+        AppProgressBar(
+          value: progress / 100,
+          color: completed ? AppColors.success : item.color,
+        ),
+        const SizedBox(height: AppSpace.s4),
         Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Color(0xFF0B081A),
-            fontWeight: AppFont.w500,
-            fontFamily: 'PingFang SC',
-            height: 1,
-          ),
+          completed
+              ? '${item.text}课程已全部完成'
+              : '已上 ${item.completeCount} / 共 ${item.allCount} 课时，剩余 ${item.remainingCount} 课时',
+          style: AppText.caption12,
         ),
       ],
     );
   }
 }
 
-// ── News grid (4 equal-width cards) ──────────────────────────────────────────
+class _QuickEntriesCard extends StatelessWidget {
+  const _QuickEntriesCard({required this.state});
+
+  final SchoolPageState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = state.quickActions;
+    return AppCard(
+      padding: const EdgeInsets.only(bottom: AppSpace.s4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s4,
+            ),
+            child: Text('校园资源', style: AppText.title16),
+          ),
+          for (var i = 0; i < actions.length; i++)
+            AppListRow(
+              title: actions[i].name,
+              leading: AppIconTile(icon: actions[i].icon, size: 36),
+              chevron: true,
+              divider: i < actions.length - 1,
+              onTap: () {
+                final action = actions[i];
+                if (action.comingSoon) {
+                  AppToast.showInfo(context, '「${action.name}」即将开放');
+                  return;
+                }
+                Navigator.pushNamed(
+                  context,
+                  action.route,
+                  arguments: <String, dynamic>{
+                    ..._schoolArgs(state),
+                    if (action.firstMenu != null)
+                      'firstMenu': action.firstMenu.toString(),
+                  },
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _NewsGrid extends StatelessWidget {
   const _NewsGrid({required this.items, required this.sourceName});
 
@@ -839,36 +383,59 @@ class _NewsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const SizedBox.shrink();
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        mainAxisExtent: 138,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, i) =>
-          _NewsCard(item: items[i], sourceName: sourceName),
+    if (items.isEmpty) {
+      return const AppCard(
+        child: SizedBox(
+          height: 160,
+          child: AppEmptyState(
+            icon: Icons.feed_outlined,
+            title: '画室还没有发布资讯',
+            description: '通知、写生安排与作品展评会显示在这里',
+          ),
+        ),
+      );
+    }
+    final now = DateTime.now();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 840 ? 4 : 2;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: AppSpace.s16,
+            mainAxisSpacing: AppSpace.s16,
+            mainAxisExtent: 150,
+          ),
+          itemCount: items.take(4).length,
+          itemBuilder: (context, i) =>
+              _NewsCard(item: items[i], sourceName: sourceName, now: now),
+        );
+      },
     );
   }
 }
 
-/// 校园资讯卡片：与首页"最新"区域的资讯卡完全一致的视觉规格
-/// （字号 / 颜色 / line-height / 元素绝对定位），仅数据来源换为 SchoolNewsItem。
 class _NewsCard extends StatelessWidget {
-  const _NewsCard({required this.item, required this.sourceName});
+  const _NewsCard({
+    required this.item,
+    required this.sourceName,
+    required this.now,
+  });
 
   final SchoolNewsItem item;
   final String sourceName;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
-    final tags = item.tags.take(3).toList();
-
-    return GestureDetector(
+    final created = item.createTime;
+    final latest =
+        created != null &&
+        !now.difference(created).isNegative &&
+        now.difference(created) < const Duration(hours: 24);
+    return AppCard(
       onTap: () => Navigator.pushNamed(
         context,
         RoutePaths.consultationDetail,
@@ -877,208 +444,79 @@ class _NewsCard extends StatelessWidget {
           if (sourceName.isNotEmpty) 'sourceName': sourceName,
         },
       ),
-      child: RepaintBoundary(
-        child: Container(
-          height: 138,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.body14Strong,
           ),
-          child: Stack(
+          const SizedBox(height: AppSpace.s8),
+          Wrap(
+            spacing: AppSpace.s4,
+            runSpacing: AppSpace.s4,
+            children: [for (final tag in item.tags.take(2)) AppTag(label: tag)],
+          ),
+          const Spacer(),
+          Row(
             children: [
-              const Positioned(left: 16, top: 17.5, child: _SchoolNewsBadge()),
-              // 主标题：16/500/#0B081A，line-height 1.375
-              Positioned(
-                left: 55,
-                top: 15,
-                right: 14,
+              if (latest) ...[
+                const AppTag(label: '最新', tone: AppTone.brand),
+                const SizedBox(width: AppSpace.s8),
+              ],
+              Flexible(
                 child: Text(
-                  item.shortTitle,
+                  formatRelativeTime(created),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF0B081A),
-                    fontWeight: AppFont.w500,
-                    fontFamily: 'PingFang SC',
-                    height: 1.375,
-                  ),
-                ),
-              ),
-              // 副标题：14/400/#6D6B75，line-height 1.43
-              Positioned(
-                left: 16,
-                top: 44.5,
-                right: 16,
-                child: Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6D6B75),
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 1.43,
-                  ),
-                ),
-              ),
-              // 标签行：9.52/400/#6D6B75，背景 #F4F4FF，圆角 4
-              Positioned(
-                left: 16,
-                top: 72.5,
-                right: 16,
-                height: 18,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    for (int i = 0; i < tags.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 4),
-                      Container(
-                        height: 18,
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF4F4FF),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          tags[i],
-                          style: TextStyle(
-                            fontSize: 9.52,
-                            color: Color(0xFF6D6B75),
-                            fontWeight: AppFont.w400,
-                            height: 1,
-                            fontFamily: 'PingFang SC',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              // 时间：11/400/#788698，opacity 0.8，line-height 1.36
-              Positioned(
-                left: 16,
-                top: 110.5,
-                child: Opacity(
-                  opacity: 0.8,
-                  child: Text(
-                    _formatTime(item.createTime),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF788698),
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 1.36,
-                    ),
-                  ),
+                  style: AppText.caption12,
                 ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
-
-  String _formatTime(DateTime? time) {
-    if (time == null) return '刚刚';
-    final diff = DateTime.now().difference(time);
-    if (diff.inSeconds < 60) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-    if (diff.inHours < 24) return '${diff.inHours}小时前';
-    final days = diff.inDays;
-    if (days < 30) return '$days天前';
-    if (days < 365) return '${(days / 30).floor()}月前';
-    return '${(days / 365).floor()}年前';
-  }
 }
 
-/// 与首页 _NewsBadge 视觉一致的 NEW 标签：紫色背景 + Gilroy 12/500 白字。
-class _SchoolNewsBadge extends StatelessWidget {
-  const _SchoolNewsBadge();
+class _SchoolSkeleton extends StatelessWidget {
+  const _SchoolSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 17,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFF8E7FFF),
-        borderRadius: BorderRadius.circular(4),
+    return const SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        AppSpace.page,
+        AppSpace.s4,
+        AppSpace.page,
+        AppSpace.s24,
       ),
-      child: const Text(
-        'NEW',
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.white,
-          height: 1,
-          fontWeight: FontWeight.w500,
-          fontFamily: 'Gilroy',
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: AppCard(
+              child: Column(
+                children: [
+                  AppSkeletonText(lines: 1, lineHeight: 18),
+                  SizedBox(height: AppSpace.s16),
+                  AppSkeleton(height: 120, radius: AppRadius.control),
+                  SizedBox(height: AppSpace.s16),
+                  AppSkeleton(height: 120, radius: AppRadius.control),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(width: AppSpace.s16),
+          SizedBox(
+            width: 300,
+            child: AppCard(child: AppSkeletonText(lines: 8)),
+          ),
+        ],
       ),
-    );
-  }
-}
-
-// ── Progress meta ─────────────────────────────────────────────────────────────
-class _ProgressMeta {
-  const _ProgressMeta({
-    required this.totalHours,
-    required this.completedHours,
-    required this.remainingHours,
-    required this.progress,
-    required this.gradientStart,
-    required this.gradientEnd,
-    required this.chipColor,
-    this.tip = '',
-  });
-
-  final int totalHours;
-  final int completedHours;
-  final int remainingHours;
-  final double progress;
-  final Color gradientStart;
-  final Color gradientEnd;
-  // 进度气泡颜色不等同 gradientEnd —— 素描 #B991FF / 色彩 #FF7699 /
-  // 速写 #20E7C0，单独维护一个字段。
-  final Color chipColor;
-  final String tip;
-
-  factory _ProgressMeta.fromItem(SchoolLearningItem item) {
-    final progress = item.progress.clamp(0, 100).toDouble();
-    final completed =
-        progress >= 100 ||
-        (item.allCount > 0 && item.completeCount >= item.allCount);
-    final (Color start, Color end, Color chip) = switch (item.text) {
-      final t when t.contains('色彩') => (
-        const Color(0xFFFFBECE),
-        const Color(0xFFFF5681),
-        const Color(0xFFFF7699),
-      ),
-      final t when t.contains('速写') => (
-        const Color(0xFF4DE6C8),
-        const Color(0xFF13E8BE),
-        const Color(0xFF20E7C0),
-      ),
-      _ => (
-        const Color(0xFFD4BFFF),
-        const Color(0xFFB184FF),
-        const Color(0xFFB991FF),
-      ),
-    };
-    return _ProgressMeta(
-      totalHours: item.allCount,
-      completedHours: item.completeCount,
-      remainingHours: item.remainingCount,
-      progress: progress,
-      gradientStart: start,
-      gradientEnd: end,
-      chipColor: chip,
-      tip: completed ? '恭喜你！你完成了${item.text}的全部课程' : '',
     );
   }
 }

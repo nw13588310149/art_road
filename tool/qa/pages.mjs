@@ -82,6 +82,12 @@ export const ROLES = [
         actions: [{ click: '上传作品', after: 1800 }],
       },
       { id: 'gallery', route: '/gallery' },
+      { id: 'ebooks', route: '/ebooks' },
+      {
+        id: 'ebook-detail',
+        route: '/ebooks',
+        actions: [{ click: /联考素描静物高分解析/, after: 2200 }],
+      },
       { id: 'toolbox', route: '/toolbox' },
       ...toolSteps,
       ...sharedContent,

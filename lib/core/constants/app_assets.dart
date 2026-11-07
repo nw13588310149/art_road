@@ -41,6 +41,7 @@ abstract final class AppAssets {
   static const leftNavZuopin = 'assets/images/shell/leftNav/zuopin.png';
   static const leftNavFanhua = 'assets/images/shell/leftNav/fanhua.png';
   static const leftNavGongju = 'assets/images/shell/leftNav/gongju.png';
+  static const leftNavShukan = 'assets/images/shell/leftNav/shukan.png';
 
   /// 首页九宫格美术图标（与艺考网学情小程序 3D 功能图标同一套风格）。
   static const homeArtXueqing = 'assets/images/home/art/xueqing.png';

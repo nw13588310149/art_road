@@ -3,17 +3,17 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../core/art/art_tokens.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 
-/// 成长曲线折线图：网格 + 坐标、渐变面积、数值标注、末点高亮；
-/// 排名指标纵轴反向（越靠上名次越好）。
+/// 成长曲线折线图：网格 + 坐标、浅色面积、数值标注、末点高亮；
+/// 排名指标纵轴反向（越靠上名次越好）。静态绘制，没有入场动画。
 class GrowthLineChart extends StatelessWidget {
   const GrowthLineChart({
     required this.points,
     required this.metric,
-    this.color = ArtColors.brand,
+    this.color = AppColors.brand,
     super.key,
   });
 
@@ -28,27 +28,15 @@ class GrowthLineChart extends StatelessWidget {
         if (point.value != null) point,
     ];
     if (data.isEmpty) {
-      return const ArtEmptyState(
-        message: '暂无可展示的成绩',
+      return const AppEmptyState(
         icon: Icons.show_chart_rounded,
+        title: '暂无可展示的成绩',
+        description: '考试出分后会在这里画出走势',
       );
     }
-    final signature =
-        '${metric.name}|${data.map((p) => '${p.examId}:${p.value}').join(',')}';
-    return TweenAnimationBuilder<double>(
-      key: ValueKey<String>(signature),
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeOutCubic,
-      builder: (context, progress, _) => CustomPaint(
-        size: Size.infinite,
-        painter: _GrowthChartPainter(
-          points: data,
-          metric: metric,
-          color: color,
-          progress: progress,
-        ),
-      ),
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _GrowthChartPainter(points: data, metric: metric, color: color),
     );
   }
 }
@@ -58,31 +46,20 @@ class _GrowthChartPainter extends CustomPainter {
     required this.points,
     required this.metric,
     required this.color,
-    required this.progress,
   });
 
   final List<GrowthPoint> points;
   final GrowthMetric metric;
   final Color color;
-  final double progress;
 
   static const _padLeft = 46.0;
   static const _padRight = 24.0;
   static const _padTop = 40.0;
   static const _padBottom = 50.0;
 
-  static const _axisStyle = TextStyle(
-    fontSize: 11,
-    height: 1.2,
-    color: ArtColors.ink3,
-    fontFamily: 'Manrope',
-    fontFeatures: [FontFeature.tabularFigures()],
-  );
-  static const _dateStyle = TextStyle(
-    fontSize: 10,
-    height: 1.2,
-    color: ArtColors.ink4,
-    fontFamily: 'Manrope',
+  static final _axisStyle = AppText.number(
+    size: 12,
+    color: AppColors.textTertiary,
   );
 
   bool get _ranking => metric == GrowthMetric.ranking;
@@ -95,7 +72,9 @@ class _GrowthChartPainter extends CustomPainter {
       size.width - _padRight,
       size.height - _padBottom,
     );
-    if (plot.width <= 0 || plot.height <= 0) return;
+    if (plot.width <= 0 || plot.height <= 0) {
+      return;
+    }
 
     final values = [for (final point in points) point.value!];
     final low = values.reduce((a, b) => a < b ? a : b);
@@ -130,7 +109,7 @@ class _GrowthChartPainter extends CustomPainter {
         : plot.left + inset + index * (plot.width - inset * 2) / (count - 1);
 
     final grid = Paint()
-      ..color = ArtColors.line
+      ..color = AppColors.lineSoft
       ..strokeWidth = 1;
     for (final tick in axis.ticks) {
       final y = yOf(tick);
@@ -150,9 +129,8 @@ class _GrowthChartPainter extends CustomPainter {
         canvas,
         TextSpan(
           text: shortExamName(points[i].examName),
-          style: ArtText.caption(
-            size: 11,
-            color: last ? ArtColors.brandDeep : ArtColors.ink2,
+          style: AppText.caption12.copyWith(
+            color: last ? AppColors.ink : AppColors.textSecondary,
           ),
         ),
         Offset(x, plot.bottom + 10),
@@ -160,7 +138,7 @@ class _GrowthChartPainter extends CustomPainter {
       );
       _paintText(
         canvas,
-        TextSpan(text: studyShortDate(points[i].examTime), style: _dateStyle),
+        TextSpan(text: studyShortDate(points[i].examTime), style: _axisStyle),
         Offset(x, plot.bottom + 28),
         const Alignment(0, -1),
       );
@@ -169,9 +147,6 @@ class _GrowthChartPainter extends CustomPainter {
     final offsets = [
       for (var i = 0; i < count; i++) Offset(xOf(i), yOf(values[i])),
     ];
-    final revealX = count == 1
-        ? size.width
-        : offsets.first.dx + (offsets.last.dx - offsets.first.dx) * progress;
 
     if (count > 1) {
       final line = Path()..moveTo(offsets.first.dx, offsets.first.dy);
@@ -186,49 +161,34 @@ class _GrowthChartPainter extends CustomPainter {
         ..lineTo(offsets.first.dx, plot.bottom)
         ..close();
       canvas
-        ..save()
-        ..clipRect(Rect.fromLTRB(0, 0, revealX + 1, size.height))
-        ..drawPath(
-          area,
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                color.withValues(alpha: 0.22),
-                color.withValues(alpha: 0),
-              ],
-            ).createShader(plot),
-        )
+        ..drawPath(area, Paint()..color = AppColors.tint(color, 0.08))
         ..drawPath(
           line,
           Paint()
             ..color = color
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.6
+            ..strokeWidth = 2.4
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round,
-        )
-        ..restore();
+        );
     }
 
     for (var i = 0; i < count; i++) {
       final point = offsets[i];
-      if (count > 1 && point.dx > revealX + 0.5) continue;
       final last = i == count - 1;
       if (last) {
         canvas
-          ..drawCircle(
-            point,
-            11,
-            Paint()..color = color.withValues(alpha: 0.16),
-          )
           ..drawCircle(point, 6, Paint()..color = color)
-          ..drawCircle(point, 2.6, Paint()..color = Colors.white);
-        _paintBubble(canvas, size, _valueSpan(values[i], Colors.white), point);
+          ..drawCircle(point, 2.6, Paint()..color = AppColors.surface);
+        _paintBubble(
+          canvas,
+          size,
+          _valueSpan(values[i], AppColors.onBrand),
+          point,
+        );
       } else {
         canvas
-          ..drawCircle(point, 4.5, Paint()..color = Colors.white)
+          ..drawCircle(point, 4.5, Paint()..color = AppColors.surface)
           ..drawCircle(
             point,
             4.5,
@@ -239,7 +199,7 @@ class _GrowthChartPainter extends CustomPainter {
           );
         _paintText(
           canvas,
-          _valueSpan(values[i], ArtColors.ink2),
+          _valueSpan(values[i], AppColors.textSecondary),
           Offset(point.dx, point.dy - 9),
           const Alignment(0, 1),
         );
@@ -248,20 +208,16 @@ class _GrowthChartPainter extends CustomPainter {
   }
 
   InlineSpan _valueSpan(double value, Color textColor) {
-    final number = TextStyle(
-      fontSize: 12,
-      height: 1.2,
-      color: textColor,
-      fontFamily: 'Manrope',
-      fontWeight: FontWeight.w500,
-    );
-    if (!_ranking) return TextSpan(text: formatScore(value), style: number);
-    final unit = ArtText.caption(size: 10, color: textColor);
+    final number = AppText.number(size: 12, color: textColor);
+    if (!_ranking) {
+      return TextSpan(text: formatScore(value), style: number);
+    }
+    final unit = AppText.caption12.copyWith(color: textColor);
     return TextSpan(
       children: [
-        TextSpan(text: '第', style: unit),
+        TextSpan(text: '第 ', style: unit),
         TextSpan(text: formatScore(value), style: number),
-        TextSpan(text: '名', style: unit),
+        TextSpan(text: ' 名', style: unit),
       ],
     );
   }
@@ -293,7 +249,7 @@ class _GrowthChartPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
       maxLines: 1,
     )..layout();
-    const padH = 9.0;
+    const padH = 8.0;
     const padV = 4.0;
     const gap = 14.0;
     final width = painter.width + padH * 2;
@@ -306,7 +262,7 @@ class _GrowthChartPainter extends CustomPainter {
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(left, top, width, height),
-        Radius.circular(height / 2),
+        const Radius.circular(AppRadius.control),
       ),
       fill,
     );
@@ -322,7 +278,6 @@ class _GrowthChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GrowthChartPainter oldDelegate) =>
-      oldDelegate.progress != progress ||
       oldDelegate.metric != metric ||
       oldDelegate.color != color ||
       !identical(oldDelegate.points, points);
