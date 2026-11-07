@@ -129,7 +129,7 @@ class _MirrorBodyState extends State<_MirrorBody> {
     return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
   }
 
-  Widget _buildStage(BuildContext context, bool wide) {
+  Widget _buildStage(BuildContext context) {
     final shown = _invert ? _inverted : widget.image.image;
     final mirrored = ToolStage(
       child: Stack(
@@ -166,7 +166,7 @@ class _MirrorBodyState extends State<_MirrorBody> {
         ],
       ),
     );
-    if (!wide || !_compare) {
+    if (!_compare) {
       return mirrored;
     }
     return Row(
@@ -182,7 +182,7 @@ class _MirrorBodyState extends State<_MirrorBody> {
     );
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -213,12 +213,11 @@ class _MirrorBodyState extends State<_MirrorBody> {
           value: _alternate != null,
           onChanged: _setAlternate,
         ),
-        if (wide)
-          ToolSwitchRow(
-            label: '与原图并排对比',
-            value: _compare,
-            onChanged: (v) => setState(() => _compare = v),
-          ),
+        ToolSwitchRow(
+          label: '与原图并排对比',
+          value: _compare,
+          onChanged: (v) => setState(() => _compare = v),
+        ),
         Align(
           alignment: Alignment.centerLeft,
           child: AppButton(

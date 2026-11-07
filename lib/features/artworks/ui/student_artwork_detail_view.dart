@@ -82,7 +82,7 @@ class _StudentArtworkDetailViewState
       builder: (context, constraints) {
         final imagePanel = _buildImagePanel(detail);
         final info = _InfoColumn(detail: detail);
-        if (constraints.maxWidth >= 820) {
+        if (constraints.maxWidth >= 800) {
           return Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpace.page,
@@ -199,15 +199,17 @@ class _StudentArtworkDetailViewState
                     ),
                   ),
           ),
-          const SizedBox(height: AppSpace.s8),
-          Text(
-            _showAnnotations && annotators.isNotEmpty
-                ? '红蓝笔迹为${annotators.join('、')}老师的批注 · 点击图片全屏查看'
-                : '点击图片全屏查看',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.caption12,
-          ),
+          if (images.isNotEmpty) ...[
+            const SizedBox(height: AppSpace.s8),
+            Text(
+              _showAnnotations && annotators.isNotEmpty
+                  ? '批注来自${annotators.join('、')}老师 · 点击图片全屏查看原图'
+                  : '点击图片全屏查看原图',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption12,
+            ),
+          ],
           if (images.length > 1) ...[
             const SizedBox(height: AppSpace.s8),
             ArtworkThumbnailStrip(

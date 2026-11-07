@@ -209,6 +209,7 @@ class _StudyReportViewState extends ConsumerState<StudyReportView> {
           ],
           StudyHeroCard(
             exam: exam,
+            studentName: widget.studentName,
             scoreChange: report.scoreChange,
             rankingChange: report.rankingChange,
             surpassedPercent: report.surpassedPercent,

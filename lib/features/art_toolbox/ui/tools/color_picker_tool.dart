@@ -107,7 +107,7 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
     return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
   }
 
-  Widget _buildStage(BuildContext context, bool wide) {
+  Widget _buildStage(BuildContext context) {
     return ToolStage(
       child: Padding(
         padding: const EdgeInsets.all(AppSpace.s12),
@@ -201,7 +201,7 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
     );
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     final color = _color;
     final palette = _palette;
     final base = _baseColor;

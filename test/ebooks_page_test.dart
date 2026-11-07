@@ -43,6 +43,8 @@ Map<String, dynamic> _book(
 
 /// 立即应答的假仓库：书架 = 收藏 + 读过，收藏开关会改变书架与详情。
 class _FakeRepository implements EbookRepository {
+  bool shelfUnavailable = false;
+
   final Map<String, Map<String, dynamic>> books = {
     for (final book in [
       _book('b1', '素描静物解析（示例）', progress: 4, featuredIntro: '编辑推荐一'),
@@ -124,12 +126,14 @@ class _FakeRepository implements EbookRepository {
   });
 
   @override
-  Future<ApiResponse> getShelf() => _ok({
-    'records': [
-      for (final b in books.values)
-        if (b['favorite'] == true || b['progress'] != null) b,
-    ],
-  });
+  Future<ApiResponse> getShelf() => shelfUnavailable
+      ? Future.value(ApiResponse(code: 500, msg: '暂时无法加载书架'))
+      : _ok({
+          'records': [
+            for (final b in books.values)
+              if (b['favorite'] == true || b['progress'] != null) b,
+          ],
+        });
 
   @override
   Future<ApiResponse> setFavorite(String id, {required bool favorite}) {
@@ -224,6 +228,24 @@ void main() {
     expect(find.text('速写动态（示例）'), findsNothing);
 
     await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('shelf failure offers retry and recovers', (tester) async {
+    final repository = _FakeRepository()..shelfUnavailable = true;
+    await _pumpInShell(tester, const EbooksPage(), repository);
+
+    await tester.tap(find.text('我的书架'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('书架加载失败'), findsOneWidget);
+    expect(find.text('书架还是空的'), findsNothing);
+
+    repository.shelfUnavailable = false;
+    await tester.tap(find.text('重试'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('书架加载失败'), findsNothing);
+    expect(find.text('全部 3'), findsOneWidget);
   });
 
   testWidgets('home section shows continue reading and picks', (tester) async {

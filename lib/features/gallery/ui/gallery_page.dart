@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/ui.dart';
+import '../../shell/ui/shell_layout.dart';
 import '../../smart_campus/navigation/group_chat_return.dart';
 import '../data/gallery_models.dart';
 import '../state/gallery_controller.dart';
@@ -127,13 +128,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         });
       }
       final msg = next.errorMessage;
-      if (msg.isEmpty || msg == previous?.errorMessage) {
+      if (msg.isEmpty || msg == previous?.errorMessage || next.works.isEmpty) {
         return;
       }
       // 没有旧数据时由页面错误状态说明，有旧数据时用轻提示，不替换内容。
-      if (next.works.isNotEmpty) {
-        AppToast.showError(context, msg);
-      }
+      AppToast.showError(context, msg);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (controller.mounted) {
           controller.clearError();
@@ -143,46 +142,49 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
     final openId = state.openWorkId;
     final canPop = _openedFromPage && Navigator.of(context).canPop();
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Offstage(
-          offstage: openId != null,
-          child: TickerMode(
-            enabled: openId == null,
-            child: _GalleryBrowser(
-              state: state,
-              scrollController: _scroll,
-              onBack: canPop
-                  ? () => GroupChatReturnNavigator.pop(context, ref: ref)
-                  : null,
-              onSubjectChanged: (s) =>
-                  _applyFilter(() => controller.setSubject(s)),
-              onCategoryChanged: (c) =>
-                  _applyFilter(() => controller.setCategory(c)),
-              onSortChanged: (s) => _applyFilter(() => controller.setSort(s)),
-              onKeywordChanged: (k) =>
-                  _applyFilter(() => controller.setKeyword(k)),
-              onResetFilters: () => _applyFilter(controller.resetFilters),
-              onRetry: () => unawaited(controller.refresh()),
-              onOpen: (work) => controller.openDetail(work.id),
-              onToggleFavorite: _toggleFavorite,
+    return ShellPageSurface(
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Offstage(
+            offstage: openId != null,
+            child: TickerMode(
+              enabled: openId == null,
+              child: _GalleryBrowser(
+                state: state,
+                scrollController: _scroll,
+                onBack: canPop
+                    ? () => GroupChatReturnNavigator.pop(context, ref: ref)
+                    : null,
+                onSubjectChanged: (s) =>
+                    _applyFilter(() => controller.setSubject(s)),
+                onCategoryChanged: (c) =>
+                    _applyFilter(() => controller.setCategory(c)),
+                onSortChanged: (s) => _applyFilter(() => controller.setSort(s)),
+                onKeywordChanged: (k) =>
+                    _applyFilter(() => controller.setKeyword(k)),
+                onResetFilters: () => _applyFilter(controller.resetFilters),
+                onRetry: () => unawaited(controller.refresh()),
+                onOpen: (work) => controller.openDetail(work.id),
+                onToggleFavorite: _toggleFavorite,
+              ),
             ),
           ),
-        ),
-        if (openId != null)
-          GalleryDetailView(
-            key: ValueKey(openId),
-            detail: state.details[openId],
-            loading: state.detailLoading.contains(openId),
-            error: state.detailErrors[openId] ?? '',
-            onBack: () => _closeDetail(state),
-            onRetry: () => unawaited(controller.retryDetail()),
-            onToggleFavorite: _toggleFavorite,
-            onOpenWork: controller.openDetail,
-            onTagSelected: _searchTag,
-          ),
-      ],
+          if (openId != null)
+            GalleryDetailView(
+              key: ValueKey(openId),
+              detail: state.details[openId],
+              loading: state.detailLoading.contains(openId),
+              error: state.detailErrors[openId] ?? '',
+              onBack: () => _closeDetail(state),
+              onRetry: () => unawaited(controller.retryDetail()),
+              onToggleFavorite: _toggleFavorite,
+              onOpenWork: controller.openDetail,
+              onTagSelected: _searchTag,
+            ),
+        ],
+      ),
     );
   }
 }
@@ -226,27 +228,12 @@ class _GalleryBrowser extends StatelessWidget {
           title: '范画库',
           subtitle: subtitle,
           onBack: onBack,
-          actions: [
-            SizedBox(
-              width: 240,
-              child: GallerySearchField(
-                keyword: state.keyword,
-                onChanged: onKeywordChanged,
-              ),
-            ),
-            AppSegmented<GallerySort>(
-              segments: [
-                for (final sort in GallerySort.values)
-                  AppSegment(value: sort, label: sort.label),
-              ],
-              value: state.sort,
-              onChanged: onSortChanged,
-            ),
-          ],
           bottom: GalleryFilterBar(
             state: state,
             onSubjectChanged: onSubjectChanged,
             onCategoryChanged: onCategoryChanged,
+            onSortChanged: onSortChanged,
+            onKeywordChanged: onKeywordChanged,
           ),
         ),
         Expanded(child: _buildBody()),

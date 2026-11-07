@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +9,7 @@ import '../../../core/demo/demo_accounts.dart';
 import '../../../core/demo/demo_config.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../../shell/state/shell_controller.dart';
 import '../data/role_guide_store.dart';
 import '../state/help_guide_controller.dart';
@@ -257,21 +260,6 @@ class _GuideGrid extends StatelessWidget {
   }
 }
 
-IconData _iconOf(String categoryId) {
-  return switch (categoryId) {
-    'start' => Icons.rocket_launch_outlined,
-    'study' => Icons.insights_outlined,
-    'artworks' => Icons.photo_library_outlined,
-    'gallery' => Icons.collections_outlined,
-    'toolbox' => Icons.handyman_outlined,
-    'video' => Icons.play_circle_outline_rounded,
-    'campus' => Icons.apartment_outlined,
-    'ai' => Icons.chat_bubble_outline_rounded,
-    'notes' => Icons.edit_note_rounded,
-    _ => Icons.help_outline_rounded,
-  };
-}
-
 class _GuideCard extends StatelessWidget {
   const _GuideCard({required this.item});
 
@@ -301,34 +289,25 @@ class _GuideCard extends StatelessWidget {
           ),
           const Spacer(),
           const SizedBox(height: AppSpace.s12),
-          Container(
-            height: 80,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              borderRadius: AppRadius.br8,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.brandWash, AppColors.brandTint],
-              ),
-            ),
-            child: Icon(
-              _iconOf(item.categoryId),
-              size: 32,
-              color: AppColors.brand,
-            ),
-          ),
-          const SizedBox(height: AppSpace.s12),
+          _GuideCover(subject: item.title),
+          const SizedBox(height: AppSpace.s8),
           Row(
             children: [
-              AppTag(label: item.subtitle),
-              const SizedBox(width: AppSpace.s8),
-              Text('${item.steps.length} 个步骤', style: AppText.caption12),
-              const Spacer(),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 20,
-                color: AppColors.textPlaceholder,
+              Expanded(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: AppSpace.s8,
+                  runSpacing: AppSpace.s4,
+                  children: [
+                    AppTag(label: item.subtitle),
+                    Text('${item.steps.length} 个步骤', style: AppText.caption12),
+                  ],
+                ),
+              ),
+              const AppAssetGraphic(
+                AppAssets.listChevron,
+                width: 20,
+                height: 20,
               ),
             ],
           ),
@@ -336,6 +315,143 @@ class _GuideCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 与功能指南原版一致的渐变封面，以当前品牌和实际指南标题呈现。
+class _GuideCover extends StatelessWidget {
+  const _GuideCover({required this.subject});
+
+  final String subject;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: ClipRRect(
+        borderRadius: AppRadius.br8,
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.brandWash,
+                      AppColors.brandSoft,
+                      AppColors.brandDeep,
+                    ],
+                    stops: [0, 0.48, 1],
+                  ),
+                ),
+                child: CustomPaint(painter: _GuideWavePainter()),
+              ),
+            ),
+            const Positioned(
+              top: AppSpace.s8,
+              left: AppSpace.s8,
+              child: AppAssetGraphic(
+                AppAssets.brandMark,
+                width: 20,
+                height: 20,
+              ),
+            ),
+            Align(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.s12,
+                  AppSpace.s24,
+                  AppSpace.s12,
+                  AppSpace.s16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '美术之路 功能指南',
+                      textAlign: TextAlign.center,
+                      style: AppText.title20.copyWith(
+                        color: AppColors.brandDeep,
+                        shadows: const [
+                          Shadow(color: Colors.white, blurRadius: 6),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpace.s4),
+                    DecoratedBox(
+                      decoration: const BoxDecoration(
+                        color: AppColors.brandDeep,
+                        borderRadius: AppRadius.brPill,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpace.s12,
+                          vertical: AppSpace.s4,
+                        ),
+                        child: RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textScaler: MediaQuery.textScalerOf(context),
+                          text: TextSpan(
+                            text: subject,
+                            style: AppText.body14Strong.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuideWavePainter extends CustomPainter {
+  const _GuideWavePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final glow = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0x00FFFFFF), Color(0xA8FFFFFF), Color(0x00FFFFFF)],
+      ).createShader(Offset.zero & size)
+      ..style = PaintingStyle.stroke;
+    final purple = Paint()
+      ..color = AppColors.brandDeep.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.7;
+    for (var i = 0; i < 24; i++) {
+      final y = size.height * (0.13 + i * 0.034);
+      final amplitude = 4.0 + i * 0.45;
+      final path = Path()..moveTo(-8, y);
+      for (double x = -8; x <= size.width + 8; x += 4) {
+        final wave = math.sin(x / size.width * math.pi * 3.2 + i * 0.22);
+        path.lineTo(x, y + wave * amplitude);
+      }
+      canvas.drawPath(path, i.isEven ? glow : purple);
+    }
+    final flare = Paint()
+      ..shader =
+          const RadialGradient(
+            colors: [Color(0xC7FFFFFF), Color(0x00FFFFFF)],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.52, size.height * 0.08),
+              radius: size.width * 0.52,
+            ),
+          );
+    canvas.drawRect(Offset.zero & size, flare);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GuideWavePainter oldDelegate) => false;
 }
 
 Future<void> _showGuideDetail(BuildContext context, HelpGuideItem item) {

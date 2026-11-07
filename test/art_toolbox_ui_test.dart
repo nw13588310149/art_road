@@ -10,6 +10,8 @@ import 'package:the_road_of_art_flutter/features/art_toolbox/data/toolbox_image_
 import 'package:the_road_of_art_flutter/features/art_toolbox/logic/image_ops.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/state/toolbox_image_controller.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/ui/art_toolbox_page.dart';
+import 'package:the_road_of_art_flutter/features/art_toolbox/ui/widgets/image_tool_frame.dart';
+import 'package:the_road_of_art_flutter/features/art_toolbox/ui/widgets/tool_panel.dart';
 
 class _PreloadedImageController extends ToolboxImageController {
   _PreloadedImageController(ToolboxImage image) : super(ToolboxImageLoader()) {
@@ -84,7 +86,7 @@ Future<void> _pumpToolbox(
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
-  for (final size in const [Size(950, 740), Size(720, 700)]) {
+  for (final size in const [Size(950, 740), Size(720, 400)]) {
     testWidgets('home lists every group and tool at ${size.width.round()}', (
       tester,
     ) async {
@@ -109,6 +111,39 @@ void main() {
         final image = tool.usesImage ? await _sampleImage(tester) : null;
         await _pumpToolbox(tester, size: size, tool: tool.key, image: image);
         expect(find.byTooltip('返回'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ToolDetailHeader),
+            matching: find.text(tool.label),
+          ),
+          findsOneWidget,
+        );
+        if (size.width == 720 &&
+            const {
+              ArtTool.value,
+              ArtTool.blur,
+              ArtTool.simplify,
+              ArtTool.temperature,
+              ArtTool.edges,
+              ArtTool.mirror,
+            }.contains(tool)) {
+          final compare = find.text('与原图并排对比');
+          final labels = find.byType(StageLabel);
+          final initiallyComparing = labels.evaluate().length == 2;
+          await tester.ensureVisible(compare);
+          await tester.tap(compare);
+          await tester.pump();
+          if (initiallyComparing) {
+            expect(labels, findsOneWidget);
+            await tester.tap(compare);
+            await tester.pump();
+          }
+          expect(labels, findsNWidgets(2));
+          expect(
+            tester.getTopLeft(labels.first).dx,
+            lessThan(tester.getTopLeft(labels.last).dx),
+          );
+        }
         expect(find.text(tool.help), findsNothing);
         await tester.tap(find.byTooltip('工具用法'));
         await tester.pump();
@@ -118,6 +153,32 @@ void main() {
       });
     }
   }
+
+  testWidgets('timed sketch controls fit a short landscape window', (
+    tester,
+  ) async {
+    await _pumpToolbox(
+      tester,
+      size: const Size(800, 400),
+      tool: ArtTool.quickSketch.key,
+    );
+    final start = find.text('开始练习');
+    await tester.ensureVisible(start);
+    await tester.tap(start);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('暂停'));
+    await tester.pump();
+    expect(find.text('已暂停，点击继续'), findsOneWidget);
+    await tester.tap(find.text('继续'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('跳过'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('结束'));
+    await tester.pump();
+    expect(find.text('练习回顾'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('image tools show the upload prompt without an image', (
     tester,

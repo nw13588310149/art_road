@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/ui/ui.dart';
 import '../../data/toolbox_catalog.dart';
+import '../widgets/image_tool_frame.dart';
 import '../widgets/tool_panel.dart';
 
 enum SketchOutcome { completed, skipped, stopped }
@@ -201,7 +202,8 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
       builder: (context, constraints) {
         final landscape =
             constraints.maxWidth >= constraints.maxHeight &&
-            constraints.maxWidth >= 700;
+            constraints.maxWidth >= 700 &&
+            constraints.maxHeight >= 440;
         final reference = _buildReference();
         if (landscape) {
           return Padding(
@@ -603,7 +605,7 @@ class _SketchReview extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppPageHeader(
+        ToolDetailHeader(
           title: '练习回顾',
           subtitle: '$setLabel · 每张 ${sketchIntervalLabel(interval.inSeconds)}',
           actions: [
@@ -622,6 +624,7 @@ class _SketchReview extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: AppSpace.s12),
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpace.page,

@@ -252,6 +252,7 @@ class _OverviewBody extends ConsumerWidget {
             onFilterChanged: controller.setFilter,
             onOpen: (item) => controller.openReport(item.examId),
             onLoadMore: () => controller.loadExams(),
+            onRetry: () => controller.loadExams(reset: true),
           ),
           const StudyFootnote('成绩以阅卷系统最终结果为准，仅供本人查阅'),
         ],

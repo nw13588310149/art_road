@@ -121,7 +121,7 @@ class _GridBodyState extends State<_GridBody> {
     return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
   }
 
-  Widget _buildStage(BuildContext context, bool wide) {
+  Widget _buildStage(BuildContext context) {
     final image = widget.image;
     return ToolStage(
       child: LayoutBuilder(
@@ -222,7 +222,7 @@ class _GridBodyState extends State<_GridBody> {
         '${count.cols} 列 × ${count.rows} 行，每格约 ${cell.width.round()}×${cell.height.round()}mm。';
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

@@ -99,14 +99,13 @@ class StageImagePane extends StatelessWidget {
   }
 }
 
-/// 处理结果与原图：宽屏且打开对比时左右并排，否则只显示结果。
+/// 处理结果与原图：打开对比时左右并排，否则只显示结果。
 class CompareStage extends StatelessWidget {
   const CompareStage({
     required this.original,
     required this.processed,
     required this.label,
     required this.compare,
-    required this.wide,
     this.failed = false,
     this.onRetry,
     super.key,
@@ -116,7 +115,6 @@ class CompareStage extends StatelessWidget {
   final ui.Image? processed;
   final String label;
   final bool compare;
-  final bool wide;
   final bool failed;
   final VoidCallback? onRetry;
 
@@ -130,7 +128,7 @@ class CompareStage extends StatelessWidget {
         onRetry: onRetry,
       ),
     );
-    if (!compare || !wide) {
+    if (!compare) {
       return result;
     }
     return Row(

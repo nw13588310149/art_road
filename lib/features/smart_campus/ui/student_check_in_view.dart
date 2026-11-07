@@ -813,11 +813,21 @@ class _CheckInActionPanel extends StatelessWidget {
                         ),
                       ),
                       Positioned(
-                        left: ui(170),
+                        left: ui(12),
                         top: ui(89),
                         right: ui(12),
-                        child: _TeacherSignTimeline(
-                          courseSignStatus: data.courseSignStatus,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compact = constraints.maxWidth < ui(446);
+                            return Padding(
+                              padding: compact
+                                  ? EdgeInsets.only(top: ui(19))
+                                  : EdgeInsets.only(left: ui(158)),
+                              child: _TeacherSignTimeline(
+                                courseSignStatus: data.courseSignStatus,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       Positioned(

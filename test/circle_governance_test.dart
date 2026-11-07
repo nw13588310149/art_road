@@ -423,7 +423,7 @@ void main() {
       final expected = _workbenchCount();
       await _withCirclePage(tester, DemoAccounts.admin, governance: true, () async {
         expect(find.text('校圈治理'), findsNothing);
-        expect(find.text('发布动态'), findsNothing);
+        expect(find.bySemanticsLabel('发布动态'), findsNothing);
         expect(_tab('待处理'), findsOneWidget);
         expect(_tab('($expected)'), findsOneWidget);
         expect(_tab('已处理'), findsOneWidget);
@@ -455,7 +455,7 @@ void main() {
         await _settle(tester, steps: 3);
         expect(find.byType(CirclePostCard), findsWidgets);
         expect(find.byType(AppSegmented<CircleMode>), findsOneWidget);
-        expect(find.text('发布动态'), findsNothing);
+        expect(find.bySemanticsLabel('发布动态'), findsNothing);
         expect(
           _moreButtons.evaluate().length,
           find.byType(CirclePostCard).evaluate().length,
@@ -568,7 +568,7 @@ void main() {
       final before = _workbenchCount();
       await _withCirclePage(tester, DemoAccounts.student, () async {
         expect(find.text('校圈'), findsNothing);
-        expect(find.text('发布动态'), findsOneWidget);
+        expect(find.bySemanticsLabel('发布动态'), findsOneWidget);
         expect(find.text('校圈治理'), findsNothing);
         expect(_governanceTabs, findsNothing);
         expect(find.text('待处理'), findsNothing);
@@ -618,7 +618,7 @@ void main() {
           .length;
       expect(own, greaterThan(0));
       await _withCirclePage(tester, DemoAccounts.admin, () async {
-        expect(find.text('发布动态'), findsOneWidget);
+        expect(find.bySemanticsLabel('发布动态'), findsOneWidget);
         expect(_governanceTabs, findsNothing);
         expect(_moreButtons, findsNWidgets(own));
       });

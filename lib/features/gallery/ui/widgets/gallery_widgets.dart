@@ -28,7 +28,10 @@ class GalleryMasonryGrid extends StatelessWidget {
     if (width >= 860) {
       return 4;
     }
-    return width >= 580 ? 3 : 2;
+    if (width >= 580) {
+      return 3;
+    }
+    return width >= 360 ? 2 : 1;
   }
 
   @override
@@ -249,11 +252,7 @@ class _CardMeta extends StatelessWidget {
               ),
             ),
           const SizedBox(width: AppSpace.s8),
-          Image.asset(
-            AppAssets.newsViews,
-            width: 14,
-            height: 14,
-          ),
+          Image.asset(AppAssets.newsViews, width: 14, height: 14),
           const SizedBox(width: 2),
           Text(formatViewCount(work.views), style: AppText.caption12),
         ],
@@ -279,10 +278,7 @@ class GallerySourceTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (source) {
-      GallerySource.examTop => const AppTag(
-        label: '高分卷',
-        tone: AppTone.brand,
-      ),
+      GallerySource.examTop => const AppTag(label: '高分卷', tone: AppTone.brand),
       GallerySource.student => const AppTag(
         label: '优秀作品',
         tone: AppTone.success,
@@ -334,12 +330,16 @@ class GalleryFilterBar extends StatelessWidget {
     required this.state,
     required this.onSubjectChanged,
     required this.onCategoryChanged,
+    required this.onSortChanged,
+    required this.onKeywordChanged,
     super.key,
   });
 
   final GalleryState state;
   final ValueChanged<String> onSubjectChanged;
   final ValueChanged<String> onCategoryChanged;
+  final ValueChanged<GallerySort> onSortChanged;
+  final ValueChanged<String> onKeywordChanged;
 
   static const _subjects = <String>['', '素描', '色彩', '速写'];
 
@@ -349,10 +349,7 @@ class GalleryFilterBar extends StatelessWidget {
     if (subject == null) {
       return category.label;
     }
-    final label = category.label.replaceFirst(
-      RegExp('^$subject\\s*·\\s*'),
-      '',
-    );
+    final label = category.label.replaceFirst(RegExp('^$subject\\s*·\\s*'), '');
     return label.isEmpty ? category.label : label;
   }
 
@@ -364,34 +361,71 @@ class GalleryFilterBar extends StatelessWidget {
             (state.subject.isNotEmpty || category.subject == null))
           category,
     ];
-    return Wrap(
-      spacing: AppSpace.s12,
-      runSpacing: AppSpace.s8,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppSegmented<String>(
-          segments: [
-            for (final subject in _subjects)
-              AppSegment(
-                value: subject,
-                label: subject.isEmpty ? '全部科目' : subject,
-              ),
-          ],
-          value: state.subject,
-          onChanged: onSubjectChanged,
-        ),
-        for (final category in chips)
-          AppChip(
-            label: category.count > 0
-                ? '${shortLabel(category)} ${category.count}'
-                : shortLabel(category),
-            selected: category.key == state.category,
-            onTap: () => onCategoryChanged(
-              category.key == state.category
-                  ? GalleryCategory.allKey
-                  : category.key,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: AppSpace.s12,
+          runSpacing: AppSpace.s8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            AppSegmented<String>(
+              segments: [
+                for (final subject in _subjects)
+                  AppSegment(
+                    value: subject,
+                    label: subject.isEmpty ? '全部科目' : subject,
+                  ),
+              ],
+              value: state.subject,
+              onChanged: onSubjectChanged,
             ),
+            Wrap(
+              spacing: AppSpace.s8,
+              runSpacing: AppSpace.s8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SizedBox(
+                  width: 228,
+                  child: GallerySearchField(
+                    keyword: state.keyword,
+                    onChanged: onKeywordChanged,
+                  ),
+                ),
+                AppSegmented<GallerySort>(
+                  segments: [
+                    for (final sort in GallerySort.values)
+                      AppSegment(value: sort, label: sort.label),
+                  ],
+                  value: state.sort,
+                  onChanged: onSortChanged,
+                ),
+              ],
+            ),
+          ],
+        ),
+        if (chips.isNotEmpty) ...[
+          const SizedBox(height: AppSpace.s8),
+          Wrap(
+            spacing: AppSpace.s8,
+            runSpacing: AppSpace.s8,
+            children: [
+              for (final category in chips)
+                AppChip(
+                  label: category.count > 0
+                      ? '${shortLabel(category)} ${category.count}'
+                      : shortLabel(category),
+                  selected: category.key == state.category,
+                  onTap: () => onCategoryChanged(
+                    category.key == state.category
+                        ? GalleryCategory.allKey
+                        : category.key,
+                  ),
+                ),
+            ],
           ),
+        ],
       ],
     );
   }
@@ -423,6 +457,7 @@ class _GallerySearchFieldState extends State<GallerySearchField> {
     super.didUpdateWidget(oldWidget);
     if (widget.keyword != oldWidget.keyword &&
         widget.keyword != _controller.text.trim()) {
+      _debounce?.cancel();
       _controller.value = TextEditingValue(
         text: widget.keyword,
         selection: TextSelection.collapsed(offset: widget.keyword.length),

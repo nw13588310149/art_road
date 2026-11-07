@@ -35,6 +35,7 @@ class ToolPageScaffold extends StatelessWidget {
     required this.tool,
     required this.onBack,
     required this.body,
+    this.subtitle,
     this.actions = const <Widget>[],
     super.key,
   });
@@ -42,6 +43,7 @@ class ToolPageScaffold extends StatelessWidget {
   final ArtTool tool;
   final VoidCallback onBack;
   final Widget body;
+  final String? subtitle;
   final List<Widget> actions;
 
   @override
@@ -49,14 +51,16 @@ class ToolPageScaffold extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppPageHeader(
+        ToolDetailHeader(
           title: tool.label,
+          subtitle: subtitle,
           onBack: onBack,
           actions: [
             ...actions,
             AppIconButton.asset(
               asset: AppAssets.shellV2Help,
               semanticLabel: '工具用法',
+              size: AppButtonSize.sm,
               onTap: () => showAppDialog<void>(
                 context: context,
                 builder: (_) =>
@@ -65,8 +69,80 @@ class ToolPageScaffold extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: AppSpace.s12),
         Expanded(child: body),
       ],
+    );
+  }
+}
+
+/// 详情工具栏沿用预览页的返回、对象名称和操作布局。
+class ToolDetailHeader extends StatelessWidget {
+  const ToolDetailHeader({
+    required this.title,
+    required this.actions,
+    this.subtitle,
+    this.onBack,
+    super.key,
+  });
+
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onBack;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 56),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s12,
+        vertical: AppSpace.s8,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
+      ),
+      alignment: Alignment.center,
+      child: LayoutBuilder(
+        builder: (context, constraints) => Row(
+          children: [
+            if (onBack != null) AppIconButton.back(onTap: onBack),
+            const SizedBox(width: AppSpace.s12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title16,
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption12,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpace.s12),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth * .55),
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpace.s8,
+                runSpacing: AppSpace.s8,
+                children: actions,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -125,18 +201,10 @@ class ImageToolScaffold extends ConsumerWidget {
     return ToolPageScaffold(
       tool: tool,
       onBack: onBack,
+      subtitle: image?.label,
       actions: image == null
           ? const <Widget>[]
           : [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 160),
-                child: Text(
-                  '当前：${image.label}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.caption12,
-                ),
-              ),
               AppButton(
                 label: '上传图片',
                 icon: Icons.upload_rounded,
@@ -166,8 +234,8 @@ class ImageToolLayout extends StatelessWidget {
     super.key,
   });
 
-  final Widget Function(BuildContext context, bool wide) stage;
-  final Widget Function(BuildContext context, bool wide) panel;
+  final WidgetBuilder stage;
+  final WidgetBuilder panel;
   final double panelWidth;
 
   static const wideBreakpoint = 760.0;
@@ -185,7 +253,7 @@ class ImageToolLayout extends StatelessWidget {
           ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(AppSpace.card),
-            child: panel(context, wide),
+            child: panel(context),
           ),
         );
         if (wide) {
@@ -199,7 +267,7 @@ class ImageToolLayout extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: stage(context, wide)),
+                Expanded(child: stage(context)),
                 const SizedBox(width: AppSpace.s16),
                 SizedBox(width: panelWidth, child: panelBox),
               ],
@@ -207,7 +275,7 @@ class ImageToolLayout extends StatelessWidget {
           );
         }
         final panelHeight = (constraints.maxHeight * 0.42)
-            .clamp(180.0, 320.0)
+            .clamp(0.0, 320.0)
             .toDouble();
         return Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -219,7 +287,7 @@ class ImageToolLayout extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: stage(context, wide)),
+              Expanded(child: stage(context)),
               const SizedBox(height: AppSpace.s12),
               SizedBox(height: panelHeight, child: panelBox),
             ],

@@ -55,6 +55,7 @@ class GalleryDetailView extends StatelessWidget {
       );
     }
     final work = detail.work;
+    final imageUrl = MediaUrl.resolve(work.imageUrl);
     return LayoutBuilder(
       builder: (context, constraints) {
         final header = AppPageHeader(
@@ -66,11 +67,13 @@ class GalleryDetailView extends StatelessWidget {
               icon: Icons.fullscreen_rounded,
               semanticLabel: '全屏查看',
               size: AppButtonSize.sm,
-              onTap: () => showImageGallery(
-                context,
-                images: [MediaUrl.resolve(work.imageUrl)],
-                heroTagPrefix: 'gallery_${work.id}',
-              ),
+              onTap: imageUrl.isEmpty
+                  ? null
+                  : () => showImageGallery(
+                      context,
+                      images: [imageUrl],
+                      heroTagPrefix: 'gallery_${work.id}',
+                    ),
             ),
           ],
         );
@@ -222,11 +225,13 @@ class _ArtworkPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = MediaUrl.resolve(work.imageUrl);
     return AppPressable(
-      onTap: () => showImageGallery(
-        context,
-        images: [url],
-        heroTagPrefix: 'gallery_${work.id}',
-      ),
+      onTap: url.isEmpty
+          ? null
+          : () => showImageGallery(
+              context,
+              images: [url],
+              heroTagPrefix: 'gallery_${work.id}',
+            ),
       semanticLabel: '查看大图',
       child: AppCard(
         color: AppColors.surfaceSubtle,
@@ -245,11 +250,12 @@ class _ArtworkPreview extends StatelessWidget {
                     fit: BoxFit.contain,
                     borderRadius: AppRadius.br8,
                   ),
-                  const Positioned(
-                    right: AppSpace.s8,
-                    bottom: AppSpace.s8,
-                    child: _StageHint(text: '点击查看大图'),
-                  ),
+                  if (url.isNotEmpty)
+                    const Positioned(
+                      right: AppSpace.s8,
+                      bottom: AppSpace.s8,
+                      child: _StageHint(text: '点击查看大图'),
+                    ),
                 ],
               ),
             ),

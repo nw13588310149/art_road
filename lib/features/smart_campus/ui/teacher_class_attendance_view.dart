@@ -1673,7 +1673,7 @@ class _BigClassActionPanel extends StatelessWidget {
                   ],
                 ),
                 SizedBox(height: ui(12)),
-                // 学生网格：8 列，自动分行
+                // 学生网格：根据面板宽度自动分行，最多 8 列。
                 _StudentAttendGrid(
                   students: data.students,
                   onTapStudent: onPickStudentStatus,
@@ -1892,48 +1892,48 @@ class _StudentAttendGrid extends StatelessWidget {
   final List<_StudentAttend> students;
   final ValueChanged<int> onTapStudent;
 
-  static const int _columns = 8;
+  static const int _maxColumns = 8;
 
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final rows = <Widget>[];
-    for (var r = 0; r * _columns < students.length; r++) {
-      final rowItems = <Widget>[];
-      for (var c = 0; c < _columns; c++) {
-        final idx = r * _columns + c;
-        if (idx >= students.length) {
-          rowItems.add(SizedBox(width: ui(60)));
-        } else {
-          rowItems.add(
-            _StudentAttendCell(
-              student: students[idx],
-              onTap: () => onTapStudent(idx),
-            ),
-          );
-        }
-      }
-      rows.add(
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: rowItems,
-        ),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) SizedBox(height: ui(12)),
-          rows[i],
-        ],
-      ],
+    final cellWidth = ui(_StudentAttendCell.width);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = (constraints.maxWidth / cellWidth).floor().clamp(
+          1,
+          _maxColumns,
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var start = 0; start < students.length; start += columns) ...[
+              if (start > 0) SizedBox(height: ui(12)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  for (var index = start; index < start + columns; index++)
+                    if (index < students.length)
+                      _StudentAttendCell(
+                        student: students[index],
+                        onTap: () => onTapStudent(index),
+                      )
+                    else
+                      SizedBox(width: cellWidth),
+                ],
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
 
 class _StudentAttendCell extends StatelessWidget {
   const _StudentAttendCell({required this.student, required this.onTap});
+
+  static const width = 60.0;
 
   final _StudentAttend student;
   final VoidCallback onTap;
@@ -1955,7 +1955,7 @@ class _StudentAttendCell extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(ui(20)),
       child: SizedBox(
-        width: ui(60),
+        width: ui(width),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

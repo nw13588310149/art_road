@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:the_road_of_art_flutter/core/constants/app_assets.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_asset_graphic.dart';
 import 'package:the_road_of_art_flutter/core/widgets/art_widgets.dart';
 import 'package:the_road_of_art_flutter/core/widgets/dashboard_course_notice_card.dart';
 import 'package:the_road_of_art_flutter/core/widgets/segment_toggle.dart';
@@ -32,6 +36,54 @@ void _expectFullyLaidOut(WidgetTester tester, String text, Rect bounds) {
 }
 
 void main() {
+  testWidgets('asset graphics keep the original format on a decode error', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        const Row(
+          children: [
+            AppAssetGraphic(AppAssets.shellV2Notice, width: 20, height: 20),
+            AppAssetGraphic(AppAssets.shellV2MoreArrow, width: 10, height: 10),
+          ],
+        ),
+      ),
+    );
+    final raster = find.byType(Image);
+    expect(raster, findsOneWidget);
+    expect(find.byType(SvgPicture), findsOneWidget);
+    final fallback = tester.widget<Image>(raster).errorBuilder!(
+      tester.element(raster),
+      StateError('asset decode failed'),
+      null,
+    );
+    expect(fallback, isA<SizedBox>());
+  });
+
+  testWidgets('shared controls respond to keyboard and skip disabled items', (
+    tester,
+  ) async {
+    var calls = 0;
+    await tester.pumpWidget(
+      _host(
+        Row(
+          children: [
+            AppButton(label: '不可用', enabled: false, onTap: () => calls += 10),
+            AppButton(label: '查看', onTap: () => calls++),
+          ],
+        ),
+      ),
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+
+    expect(calls, 2);
+    expect(tester.takeException(), isNull);
+  });
+
   group('AppSegmented', () {
     testWidgets('changes selection on the same frame without animating', (
       tester,

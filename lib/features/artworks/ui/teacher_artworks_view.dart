@@ -186,8 +186,12 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
                     value: state.filter,
                     onChanged: (f) => unawaited(_controller.setFilter(f)),
                   ),
-                  const SizedBox(width: AppSpace.s12),
-                  Text('共 ${state.total} 件', style: AppText.caption12),
+                  if (state.loaded &&
+                      !state.loadingList &&
+                      !state.listFailed) ...[
+                    const SizedBox(width: AppSpace.s12),
+                    Text('共 ${state.total} 件', style: AppText.caption12),
+                  ],
                 ],
               ),
               Wrap(
@@ -201,6 +205,7 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
                       controller: _search,
                       hint: '搜索学生、校区或作品',
                       onChanged: _onSearchChanged,
+                      onCleared: _clearSearch,
                       onSubmitted: (value) {
                         _searchDebounce?.cancel();
                         unawaited(_controller.setKeyword(value));

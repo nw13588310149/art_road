@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show IconData, Icons;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../artworks/data/artwork_models.dart';
 import '../../artworks/data/artwork_repository.dart';
 import '../data/home_repository.dart';
@@ -24,7 +24,7 @@ enum HomeTodoAction {
 class HomeTodoItem {
   const HomeTodoItem({
     required this.action,
-    required this.icon,
+    required this.iconAsset,
     required this.title,
     this.subtitle = '',
     this.value = '',
@@ -34,7 +34,7 @@ class HomeTodoItem {
   });
 
   final HomeTodoAction action;
-  final IconData icon;
+  final String iconAsset;
   final String title;
   final String subtitle;
 
@@ -81,7 +81,7 @@ String _count(int? value) => value == null ? '—' : '$value';
 List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
   final notices = HomeTodoItem(
     action: HomeTodoAction.notices,
-    icon: Icons.notifications_none_rounded,
+    iconAsset: AppAssets.shellV2Notice,
     title: '未读消息',
     subtitle: '学情、作品点评与系统消息',
     value: '${input.unreadNotices}',
@@ -94,7 +94,8 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
       return [
         HomeTodoItem(
           action: HomeTodoAction.artworks,
-          icon: Icons.rate_review_outlined,
+          iconAsset:
+              '${AppAssets.campusHomeActions}/teacher/homework_review.png',
           title: '待点评作品',
           subtitle: '分配给你的学生作品',
           value: _count(pending),
@@ -104,7 +105,8 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
         ),
         const HomeTodoItem(
           action: HomeTodoAction.classWorkbench,
-          icon: Icons.apartment_outlined,
+          iconAsset:
+              '${AppAssets.campusHomeActions}/head_teacher/class_workbench.png',
           title: '班级工作台',
           subtitle: '班级通知、请假审批与考勤',
         ),
@@ -118,7 +120,8 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
       return [
         HomeTodoItem(
           action: HomeTodoAction.dormCheckByRoom,
-          icon: Icons.king_bed_outlined,
+          iconAsset:
+              '${AppAssets.campusHomeActions}/dorm_manager/dorm_check_by_room.png',
           title: '晚查寝',
           subtitle: '学生在此时间前归寝打卡',
           value: time(input.eveningCheck),
@@ -126,7 +129,8 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
         ),
         HomeTodoItem(
           action: HomeTodoAction.dormDynamic,
-          icon: Icons.wb_sunny_outlined,
+          iconAsset:
+              '${AppAssets.campusHomeActions}/head_teacher/dorm_dynamic.png',
           title: '早查寝',
           subtitle: '起床后在此时间前签到',
           value: time(input.morningCheck),
@@ -134,13 +138,15 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
         ),
         const HomeTodoItem(
           action: HomeTodoAction.dormCheckIn,
-          icon: Icons.how_to_reg_outlined,
+          iconAsset:
+              '${AppAssets.campusHomeActions}/dorm_manager/punch_management.png',
           title: '到岗打卡',
           subtitle: '本人上下班打卡与记录',
         ),
         const HomeTodoItem(
           action: HomeTodoAction.dormLeave,
-          icon: Icons.edit_note_rounded,
+          iconAsset:
+              '${AppAssets.campusHomeActions}/dorm_manager/dorm_leave.png',
           title: '宿管请假',
           subtitle: '提交与查看本人的请假',
         ),
@@ -152,7 +158,8 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
       return [
         HomeTodoItem(
           action: HomeTodoAction.leaveApproval,
-          icon: Icons.approval_outlined,
+          iconAsset:
+              '${AppAssets.campusHomeActions}/admin/dorm_leave_approval.png',
           title: '教师请假审批',
           subtitle: '老师和宿管的请假申请',
           value: _count(leaves),
@@ -162,7 +169,8 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
         ),
         HomeTodoItem(
           action: HomeTodoAction.signManagement,
-          icon: Icons.fact_check_outlined,
+          iconAsset:
+              '${AppAssets.campusHomeActions}/teacher/class_check_in.png',
           title: '小课签课确认',
           subtitle: '近一周学生已评价的小课',
           value: _count(signs),
@@ -172,7 +180,8 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
         ),
         const HomeTodoItem(
           action: HomeTodoAction.scheduleManagement,
-          icon: Icons.calendar_month_outlined,
+          iconAsset:
+              '${AppAssets.campusHomeActions}/admin/schedule_management.png',
           title: '排课与课表',
           subtitle: '本周课表与小课申请',
         ),
@@ -198,7 +207,9 @@ final homeReviewStatsProvider = FutureProvider.autoDispose<ArtworkStats>((
 /// 管理员今日待办里的两个数：教职工待审批请假、待确认的小课。
 final homeAdminTodoProvider =
     FutureProvider.autoDispose<({int leaves, int signs})>((ref) async {
-      final response = await ref.watch(homeRepositoryProvider).getAdminIndexSum();
+      final response = await ref
+          .watch(homeRepositoryProvider)
+          .getAdminIndexSum();
       if (!response.isSuccess) {
         throw StateError(response.displayMsg);
       }

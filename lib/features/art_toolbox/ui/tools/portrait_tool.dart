@@ -164,7 +164,7 @@ class _PortraitBodyState extends State<_PortraitBody> {
     return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
   }
 
-  Widget _buildStage(BuildContext context, bool wide) {
+  Widget _buildStage(BuildContext context) {
     final image = widget.image;
     return ToolStage(
       child: Padding(
@@ -215,7 +215,7 @@ class _PortraitBodyState extends State<_PortraitBody> {
     );
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     final ratios = facialThirds(_frame.top, _browY, _noseY, _frame.bottom);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

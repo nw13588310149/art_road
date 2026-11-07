@@ -16,6 +16,7 @@ class StudyGrowthView extends ConsumerWidget {
     required this.title,
     required this.onBack,
     this.subtitle,
+    this.studentName = '',
     super.key,
   });
 
@@ -23,6 +24,7 @@ class StudyGrowthView extends ConsumerWidget {
   final String archiveId;
   final String title;
   final String? subtitle;
+  final String studentName;
   final VoidCallback onBack;
 
   static const _defaultTabs = <GrowthTab>[
@@ -123,7 +125,10 @@ class StudyGrowthView extends ConsumerWidget {
           AppCard(
             title:
                 '${labelOf(subjectName)} · ${metric == GrowthMetric.score ? '分数走势' : '排名走势'}',
-            subtitle: '近 ${result.points.length} 次已出分测评',
+            subtitle: [
+              if (studentName.isNotEmpty) studentName,
+              '近 ${result.points.length} 次已出分测评',
+            ].join(' · '),
             trailing: metric == GrowthMetric.ranking
                 ? const AppTag(
                     label: '越靠上名次越靠前',

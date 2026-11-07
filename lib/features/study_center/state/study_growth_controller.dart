@@ -134,6 +134,8 @@ class StudyGrowthController extends StateNotifier<StudyGrowthState> {
         loading: false,
         failed: state.result == null,
         errorMessage: error,
+        subjectName: state.result == null ? null : state.resultSubjectName,
+        metric: state.result == null ? null : state.resultMetric,
       );
       return;
     }

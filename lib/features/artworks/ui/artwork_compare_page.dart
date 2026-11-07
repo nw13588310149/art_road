@@ -146,6 +146,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                         SizedBox(
                           width: available * _split,
                           child: _ComparePane(
+                            key: ValueKey(_mine),
                             label: '我的作品',
                             child: widget.images.isEmpty
                                 ? const SizedBox.shrink()
@@ -163,17 +164,20 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                                 .clamp(0.15, 0.85);
                           }),
                           onDoubleTap: () => setState(() => _split = 0.5),
-                          child: SizedBox(
-                            width: _handleWidth,
-                            child: Center(
-                              child: Container(
-                                width: 4,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  color: AppColors.onBrand.withValues(
-                                    alpha: 0.72,
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.resizeColumn,
+                            child: SizedBox(
+                              width: _handleWidth,
+                              child: Center(
+                                child: Container(
+                                  width: 4,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.onBrand.withValues(
+                                      alpha: 0.72,
+                                    ),
+                                    borderRadius: AppRadius.brPill,
                                   ),
-                                  borderRadius: AppRadius.brPill,
                                 ),
                               ),
                             ),
@@ -181,6 +185,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                         ),
                         Expanded(
                           child: _ComparePane(
+                            key: ValueKey(_samples[_sample]),
                             label: '范画 · $subjectLabel',
                             child: AppImage(
                               src: _samples[_sample],
@@ -228,7 +233,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
 }
 
 class _ComparePane extends StatelessWidget {
-  const _ComparePane({required this.label, required this.child});
+  const _ComparePane({required this.label, required this.child, super.key});
 
   final String label;
   final Widget child;

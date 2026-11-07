@@ -27,6 +27,8 @@ const _routesWithOwnSurface = {
   RoutePaths.smartCampus,
   RoutePaths.circle,
   RoutePaths.helpGuide,
+  RoutePaths.gallery,
+  RoutePaths.ebooks,
   RoutePaths.personalCenter,
   RoutePaths.mock,
 };

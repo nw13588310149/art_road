@@ -4393,26 +4393,19 @@ class _UserMessageRow extends StatelessWidget {
         height: 1,
       ),
     );
+    final boundedBubble = Flexible(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: ui(420)),
+        child: bubble,
+      ),
+    );
+    final timeGap = SizedBox(width: ui(6));
     final bubbleWithTime = Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: isMine
-          ? [
-              timeLabel,
-              SizedBox(width: ui(6)),
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: ui(420)),
-                child: bubble,
-              ),
-            ]
-          : [
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: ui(420)),
-                child: bubble,
-              ),
-              SizedBox(width: ui(6)),
-              timeLabel,
-            ],
+          ? [timeLabel, timeGap, boundedBubble]
+          : [boundedBubble, timeGap, timeLabel],
     );
 
     final textColumn = Column(

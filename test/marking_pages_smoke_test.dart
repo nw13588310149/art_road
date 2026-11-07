@@ -16,8 +16,8 @@ import 'package:the_road_of_art_flutter/features/study_center/state/study_center
 import 'package:the_road_of_art_flutter/features/study_center/ui/staff/staff_study_view.dart';
 import 'package:the_road_of_art_flutter/features/study_center/ui/student/student_study_view.dart';
 
-/// 外壳内容区约 950 × 740（iPad 1180 × 820 横屏去掉侧栏与顶栏）；760 宽用来检查窄布局。
-const _sizes = <Size>[Size(950, 740), Size(760, 720)];
+/// 外壳内容区 950 / 814 对应常规与窄横屏；760 宽用来检查堆叠布局。
+const _sizes = <Size>[Size(950, 740), Size(814, 680), Size(760, 720)];
 var _contentSize = _sizes.first;
 
 Future<void> _pump(
@@ -84,7 +84,11 @@ void _pageTests() {
     expect(find.textContaining('学号 2027001'), findsOneWidget);
     expect(find.text('超过全画室 82% 的考生'), findsOneWidget);
     expect(find.text('各科表现'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -300));
+    expect(
+      tester.getTopLeft(find.text('全画室排名')).dy,
+      tester.getTopLeft(find.text('城东校区排名')).dy,
+    );
+    await tester.ensureVisible(find.text('评分标准').first);
     await _settle(tester);
     await tester.tap(find.text('评分标准').first);
     await _settle(tester);
@@ -104,7 +108,7 @@ void _pageTests() {
       const StudentStudyView(args: StudyCenterArgs(examId: '26')),
       account: DemoAccounts.student,
     );
-    expect(find.textContaining('各科成绩'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^各科成绩')), findsOneWidget);
     await tester.tap(find.text('成长曲线'));
     await _settle(tester);
     expect(find.textContaining('分数走势'), findsOneWidget);
@@ -129,6 +133,23 @@ void _pageTests() {
     );
     await _settle(tester);
     expect(find.text('总分排名'), findsOneWidget);
+    final search = find.descendant(
+      of: find.byType(AppSearchField),
+      matching: find.byType(EditableText),
+    );
+    await tester.enterText(search, '林小雨');
+    await _settle(tester);
+    final rowName = find.byWidgetPredicate(
+      (widget) => widget is Text && widget.data == '林小雨',
+    );
+    await tester.ensureVisible(rowName);
+    await _settle(tester);
+    await tester.tap(rowName);
+    await _settle(tester);
+    expect(find.textContaining('林小雨 · 2026-09-20'), findsOneWidget);
+    await tester.tap(find.text('成绩曲线'));
+    await _settle(tester);
+    expect(find.textContaining('林小雨 · 近'), findsOneWidget);
     await _unmount(tester);
   });
 
@@ -141,6 +162,12 @@ void _pageTests() {
     expect(find.textContaining('点评小结'), findsOneWidget);
     expect(find.textContaining('得分最高科目'), findsOneWidget);
     expect(find.textContaining('最佳'), findsNothing);
+    expect(find.text('看范画'), findsNothing);
+    await tester.tap(find.text('查看练习建议'));
+    await _settle(tester);
+    expect(find.text('看范画'), findsWidgets);
+    await tester.tap(find.text('收起练习建议'));
+    await _settle(tester);
 
     await tester.tap(find.text('上传作品').first);
     await _settle(tester);
@@ -149,12 +176,13 @@ void _pageTests() {
     await _settle(tester);
     expect(find.text('提交作品'), findsNothing);
 
-    await tester.drag(
-      find.byType(CustomScrollView).first,
-      const Offset(0, -400),
+    expect(find.text('2026 年 11 月'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('石膏头像结构练习'),
+      160,
+      scrollable: find.byType(Scrollable).first,
     );
     await _settle(tester);
-    expect(find.text('2026 年 11 月'), findsOneWidget);
     await tester.tap(find.text('石膏头像结构练习'));
     await _settle(tester);
     expect(find.text('老师点评'), findsOneWidget);
@@ -203,6 +231,17 @@ void _pageTests() {
     );
     expect(find.text('大卫石膏像 · 侧转头像'), findsOneWidget);
     expect(find.text('点评要点'), findsOneWidget);
+    await tester.tap(find.text('对比我的原卷'));
+    await _settle(tester);
+    final divider = find.bySemanticsLabel('对比分隔线');
+    expect(divider, findsOneWidget);
+    expect(tester.getSemantics(divider).getSemanticsData().value, '50%');
+    await tester.drag(divider, const Offset(120, 0));
+    await tester.pump();
+    expect(tester.getSemantics(divider).getSemanticsData().value, isNot('50%'));
+    await tester.tap(find.text('滑动'));
+    await tester.pump();
+    expect(divider, findsOneWidget);
     await _unmount(tester);
   });
 }

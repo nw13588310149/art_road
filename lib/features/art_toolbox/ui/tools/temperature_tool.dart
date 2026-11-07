@@ -73,12 +73,11 @@ class _TemperatureBodyState extends State<_TemperatureBody>
   @override
   Widget build(BuildContext context) {
     return ImageToolLayout(
-      stage: (context, wide) => CompareStage(
+      stage: (context) => CompareStage(
         original: widget.image.image,
         processed: result?.image,
         label: '冷暖分布',
         compare: _compare,
-        wide: wide,
         failed: failed,
         onRetry: reprocess,
       ),
@@ -86,7 +85,7 @@ class _TemperatureBodyState extends State<_TemperatureBody>
     );
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     final shares = result?.info;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -119,12 +118,11 @@ class _TemperatureBodyState extends State<_TemperatureBody>
             reprocess();
           },
         ),
-        if (wide)
-          ToolSwitchRow(
-            label: '与原图并排对比',
-            value: _compare,
-            onChanged: (v) => setState(() => _compare = v),
-          ),
+        ToolSwitchRow(
+          label: '与原图并排对比',
+          value: _compare,
+          onChanged: (v) => setState(() => _compare = v),
+        ),
         const ToolTipCard(
           title: '怎样看冷暖',
           text:

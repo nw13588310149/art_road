@@ -71,7 +71,7 @@ class _FigureToolState extends State<FigureTool> {
                 Expanded(child: diagram),
                 const SizedBox(height: AppSpace.s12),
                 SizedBox(
-                  height: (constraints.maxHeight * 0.4).clamp(200.0, 320.0),
+                  height: (constraints.maxHeight * 0.4).clamp(0.0, 320.0),
                   child: panel,
                 ),
               ],

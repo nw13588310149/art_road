@@ -24,6 +24,7 @@ abstract final class AppAssets {
   static const shellV2Help = 'assets/images/shell/topbar_v2/help.png';
   static const shellV2Notice = 'assets/images/shell/topbar_v2/notice.png';
   static const shellV2Setting = 'assets/images/shell/topbar_v2/setting.png';
+  static const shellV2MoreArrow = 'assets/images/shell/topbar_v2/more_arrow.png';
 
   /// 全局页面 loading / 下拉刷新动画。
   static const homeLoading = 'assets/images/home/loading.gif';
@@ -164,6 +165,7 @@ abstract final class AppAssets {
 
   /// 校圈（社区动态）
   static const xiaoquanHeaderBg = 'assets/images/xiaoquan/bg.png';
+  static const circlePublish = 'assets/images/home/add.png';
   static const circleLike = 'assets/images/circle/fav2.png';
   static const circleLiked = 'assets/images/circle/fav1.png';
   static const circleComment = 'assets/images/circle/msg1.png';

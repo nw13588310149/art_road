@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 import 'app_pressable.dart';
+import 'app_section_header.dart';
 import 'app_spacing.dart';
 import 'app_text.dart';
 
@@ -39,33 +40,17 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final heading = title;
-    final note = subtitle;
     Widget body = child;
     if (heading != null) {
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: heading, style: AppText.title16),
-                      if (note != null && note.isNotEmpty)
-                        TextSpan(text: '  $note', style: AppText.caption12),
-                    ],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: AppSpace.s12),
-                trailing!,
-              ],
-            ],
+          AppSectionHeader(
+            title: heading,
+            titleStyle: AppText.title16,
+            subtitle: subtitle,
+            trailing: trailing,
           ),
           const SizedBox(height: AppSpace.s12),
           child,

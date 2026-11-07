@@ -135,7 +135,12 @@ class EbookProgressLine extends StatelessWidget {
 /// 网格里的书刊卡：封面、书名、编者与页数、科目与阶段、阅读进度；
 /// 传 [onRead] 时底部多一个阅读按钮（我的书架）。
 class EbookCard extends StatelessWidget {
-  const EbookCard({required this.book, required this.onTap, this.onRead, super.key});
+  const EbookCard({
+    required this.book,
+    required this.onTap,
+    this.onRead,
+    super.key,
+  });
 
   final EbookSummary book;
   final VoidCallback onTap;
@@ -144,9 +149,15 @@ class EbookCard extends StatelessWidget {
   static const _padding = AppSpace.s12;
 
   /// 固定行高：封面按卡片宽度 3:4，下方预留两行书名、两行标签与进度。
-  static double extentFor(double width, {bool withAction = false}) {
+  static double extentFor(
+    double width, {
+    required TextScaler textScaler,
+    bool withAction = false,
+  }) {
     final cover = (width - _padding * 2) * 4 / 3;
-    return cover + 200 + (withAction ? 42 : 0);
+    final metadata = width >= 180 ? 168 : 192;
+    final textAllowance = (textScaler.scale(14) - 14).clamp(0.0, 30.0) * 8;
+    return cover + metadata + textAllowance + (withAction ? 42 : 0);
   }
 
   @override
@@ -173,7 +184,10 @@ class EbookCard extends StatelessWidget {
                 TextSpan(text: '${book.editor} 编 · '),
                 TextSpan(
                   text: '${book.pageCount}',
-                  style: AppText.number(size: 12, color: AppColors.textTertiary),
+                  style: AppText.number(
+                    size: 12,
+                    color: AppColors.textTertiary,
+                  ),
                 ),
                 const TextSpan(text: ' 页'),
               ],
@@ -213,7 +227,9 @@ class EbookFeaturedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final intro = book.featuredIntro.isNotEmpty ? book.featuredIntro : book.intro;
+    final intro = book.featuredIntro.isNotEmpty
+        ? book.featuredIntro
+        : book.intro;
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpace.s12),
@@ -305,16 +321,26 @@ class EbookGrid extends StatelessWidget {
     return SliverLayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.crossAxisExtent;
-        final count = ((width + gap) / (minItemWidth + gap)).floor().clamp(2, 8);
+        final count = ((width + gap) / (minItemWidth + gap)).floor().clamp(
+          1,
+          8,
+        );
         final itemWidth = (width - gap * (count - 1)) / count;
         return SliverGrid(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: count,
             mainAxisSpacing: gap,
             crossAxisSpacing: gap,
-            mainAxisExtent: EbookCard.extentFor(itemWidth, withAction: withAction),
+            mainAxisExtent: EbookCard.extentFor(
+              itemWidth,
+              textScaler: MediaQuery.textScalerOf(context),
+              withAction: withAction,
+            ),
           ),
-          delegate: SliverChildBuilderDelegate(itemBuilder, childCount: itemCount),
+          delegate: SliverChildBuilderDelegate(
+            itemBuilder,
+            childCount: itemCount,
+          ),
         );
       },
     );

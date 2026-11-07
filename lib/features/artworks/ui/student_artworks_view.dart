@@ -28,6 +28,7 @@ class StudentArtworksView extends ConsumerStatefulWidget {
 class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
   final _scrollController = ScrollController();
   String? _detailId;
+  bool _showSuggestions = false;
 
   @override
   void initState() {
@@ -166,7 +167,13 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
                           0,
                         ),
                         sliver: SliverToBoxAdapter(
-                          child: _InsightsCard(insights: state.insights),
+                          child: _InsightsCard(
+                            insights: state.insights,
+                            showSuggestions: _showSuggestions,
+                            onToggleSuggestions: () => setState(
+                              () => _showSuggestions = !_showSuggestions,
+                            ),
+                          ),
                         ),
                       ),
                     SliverPadding(
@@ -182,17 +189,23 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
                             AppSegmented<ArtworkStatusFilter>(
                               segments: [
                                 for (final filter in ArtworkStatusFilter.values)
-                                  AppSegment(value: filter, label: filter.label),
+                                  AppSegment(
+                                    value: filter,
+                                    label: filter.label,
+                                  ),
                               ],
                               value: state.filter,
                               onChanged: (f) =>
                                   unawaited(controller.setFilter(f)),
                             ),
                             const Spacer(),
-                            Text(
-                              '共 ${state.total} 件',
-                              style: AppText.caption12,
-                            ),
+                            if (state.loaded &&
+                                !state.loadingList &&
+                                !state.listFailed)
+                              Text(
+                                '共 ${state.total} 件',
+                                style: AppText.caption12,
+                              ),
                           ],
                         ),
                       ),
@@ -372,9 +385,15 @@ class _StatsCard extends StatelessWidget {
 
 /// 点评小结：只统计全部老师点评完成的日常作品；问题与亮点分开展示。
 class _InsightsCard extends StatelessWidget {
-  const _InsightsCard({required this.insights});
+  const _InsightsCard({
+    required this.insights,
+    required this.showSuggestions,
+    required this.onToggleSuggestions,
+  });
 
   final ArtworkInsights insights;
+  final bool showSuggestions;
+  final VoidCallback onToggleSuggestions;
 
   @override
   Widget build(BuildContext context) {
@@ -385,13 +404,23 @@ class _InsightsCard extends StatelessWidget {
     ];
     final highlights = [
       for (final tag in insights.topTags)
-        if (ArtworkRules.isHighlightTag(tag.color, positive: tag.positive))
-          tag,
+        if (ArtworkRules.isHighlightTag(tag.color, positive: tag.positive)) tag,
     ];
     final hasData = insights.reviewedCount > 0;
     return AppCard(
       title: '点评小结',
       subtitle: hasData ? '基于 ${insights.reviewedCount} 件已点评的日常作品' : null,
+      trailing: hasData && insights.suggestions.isNotEmpty
+          ? AppButton(
+              label: showSuggestions ? '收起练习建议' : '查看练习建议',
+              icon: showSuggestions
+                  ? Icons.expand_less_rounded
+                  : Icons.expand_more_rounded,
+              variant: AppButtonVariant.text,
+              size: AppButtonSize.sm,
+              onTap: onToggleSuggestions,
+            )
+          : null,
       child: !hasData
           ? Text(
               '老师点评后，这里会汇总你常出现的问题和做得好的地方，并推荐对应的范画、教程与工具',
@@ -411,15 +440,9 @@ class _InsightsCard extends StatelessWidget {
                             '${ArtworkRules.displayScore(insights.averageScore)} 分',
                       ),
                     if (insights.bestSubject.isNotEmpty)
-                      _MetaItem(
-                        label: '得分最高科目',
-                        value: insights.bestSubject,
-                      ),
+                      _MetaItem(label: '得分最高科目', value: insights.bestSubject),
                     if (insights.weakestSubject.isNotEmpty)
-                      _MetaItem(
-                        label: '有待加强',
-                        value: insights.weakestSubject,
-                      ),
+                      _MetaItem(label: '有待加强', value: insights.weakestSubject),
                   ],
                 ),
                 if (problems.isNotEmpty) ...[
@@ -430,7 +453,7 @@ class _InsightsCard extends StatelessWidget {
                   const SizedBox(height: AppSpace.s12),
                   _TagGroup(label: '做得好的地方', tags: highlights),
                 ],
-                if (insights.suggestions.isNotEmpty) ...[
+                if (showSuggestions && insights.suggestions.isNotEmpty) ...[
                   const SizedBox(height: AppSpace.s16),
                   for (var i = 0; i < insights.suggestions.length; i++) ...[
                     if (i > 0) const SizedBox(height: AppSpace.s8),
@@ -538,9 +561,11 @@ class _SuggestionRow extends StatelessWidget {
           icon: Icons.play_circle_outline_rounded,
           variant: AppButtonVariant.text,
           size: AppButtonSize.sm,
-          onTap: () => _open(context, RoutePaths.videoTutorial, <String, dynamic>{
-            'keyword': s.galleryKeyword,
-          }),
+          onTap: () => _open(
+            context,
+            RoutePaths.videoTutorial,
+            <String, dynamic>{'keyword': s.galleryKeyword},
+          ),
         ),
         if (s.tool.isNotEmpty)
           AppButton(
@@ -548,9 +573,11 @@ class _SuggestionRow extends StatelessWidget {
             icon: Icons.handyman_outlined,
             variant: AppButtonVariant.text,
             size: AppButtonSize.sm,
-            onTap: () => _open(context, RoutePaths.artToolbox, <String, dynamic>{
-              'tool': s.tool,
-            }),
+            onTap: () => _open(
+              context,
+              RoutePaths.artToolbox,
+              <String, dynamic>{'tool': s.tool},
+            ),
           ),
       ],
     );

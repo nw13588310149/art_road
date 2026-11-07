@@ -1945,15 +1945,16 @@ class _TeacherScheduleSectionState
           onTapLesson: open == null ? null : openLesson,
         );
         if (twoColumns) {
-          final row = Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          return Row(
+            crossAxisAlignment: fill
+                ? CrossAxisAlignment.stretch
+                : CrossAxisAlignment.start,
             children: [
               Expanded(child: current),
               const SizedBox(width: AppSpace.s16),
               Expanded(child: today),
             ],
           );
-          return fill ? row : IntrinsicHeight(child: row);
         }
         final column = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

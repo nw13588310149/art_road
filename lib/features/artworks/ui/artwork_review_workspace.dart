@@ -318,7 +318,7 @@ class _ArtworkReviewWorkspaceState
           AppSpace.page,
           AppSpace.s16,
         );
-        if (constraints.maxWidth >= 820) {
+        if (constraints.maxWidth >= 800) {
           return Padding(
             padding: padding,
             child: Row(

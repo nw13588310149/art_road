@@ -84,7 +84,10 @@ class EbookDetailView extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final main = _DetailMain(detail: detail, onRead: onRead);
-                final side = _DetailSide(detail: detail, onOpenBook: onOpenBook);
+                final side = _DetailSide(
+                  detail: detail,
+                  onOpenBook: onOpenBook,
+                );
                 if (constraints.maxWidth >= 760) {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +100,11 @@ class EbookDetailView extends StatelessWidget {
                 }
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [main, const SizedBox(height: AppSpace.s16), side],
+                  children: [
+                    main,
+                    const SizedBox(height: AppSpace.s16),
+                    side,
+                  ],
                 );
               },
             ),
@@ -122,68 +129,85 @@ class _DetailMain extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppCard(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 168,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final info = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(book.title, style: AppText.title24),
+                  if (book.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: AppSpace.s4),
+                    Text(
+                      book.subtitle,
+                      style: AppText.body14.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpace.s12),
+                  Wrap(
+                    spacing: AppSpace.s4,
+                    runSpacing: AppSpace.s4,
+                    children: [
+                      for (final subject in book.subjects)
+                        AppTag.subject(subject),
+                      if (book.categoryLabel.isNotEmpty)
+                        AppTag(label: book.categoryLabel),
+                      const AppTag(label: '示例', tone: AppTone.info),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpace.s16),
+                  _MetaRow(label: '编者', child: _MetaText(book.editor)),
+                  _MetaRow(label: '出版', child: _MetaText(book.publisher)),
+                  _MetaRow(
+                    label: '适用阶段',
+                    child: _StageScale(stage: book.stage),
+                  ),
+                  _MetaRow(
+                    label: '页数',
+                    child: _MetaNumber(value: '${book.pageCount}', unit: ' 页'),
+                  ),
+                  if (book.publishDate.isNotEmpty)
+                    _MetaRow(
+                      label: '发布日期',
+                      child: _MetaNumber(value: book.publishDate),
+                    ),
+                  _MetaRow(
+                    label: '阅读',
+                    child: _MetaNumber(value: '${book.readers}', unit: ' 人读过'),
+                  ),
+                  if (book.started) ...[
+                    const SizedBox(height: AppSpace.s12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 280),
+                      child: EbookProgressLine(book: book),
+                    ),
+                  ],
+                ],
+              );
+              final cover = SizedBox(
+                width: constraints.maxWidth >= 420 ? 168 : 112,
                 child: EbookCover(url: book.coverUrl, favorite: book.favorite),
-              ),
-              const SizedBox(width: AppSpace.s20),
-              Expanded(
-                child: Column(
+              );
+              if (constraints.maxWidth < 340) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(book.title, style: AppText.title24),
-                    if (book.subtitle.isNotEmpty) ...[
-                      const SizedBox(height: AppSpace.s4),
-                      Text(
-                        book.subtitle,
-                        style: AppText.body14.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpace.s12),
-                    Wrap(
-                      spacing: AppSpace.s4,
-                      runSpacing: AppSpace.s4,
-                      children: [
-                        for (final subject in book.subjects)
-                          AppTag.subject(subject),
-                        if (book.categoryLabel.isNotEmpty)
-                          AppTag(label: book.categoryLabel),
-                        const AppTag(label: '示例', tone: AppTone.info),
-                      ],
-                    ),
+                    cover,
                     const SizedBox(height: AppSpace.s16),
-                    _MetaRow(label: '编者', child: _MetaText(book.editor)),
-                    _MetaRow(label: '出版', child: _MetaText(book.publisher)),
-                    _MetaRow(
-                      label: '适用阶段',
-                      child: _StageScale(stage: book.stage),
-                    ),
-                    _MetaRow(
-                      label: '页数',
-                      child: _MetaNumber(value: '${book.pageCount}', unit: ' 页'),
-                    ),
-                    if (book.publishDate.isNotEmpty)
-                      _MetaRow(
-                        label: '发布日期',
-                        child: _MetaNumber(value: book.publishDate),
-                      ),
-                    _MetaRow(
-                      label: '阅读',
-                      child: _MetaNumber(value: '${book.readers}', unit: ' 人读过'),
-                    ),
-                    if (book.started) ...[
-                      const SizedBox(height: AppSpace.s12),
-                      SizedBox(width: 280, child: EbookProgressLine(book: book)),
-                    ],
+                    info,
                   ],
-                ),
-              ),
-            ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  cover,
+                  const SizedBox(width: AppSpace.s20),
+                  Expanded(child: info),
+                ],
+              );
+            },
           ),
         ),
         const SizedBox(height: AppSpace.s16),
@@ -194,7 +218,7 @@ class _DetailMain extends StatelessWidget {
         const SizedBox(height: AppSpace.s16),
         AppCard(
           title: '目录',
-          subtitle: '共 ${book.pageCount} 页 · 点章节从该页开始阅读',
+          subtitle: '共 ${book.pageCount} 页',
           child: toc.isEmpty
               ? Text('这本书刊没有目录。', style: AppText.body13)
               : Column(
@@ -202,7 +226,9 @@ class _DetailMain extends StatelessWidget {
                     for (var i = 0; i < toc.length; i++)
                       AppListRow(
                         title: toc[i].title,
-                        padding: const EdgeInsets.symmetric(vertical: AppSpace.s12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpace.s12,
+                        ),
                         divider: i < toc.length - 1,
                         chevron: true,
                         trailing: Text(
@@ -348,7 +374,12 @@ class _MetaText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.body14);
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: AppText.body14,
+    );
   }
 }
 
@@ -404,7 +435,12 @@ class _DetailSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return const SingleChildScrollView(
       physics: NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(AppSpace.page, AppSpace.s4, AppSpace.page, AppSpace.s24),
+      padding: EdgeInsets.fromLTRB(
+        AppSpace.page,
+        AppSpace.s4,
+        AppSpace.page,
+        AppSpace.s24,
+      ),
       child: AppCard(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,

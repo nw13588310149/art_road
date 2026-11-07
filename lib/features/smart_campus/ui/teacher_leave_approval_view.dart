@@ -413,47 +413,52 @@ class _TabsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Flexible(
-          child: AppTabs<_StatusTab>(
-            tabs: [
-              for (final t in _StatusTab.values)
-                AppTab(value: t, label: t.label, count: counts[t]),
-            ],
-            value: current,
-            onChanged: onTap,
-          ),
-        ),
-        SizedBox(width: ui(16)),
-        Container(
-          width: ui(260),
-          height: ui(40),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(12)),
-          ),
-          padding: EdgeInsets.fromLTRB(ui(14), 0, ui(24), 0),
-          child: Row(
-            children: [
-              AppAssetGraphic(
-                AppAssets.shellV2Search,
-                width: ui(16),
-                height: ui(16),
-                fit: BoxFit.contain,
+    return LayoutBuilder(
+      builder: (context, constraints) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: AppTabs<_StatusTab>(
+                tabs: [
+                  for (final t in _StatusTab.values)
+                    AppTab(value: t, label: t.label, count: counts[t]),
+                ],
+                value: current,
+                onChanged: onTap,
               ),
-              SizedBox(width: ui(8)),
-              Expanded(
-                child: _LeaveApprovalSearchField(
-                  value: searchValue,
-                  onChanged: onSearchChanged,
+            ),
+          ),
+          SizedBox(width: ui(16)),
+          Container(
+            width: (constraints.maxWidth * 0.28).clamp(ui(120), ui(260)),
+            height: ui(40),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(ui(12)),
+            ),
+            padding: EdgeInsets.fromLTRB(ui(14), 0, ui(24), 0),
+            child: Row(
+              children: [
+                AppAssetGraphic(
+                  AppAssets.shellV2Search,
+                  width: ui(16),
+                  height: ui(16),
+                  fit: BoxFit.contain,
                 ),
-              ),
-            ],
+                SizedBox(width: ui(8)),
+                Expanded(
+                  child: _LeaveApprovalSearchField(
+                    value: searchValue,
+                    onChanged: onSearchChanged,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
