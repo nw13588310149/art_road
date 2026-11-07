@@ -684,7 +684,7 @@ List<Map<String, dynamic>> _seedNotices() {
       content:
           '本周起兰州将迎来大幅降温，最低气温 -6℃。请同学们增添衣物，晚自习后结伴回宿舍；'
           '宿舍内严禁使用电热毯、暖手宝等大功率电器，宿管老师将加强夜间巡查。',
-      type: '紧急',
+      type: '通知',
       priority: '紧急',
       scope: 'student,course_teacher,head_teacher,dormitory,parent',
       creator: '王敏',

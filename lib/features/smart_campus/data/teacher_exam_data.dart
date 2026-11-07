@@ -402,7 +402,7 @@ TeacherExamItem teacherExamItemSkeleton({
     deadline: examDate,
     syncNote: '数据来自教务考试安排',
     officialDesc: _stringValue(row['remark'], fallback: '暂无考试说明'),
-    cornerLabel: status == 0 ? '成绩未发布' : '成绩已发布',
+    cornerLabel: status == 0 ? '阅卷中' : '已出分',
     cornerKind: status == 0
         ? TeacherExamCornerKind.unpublished
         : TeacherExamCornerKind.published,

@@ -655,10 +655,16 @@ typedef _ExamRow = ({
   String comment,
 });
 
-List<_ExamRow> _examRows(CbScope scope, DemoExamDef exam, DemoSubjectDef def) {
+/// [classId] 为空时统计老师任教的全部班级，否则只统计所选班级。
+List<_ExamRow> _examRows(
+  CbScope scope,
+  DemoExamDef exam,
+  DemoSubjectDef def, {
+  String classId = '',
+}) {
   final data = DemoMarkingData.instance;
   final rows = <_ExamRow>[];
-  for (final sid in cbVisibleStudentIds(scope)) {
+  for (final sid in cbVisibleStudentIds(scope, classId: classId)) {
     final p = cbPerson(sid);
     final entry = p == null ? null : data.entryOf(p.index, exam.examId);
     if (p == null || entry == null) {
@@ -691,7 +697,7 @@ Object? _examStudentList(DemoRequest req) {
   final exam = _examOf(req, 'examId');
   final def = _subjectOf(exam, req);
   final scoreStatus = cbStr(req.value('scoreStatus'));
-  final rows = _examRows(scope, exam, def)
+  final rows = _examRows(scope, exam, def, classId: req.str('classId'))
     ..sort((a, b) {
       int rank(_ExamRow r) => !r.submitted ? 2 : (r.score == null ? 0 : 1);
       final byRank = rank(a).compareTo(rank(b));
@@ -757,7 +763,7 @@ Object? _examStudentStat(DemoRequest req) {
   final scope = cbScope(req);
   final exam = _examOf(req, 'examId');
   final def = _subjectOf(exam, req);
-  final rows = _examRows(scope, exam, def);
+  final rows = _examRows(scope, exam, def, classId: req.str('classId'));
   final scores = [
     for (final r in rows)
       if (r.score != null) r.score!,

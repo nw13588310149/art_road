@@ -12,7 +12,6 @@ import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/admin_repository.dart';
-import '../data/smart_campus_role_theme.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
@@ -27,7 +26,6 @@ const Color _kTextPrimary = AppColors.ink;
 const Color _kTextHint = AppColors.textPlaceholder;
 const Color _kTextSub = AppColors.textSecondary;
 const Color _kPurple = AppColors.brand;
-const Color _kGreen = AppColors.success;
 const Color _kBorder = AppColors.lineSoft;
 const Color _kPurpleSoft = AppColors.brandTint;
 
@@ -50,28 +48,6 @@ extension on _TeacherStatus {
         return '请假';
       case _TeacherStatus.maternity:
         return '产假';
-    }
-  }
-
-  /// 右上角徽章背景：在岗用浅绿，其它两类共用浅灰。
-  Color get tagBg {
-    switch (this) {
-      case _TeacherStatus.onDuty:
-        return AppColors.successSoft;
-      case _TeacherStatus.leave:
-      case _TeacherStatus.maternity:
-        return AppColors.lineSoft;
-    }
-  }
-
-  /// 圆点 / 文字色。
-  Color get tagFg {
-    switch (this) {
-      case _TeacherStatus.onDuty:
-        return _kGreen;
-      case _TeacherStatus.leave:
-      case _TeacherStatus.maternity:
-        return _kTextHint;
     }
   }
 }
@@ -328,10 +304,6 @@ List<String> _parseTeacherRoles(dynamic raw) {
   return labels;
 }
 
-/// 教师身份标签配色（五身份主题色）。
-({Color bg, Color fg}) _teacherRoleColors(String label) =>
-    smartCampusRoleTagColors(label);
-
 Map<String, dynamic> _pickNestedMap(
   Map<String, dynamic> json,
   List<String> keys,
@@ -566,7 +538,11 @@ class _AdminTeacherManagementViewState
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kBg,
       bodyTopClipRadius: 8,
-      header: _Banner(onBack: widget.onBack),
+      header: AppPageHeader(
+        title: '教师管理',
+        subtitle: '管理教师档案、任课班级与角色',
+        onBack: widget.onBack,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -609,82 +585,6 @@ class _AdminTeacherManagementViewState
 // ============================================================================
 // Banner
 // ============================================================================
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(62),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onBack,
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorder, width: 1),
-                ),
-                child: Icon(
-                  Icons.chevron_left,
-                  size: ui(20),
-                  color: _kTextPrimary,
-                ),
-              ),
-            ),
-          ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '教师管理',
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    height: 1.2,
-                    fontWeight: AppFont.w600,
-                    color: _kTextPrimary,
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                Text(
-                  '人事档案、部门归属、任课与角色；与教师端登录权限、班主任带班关系对齐',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    height: 1.2,
-                    color: _kTextHint,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ============================================================================
 // 5 列统计
@@ -1051,7 +951,7 @@ class _TeacherCard extends StatelessWidget {
                               SizedBox(height: ui(6)),
                               Text(
                                 teacher.summaryInfo,
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: ui(12),
@@ -1088,44 +988,15 @@ class _TeacherCard extends StatelessWidget {
                 ],
               ),
             ),
-            // 右上状态徽章
+            // 右上状态：在岗 success，其余 warning。
             Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                height: ui(22),
-                padding: EdgeInsets.symmetric(horizontal: ui(8)),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: teacher.status.tagBg,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(ui(12)),
-                    bottomLeft: Radius.circular(ui(12)),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: ui(6),
-                      height: ui(6),
-                      decoration: BoxDecoration(
-                        color: teacher.status.tagFg,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    SizedBox(width: ui(4)),
-                    Text(
-                      teacher.status.label,
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        height: 1.0,
-                        color: teacher.status.tagFg,
-                      ),
-                    ),
-                  ],
-                ),
+              right: ui(12),
+              top: ui(10),
+              child: AppStatusTag(
+                label: teacher.status.label,
+                tone: teacher.status.label == '在岗'
+                    ? AppTone.success
+                    : AppTone.warning,
               ),
             ),
           ],
@@ -1142,28 +1013,7 @@ class _RoleTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final colors = _teacherRoleColors(label);
-    return Container(
-      height: ui(17),
-      padding: EdgeInsets.symmetric(horizontal: ui(6)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: colors.bg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: ui(12),
-          height: 15.24 / 12,
-          color: colors.fg,
-          fontWeight: AppFont.w400,
-        ),
-      ),
-    );
+    return AppTag(label: label);
   }
 }
 
@@ -1181,39 +1031,7 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final initial = name.isEmpty ? '·' : name.characters.first;
-    final placeholder = Container(
-      width: ui(size),
-      height: ui(size),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.brandTint,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: ui(size * 0.4),
-          height: 1.0,
-          fontWeight: AppFont.w600,
-          color: _kPurple,
-        ),
-      ),
-    );
-    if (avatarUrl.isEmpty) {
-      return placeholder;
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Image.network(
-        avatarUrl,
-        width: ui(size),
-        height: ui(size),
-        fit: BoxFit.cover,
-        // 404 / CORS / 离线时退回首字母占位，避免出现"问号 / 黑块"。
-        errorBuilder: (_, _, _) => placeholder,
-      ),
-    );
+    return AppAvatar(name: name, url: avatarUrl, size: ui(size));
   }
 }
 

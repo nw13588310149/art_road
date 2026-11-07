@@ -60,7 +60,7 @@ class ToolPageScaffold extends StatelessWidget {
   }
 }
 
-/// 图片类工具的骨架：未选图时显示选图区（上传图片 / 使用示例画作），处理中显示加载，
+/// 图片类工具的骨架：未选图时显示选图区（上传图片 / 示例画作），处理中显示加载，
 /// 选好图后交给 [builder] 渲染工具本体；页头右侧可随时换图。
 class ImageToolScaffold extends ConsumerWidget {
   const ImageToolScaffold({
@@ -94,7 +94,6 @@ class ImageToolScaffold extends ConsumerWidget {
           : ImageSourcePanel(
               tool: tool,
               onUpload: controller.pickFromAlbum,
-              onPickSample: pickSample,
               onSample: controller.loadSample,
             );
     } else {
@@ -220,19 +219,17 @@ class ImageToolLayout extends StatelessWidget {
   }
 }
 
-/// 选图区：上传图片 / 使用示例画作，下方可直接点一张示例。
+/// 选图区：上传图片，或直接点一张示例画作。
 class ImageSourcePanel extends StatelessWidget {
   const ImageSourcePanel({
     required this.tool,
     required this.onUpload,
-    required this.onPickSample,
     required this.onSample,
     super.key,
   });
 
   final ArtTool tool;
   final VoidCallback onUpload;
-  final VoidCallback onPickSample;
   final ValueChanged<ToolboxSample> onSample;
 
   @override
@@ -260,7 +257,7 @@ class ImageSourcePanel extends StatelessWidget {
                 child: Icon(tool.icon, color: tool.accent, size: 28),
               ),
               const SizedBox(height: AppSpace.s12),
-              Text('选择一张画作开始${tool.label}', style: AppText.title16),
+              Text('选一张画作，开始使用「${tool.label}」', style: AppText.title16),
               const SizedBox(height: AppSpace.s4),
               Text(
                 '可以上传自己作业的照片，也可以先用示例画作体验；图片只在本机处理，不会上传到服务器',
@@ -268,26 +265,13 @@ class ImageSourcePanel extends StatelessWidget {
                 style: AppText.body13,
               ),
               const SizedBox(height: AppSpace.s20),
-              Wrap(
-                spacing: AppSpace.s12,
-                runSpacing: AppSpace.s12,
-                alignment: WrapAlignment.center,
-                children: [
-                  AppButton(
-                    label: '上传图片',
-                    icon: Icons.upload_rounded,
-                    onTap: onUpload,
-                  ),
-                  AppButton(
-                    label: '使用示例画作',
-                    icon: Icons.collections_outlined,
-                    variant: AppButtonVariant.secondary,
-                    onTap: onPickSample,
-                  ),
-                ],
+              AppButton(
+                label: '上传图片',
+                icon: Icons.upload_rounded,
+                onTap: onUpload,
               ),
               const SizedBox(height: AppSpace.s24),
-              Text('或直接选一张示例', style: AppText.caption12),
+              Text('或直接选一张示例画作', style: AppText.caption12),
               const SizedBox(height: AppSpace.s12),
               Wrap(
                 spacing: AppSpace.s12,

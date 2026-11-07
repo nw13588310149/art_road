@@ -239,6 +239,7 @@ class _TableRow extends StatelessWidget {
             child: StudyRankText(
               rank: subject.ranking,
               total: participantCount,
+              totalUnit: '人',
               size: 14,
             ),
           ),
@@ -247,6 +248,7 @@ class _TableRow extends StatelessWidget {
             child: StudyRankText(
               rank: subject.organizationRanking,
               total: organizationParticipantCount,
+              totalUnit: '人',
               size: 14,
             ),
           ),

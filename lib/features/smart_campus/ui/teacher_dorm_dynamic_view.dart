@@ -38,9 +38,9 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_text_field.dart';
+import '../data/campus_format.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import '../data/smart_campus_count_badge.dart';
 import '../data/student_dormitory_data.dart' show DormitoryDetailField;
 import '../data/teacher_dormitory_data.dart';
 import '../state/smart_campus_controller.dart';
@@ -53,23 +53,18 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kCardGreyBg = AppColors.surfaceSubtle;
-const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
 const Color _kTextSecondary = AppColors.textSecondary;
 const Color _kTextHint = AppColors.textPlaceholder;
 const Color _kTextPlaceholder = AppColors.textPlaceholder;
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleSoftBg = AppColors.brandTint;
 const Color _kRed = AppColors.danger;
 const Color _kRedSoftBg = AppColors.dangerSoft;
-const Color _kBlue = Color(0xFF325BFF);
-const Color _kBadgeRed = AppColors.danger;
 
 // —— 顶部 tab 枚举 ——————————————————————————————————————————————
 enum _TopTab {
-  classRoster('本班查纪'),
+  classRoster('查寝记录'),
   punchAudit('补卡审核');
 
   const _TopTab(this.label);
@@ -89,8 +84,8 @@ enum _FilterTab {
 // Figma 学生口径卡只出现 "正常 / 未打卡" 两种；如需扩展（如"迟到"），
 // 可参考 _DormStatus 加入蓝底 _kBlue 配色。
 enum _StudentStatus {
-  normal('正常', _kPurpleSoftBg, _kPurple),
-  late_('晚归', Color(0xFFDBE2FF), _kBlue),
+  normal('正常', AppColors.successSoft, AppColors.success),
+  late_('晚归', AppColors.warningSoft, AppColors.warning),
   absent('未打卡', _kRedSoftBg, _kRed);
 
   const _StudentStatus(this.label, this.bg, this.fg);
@@ -103,9 +98,9 @@ enum _StudentStatus {
 
 // —— 宿舍口径状态（实色徽章）—————————————————————————————————————
 enum _DormStatus {
-  normal('正常', AppColors.brandSoft),
+  normal('正常', AppColors.success),
   absent('未打卡', _kRed),
-  late_('迟到', _kBlue);
+  late_('晚归', AppColors.warning);
 
   const _DormStatus(this.label, this.solidBg);
   final String label;
@@ -275,68 +270,70 @@ class _TeacherDormDynamicViewState
     final pendingPunchCount = punchAudits
         .where((record) => record.status == _PunchAuditStatus.pending)
         .length;
-    return Container(
-      color: _kPageBg,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: ui(20)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Banner(onBack: widget.onBack),
+    final exceptionCount = students.where((r) => r.status.isException).length;
+    final batchDate = students.isEmpty ? '' : students.first.date;
+    return SmartCampusSecondaryPageShell(
+      header: AppPageHeader(
+        title: '查寝动态',
+        subtitle: '管辖楼栋的晚查寝结果、异常跟进与补卡审核',
+        onBack: widget.onBack,
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StatsRow(
+            batchLabel: switch (campusParseTime(batchDate)) {
+              final day? => '${campusMonthDay(day)} 晚查寝',
+              null => '晚查寝',
+            },
+            residentCount: state.overview.enrolledDormCount != 0
+                ? state.overview.enrolledDormCount
+                : state.stat.studentCount,
+            returnedCount: students.length - exceptionCount,
+            exceptionCount: exceptionCount,
+            auditCount: pendingPunchCount,
+          ),
+          SizedBox(height: ui(16)),
+          _TabsRow(
+            current: _topTab,
+            pendingPunchCount: pendingPunchCount,
+            searchValue: _searchQuery,
+            onSearchChanged: (v) => setState(() => _searchQuery = v),
+            onTap: (t) => setState(() => _topTab = t),
+          ),
+          SizedBox(height: ui(16)),
+          // 「本班查纪」展示 全部 / 异常 toggle + 学生口径 / 宿舍口径卡片网格；
+          // 「补卡审核」直接展示补卡申请卡片网格（无 toggle）。
+          if (_topTab == _TopTab.classRoster) ...[
+            _FilterToolbar(
+              total: students.length + dormRecords.length,
+              exceptions: _exceptionTotal(students, dormRecords),
+              current: _filterTab,
+              onTap: (t) => setState(() => _filterTab = t),
+            ),
             SizedBox(height: ui(12)),
-            _StatsRow(
-              residentCount: state.overview.enrolledDormCount != 0
-                  ? state.overview.enrolledDormCount
-                  : state.stat.studentCount,
-              returnedCount: state.overview.todayNormalCount,
-              exceptionCount:
-                  state.overview.todayAbsentCount +
-                  state.overview.todayLateCount,
-              auditCount: state.overview.pendingMakeupCount != 0
-                  ? state.overview.pendingMakeupCount
-                  : pendingPunchCount,
+            _CardsGrid(
+              students: _filteredStudents(students),
+              dormRecords: _filteredDormRecords(dormRecords),
+              emptyMessage:
+                  _searchQuery.trim().isNotEmpty &&
+                      (students.isNotEmpty || dormRecords.isNotEmpty)
+                  ? '未找到匹配记录'
+                  : '暂无相关记录',
             ),
-            SizedBox(height: ui(16)),
-            _TabsRow(
-              current: _topTab,
-              pendingPunchCount: pendingPunchCount,
-              searchValue: _searchQuery,
-              onSearchChanged: (v) => setState(() => _searchQuery = v),
-              onTap: (t) => setState(() => _topTab = t),
+          ] else ...[
+            _PunchAuditGrid(
+              records: _filteredPunchAudits(punchAudits),
+              emptyMessage:
+                  _searchQuery.trim().isNotEmpty && punchAudits.isNotEmpty
+                  ? '未找到匹配记录'
+                  : '暂无补卡申请',
+              onDetail: (record) => unawaited(_showMakeupDetail(record)),
+              onApprove: _onApprovePunchAudit,
+              onReject: _onRejectPunchAudit,
             ),
-            SizedBox(height: ui(16)),
-            // 「本班查纪」展示 全部 / 异常 toggle + 学生口径 / 宿舍口径卡片网格；
-            // 「补卡审核」直接展示补卡申请卡片网格（无 toggle）。
-            if (_topTab == _TopTab.classRoster) ...[
-              _FilterToolbar(
-                total: _exceptionTotal(students, dormRecords),
-                current: _filterTab,
-                onTap: (t) => setState(() => _filterTab = t),
-              ),
-              SizedBox(height: ui(12)),
-              _CardsGrid(
-                students: _filteredStudents(students),
-                dormRecords: _filteredDormRecords(dormRecords),
-                emptyMessage:
-                    _searchQuery.trim().isNotEmpty &&
-                        (students.isNotEmpty || dormRecords.isNotEmpty)
-                    ? '未找到匹配记录'
-                    : '暂无相关记录',
-              ),
-            ] else ...[
-              _PunchAuditGrid(
-                records: _filteredPunchAudits(punchAudits),
-                emptyMessage:
-                    _searchQuery.trim().isNotEmpty && punchAudits.isNotEmpty
-                    ? '未找到匹配记录'
-                    : '暂无补卡申请',
-                onDetail: (record) => unawaited(_showMakeupDetail(record)),
-                onApprove: _onApprovePunchAudit,
-                onReject: _onRejectPunchAudit,
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
@@ -482,91 +479,19 @@ List<_PunchAuditRecord> _punchAuditRecords(
 
 // —— Banner ————————————————————————————————————————————————————————
 
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: smartCampusPageBannerDecoration(ui),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft, width: 1),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(56)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '查寝动态',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontWeight: AppFont.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: ui(2)),
-                  Text(
-                    '掌握本班住宿生归宿与晨检结果，协同处理补卡与异常跟进。现场刷脸/签到由查寝老师/宿管在专用端执行——本页不提供打卡入口。',
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontWeight: AppFont.w400,
-                      height: 1.4,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // —— 4 张统计卡 ——————————————————————————————————————————————————————
 
 class _StatsRow extends StatelessWidget {
   const _StatsRow({
+    required this.batchLabel,
     required this.residentCount,
     required this.returnedCount,
     required this.exceptionCount,
     required this.auditCount,
   });
 
+  /// 指标对应的查寝批次，如「11-06 晚查寝」。
+  final String batchLabel;
   final int residentCount;
   final int returnedCount;
   final int exceptionCount;
@@ -582,7 +507,7 @@ class _StatsRow extends StatelessWidget {
           Expanded(
             child: SmartCampusStatCard(
               backgroundAsset: AppAssets.headTeacherDormDynamicStatResident,
-              label: '住宿生',
+              label: '在册住宿生',
               value: residentCount,
             ),
           ),
@@ -590,7 +515,7 @@ class _StatsRow extends StatelessWidget {
           Expanded(
             child: SmartCampusStatCard(
               backgroundAsset: AppAssets.headTeacherDormDynamicStatReturned,
-              label: '今晚已归寝口径',
+              label: '已归寝（$batchLabel）',
               value: returnedCount,
             ),
           ),
@@ -598,7 +523,7 @@ class _StatsRow extends StatelessWidget {
           Expanded(
             child: SmartCampusStatCard(
               backgroundAsset: AppAssets.headTeacherDormDynamicStatException,
-              label: '异常（未打/晚归）',
+              label: '异常（未打卡 / 晚归）',
               value: exceptionCount,
             ),
           ),
@@ -606,9 +531,8 @@ class _StatsRow extends StatelessWidget {
           Expanded(
             child: SmartCampusStatCard(
               backgroundAsset: AppAssets.headTeacherDormDynamicStatPunchAudit,
-              label: '补卡待审',
+              label: '待审补卡',
               value: auditCount,
-              valueSuffix: '需协同审核',
             ),
           ),
         ],
@@ -645,28 +569,21 @@ class _TabsRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          padding: EdgeInsets.fromLTRB(ui(4), ui(4), ui(3), ui(4)),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(8)),
-            border: Border.all(color: _kBorderSoft, width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < _TopTab.values.length; i++) ...[
-                if (i != 0) SizedBox(width: ui(16)),
-                _TabPill(
-                  tab: _TopTab.values[i],
-                  active: _TopTab.values[i] == current,
-                  pendingPunchCount: pendingPunchCount,
-                  onTap: () => onTap(_TopTab.values[i]),
-                ),
-              ],
+        Flexible(
+          child: AppTabs<_TopTab>(
+            tabs: [
+              const AppTab(value: _TopTab.classRoster, label: '查寝记录'),
+              AppTab(
+                value: _TopTab.punchAudit,
+                label: '补卡审核',
+                count: pendingPunchCount > 0 ? pendingPunchCount : null,
+              ),
             ],
+            value: current,
+            onChanged: onTap,
           ),
         ),
+        SizedBox(width: ui(16)),
         Container(
           width: ui(324),
           decoration: BoxDecoration(
@@ -765,94 +682,18 @@ class _DormDynamicSearchFieldState extends State<_DormDynamicSearchField> {
   }
 }
 
-class _TabPill extends StatelessWidget {
-  const _TabPill({
-    required this.tab,
-    required this.active,
-    required this.pendingPunchCount,
-    required this.onTap,
-  });
-
-  final _TopTab tab;
-  final bool active;
-  final int pendingPunchCount;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(8)),
-        decoration: BoxDecoration(
-          color: active ? _kTextDark : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(active ? 6 : 8)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              tab.label,
-              style: TextStyle(
-                fontSize: ui(14),
-                color: active ? AppColors.surface : _kTextSecondary,
-                fontWeight: AppFont.w500,
-                height: 1.2,
-              ),
-            ),
-            if (tab == _TopTab.punchAudit && pendingPunchCount > 0) ...[
-              SizedBox(width: ui(4)),
-              _RedBadge(text: smartCampusCountBadgeLabel(pendingPunchCount)!),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RedBadge extends StatelessWidget {
-  const _RedBadge({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: ui(22),
-      height: ui(15),
-      decoration: BoxDecoration(
-        color: _kBadgeRed,
-        borderRadius: BorderRadius.circular(ui(20)),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: AppColors.surface,
-          fontFamily: 'Manrope',
-          fontWeight: FontWeight.w800,
-          height: 1.0,
-        ),
-      ),
-    );
-  }
-}
-
 // —— 全部异常记录 + 全部 / 异常 toggle ————————————————————————————————
 
 class _FilterToolbar extends StatelessWidget {
   const _FilterToolbar({
     required this.total,
+    required this.exceptions,
     required this.current,
     required this.onTap,
   });
 
   final int total;
+  final int exceptions;
   final _FilterTab current;
   final ValueChanged<_FilterTab> onTap;
 
@@ -870,10 +711,10 @@ class _FilterToolbar extends StatelessWidget {
                 fontWeight: AppFont.w400,
               ),
               children: [
-                const TextSpan(text: '全部异常记录 '),
+                TextSpan(text: '共 $total 条 · 异常 '),
                 TextSpan(
-                  text: '$total',
-                  style: const TextStyle(color: _kPurple),
+                  text: '$exceptions',
+                  style: const TextStyle(color: AppColors.danger),
                 ),
                 const TextSpan(text: ' 条'),
               ],
@@ -881,65 +722,16 @@ class _FilterToolbar extends StatelessWidget {
           ),
         ),
         SizedBox(width: ui(12)),
-        Container(
-          padding: EdgeInsets.fromLTRB(ui(4), ui(4), ui(3), ui(4)),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(8)),
-            border: Border.all(color: _kBorderSoft, width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < _FilterTab.values.length; i++) ...[
-                if (i != 0) SizedBox(width: ui(12)),
-                _FilterPill(
-                  tab: _FilterTab.values[i],
-                  active: _FilterTab.values[i] == current,
-                  onTap: () => onTap(_FilterTab.values[i]),
-                ),
-              ],
-            ],
-          ),
+        AppSegmented<_FilterTab>(
+          size: AppControlSize.sm,
+          segments: [
+            for (final t in _FilterTab.values)
+              AppSegment(value: t, label: t.label),
+          ],
+          value: current,
+          onChanged: onTap,
         ),
       ],
-    );
-  }
-}
-
-class _FilterPill extends StatelessWidget {
-  const _FilterPill({
-    required this.tab,
-    required this.active,
-    required this.onTap,
-  });
-
-  final _FilterTab tab;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(7)),
-        decoration: BoxDecoration(
-          color: active ? _kTextDark : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(active ? 6 : 8)),
-        ),
-        child: Text(
-          tab.label,
-          style: TextStyle(
-            fontSize: ui(14),
-            color: active ? AppColors.surface : _kTextSecondary,
-            fontWeight: AppFont.w500,
-            height: 1.2,
-          ),
-        ),
-      ),
     );
   }
 }

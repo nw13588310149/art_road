@@ -29,6 +29,7 @@ import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/data/shell_repository.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../shell/state/shell_state.dart';
+import '../data/campus_format.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/head_teacher_class_score_data.dart';
 import '../data/head_teacher_index_data.dart';
@@ -52,7 +53,6 @@ const Color _kPurple = AppColors.brand;
 const Color _kPurpleSoft = AppColors.brandSoft;
 const Color _kBlue = Color(0xFF325BFF);
 const Color _kRed = AppColors.danger;
-const Color _kYellow = Color(0xFFDBEE49);
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kAnnounceBg = AppColors.brandWash;
 
@@ -299,38 +299,34 @@ class _TeacherClassWorkbenchViewState
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-
-    final banner = _WorkbenchBanner(
-      tab: _tab,
-      onTabChanged: (t) => setState(() => _tab = t),
+    final header = AppPageHeader(
+      title: '班级工作台',
+      subtitle: '本班学生、班级通知、请假与成绩',
       onBack: widget.onBack,
+      bottom: AppTabs<_WorkbenchTab>(
+        tabs: [
+          for (final t in _WorkbenchTab.values)
+            AppTab(value: t, label: t.label),
+        ],
+        value: _tab,
+        onChanged: (t) => setState(() => _tab = t),
+      ),
     );
 
     if (_classError.isNotEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          banner,
-          SizedBox(height: ui(60)),
-          Center(
-            child: Text(
-              _classError,
-              style: TextStyle(fontSize: ui(14), color: _kTextHint),
-            ),
-          ),
-        ],
+      return SmartCampusSecondaryPageShell(
+        header: header,
+        body: AppCard(
+          child: AppErrorState(title: '班级工作台加载失败', description: _classError),
+        ),
       );
     }
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.only(bottom: ui(20)),
-      child: Column(
+    return SmartCampusSecondaryPageShell(
+      header: header,
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          banner,
-          SizedBox(height: ui(16)),
-          // 不同 Tab 的主体——保持 banner 一致，下方切换内容。
           if (_loadingClass)
             const SizedBox.shrink()
           else
@@ -358,143 +354,6 @@ class _TeacherClassWorkbenchViewState
 // =============================================================================
 // 顶部 Banner：左侧返回按钮 / 居中「班级工作台」标题 / 右侧 3 段 Tab
 // =============================================================================
-
-class _WorkbenchBanner extends StatelessWidget {
-  const _WorkbenchBanner({
-    required this.tab,
-    required this.onTabChanged,
-    required this.onBack,
-  });
-
-  final _WorkbenchTab tab;
-  final ValueChanged<_WorkbenchTab> onTabChanged;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: smartCampusPageBannerDecoration(ui, borderRadius: 12),
-      child: Stack(
-        children: [
-          // 返回按钮
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-          // 居中标题
-          Center(
-            child: Text(
-              '班级工作台',
-              style: TextStyle(
-                fontSize: ui(16),
-                color: _kTextDark,
-                fontWeight: FontWeight.w600,
-                height: 1,
-              ),
-            ),
-          ),
-          // 右侧 Tab
-          Positioned(
-            right: ui(12),
-            top: ui(15),
-            child: _WorkbenchTabSegmented(tab: tab, onTabChanged: onTabChanged),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WorkbenchTabSegmented extends StatelessWidget {
-  const _WorkbenchTabSegmented({required this.tab, required this.onTabChanged});
-
-  final _WorkbenchTab tab;
-  final ValueChanged<_WorkbenchTab> onTabChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      // minHeight 而不是 fixed height：避免中文字 height:1 被切顶（与人脸库 banner tab 一致）。
-      constraints: BoxConstraints(minHeight: ui(32)),
-      padding: EdgeInsets.all(ui(2)),
-      decoration: BoxDecoration(
-        color: _kInnerGray,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final t in _WorkbenchTab.values)
-            _SegmentItem(
-              label: t.label,
-              selected: t == tab,
-              onTap: () => onTabChanged(t),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentItem extends StatelessWidget {
-  const _SegmentItem({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(7)),
-        decoration: BoxDecoration(
-          color: selected ? _kTextDark : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: selected ? AppColors.surface : _kTextHint,
-            fontWeight: selected ? AppFont.w500 : AppFont.w400,
-            height: 1.2,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // =============================================================================
 // 概况 Tab
@@ -590,7 +449,7 @@ class _OverviewTab extends StatelessWidget {
       section(
         leftTitle: const _SectionTitle('我的班级'),
         rightTitle: _SectionTitleWithAction(
-          title: '待批请假',
+          title: '待我审批',
           actionLabel: '全部',
           onActionTap: onOpenLeaveApproval,
         ),
@@ -668,7 +527,7 @@ class _OverviewTab extends StatelessWidget {
   List<Widget> _buildRightColumn(double Function(double) ui) {
     return [
       _SectionTitleWithAction(
-        title: '待批请假',
+        title: '待我审批',
         actionLabel: '全部',
         onActionTap: onOpenLeaveApproval,
       ),
@@ -888,18 +747,15 @@ class _NoticeSectionState extends ConsumerState<_NoticeSection> {
           child: _loading
               ? const SizedBox.shrink()
               : _notices.isEmpty
-              ? Padding(
-                  padding: EdgeInsets.symmetric(vertical: ui(20)),
-                  child: Center(
-                    child: Text(
-                      '暂无通知，点击右上角"发布通知"为本班发布第一条通知。',
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        color: _kTextHint,
-                        fontWeight: AppFont.w400,
-                        height: 20 / 13,
-                      ),
-                    ),
+              ? AppEmptyState(
+                  icon: Icons.campaign_outlined,
+                  title: '暂无班级通知',
+                  actionLabel: '发布通知',
+                  onAction: () => _showPublishNoticeDialog(
+                    context,
+                    ref,
+                    classId: widget.classId,
+                    onPublished: _loadNotices,
                   ),
                 )
               : LayoutBuilder(
@@ -940,12 +796,12 @@ class _NoticeSectionState extends ConsumerState<_NoticeSection> {
       builder: (dialogContext) {
         final ui = DashboardScaleScope.of(dialogContext).ui;
         return GradientHeaderDialog(
-          title: '删除班级通知',
+          title: '撤回班级通知',
           titlePaddingTop: 40,
           width: 420,
           contentPadding: EdgeInsets.fromLTRB(ui(40), ui(30), ui(40), ui(30)),
           actionBar: AppDialogActionBar(
-            confirmLabel: '删除',
+            confirmLabel: '撤回',
             cancelLabel: '取消',
             onCancel: () => Navigator.of(dialogContext).pop(false),
             onConfirm: () => Navigator.of(dialogContext).pop(true),
@@ -955,7 +811,7 @@ class _NoticeSectionState extends ConsumerState<_NoticeSection> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '删除后学生端「我的班级」也会同步移除该通知，操作不可撤回。',
+                '撤回后学生端「我的班级」会同步移除这条通知，撤回后不能恢复。',
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextSecondary,
@@ -998,7 +854,7 @@ class _NoticeSectionState extends ConsumerState<_NoticeSection> {
     if (!mounted || !ctx.mounted) return;
     if (res.isSuccess) {
       setState(() => _notices.removeWhere((n) => n.id == notice.id));
-      AppToast.show(ctx, '班级通知已删除');
+      AppToast.show(ctx, '班级通知已撤回');
     } else {
       AppToast.show(ctx, res.msg.isNotEmpty ? res.msg : '删除失败，请重试');
     }
@@ -1012,40 +868,14 @@ class _NoticeSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return Row(
       children: [
         Expanded(child: _SectionTitle('班级通知')),
-        InkWell(
+        AppButton(
+          label: '发布通知',
+          icon: Icons.add_rounded,
+          size: AppButtonSize.sm,
           onTap: onPublish,
-          borderRadius: BorderRadius.circular(ui(8)),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(7)),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [_kPurple, _kPurpleSoft],
-              ),
-              borderRadius: BorderRadius.circular(ui(8)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.add_rounded, size: ui(16), color: AppColors.surface),
-                SizedBox(width: ui(4)),
-                Text(
-                  '发布通知',
-                  style: TextStyle(
-                    fontSize: ui(13),
-                    color: AppColors.surface,
-                    fontWeight: AppFont.w500,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ],
     );
@@ -1101,23 +931,11 @@ class _NoticeCardEditable extends StatelessWidget {
                 ),
               ),
               SizedBox(width: ui(4)),
-              InkWell(
+              AppButton(
+                label: '撤回',
+                variant: AppButtonVariant.text,
+                size: AppButtonSize.sm,
                 onTap: onDelete,
-                borderRadius: BorderRadius.circular(ui(10)),
-                child: Container(
-                  width: ui(20),
-                  height: ui(20),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(ui(10)),
-                  ),
-                  child: Icon(
-                    Icons.close_rounded,
-                    size: ui(14),
-                    color: _kTextSecondary,
-                  ),
-                ),
               ),
             ],
           ),
@@ -1704,26 +1522,7 @@ class _TeacherInfoHeader extends StatelessWidget {
               Positioned(
                 left: 0,
                 top: ui(36),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ui(7),
-                    vertical: ui(2),
-                  ),
-                  decoration: BoxDecoration(
-                    color: _kYellow,
-                    borderRadius: BorderRadius.circular(ui(10)),
-                    border: Border.all(color: AppColors.surface, width: 1),
-                  ),
-                  child: Text(
-                    '班主任',
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextDark,
-                      fontWeight: FontWeight.w400,
-                      height: 1,
-                    ),
-                  ),
-                ),
+                child: const AppTag(label: '班主任', tone: AppTone.brand),
               ),
             ],
           ),
@@ -2019,7 +1818,7 @@ class _TeacherInfoStats extends StatelessWidget {
     );
     return Row(
       children: [
-        box('待批请假', index.pendingLeaveCount.toString()),
+        box('待我审批', index.pendingLeaveCount.toString()),
         SizedBox(width: ui(13)),
         box('待批补卡', index.pendingMakeupCount.toString()),
         SizedBox(width: ui(13)),
@@ -2142,7 +1941,7 @@ class _ShortcutStatGrid extends StatelessWidget {
             SizedBox(width: ui(12)),
             cell(
               value: index.pendingLeaveCount.toString(),
-              label: '待批请假',
+              label: '待我审批',
               actionLabel: index.pendingLeaveCount > 0 ? '去处理' : null,
               onActionTap: onOpenLeaveApproval,
             ),
@@ -2462,7 +2261,7 @@ class _LeaveListCardState extends ConsumerState<_LeaveListCard> {
         .headTeacherStudentLeaveList(
           current: 1,
           size: 10,
-          statusList: const [0, 1],
+          statusList: const [1],
         );
     if (!mounted) return;
     if (!resp.isSuccess) {
@@ -2482,11 +2281,7 @@ class _LeaveListCardState extends ConsumerState<_LeaveListCard> {
   }
 
   _LeaveItem _mapLeaveRecord(StudentLeaveRecord record) {
-    final (tagColor, tagTextColor) = switch (record.leaveType) {
-      '病假' => (_kYellow, _kTextDark),
-      '事假' => (_kPurple, AppColors.surface),
-      _ => (_kInnerGray, _kTextSecondary),
-    };
+    final (tagColor, tagTextColor) = (_kInnerGray, _kTextSecondary);
     return _LeaveItem(
       name: record.studentName,
       headUrl: record.headUrl,
@@ -2503,12 +2298,11 @@ class _LeaveListCardState extends ConsumerState<_LeaveListCard> {
   String _formatLeaveTimeRange(String raw) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty || trimmed == '—') return '—';
-    return trimmed
-        .replaceAllMapped(
-          RegExp(r'(\d{4})-(\d{2})-(\d{2})'),
-          (m) => '${int.parse(m.group(2)!)}月${int.parse(m.group(3)!)}日',
-        )
-        .replaceAll(' - ', '-');
+    final parts = trimmed.split(RegExp(r'\s+[-–~]\s+|\s*[–~]\s*'));
+    if (parts.length == 2) {
+      return campusRange(parts[0], parts[1], fallback: trimmed);
+    }
+    return trimmed;
   }
 
   String _formatLeaveSubmitted(String raw) {
@@ -2519,7 +2313,7 @@ class _LeaveListCardState extends ConsumerState<_LeaveListCard> {
         '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     if (trimmed.startsWith(today)) {
       final hm = trimmed.length >= 16 ? trimmed.substring(11, 16) : '';
-      return hm.isNotEmpty ? '今天$hm' : '今天';
+      return hm.isNotEmpty ? '今天 $hm' : '今天';
     }
     return trimmed.length >= 16 ? trimmed.substring(5, 16) : trimmed;
   }
@@ -4060,17 +3854,11 @@ class _ExamScoreCard extends StatelessWidget {
       tags.add(_MiniTag(text: text, color: color, textColor: textColor));
     }
 
-    if (item.hasStudentAudio) {
-      addTag('学生录音', AppColors.line, _kTextSecondary);
-    }
     if (item.hasStudentVideo) {
-      addTag('学生录像', AppColors.line, _kTextSecondary);
+      addTag('考试录像', AppColors.surfaceSubtle, _kTextSecondary);
     }
-    if (item.hasVideoComment) {
-      addTag('视频点评', _kPurpleSoft, AppColors.surface);
-    }
-    if (item.hasAudioComment) {
-      addTag('语音点评', _kPurpleSoft, AppColors.surface);
+    if (item.hasVideoComment || item.hasAudioComment) {
+      addTag('老师点评', AppColors.brandTint, AppColors.brandDeep);
     }
     return tags;
   }
@@ -4539,17 +4327,11 @@ class _ScoreDetailPanelState extends ConsumerState<_ScoreDetailPanel> {
       tags.add(_MiniTag(text: text, color: bg, textColor: fg));
     }
 
-    if (widget.record.hasStudentAudio) {
-      add('学生录音', AppColors.line, _kTextSecondary);
-    }
     if (widget.record.hasStudentVideo) {
-      add('学生录像', AppColors.line, _kTextSecondary);
+      add('考试录像', AppColors.surfaceSubtle, _kTextSecondary);
     }
-    if (widget.record.hasVideoComment) {
-      add('视频点评', _kPurpleSoft, AppColors.surface);
-    }
-    if (widget.record.hasAudioComment) {
-      add('语音点评', _kPurpleSoft, AppColors.surface);
+    if (widget.record.hasVideoComment || widget.record.hasAudioComment) {
+      add('老师点评', AppColors.brandTint, AppColors.brandDeep);
     }
     return tags;
   }

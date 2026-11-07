@@ -187,84 +187,74 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
             icon: Icons.groups_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/我的班级.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/我的班级.png',
           ),
           SmartCampusQuickActionData(
             label: '我的课表',
             icon: Icons.calendar_view_week_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/我的课表.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/我的课表.png',
           ),
           SmartCampusQuickActionData(
             label: '课堂签到',
             icon: Icons.fact_check_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/课堂签到.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/课堂签到.png',
           ),
           SmartCampusQuickActionData(
             label: '我的作业',
             icon: Icons.assignment_rounded,
             background: _blueSoft,
             foreground: _blue,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/我的作业.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/我的作业.png',
           ),
           SmartCampusQuickActionData(
             label: '我的考试',
             icon: Icons.history_edu_rounded,
             background: _orangeSoft,
             foreground: _orange,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/我的成绩.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/我的成绩.png',
           ),
           SmartCampusQuickActionData(
             label: '群聊',
             icon: Icons.forum_rounded,
             background: _pinkSoft,
             foreground: _pink,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/群聊.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/群聊.png',
           ),
           SmartCampusQuickActionData(
             label: '校圈',
             icon: Icons.apartment_rounded,
             background: _blueSoft,
             foreground: _blue,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/校圈.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/校圈.png',
           ),
           SmartCampusQuickActionData(
             label: '我的请假',
             icon: Icons.event_note_rounded,
             background: _greenSoft,
             foreground: _green,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/请假管理.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/请假管理.png',
           ),
           SmartCampusQuickActionData(
             label: '我的查寝',
             icon: Icons.night_shelter_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/查寝管理.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/查寝管理.png',
           ),
           SmartCampusQuickActionData(
             label: '校长信箱',
             icon: Icons.markunread_mailbox_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/校长信箱.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/校长信箱.png',
           ),
         ],
         profile: const SmartCampusProfileData(
-          name: 'Grey黎',
+          name: '老师',
           title: '在校',
           badgeLabel: '学生',
           statusLabel: '在线',
@@ -327,7 +317,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badge: '素描课',
               badgeForeground: _purple,
               badgeBackground: _purpleSoft,
-              title: '14:00 - 14:45',
+              title: '14:00–17:00',
               subtitle: '本节进行石膏头像结构与明暗训练',
               person: '江月月',
               personHint: '45分钟·素描小课',
@@ -355,7 +345,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badge: '速写课',
               badgeForeground: _green,
               badgeBackground: _greenSoft,
-              title: '09:00 - 09:45',
+              title: '08:30–11:30',
               subtitle: '专业教室 A301 · 小课',
               person: '徐明敏',
               personHint: '45分钟·素描小课',
@@ -366,7 +356,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badge: '大课',
               badgeForeground: _pink,
               badgeBackground: _pinkSoft,
-              title: '19:00 - 20:00',
+              title: '19:00–21:00',
               subtitle: '综合楼 201 · 晚自习集训',
               person: '李达扬',
               personHint: '60分钟·晚自习集训',
@@ -396,77 +386,68 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
             icon: Icons.calendar_month_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/任课老师/授课课表.png',
+            imagePath: 'assets/images/new/智慧校园/任课老师/授课课表.png',
           ),
           SmartCampusQuickActionData(
             label: '签课管理',
             icon: Icons.how_to_reg_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/任课老师/签课管理.png',
+            imagePath: 'assets/images/new/智慧校园/任课老师/签课管理.png',
           ),
           SmartCampusQuickActionData(
             label: '学生名册',
             icon: Icons.badge_rounded,
             background: _blueSoft,
             foreground: _blue,
-            imagePath:
-                'assets/images/new/智慧校园/任课老师/学生名册.png',
+            imagePath: 'assets/images/new/智慧校园/任课老师/学生名册.png',
           ),
           SmartCampusQuickActionData(
             label: '作业批改',
             icon: Icons.edit_note_rounded,
             background: _orangeSoft,
             foreground: _orange,
-            imagePath:
-                'assets/images/new/智慧校园/任课老师/作业批改.png',
+            imagePath: 'assets/images/new/智慧校园/任课老师/作业批改.png',
           ),
           SmartCampusQuickActionData(
             label: '考评管理',
             icon: Icons.rule_folder_rounded,
             background: _pinkSoft,
             foreground: _pink,
-            imagePath:
-                'assets/images/new/智慧校园/任课老师/考评管理.png',
+            imagePath: 'assets/images/new/智慧校园/任课老师/考评管理.png',
           ),
           SmartCampusQuickActionData(
             label: '我的请假',
             icon: Icons.fact_check_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/请假管理.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/请假管理.png',
           ),
           SmartCampusQuickActionData(
             label: '群聊',
             icon: Icons.forum_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/任课老师/群聊.png',
+            imagePath: 'assets/images/new/智慧校园/任课老师/群聊.png',
           ),
           SmartCampusQuickActionData(
             label: '校圈',
             icon: Icons.apartment_rounded,
             background: _greenSoft,
             foreground: _green,
-            imagePath:
-                'assets/images/new/智慧校园/任课老师/校圈.png',
+            imagePath: 'assets/images/new/智慧校园/任课老师/校圈.png',
           ),
           SmartCampusQuickActionData(
             label: '校长信箱',
             icon: Icons.markunread_mailbox_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/任课老师/校长信箱.png',
+            imagePath: 'assets/images/new/智慧校园/任课老师/校长信箱.png',
           ),
         ],
         profile: const SmartCampusProfileData(
-          name: 'Grey黎',
-          title: '运行中',
+          name: '老师',
+          title: '在岗',
           badgeLabel: '任课老师',
           statusLabel: '授课中',
           organization: '',
@@ -520,7 +501,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badge: '素描课',
               badgeForeground: _purple,
               badgeBackground: _purpleSoft,
-              title: '15:20 - 16:05',
+              title: '14:00–17:00',
               subtitle: '教学楼 402 · 待签到 2 人，已到 32 人',
               person: '联考冲刺1班',
               personHint: '课程主题：石膏头像结构训练',
@@ -548,7 +529,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badge: '色彩课',
               badgeForeground: _blue,
               badgeBackground: _blueSoft,
-              title: '08:30 - 09:15',
+              title: '08:30–11:30',
               subtitle: '色彩基础 · 色彩教室 B',
               person: '联考冲刺2班',
               personHint: '已完成上午授课',
@@ -559,7 +540,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badge: '答疑',
               badgeForeground: _green,
               badgeBackground: _greenSoft,
-              title: '19:10 - 19:55',
+              title: '19:00–21:00',
               subtitle: '画室 3 区 · 晚自习集体答疑',
               person: '晚自习答疑',
               personHint: '计划面向高三与校考冲刺生',
@@ -577,7 +558,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
         noticeTitle: '通知',
         stats: const [
           SmartCampusStatCardData(label: '班级出勤', value: '0'),
-          SmartCampusStatCardData(label: '待批请假', value: '0'),
+          SmartCampusStatCardData(label: '待我审批', value: '0'),
           SmartCampusStatCardData(label: '查寝异常', value: '0'),
           SmartCampusStatCardData(label: '家校未读', value: '0'),
           SmartCampusStatCardData(label: '关注学生', value: '0'),
@@ -589,71 +570,63 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
             icon: Icons.dashboard_customize_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/班主任/班级工作台.png',
+            imagePath: 'assets/images/new/智慧校园/班主任/班级工作台.png',
           ),
           SmartCampusQuickActionData(
             label: '请假审批',
             icon: Icons.fact_check_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/班主任/请假审批.png',
+            imagePath: 'assets/images/new/智慧校园/班主任/请假审批.png',
           ),
           SmartCampusQuickActionData(
             label: '我的请假',
             icon: Icons.fact_check_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/学生端/请假管理.png',
+            imagePath: 'assets/images/new/智慧校园/学生端/请假管理.png',
           ),
           SmartCampusQuickActionData(
             label: '查寝历史',
             icon: Icons.history_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/班主任/查寝历史.png',
+            imagePath: 'assets/images/new/智慧校园/班主任/查寝历史.png',
           ),
           SmartCampusQuickActionData(
             label: '家校沟通',
             icon: Icons.family_restroom_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/班主任/家校沟通.png',
+            imagePath: 'assets/images/new/智慧校园/班主任/家校沟通.png',
           ),
           SmartCampusQuickActionData(
             label: '群聊',
             icon: Icons.forum_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/班主任/群聊.png',
+            imagePath: 'assets/images/new/智慧校园/班主任/群聊.png',
           ),
           SmartCampusQuickActionData(
             label: '校圈',
             icon: Icons.apartment_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/班主任/校圈.png',
+            imagePath: 'assets/images/new/智慧校园/班主任/校圈.png',
           ),
           SmartCampusQuickActionData(
             label: '校长信箱',
             icon: Icons.markunread_mailbox_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/班主任/校长信箱.png',
+            imagePath: 'assets/images/new/智慧校园/班主任/校长信箱.png',
           ),
         ],
         profile: const SmartCampusProfileData(
-          name: 'Grey黎',
-          title: '运行中',
+          name: '老师',
+          title: '在岗',
           badgeLabel: '班主任',
-          statusLabel: '运行中',
+          statusLabel: '在岗',
           organization: '',
           detailLines: ['岗位：班主任', '权限：本班班务管理', '职责：请假查寝、班务协同与家校沟通'],
         ),
@@ -774,67 +747,59 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
             icon: Icons.king_bed_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/宿管/按宿舍查寝.png',
+            imagePath: 'assets/images/new/智慧校园/宿管/按宿舍查寝.png',
           ),
           SmartCampusQuickActionData(
             label: '查寝动态',
             icon: Icons.king_bed_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/班主任/查寝动态.png',
+            imagePath: 'assets/images/new/智慧校园/班主任/查寝动态.png',
           ),
           SmartCampusQuickActionData(
             label: '查寝历史',
             icon: Icons.history_rounded,
             background: _blueSoft,
             foreground: _blue,
-            imagePath:
-                'assets/images/new/智慧校园/宿管/查寝历史.png',
+            imagePath: 'assets/images/new/智慧校园/宿管/查寝历史.png',
           ),
           SmartCampusQuickActionData(
             label: '宿管请假',
             icon: Icons.note_alt_rounded,
             background: _pinkSoft,
             foreground: _pink,
-            imagePath:
-                'assets/images/new/智慧校园/宿管/宿管请假.png',
+            imagePath: 'assets/images/new/智慧校园/宿管/宿管请假.png',
           ),
           SmartCampusQuickActionData(
             label: '校圈',
             icon: Icons.groups_3_rounded,
             background: _greenSoft,
             foreground: _green,
-            imagePath:
-                'assets/images/new/智慧校园/宿管/校圈.png',
+            imagePath: 'assets/images/new/智慧校园/宿管/校圈.png',
           ),
           SmartCampusQuickActionData(
             label: '群聊',
             icon: Icons.forum_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/宿管/群聊.png',
+            imagePath: 'assets/images/new/智慧校园/宿管/群聊.png',
           ),
           SmartCampusQuickActionData(
             label: '校长信箱',
             icon: Icons.markunread_mailbox_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/宿管/校长信箱.png',
+            imagePath: 'assets/images/new/智慧校园/宿管/校长信箱.png',
           ),
         ],
         profile: const SmartCampusProfileData(
-          name: 'Grey黎',
+          name: '老师',
           title: '值班中',
           badgeLabel: '宿管老师',
           statusLabel: '巡查中',
           organization: '生活辅导员 · 宿管值班',
           detailLines: [
-            '区域：男生公寓 1-3 号楼',
-            '区域：女生公寓 A 区',
+            '管辖区域：女生公寓1号楼、男生公寓2号楼',
             '权限：管辖区域宿舍管理',
             '职责：查寝 / 补卡 / 晚归闭环',
           ],
@@ -856,7 +821,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
           ),
           SmartCampusNoticeData(
             tag: '晨检',
-            title: '明晨女生公寓 A 区需增加一轮离寝统计，请提前安排。',
+            title: '明晨女生公寓1号楼需增加一轮离寝统计，请提前安排。',
             time: '周三',
             tagForeground: _blue,
             tagBackground: _blueSoft,
@@ -878,9 +843,9 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badgeForeground: _purple,
               badgeBackground: _purpleSoft,
               title: '晚查寝预备 · 设备与名单核对',
-              subtitle: '今晚 21:20 前完成 3 号楼设备、电量与人脸名单同步',
+              subtitle: '今晚 21:20 前完成男生公寓2号楼设备、电量与人脸名单同步',
               person: '值班任务',
-              personHint: '值班人：Grey黎',
+              personHint: '值班人：宿管老师',
               trailing: '待执行',
               avatarSeed: '晚',
             ),
@@ -906,8 +871,8 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badgeForeground: _blue,
               badgeBackground: _blueSoft,
               title: '晨检开门 · 离寝统计同步',
-              subtitle: '07:00 - 07:40 · 女生 A 区',
-              person: 'Grey黎',
+              subtitle: '06:40–07:20 · 女生公寓1号楼',
+              person: '老师',
               personHint: '今日晨检班次负责人',
               trailing: '已完成',
               avatarSeed: '晨',
@@ -916,9 +881,9 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badge: '晚查',
               badgeForeground: _pink,
               badgeBackground: _pinkSoft,
-              title: '男生 3 号楼晚查',
-              subtitle: '21:30 - 22:10 · 重点核对晚归与请假回寝',
-              person: 'Grey黎',
+              title: '男生公寓2号楼晚查',
+              subtitle: '21:30–22:30 · 重点核对晚归与请假回寝',
+              person: '老师',
               personHint: '与班主任端同步闭环',
               trailing: '未开始',
               avatarSeed: '宿',
@@ -949,89 +914,79 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
             icon: Icons.groups_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/学生管理.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/学生管理.png',
           ),
           SmartCampusQuickActionData(
             label: '教师管理',
             icon: Icons.person_4_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/教师管理.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/教师管理.png',
           ),
           SmartCampusQuickActionData(
-            label: '班级编辑',
+            label: '班级管理',
             icon: Icons.draw_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/班级编辑.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/班级编辑.png',
           ),
           SmartCampusQuickActionData(
             label: '排课与课表',
             icon: Icons.calendar_month_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/排课与课表.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/排课与课表.png',
           ),
           SmartCampusQuickActionData(
-            label: '宿管请假审批',
+            label: '教师请假审批',
             icon: Icons.approval_rounded,
             background: _orangeSoft,
             foreground: _orange,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/宿管请假审批.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/宿管请假审批.png',
           ),
           SmartCampusQuickActionData(
             label: '人脸库',
             icon: Icons.face_retouching_natural_rounded,
             background: _blueSoft,
             foreground: _blue,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/人脸库.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/人脸库.png',
           ),
           SmartCampusQuickActionData(
             label: '通知管理',
             icon: Icons.campaign_rounded,
             background: _pinkSoft,
             foreground: _pink,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/通知管理.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/通知管理.png',
           ),
           SmartCampusQuickActionData(
             label: '群聊',
             icon: Icons.forum_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/群聊.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/群聊.png',
           ),
           SmartCampusQuickActionData(
             label: '校长信箱',
             icon: Icons.markunread_mailbox_rounded,
             background: _purpleSoft,
             foreground: _purple,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/校长信箱.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/校长信箱.png',
           ),
           SmartCampusQuickActionData(
-            label: '校园治理',
+            label: '校圈治理',
             icon: Icons.admin_panel_settings_rounded,
             background: _greenSoft,
             foreground: _green,
-            imagePath:
-                'assets/images/new/智慧校园/管理员/校圈.png',
+            imagePath: 'assets/images/new/智慧校园/管理员/校圈.png',
           ),
         ],
         profile: const SmartCampusProfileData(
-          name: 'Grey黎',
-          title: '运行中',
+          name: '老师',
+          title: '在岗',
           badgeLabel: '老师',
           statusLabel: '在线',
           organization: '校园管理端',
-          detailLines: ['主项：校务统筹', '副项：教学运营', '职责：四端联动与流程治理'],
+          detailLines: ['负责：校务统筹、教学运营', '职责：四端联动与流程治理'],
         ),
         notices: const [
           SmartCampusNoticeData(
@@ -1071,7 +1026,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
           ),
           SmartCampusRoleScopeSectionData(
             title: '管理端',
-            items: ['学生管理', '教师管理', '班级编辑', '排课与课表', '人脸库', '通知管理', '校园治理'],
+            items: ['学生管理', '教师管理', '班级管理', '排课与课表', '人脸库', '通知管理', '校圈治理'],
           ),
         ],
         alerts: const [
@@ -1082,7 +1037,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
           ),
           SmartCampusAlertData(
             tag: '预警',
-            title: '宿管请假审批超 12 小时未处理',
+            title: '教师请假审批超 12 小时未处理',
             subtitle: '请教务老师补充责任人并通知宿管端继续值班。',
           ),
           SmartCampusAlertData(

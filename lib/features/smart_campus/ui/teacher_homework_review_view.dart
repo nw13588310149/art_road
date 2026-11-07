@@ -21,7 +21,7 @@
 //        显示截止时间 / 班级 / 科目 tag / 标题。点击切换 active。
 //      · 右 615 白卡：当前作业详情：
 //          - 标题 + 截止时间（spaceBetween）
-//          - 灰底卡：【建议提交：音频】+ 描述说明 12/24 行高
+//          - 灰底卡：建议提交（AppTag）+ 描述说明
 //          - 4 项数据指示（126×32 灰底胶囊：标签 + 数字 + 28×28 紫色渐变图标）
 //          - 学生表格：表头 + N 行（32×32 头像 + 姓名 + 状态 tag + 科目 + 介质
 //            + 上传时间 + 80×40 黑底操作按钮）
@@ -52,7 +52,6 @@ import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/network/api_response.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/network/upload_result.dart';
@@ -66,6 +65,7 @@ import '../../../core/widgets/app_date_time_pickers.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../school/data/school_repository.dart';
+import '../data/campus_format.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import '../data/teacher_repository.dart';
@@ -92,18 +92,9 @@ String _formatYmdHms(DateTime d) {
       '${d.second.toString().padLeft(2, '0')}';
 }
 
-/// 格式：`17:11:00`（作业详情学生提交时间列）
-String _formatHms(DateTime d) {
-  return '${d.hour.toString().padLeft(2, '0')}:'
-      '${d.minute.toString().padLeft(2, '0')}:'
-      '${d.second.toString().padLeft(2, '0')}';
-}
-
 /// `expectedExt` → 展示用中文。
 String _expectedExtDisplay(String raw) {
   switch (raw.trim().toLowerCase()) {
-    case 'audio':
-      return '音频';
     case 'video':
       return '视频';
     case 'doc':
@@ -240,12 +231,6 @@ const Color _kPurpleEnd = AppColors.brandSoft;
 const Color _kPurpleStart = AppColors.brand;
 const Color _kRecordRed = AppColors.danger;
 const Color _kRecordRedLight = AppColors.danger;
-const Color _kOrange = AppColors.warning;
-const Color _kOrangeBg = AppColors.warningSoft;
-const Color _kGreen = AppColors.success;
-const Color _kGreenBg = AppColors.successSoft;
-const Color _kSubjectBg = AppColors.surface;
-const Color _kPillIconColor = AppColors.ink;
 
 /// 页面各板块之间的固定间距。
 const double _kSectionGap = 14;
@@ -336,7 +321,7 @@ class _Submission {
         : (m['createTime']?.toString() ?? '');
     final parsed = _tryParseFlexibleDateTime(raw);
     final uploadAt = parsed != null
-        ? _formatHms(parsed)
+        ? campusListTime(parsed)
         : (raw.isNotEmpty ? raw : '—');
 
     final extForMedium = fromTop('expectedExt').isNotEmpty
@@ -493,9 +478,9 @@ class _HomeworkItem {
     final kind = hwStatus == 1 ? _CornerKind.closed : _CornerKind.pending;
     late final String cornerLabel;
     if (hwStatus == 1) {
-      cornerLabel = '已完成';
+      cornerLabel = '已截止';
     } else if (pendingReview > 0) {
-      cornerLabel = '待评($pendingReview)';
+      cornerLabel = '待批改 $pendingReview';
     } else {
       cornerLabel = '进行中';
     }
@@ -503,7 +488,7 @@ class _HomeworkItem {
     final endRaw =
         src['endTime']?.toString() ?? src['deadline']?.toString() ?? '';
     final parsedEnd = _tryParseFlexibleDateTime(endRaw);
-    final deadline = parsedEnd != null ? _formatYmdHms(parsedEnd) : endRaw;
+    final deadline = parsedEnd != null ? campusListTime(parsedEnd) : endRaw;
 
     final rawExt = src['expectedExt']?.toString() ?? '';
     final subjectLabel = _homeworkSubjectLabel(src);
@@ -629,7 +614,7 @@ class _HomeworkStats {
 
 enum _CornerKind { closed, pending }
 
-const List<String> _kStatusTabs = ['全部', '待我批改', '进行中', '已截止/已收尾'];
+const List<String> _kStatusTabs = ['全部', '待我批改', '进行中', '已截止'];
 const List<String> _kRangeTabs = ['累计', '本学期', '本月'];
 
 // ---- 入口 view --------------------------------------------------------------
@@ -845,10 +830,25 @@ class _TeacherHomeworkReviewViewState
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       bodyScrollable: false,
-      header: _ReviewBanner(
+      header: AppPageHeader(
+        title: '作业批改',
+        subtitle: '布置作业、查看提交情况并逐份批改',
         onBack: widget.onBack,
-        onOpenHistory: () => _openHistoryDrawer(),
-        onOpenPublish: () => _openPublishDrawer(),
+        actions: [
+          AppButton(
+            label: '历史作业',
+            icon: Icons.history_rounded,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: _openHistoryDrawer,
+          ),
+          AppButton(
+            label: '发布作业',
+            icon: Icons.add_rounded,
+            size: AppButtonSize.sm,
+            onTap: _openPublishDrawer,
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -894,10 +894,11 @@ class _TeacherHomeworkReviewViewState
           SizedBox(height: ui(_kSectionGap)),
           Expanded(
             child: _all.isEmpty
-                ? Center(
-                    child: Text(
-                      '暂无作业数据',
-                      style: TextStyle(color: _kTextHint, fontSize: ui(14)),
+                ? const AppCard(
+                    child: AppEmptyState(
+                      icon: Icons.assignment_outlined,
+                      title: '还没有作业',
+                      description: '点右上角「发布作业」给学生布置第一份作业',
                     ),
                   )
                 : _BodyRow(
@@ -1034,144 +1035,6 @@ class _TeacherHomeworkReviewViewState
 // 顶部 banner（白→#F9EDFF 渐变；左返回 + 居中标题 + 右两按钮）
 // =============================================================================
 
-class _ReviewBanner extends StatelessWidget {
-  const _ReviewBanner({
-    required this.onBack,
-    required this.onOpenHistory,
-    required this.onOpenPublish,
-  });
-
-  final VoidCallback onBack;
-  final VoidCallback onOpenHistory;
-  final VoidCallback onOpenPublish;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: const DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: _kPillIconColor,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Text(
-                '作业与批改',
-                style: TextStyle(
-                  fontSize: ui(16),
-                  color: _kTextDark,
-                  fontWeight: AppFont.w600,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: ui(15),
-            child: Row(
-              children: [
-                _BannerActionButton(
-                  assetIcon: AppAssets.teacherHomeworkHistoryIcon,
-                  label: '历史作业',
-                  onTap: onOpenHistory,
-                ),
-                SizedBox(width: ui(8)),
-                _BannerActionButton(
-                  assetIcon: AppAssets.teacherHomeworkPublishIcon,
-                  label: '发布作业',
-                  onTap: onOpenPublish,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BannerActionButton extends StatelessWidget {
-  const _BannerActionButton({
-    required this.assetIcon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final String assetIcon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        height: ui(33),
-        padding: EdgeInsets.symmetric(horizontal: ui(12)),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppAssetGraphic(
-              assetIcon,
-              width: ui(16),
-              height: ui(16),
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: ui(4)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kTextDark,
-                fontWeight: AppFont.w600,
-                height: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // =============================================================================
 // 状态 tabs（4 项；命中黑底白字 6 圆角）
 // =============================================================================
@@ -1189,27 +1052,12 @@ class _StatusTabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(44),
-      padding: EdgeInsets.all(ui(4)),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < tabs.length; i++) ...[
-            if (i > 0) SizedBox(width: ui(4)),
-            _SegmentChip(
-              label: tabs[i],
-              active: i == activeIdx,
-              onTap: () => onTap(i),
-            ),
-          ],
-        ],
-      ),
+    return AppTabs<int>(
+      tabs: [
+        for (var i = 0; i < tabs.length; i++) AppTab(value: i, label: tabs[i]),
+      ],
+      value: activeIdx,
+      onChanged: onTap,
     );
   }
 }
@@ -1626,14 +1474,7 @@ class _HomeworkListCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: ui(6)),
-                  Row(
-                    children: [
-                      _SubjectTag(label: subjectDisplay),
-                      SizedBox(width: ui(4)),
-                      if (item.pendingReview > 0)
-                        _PendingReviewTag(count: item.pendingReview),
-                    ],
-                  ),
+                  Row(children: [_SubjectTag(label: subjectDisplay)]),
                   SizedBox(height: ui(8)),
                   Text(
                     item.title,
@@ -1680,50 +1521,7 @@ class _SubjectTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: _kSubjectBg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: _kTextHint,
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _PendingReviewTag extends StatelessWidget {
-  const _PendingReviewTag({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: _kOrangeBg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        '待评($count)',
-        style: TextStyle(
-          fontSize: ui(12),
-          color: _kOrange,
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-      ),
-    );
+    return AppTag.subject(label);
   }
 }
 
@@ -1735,29 +1533,12 @@ class _CornerLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final bg = kind == _CornerKind.closed ? AppColors.line : _kOrangeBg;
-    final fg = kind == _CornerKind.closed ? _kTextHint : _kOrange;
-    return Container(
-      width: ui(68),
-      height: ui(22),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(ui(12)),
-          bottomLeft: Radius.circular(ui(12)),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: fg,
-          fontWeight: AppFont.w400,
-          height: 1,
-        ),
-      ),
+    final tone = kind == _CornerKind.closed
+        ? AppTone.neutral
+        : (label.startsWith('待批改') ? AppTone.warning : AppTone.brand);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 10, 12, 0),
+      child: AppStatusTag(label: label, tone: tone),
     );
   }
 }
@@ -1861,14 +1642,17 @@ class _SuggestedBlock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '【建议提交：$suggested】',
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextDark,
-              fontWeight: AppFont.w500,
-              height: 1.6,
-            ),
+          Row(
+            children: [
+              Text(
+                '建议提交',
+                style: AppText.caption12.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              SizedBox(width: ui(6)),
+              AppTag(label: suggested),
+            ],
           ),
           SizedBox(height: ui(2)),
           Text(
@@ -2036,7 +1820,6 @@ class _SubmissionsTable extends StatelessWidget {
               SizedBox(width: 90 + 4, child: _ColHeader('学生')),
               Expanded(child: _ColHeader('状态')),
               Expanded(child: _ColHeader('科目')),
-              Expanded(child: _ColHeader('介质')),
               Expanded(child: _ColHeader('上传时间')),
               SizedBox(width: 80, child: _ColHeader('操作')),
             ],
@@ -2126,31 +1909,18 @@ class _SubmissionRow extends StatelessWidget {
           SizedBox(width: ui(12)),
           Expanded(child: _StatusPill(state: item.state)),
           Expanded(child: _CellText(subjectCell)),
-          Expanded(child: _CellText(item.medium)),
           Expanded(child: _CellText(item.uploadAt)),
           SizedBox(
             width: ui(90),
             child: item.state == _SubmissionState.missing
                 ? const SizedBox.shrink()
-                : InkWell(
-                    onTap: onOpenReview,
-                    borderRadius: BorderRadius.circular(ui(8)),
-                    child: Container(
-                      height: ui(32),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: _kTextDark,
-                        borderRadius: BorderRadius.circular(ui(8)),
-                      ),
-                      child: Text(
-                        item.action,
-                        style: TextStyle(
-                          fontSize: ui(13),
-                          color: AppColors.surface,
-                          fontWeight: AppFont.w400,
-                          height: 1.4,
-                        ),
-                      ),
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: AppButton(
+                      label: item.action,
+                      variant: AppButtonVariant.quiet,
+                      size: AppButtonSize.sm,
+                      onTap: onOpenReview,
                     ),
                   ),
           ),
@@ -2189,35 +1959,26 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final ({Color bg, Color fg, String text}) tone = switch (state) {
-      _SubmissionState.passed => (bg: _kGreenBg, fg: _kGreen, text: '已通过'),
-      _SubmissionState.pending => (bg: _kOrangeBg, fg: _kOrange, text: '待评'),
-      _SubmissionState.missing => (
-        bg: AppColors.dangerSoft,
-        fg: AppColors.danger,
-        text: '未交',
-      ),
-      _SubmissionState.reviewed => (bg: _kGreenBg, fg: _kGreen, text: '已批改'),
-    };
     return Align(
       alignment: Alignment.centerLeft,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-        decoration: BoxDecoration(
-          color: tone.bg,
-          borderRadius: BorderRadius.circular(ui(4)),
+      child: switch (state) {
+        _SubmissionState.passed => const AppStatusTag(
+          label: '已通过',
+          tone: AppTone.success,
         ),
-        child: Text(
-          tone.text,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: tone.fg,
-            fontWeight: AppFont.w400,
-            height: 1.2,
-          ),
+        _SubmissionState.pending => const AppStatusTag(
+          label: '待批改',
+          tone: AppTone.warning,
         ),
-      ),
+        _SubmissionState.missing => const AppStatusTag(
+          label: '未交',
+          tone: AppTone.danger,
+        ),
+        _SubmissionState.reviewed => const AppStatusTag(
+          label: '已批改',
+          tone: AppTone.success,
+        ),
+      },
     );
   }
 }
@@ -2238,67 +1999,10 @@ class _AvatarCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final resolved = _resolveMediaUrl(imageUrl);
-    final palettes = const [
-      [AppColors.brandSoft, AppColors.brand],
-      [Color(0xFFFFB68E), AppColors.warning],
-      [Color(0xFF8EE0FF), Color(0xFF418EFF)],
-    ];
-    final palette = palettes[seed.abs() % palettes.length];
-    final initial = name.isNotEmpty ? name.characters.first : '?';
-    if (resolved != null) {
-      return ClipOval(
-        child: Image.network(
-          resolved,
-          width: ui(size),
-          height: ui(size),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            width: ui(size),
-            height: ui(size),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: palette,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: TextStyle(
-                fontSize: ui(13),
-                color: AppColors.surface,
-                fontWeight: AppFont.w500,
-                height: 1,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    return Container(
-      width: ui(size),
-      height: ui(size),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: palette,
-        ),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: ui(13),
-          color: AppColors.surface,
-          fontWeight: AppFont.w500,
-          height: 1,
-        ),
-      ),
+    return AppAvatar(
+      name: name,
+      url: _resolveMediaUrl(imageUrl) ?? '',
+      size: ui(size),
     );
   }
 }
@@ -2317,13 +2021,8 @@ class _PublishDrawer extends ConsumerStatefulWidget {
 }
 
 class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
-  static const _mediumOptions = ['文档', '音频', '视频', '图片'];
-  static const _mediumExtMap = {
-    '文档': 'doc',
-    '音频': 'audio',
-    '视频': 'video',
-    '图片': 'image',
-  };
+  static const _mediumOptions = ['图片', '视频', '文档'];
+  static const _mediumExtMap = {'图片': 'image', '视频': 'video', '文档': 'doc'};
 
   /// 来自 `/app/school/v2/user/subjectList`（按当前勾选班级之一拉取）。
   List<({int id, String name})> _subjects = [];

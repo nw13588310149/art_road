@@ -1,5 +1,5 @@
 // =============================================================================
-// 学生端「请假管理」独立页面
+// 学生端「我的请假」独立页面
 //
 // 入口：学生 dashboard 快捷区「请假管理」按钮 → controller.openLeaveManagement()
 //      → mainView == leaveManagement + role == student → SmartCampusPage
@@ -66,9 +66,7 @@ const Color _kTextSecondary = AppColors.textSecondary;
 const Color _kTextHint = AppColors.textPlaceholder;
 const Color _kTextDivider = AppColors.textTertiary;
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleSoftBg = AppColors.brandTint;
 const Color _kGreen = AppColors.success;
-const Color _kGreenSoftBg = AppColors.successSoft;
 const Color _kRed = AppColors.danger;
 const Color _kRedSoftBg = AppColors.dangerSoft;
 const Color _kOrange = AppColors.warning;
@@ -273,6 +271,14 @@ class _StudentLeaveManagementViewState
 
   int _countOf(_LeaveStatus s) => _records.where((r) => r.status == s).length;
 
+  int _countOfTab(_StatusTab t) => switch (t) {
+    _StatusTab.all => _records.length,
+    _StatusTab.reviewing => _countOf(_LeaveStatus.reviewing),
+    _StatusTab.approved => _countOf(_LeaveStatus.approved),
+    _StatusTab.rejected => _countOf(_LeaveStatus.rejected),
+    _StatusTab.withdrawn => _countOf(_LeaveStatus.withdrawn),
+  };
+
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
@@ -280,7 +286,19 @@ class _StudentLeaveManagementViewState
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
-      header: _LeaveBanner(onBack: widget.onBack),
+      header: AppPageHeader(
+        title: '我的请假',
+        subtitle: '先由家长确认，再由班主任审批；已和家长沟通好的可直接交班主任审批',
+        onBack: widget.onBack,
+        actions: [
+          AppButton(
+            label: '发起请假',
+            icon: Icons.add_rounded,
+            size: AppButtonSize.sm,
+            onTap: _submitting ? null : _showApplyDrawer,
+          ),
+        ],
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -296,10 +314,13 @@ class _StudentLeaveManagementViewState
                   rejected: _countOf(_LeaveStatus.rejected),
                 ),
                 SizedBox(height: ui(12)),
-                _TabsAndCreateRow(
-                  tab: _tab,
-                  onTab: (t) => setState(() => _tab = t),
-                  onCreate: _submitting ? null : _showApplyDrawer,
+                AppTabs<_StatusTab>(
+                  tabs: [
+                    for (final t in _StatusTab.values)
+                      AppTab(value: t, label: t.label, count: _countOfTab(t)),
+                  ],
+                  value: _tab,
+                  onChanged: (t) => setState(() => _tab = t),
                 ),
                 SizedBox(height: ui(12)),
                 if (_loadError != null)
@@ -318,101 +339,6 @@ class _StudentLeaveManagementViewState
 // =============================================================================
 // Banner：返回 + 标题 + 副标题
 // =============================================================================
-
-class _LeaveBanner extends StatelessWidget {
-  const _LeaveBanner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: _BackButton(onTap: onBack),
-          ),
-          Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(56)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '请假管理',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontWeight: AppFont.w600,
-                      height: 1.1,
-                    ),
-                  ),
-                  SizedBox(height: ui(4)),
-                  Text(
-                    '默认由家长在小程序审批后再由班主任审批；已与家长充分沟通的可选择班主任直接审批。',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontWeight: AppFont.w400,
-                      height: 1.1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BackButton extends StatelessWidget {
-  const _BackButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        width: ui(32),
-        height: ui(32),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Icon(
-          Icons.chevron_left_rounded,
-          size: ui(20),
-          color: AppColors.ink,
-        ),
-      ),
-    );
-  }
-}
 
 // =============================================================================
 // 三色统计卡
@@ -437,8 +363,9 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: SmartCampusStatCard(
             backgroundAsset: AppAssets.studentLeaveStatCard1,
-            label: '待审批',
+            label: '审批中',
             value: reviewing,
+            valueSuffix: '条',
           ),
         ),
         SizedBox(width: ui(12)),
@@ -447,6 +374,7 @@ class _StatsRow extends StatelessWidget {
             backgroundAsset: AppAssets.studentLeaveStatCard2,
             label: '已通过',
             value: approved,
+            valueSuffix: '条',
           ),
         ),
         SizedBox(width: ui(12)),
@@ -455,6 +383,7 @@ class _StatsRow extends StatelessWidget {
             backgroundAsset: AppAssets.studentLeaveStatCard3,
             label: '已拒绝',
             value: rejected,
+            valueSuffix: '条',
           ),
         ),
       ],
@@ -485,139 +414,6 @@ extension on _StatusTab {
   }
 }
 
-class _TabsAndCreateRow extends StatelessWidget {
-  const _TabsAndCreateRow({
-    required this.tab,
-    required this.onTab,
-    required this.onCreate,
-  });
-
-  final _StatusTab tab;
-  final ValueChanged<_StatusTab> onTab;
-  final VoidCallback? onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      children: [
-        Container(
-          height: ui(44),
-          padding: EdgeInsets.all(ui(4)),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(8)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < _StatusTab.values.length; i++)
-                Padding(
-                  padding: EdgeInsets.only(
-                    right: i == _StatusTab.values.length - 1 ? 0 : ui(4),
-                  ),
-                  child: _TabPill(
-                    label: _StatusTab.values[i].label,
-                    active: _StatusTab.values[i] == tab,
-                    onTap: () => onTab(_StatusTab.values[i]),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const Spacer(),
-        _CreateApplyButton(onTap: onCreate),
-      ],
-    );
-  }
-}
-
-class _TabPill extends StatelessWidget {
-  const _TabPill({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        height: ui(36),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? _kTextDark : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(14),
-            color: active ? AppColors.surface : _kTextSecondary,
-            fontWeight: AppFont.w500,
-            height: 1,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CreateApplyButton extends StatelessWidget {
-  const _CreateApplyButton({required this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Opacity(
-        opacity: onTap == null ? 0.55 : 1,
-        child: Container(
-          padding: EdgeInsets.fromLTRB(ui(12), ui(8), ui(13), ui(8)),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(8)),
-            border: Border.all(color: _kBorderSoft, width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                AppAssets.studentLeaveCreateApplyIcon,
-                width: ui(16),
-                height: ui(16),
-                fit: BoxFit.contain,
-              ),
-              SizedBox(width: ui(8)),
-              Text(
-                '发起申请',
-                style: TextStyle(
-                  fontSize: ui(14),
-                  color: _kTextDark,
-                  fontWeight: AppFont.w500,
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.message, required this.onRetry});
 
@@ -626,29 +422,11 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: ui(40), horizontal: ui(16)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(12)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: ui(13),
-              color: _kTextSecondary,
-              fontWeight: AppFont.w400,
-            ),
-          ),
-          SizedBox(height: ui(12)),
-          TextButton(onPressed: onRetry, child: const Text('重试')),
-        ],
+    return AppCard(
+      child: AppErrorState(
+        title: '请假记录加载失败',
+        description: message,
+        onRetry: onRetry,
       ),
     );
   }
@@ -683,29 +461,11 @@ class _LeaveCardsGrid extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: ui(40)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(12)),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.inbox_outlined, size: ui(48), color: _kTextHint),
-          SizedBox(height: ui(8)),
-          Text(
-            '当前筛选下没有请假记录',
-            style: TextStyle(
-              fontSize: ui(13),
-              color: _kTextSecondary,
-              fontWeight: AppFont.w400,
-              height: 1,
-            ),
-          ),
-        ],
+    return const AppCard(
+      child: AppEmptyState(
+        icon: Icons.event_note_outlined,
+        title: '这里还没有请假记录',
+        description: '需要请假时点右上角「发起请假」',
       ),
     );
   }
@@ -722,55 +482,25 @@ class _LeaveCard extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
       color: Colors.transparent,
-      child: InkWell(
+      child: AppPressable(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(ui(12)),
         child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(12)),
-            border: Border.all(color: AppColors.surface),
+            border: Border.all(color: AppColors.lineSoft),
           ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                top: 0,
-                right: 0,
-                child: IgnorePointer(
-                  child: Container(
-                    width: ui(64),
-                    height: ui(52),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.only(
-                        topRight: Radius.circular(ui(12)),
-                      ),
-                      gradient: RadialGradient(
-                        center: Alignment.topRight,
-                        radius: 0.38,
-                        colors: [
-                          const Color(0x2EF9EEFF),
-                          const Color(0x00F9EEFF),
-                        ],
-                        stops: const [0.0, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(ui(12)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _CardHeaderRow(record: record),
-                    SizedBox(height: ui(8)),
-                    Expanded(child: _CardBoardBody(record: record)),
-                  ],
-                ),
-              ),
-            ],
+          child: Padding(
+            padding: EdgeInsets.all(ui(12)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _CardHeaderRow(record: record),
+                SizedBox(height: ui(8)),
+                Expanded(child: _CardBoardBody(record: record)),
+              ],
+            ),
           ),
         ),
       ),
@@ -799,7 +529,9 @@ class _CardHeaderRow extends StatelessWidget {
         ),
         SizedBox(width: ui(12)),
         Text(
-          '时长${record.durationLabel}',
+          record.durationLabel.startsWith('时长')
+              ? record.durationLabel
+              : '时长 ${record.durationLabel}',
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
@@ -821,29 +553,21 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final (Color bg, Color fg, String label) = switch (status) {
-      _LeaveStatus.reviewing => (_kPurpleSoftBg, _kPurple, '审批中'),
-      _LeaveStatus.approved => (_kGreenSoftBg, _kGreen, '已通过'),
-      _LeaveStatus.rejected => (_kRedSoftBg, _kRed, '已拒绝'),
-      _LeaveStatus.withdrawn => (_kBoardBg, _kTextSecondary, '已撤销'),
+    return switch (status) {
+      _LeaveStatus.reviewing => const AppStatusTag(
+        label: '审批中',
+        tone: AppTone.brand,
+      ),
+      _LeaveStatus.approved => const AppStatusTag(
+        label: '已通过',
+        tone: AppTone.success,
+      ),
+      _LeaveStatus.rejected => const AppStatusTag(
+        label: '已拒绝',
+        tone: AppTone.danger,
+      ),
+      _LeaveStatus.withdrawn => const AppStatusTag(label: '已撤销'),
     };
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: fg,
-          fontWeight: AppFont.w400,
-          height: 15.24 / 12,
-        ),
-      ),
-    );
   }
 }
 

@@ -201,7 +201,12 @@ class _SmartCampusPageBody extends ConsumerWidget {
         state.selectedRole == SmartCampusRole.headTeacher;
 
     Widget buildSchoolCircleRoute() {
-      return CirclePage(onBack: controller.backToDashboard);
+      return CirclePage(
+        onBack: controller.backToDashboard,
+        governance:
+            state.selectedRole == SmartCampusRole.admin ||
+            state.selectedRole == SmartCampusRole.principal,
+      );
     }
 
     Widget buildPrincipalMailboxRoute() {
@@ -680,13 +685,13 @@ class _SmartCampusPlaceholder extends StatelessWidget {
       case SmartCampusMainView.schoolCircle:
         return '校圈';
       case SmartCampusMainView.leaveManagement:
-        return '请假管理';
+        return '我的请假';
       case SmartCampusMainView.leaveApproval:
         return '请假审批';
       case SmartCampusMainView.myTeacherLeave:
         return '我的请假';
       case SmartCampusMainView.dormCheck:
-        return '查寝管理';
+        return '我的查寝';
       case SmartCampusMainView.dormDynamic:
         return '查寝动态';
       case SmartCampusMainView.dormHistory:
@@ -694,7 +699,7 @@ class _SmartCampusPlaceholder extends StatelessWidget {
       case SmartCampusMainView.dormCheckByRoom:
         return '按宿舍查寝';
       case SmartCampusMainView.dormCheckInManagement:
-        return '打卡管理';
+        return '到岗打卡';
       case SmartCampusMainView.dormMakeupAudit:
         return '补卡审核';
       case SmartCampusMainView.homeSchool:
@@ -712,7 +717,7 @@ class _SmartCampusPlaceholder extends StatelessWidget {
       case SmartCampusMainView.teacherManagement:
         return '教师管理';
       case SmartCampusMainView.classManagement:
-        return '班级编组';
+        return '班级管理';
       case SmartCampusMainView.scheduleManagement:
         return '排课与课表';
       case SmartCampusMainView.dormLeaveApproval:

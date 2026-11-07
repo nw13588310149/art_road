@@ -47,18 +47,19 @@ class GeoException implements Exception {
   final GeoErrorKind kind;
   final String? message;
 
+  /// 给用户看的中文文案；[message] 可能是浏览器 / 系统的英文原文，只用于排查。
   String get userMessage {
     switch (kind) {
       case GeoErrorKind.unsupported:
-        return '当前环境不支持获取定位';
+        return '当前设备不支持定位，请换用手机或平板打卡';
       case GeoErrorKind.permissionDenied:
-        return message ?? '已拒绝定位权限，请在系统设置中开启';
+        return '未获得定位权限，请在系统设置中允许后重试';
       case GeoErrorKind.positionUnavailable:
-        return '暂时无法获取位置，请检查网络与定位是否开启';
+        return '暂时无法获取位置，请检查网络与定位服务后重试';
       case GeoErrorKind.timeout:
         return '获取定位超时，请重试';
       case GeoErrorKind.unknown:
-        return message ?? '获取定位失败';
+        return '获取定位失败，请重试';
     }
   }
 

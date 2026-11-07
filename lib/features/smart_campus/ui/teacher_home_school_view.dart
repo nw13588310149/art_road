@@ -1158,14 +1158,10 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
                     child: _loading
                         ? const SizedBox.shrink()
                         : _messages.isEmpty
-                        ? Center(
-                            child: Text(
-                              '暂无消息，发送第一条回复吧',
-                              style: TextStyle(
-                                fontSize: ui(13),
-                                color: _kTextHint,
-                                fontWeight: AppFont.w400,
-                              ),
+                        ? const Center(
+                            child: AppEmptyState(
+                              icon: Icons.chat_bubble_outline_rounded,
+                              title: '暂无消息',
                             ),
                           )
                         : Builder(

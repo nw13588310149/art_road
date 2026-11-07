@@ -111,7 +111,7 @@ class HeadTeacherIndexRes {
 List<SmartCampusStatCardData> buildHeadTeacherStats(HeadTeacherIndexRes res) {
   return [
     SmartCampusStatCardData(label: '在籍学生', value: '${res.totalStudentCount}'),
-    SmartCampusStatCardData(label: '待批请假', value: '${res.pendingLeaveCount}'),
+    SmartCampusStatCardData(label: '待我审批', value: '${res.pendingLeaveCount}'),
     SmartCampusStatCardData(
       label: '查寝异常',
       value: '${res.todayAbnormalDormCount}',

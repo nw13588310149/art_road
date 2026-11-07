@@ -15,7 +15,6 @@ import '../state/admin_home_state.dart';
 import '../state/smart_campus_controller.dart';
 import '../state/smart_campus_state.dart';
 import 'widgets/role_switcher_buttons.dart';
-import 'widgets/smart_campus_avatar_role_badge.dart';
 import 'widgets/smart_campus_home_card.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
 import 'widgets/smart_campus_stat_card.dart';
@@ -38,7 +37,7 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 ///    - 工作提醒：3 条预警卡，红色「预警」徽章 + 标题 + 副标题。
 ///
 /// 整页主内容区统一滚动（左主栏 + 右栏同步），不再由中间左栏单独滚动。
-/// - 顶部 72 圆形头像 + 姓名 16/500 + 绿点「运行中」+ 黄底「管理员」徽章；
+/// - 顶部 72 圆形头像 + 姓名 + 身份 AppTag(brand) + 「在岗」状态；
 /// - 「岗位 / 部门 / 权限」3 行键值；
 /// - 「校级通知」title + 通知列表，每条卡含分类徽章
 ///   （教研室 / 场地 / 大师课）+ 内容 + 时间 + 红 / 灰未读点。
@@ -181,7 +180,7 @@ class _AdminHomeViewState extends ConsumerState<AdminHomeView> {
   List<_StatItem> _statsRow1(AdminHomeSummary summary) => [
     _StatItem('${summary.studentCount}', '在籍学生'),
     _StatItem('${summary.teacherCount}', '任课老师'),
-    _StatItem('${summary.classCount}', '本学期班级'),
+    _StatItem('${summary.classCount}', '行政班'),
     _StatItem(
       '${summary.toDoTodayCount}',
       '今日待办',
@@ -190,8 +189,8 @@ class _AdminHomeViewState extends ConsumerState<AdminHomeView> {
   ];
 
   List<_StatItem> _statsRow2(AdminHomeSummary summary) => [
-    _StatItem('${summary.leaveStatus0Count}', '教职工待审批请假'),
-    _StatItem('${summary.smallCourseSignStatus5Count}', '小课待审核'),
+    _StatItem('${summary.leaveStatus0Count}', '待审请假'),
+    _StatItem('${summary.smallCourseSignStatus5Count}', '小课待审'),
     _StatItem('${summary.userFaceNotRecordedCount}', '人脸待补录'),
     _StatItem('${summary.postStatus0Count}', '今日校圈'),
   ];
@@ -420,7 +419,7 @@ class _QuickAction {
 const _quickActions = <_QuickAction>[
   _QuickAction('学生管理', 'assets/images/new/智慧校园/管理员/学生管理.png'),
   _QuickAction('教师管理', 'assets/images/new/智慧校园/管理员/教师管理.png'),
-  _QuickAction('班级编辑', 'assets/images/new/智慧校园/管理员/班级编辑.png'),
+  _QuickAction('班级管理', 'assets/images/new/智慧校园/管理员/班级编辑.png'),
   _QuickAction('排课与课表', 'assets/images/new/智慧校园/管理员/排课与课表.png'),
   _QuickAction('签课管理', 'assets/images/new/智慧校园/管理员/排课与课表.png'),
   _QuickAction('教师请假审批', 'assets/images/new/智慧校园/管理员/宿管请假审批.png'),
@@ -546,7 +545,7 @@ class _QuickActionsCard extends StatelessWidget {
         return onOpenStudentManagement;
       case '教师管理':
         return onOpenTeacherManagement;
-      case '班级编辑':
+      case '班级管理':
         return onOpenClassManagement;
       case '排课与课表':
         return onOpenScheduleManagement;
@@ -1414,122 +1413,59 @@ class _ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
 
-    return Stack(
-      clipBehavior: Clip.none,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: ui(72),
-              height: ui(72),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.brandTint,
-                image: avatarUrl.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(avatarUrl),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: avatarUrl.isEmpty
-                  ? Center(
-                      child: Text(
-                        displayName.isEmpty
-                            ? 'A'
-                            : displayName.characters.first,
-                        style: TextStyle(
-                          fontSize: ui(24),
-                          height: 1.0,
-                          color: AppColors.brand,
-                          fontWeight: AppFont.w500,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-            SizedBox(width: ui(12)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        AppAvatar(
+          name: displayName.isEmpty ? '教务' : displayName,
+          url: avatarUrl,
+          size: ui(72),
+        ),
+        SizedBox(width: ui(12)),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: ui(8)),
+              Row(
                 children: [
-                  SizedBox(height: ui(8)),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          displayName.isEmpty ? '教务老师' : displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: ui(16),
-                            height: 1.2,
-                            fontWeight: AppFont.w500,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: ui(6)),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: ui(6),
-                          vertical: ui(3),
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(ui(4)),
-                          border: Border.all(
-                            color: AppColors.lineSoft,
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: ui(6),
-                              height: ui(6),
-                              decoration: const BoxDecoration(
-                                color: AppColors.success,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            SizedBox(width: ui(4)),
-                            Text(
-                              '运行中',
-                              style: TextStyle(
-                                fontSize: ui(12),
-                                height: 1.0,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (institutionName.trim().isNotEmpty) ...[
-                    SizedBox(height: ui(4)),
-                    Text(
-                      institutionName.trim(),
-                      maxLines: 2,
+                  Flexible(
+                    child: Text(
+                      displayName.isEmpty ? '教务老师' : displayName,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: ui(12),
+                        fontSize: ui(16),
                         height: 1.2,
-                        color: AppColors.textSecondary,
-                        fontFamily: 'Source Han Sans SC',
-                        fontWeight: AppFont.w400,
+                        fontWeight: AppFont.w500,
+                        color: AppColors.ink,
                       ),
                     ),
-                  ],
+                  ),
+                  SizedBox(width: ui(6)),
+                  AppTag(label: roleBadge, tone: AppTone.brand),
+                  SizedBox(width: ui(6)),
+                  const AppStatusTag(label: '在岗', tone: AppTone.success),
                 ],
               ),
-            ),
-          ],
+              if (institutionName.trim().isNotEmpty) ...[
+                SizedBox(height: ui(4)),
+                Text(
+                  institutionName.trim(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: ui(12),
+                    height: 1.2,
+                    color: AppColors.textSecondary,
+                    fontFamily: 'Source Han Sans SC',
+                    fontWeight: AppFont.w400,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-        SmartCampusAvatarRoleBadge(label: roleBadge, role: role),
       ],
     );
   }

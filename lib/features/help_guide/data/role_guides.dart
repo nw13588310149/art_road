@@ -174,7 +174,7 @@ const _admin = RoleGuide(
     RoleGuideStep(
       icon: Icons.apartment_outlined,
       title: '教务管理',
-      body: '学生、教师、班级编辑与排课都在智慧校园，首页的功能入口可以直接打开。',
+      body: '学生、教师、班级管理与排课都在智慧校园，首页的功能入口可以直接打开。',
       where: '左侧导航「智慧校园」',
     ),
     RoleGuideStep(

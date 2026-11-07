@@ -727,16 +727,19 @@ class TeacherRepository {
   }
 
   /// 考试考生列表。`scoreStatus`: 0 未打分、1 已打分；不传查询全部。
+  /// `classId` 不传时返回老师任教的全部班级。
   Future<ApiResponse> examStudentList({
     required String examId,
     required int subjectId,
     int? scoreStatus,
+    String? classId,
   }) {
     final body = encodeNumericIdRequestBody(
       <String, dynamic>{
         'examId': examId,
         'subjectId': subjectId,
         'scoreStatus': scoreStatus,
+        if (classId != null && classId.isNotEmpty) 'classId': classId,
       },
       numericIdKeys: const {'examId'},
     );
@@ -770,13 +773,18 @@ class TeacherRepository {
     return client.post('$_base/examStudentScore', data: body);
   }
 
-  /// 考试打分统计。
+  /// 考试打分统计；`classId` 不传时统计老师任教的全部班级。
   Future<ApiResponse> examStudentStat({
     required String examId,
     required int subjectId,
+    String? classId,
   }) {
     final body = encodeNumericIdRequestBody(
-      <String, dynamic>{'examId': examId, 'subjectId': subjectId},
+      <String, dynamic>{
+        'examId': examId,
+        'subjectId': subjectId,
+        if (classId != null && classId.isNotEmpty) 'classId': classId,
+      },
       numericIdKeys: const {'examId'},
     );
     if (body == null) return Future.value(ApiResponse.failure('考试 id 格式错误'));

@@ -96,7 +96,7 @@ class _StaffOverview extends ConsumerWidget {
       subtitle: [
         if (schoolName.isNotEmpty) schoolName,
         if (state.exams.isNotEmpty) '共 ${state.exams.length} 场考试',
-        '成绩来自艺考网阅卷系统',
+        '成绩经艺考网阅卷系统复核后发布',
       ].join(' · '),
       bottom: state.exams.isEmpty
           ? null

@@ -48,6 +48,7 @@ import '../../courseware/ui/courseware_url_opener.dart';
 import '../data/teacher_exam_data.dart';
 import '../data/teacher_repository.dart';
 import '../state/teacher_exam_controller.dart';
+import '../data/campus_format.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'student_homework_submission_preview.dart';
@@ -154,9 +155,19 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
       backgroundColor: _kPageBg,
       bodyScrollable: false,
       bodyBorderRadius: 8,
-      header: _ExamBanner(
+      header: AppPageHeader(
+        title: '考评管理',
+        subtitle: '给任教科目的月考提交评分和点评，评分同步到艺考网阅卷系统，复核后在「班级学情」发布',
         onBack: widget.onBack,
-        onOpenHistory: _openHistoryDrawer,
+        actions: [
+          AppButton(
+            label: '历史月考',
+            icon: Icons.history_rounded,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: _openHistoryDrawer,
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,11 +191,17 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
           SizedBox(height: ui(_kSectionGap)),
           Expanded(
             child: active == null
-                ? Center(
-                    child: Text(
-                      examState.error.isNotEmpty ? examState.error : '暂无考试数据',
-                      style: TextStyle(color: _kTextHint, fontSize: ui(14)),
-                    ),
+                ? AppCard(
+                    child: examState.error.isNotEmpty
+                        ? AppErrorState(
+                            title: '考试列表加载失败',
+                            description: examState.error,
+                          )
+                        : const AppEmptyState(
+                            icon: Icons.fact_check_outlined,
+                            title: '暂时没有需要评阅的考试',
+                            description: '教务安排考试后会出现在这里',
+                          ),
                   )
                 : _BodyRow(
                     items: visibleItems,
@@ -325,87 +342,6 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
 // =============================================================================
 // 顶部 banner（白→#F9EDFF 渐变；左返回 + 居中标题/副标题 + 右"历史月考"按钮）
 // =============================================================================
-
-class _ExamBanner extends StatelessWidget {
-  const _ExamBanner({required this.onBack, required this.onOpenHistory});
-
-  final VoidCallback onBack;
-  final VoidCallback onOpenHistory;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: smartCampusPageBannerDecoration(ui),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: _kPillIconColor,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '考评管理',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontWeight: AppFont.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: ui(2)),
-                  Text(
-                    '列表展示已关联到您任教的月考科目；教师仅可查看学生提交并进行评分与点评，不可新建考试。',
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontWeight: AppFont.w400,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: ui(15),
-            child: _BannerActionButton(
-              assetIcon: AppAssets.teacherExamHistoryIcon,
-              label: '历史月考',
-              onTap: onOpenHistory,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _BannerActionButton extends StatelessWidget {
   const _BannerActionButton({
@@ -826,77 +762,41 @@ class _ExamListCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${item.publishedRatio.submitted}',
-                      style: TextStyle(
-                        fontSize: ui(24),
-                        color: _kTextDark,
-                        fontFamily: 'Barlow',
-                        fontWeight: FontWeight.w600,
-                        height: 1,
-                      ),
-                    ),
-                    SizedBox(width: ui(2)),
-                    Padding(
-                      padding: EdgeInsets.only(bottom: ui(4)),
-                      child: Text(
-                        '/${item.publishedRatio.total}',
-                        style: TextStyle(
-                          fontSize: ui(16),
-                          color: _kTextHint,
-                          fontFamily: 'Barlow',
-                          fontWeight: FontWeight.w400,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: ui(2)),
-                Text(
-                  '截止 ${item.deadline}',
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: _kTextHint,
-                    fontWeight: AppFont.w400,
-                    height: 1.4,
+                Padding(
+                  padding: EdgeInsets.only(right: ui(72)),
+                  child: Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title16.copyWith(color: _kTextBlack),
                   ),
                 ),
-                SizedBox(height: ui(2)),
+                SizedBox(height: ui(4)),
                 Text(
-                  item.classLabel,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: _kTextSecondary,
-                    fontWeight: AppFont.w400,
-                    height: 1.2,
-                  ),
-                ),
-                SizedBox(height: ui(6)),
-                Row(
-                  children: [
-                    _SubjectTag(label: item.examLabel),
-                    SizedBox(width: ui(4)),
-                    _SubjectTag(label: item.subject),
-                    SizedBox(width: ui(4)),
-                    if (item.pendingReview > 0)
-                      _PendingReviewTag(count: item.pendingReview),
-                  ],
-                ),
-                SizedBox(height: ui(6)),
-                Text(
-                  item.title,
+                  [
+                    if (item.classLabel.isNotEmpty) item.classLabel,
+                    if (item.deadline.isNotEmpty)
+                      '截止 ${campusListTimeOf(item.deadline, fallback: item.deadline)}',
+                  ].join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    color: _kTextBlack,
-                    fontWeight: AppFont.w500,
-                    height: 1.2,
+                  style: AppText.caption12.copyWith(
+                    color: AppColors.textTertiary,
                   ),
+                ),
+                SizedBox(height: ui(8)),
+                Row(
+                  children: [
+                    _SubjectTag(label: item.subject),
+                    const Spacer(),
+                    if (item.publishedRatio.total > 0)
+                      Text(
+                        '已提交 ${item.publishedRatio.submitted}/${item.publishedRatio.total} 人',
+                        style: AppText.caption12.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -919,50 +819,7 @@ class _SubjectTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: _kTextHint,
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _PendingReviewTag extends StatelessWidget {
-  const _PendingReviewTag({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: _kOrangeBg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        '待评($count)',
-        style: TextStyle(
-          fontSize: ui(12),
-          color: _kOrange,
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-      ),
-    );
+    return AppTag.subject(label);
   }
 }
 
@@ -974,30 +831,13 @@ class _CornerLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final bg = kind == TeacherExamCornerKind.published
-        ? AppColors.line
-        : _kOrangeBg;
-    final fg = kind == TeacherExamCornerKind.published ? _kTextHint : _kOrange;
-    return Container(
-      height: ui(22),
-      padding: EdgeInsets.symmetric(horizontal: ui(10)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(ui(12)),
-          bottomLeft: Radius.circular(ui(12)),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: fg,
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 10, 12, 0),
+      child: AppStatusTag(
+        label: label,
+        tone: kind == TeacherExamCornerKind.published
+            ? AppTone.success
+            : AppTone.brand,
       ),
     );
   }
@@ -1055,7 +895,7 @@ class _ExamDetailPanel extends StatelessWidget {
                       ),
                       SizedBox(width: ui(12)),
                       Text(
-                        '截止 ${item.deadline}',
+                        '截止 ${campusListTimeOf(item.deadline, fallback: item.deadline)}',
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kTextSecondary,
@@ -1070,7 +910,7 @@ class _ExamDetailPanel extends StatelessWidget {
                     item.syncNote,
                     style: TextStyle(
                       fontSize: ui(12),
-                      color: _kPurple,
+                      color: AppColors.textTertiary,
                       fontWeight: AppFont.w400,
                       height: 1.4,
                     ),
@@ -1270,7 +1110,7 @@ class _ScoreSummaryStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    String fmt(double? v) => v == null ? '—' : v.toStringAsFixed(1);
+    String fmt(double? v) => campusScore(v);
     final cells = <({String label, String value, Color color})>[
       (label: '均分', value: fmt(item.avgScore), color: _kPurple),
       (label: '最高', value: fmt(item.maxScore), color: _kGreen),
@@ -1766,28 +1606,13 @@ class _SubmissionRow extends ConsumerWidget {
           Expanded(child: _CellText(item.uploadAt)),
           SizedBox(
             width: ui(90),
-            child: InkWell(
-              onTap: isReminding ? null : onOpenScore,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                height: ui(32),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: isMissing ? _kOrangeBg : _kTextDark,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: isMissing
-                      ? Border.all(color: _kOrange.withValues(alpha: 0.35))
-                      : null,
-                ),
-                child: Text(
-                  isMissing && isReminding ? '发送中…' : item.action,
-                  style: TextStyle(
-                    fontSize: ui(13),
-                    color: isMissing ? _kOrange : AppColors.surface,
-                    fontWeight: AppFont.w400,
-                    height: 1.4,
-                  ),
-                ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: AppButton(
+                label: isMissing && isReminding ? '发送中…' : item.action,
+                variant: AppButtonVariant.quiet,
+                size: AppButtonSize.sm,
+                onTap: isReminding ? null : onOpenScore,
               ),
             ),
           ),

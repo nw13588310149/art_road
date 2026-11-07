@@ -8,7 +8,7 @@
 // 视觉（Figma 970 设计宽）：
 //   1. banner（62 高, 紫白渐变 #F9EDFF→white, 圆角 16, 顶部居中 "查寝历史
 //      记录" 16/600 + 副标题 12/#B6B5BB「按自然日查看本班住宿生晚查寝
-//      打卡汇总；数据与「查寝动态」演示同源。查寝老师打卡在专用端完成。」；
+//      结果」；
 //      左 12 返回 32×32 白底 outline #F3F2F3）。
 //   2. 日期条卡（970×110，圆角 16，白底）：
 //      - 顶部 12,12 处 `2026-04-17` 14/500 + 下拉小箭头（演示）；
@@ -34,7 +34,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/media_url.dart';
 import '../../shell/ui/shell_layout.dart';
-import 'widgets/smart_campus_stat_card.dart';
 import '../data/student_dormitory_data.dart' show DormitoryDetailStudentProfile;
 import '../data/teacher_dormitory_data.dart';
 import '../data/dormitory_check_data.dart';
@@ -46,9 +45,7 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kCardGreyBg = AppColors.surfaceSubtle;
-const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
 const Color _kTextSecondary = AppColors.textSecondary;
 const Color _kTextHint = AppColors.textPlaceholder;
@@ -223,38 +220,39 @@ class _TeacherDormHistoryViewState
         .where((record) => record.session == _Session.evening)
         .toList(growable: false);
     final exceptionCount = state.stat.lateCount + state.stat.absentCount;
-    return Container(
-      color: _kPageBg,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: ui(20)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Banner(onBack: widget.onBack),
-            SizedBox(height: ui(12)),
-            _DateStripCard(
-              days: days,
-              selectedIndex: selectedDayIndex < 0 ? 6 : selectedDayIndex,
-              dateText: state.selectedDate,
-              statText:
-                  '应统计 ${state.stat.studentCount} 人，当日流水 ${state.historyItems.length} 条。',
-              onTapDay: (i) => ref
-                  .read(teacherDormitoryControllerProvider.notifier)
-                  .selectHistoryDate(days[i].date),
-            ),
-            SizedBox(height: ui(16)),
-            _StatsRow(
-              eveningReturned: state.stat.normalCount,
-              eveningWatch: exceptionCount,
-            ),
-            SizedBox(height: ui(16)),
-            _CardsGrid(
-              dormRecords: const [],
-              students: filteredStudents,
-              onStudentTap: (record) => unawaited(_showCheckDetail(record)),
-            ),
-          ],
-        ),
+    return SmartCampusSecondaryPageShell(
+      header: AppPageHeader(
+        title: '查寝历史',
+        subtitle: '按日期查看本班住宿生的晚查寝结果',
+        onBack: widget.onBack,
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _DateStripCard(
+            days: days,
+            selectedIndex: selectedDayIndex < 0
+                ? days.length - 2
+                : selectedDayIndex,
+            dateText: state.selectedDate,
+            statText:
+                '住宿生 ${state.stat.studentCount} 人 · 共 ${state.historyItems.length} 条',
+            onTapDay: (i) => ref
+                .read(teacherDormitoryControllerProvider.notifier)
+                .selectHistoryDate(days[i].date),
+          ),
+          SizedBox(height: ui(16)),
+          _StatsRow(
+            eveningReturned: state.stat.normalCount,
+            eveningWatch: exceptionCount,
+          ),
+          SizedBox(height: ui(16)),
+          _CardsGrid(
+            dormRecords: const [],
+            students: filteredStudents,
+            onStudentTap: (record) => unawaited(_showCheckDetail(record)),
+          ),
+        ],
       ),
     );
   }
@@ -264,13 +262,13 @@ List<_CalendarDay> _historyCalendarDays(DateTime now) {
   const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
   final today = DateTime(now.year, now.month, now.day);
   return [
-    for (var offset = -6; offset <= 7; offset++)
+    for (var offset = -13; offset <= 0; offset++)
       () {
         final date = today.add(Duration(days: offset));
         return _CalendarDay(
           date: date,
-          weekdayLabel: weekdays[date.weekday - 1],
-          dayLabel: offset == 0 ? '今' : date.day.toString(),
+          weekdayLabel: offset == 0 ? '今天' : weekdays[date.weekday - 1],
+          dayLabel: date.day.toString(),
           isToday: offset == 0,
         );
       }(),
@@ -306,81 +304,6 @@ List<_StudentRecord> _historyStudentRecords(
 }
 
 // —— Banner ————————————————————————————————————————————————————————
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: smartCampusPageBannerDecoration(ui),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft, width: 1),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(56)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '查寝历史记录',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontWeight: AppFont.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: ui(2)),
-                  Text(
-                    '按自然日查看本班住宿生晚查寝打卡汇总；数据与「查寝动态」演示同源。查寝老师打卡在专用端完成。',
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontWeight: AppFont.w400,
-                      height: 1.4,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // —— 日期条卡 ——————————————————————————————————————————————————
 
@@ -551,17 +474,17 @@ class _StatsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatCard(
-            title: '晚查寝 · 已归寝口径',
+            title: '已归寝',
             value: eveningReturned,
-            subtitle: '正常/免检/补卡过',
+            subtitle: '含免检、已补卡',
           ),
         ),
         SizedBox(width: ui(12)),
         Expanded(
           child: _StatCard(
-            title: '晚查寝 · 待关注',
+            title: '待关注',
             value: eveningWatch,
-            subtitle: '晚归/未打卡',
+            subtitle: '晚归、未打卡',
           ),
         ),
       ],
@@ -582,51 +505,18 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(88),
-      padding: EdgeInsets.fromLTRB(ui(16), ui(16), ui(16), ui(14)),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(12)),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          AppStatTile(label: '晚查寝 · $title', value: '$value', unit: '人'),
+          const SizedBox(height: AppSpace.s4),
           Text(
-            title,
+            subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: ui(14),
-              color: _kTextDark,
-              fontWeight: AppFont.w500,
-              height: 1.2,
-            ),
-          ),
-          const Spacer(),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('$value', style: smartCampusStatValueTextStyle(ui)),
-              SizedBox(width: ui(8)),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: ui(2)),
-                  child: Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontWeight: AppFont.w400,
-                      height: 1.0,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            style: AppText.caption12.copyWith(color: AppColors.textTertiary),
           ),
         ],
       ),
@@ -651,17 +541,11 @@ class _CardsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     if (dormRecords.isEmpty && students.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: ui(40)),
-        child: Center(
-          child: Text(
-            '所选日期暂无查寝记录',
-            style: TextStyle(
-              fontSize: ui(14),
-              color: _kTextHint,
-              fontWeight: AppFont.w400,
-            ),
-          ),
+      return const AppCard(
+        child: AppEmptyState(
+          icon: Icons.bedtime_outlined,
+          title: '当日暂无查寝记录',
+          description: '晚查寝结束后会显示查寝结果',
         ),
       );
     }

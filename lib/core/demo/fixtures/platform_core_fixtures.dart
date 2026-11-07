@@ -68,8 +68,8 @@ const _provinces = <String>[
 ];
 
 /// 宿舍查寝时间：学校配置接口与宿管消息共用一处。
-const _eveningCheckTime = '22:10';
-const _morningCheckTime = '07:10';
+const _eveningCheckTime = '22:30';
+const _morningCheckTime = '07:20';
 
 /// 消息 targetType，与客户端 `ShellNoticeTargetType` 一致。
 const _targetStudy = 1;
@@ -242,7 +242,7 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
     DemoRole.student => '【校园】班主任发布了新的班级通知，可在「智慧校园」查看。',
     DemoRole.teacher => '【校园】学校发布了新的教学通知，可在「智慧校园」查看。',
     DemoRole.headTeacher => '【校园】班级有新的请假申请与考勤记录，可在「智慧校园」的班级工作台查看。',
-    DemoRole.dormManager => '【校园】今晚 $_eveningCheckTime 晚查寝，请按时到岗。',
+    DemoRole.dormManager => '【校园】今晚晚查寝 21:30 开始、$_eveningCheckTime 截止，请按时到岗。',
     DemoRole.admin => '【校园】有新的请假审批与小课签课待处理，可在「智慧校园」查看。',
   };
   notices.add(

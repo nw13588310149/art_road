@@ -1,6 +1,7 @@
 /// 学生端「课堂签到」：今日小课解析与签到状态推导。
 library;
 
+import 'campus_format.dart';
 import '../../../core/network/snowflake_id.dart';
 import 'course_sign_data.dart';
 
@@ -323,11 +324,8 @@ List<StudentTimeConfig> parseStudentTimeConfigs(dynamic raw) {
   return configs;
 }
 
-String formatChineseDateTitle(DateTime date) {
-  const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-  return '${date.year}年${date.month}月${date.day}日 '
-      '${weekdays[date.weekday - 1]}';
-}
+/// 「2026-11-07 周六」（全应用统一的日期写法）。
+String formatChineseDateTitle(DateTime date) => campusDateWithWeekday(date);
 
 String todayIsoDate() {
   final now = DateTime.now();

@@ -1,7 +1,7 @@
 // =============================================================================
-// 学生端「查寝管理」独立页面
+// 学生端「我的查寝」独立页面
 //
-// 入口：学生 dashboard 快捷区「查寝管理」按钮 → controller.openDormCheck()
+// 入口：学生 dashboard 快捷区「我的查寝」按钮 → controller.openDormCheck()
 //      → mainView == dormCheck + role == student → SmartCampusPage 路由到
 //      本视图。返回：banner 左上角返回按钮 → onBack。
 //
@@ -60,15 +60,12 @@ const Color _kTextSection = AppColors.ink;
 const Color _kTextSecondary = AppColors.textSecondary;
 const Color _kTextHint = AppColors.textPlaceholder;
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleStatus = AppColors.brandSoft;
 const Color _kRed = AppColors.danger;
-const Color _kBlue = Color(0xFF325BFF);
 
 /// 标题栏与统计块、统计块与补卡列表之间的统一间距（与 [SmartCampusSecondaryPageShell.headerGap] 一致）。
 const double _kStatsBlockGap = 16;
 
 /// 标题栏右侧「申请补卡 / 查寝记录·补卡申请」控件统一高度。
-const double _kBannerControlHeight = 32;
 
 // —— 顶级视图 ——————————————————————————————————————————————————————
 
@@ -259,14 +256,37 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       headerGap: _kStatsBlockGap,
-      header: _DormBanner(
+      header: AppPageHeader(
+        title: '我的查寝',
+        subtitle: '只显示$displayName的查寝记录；漏打卡可申请补卡，由宿管或班主任审核',
         onBack: widget.onBack,
-        studentName: displayName,
-        onApplyResubmit: state.submittingMakeup ? null : _openApplyDialog,
-        section: state.listSection,
-        onSection: (section) => ref
-            .read(studentDormitoryControllerProvider.notifier)
-            .selectListSection(section),
+        actions: [
+          AppButton(
+            label: '申请补卡',
+            icon: Icons.event_available_outlined,
+            size: AppButtonSize.sm,
+            onTap: state.submittingMakeup ? null : _openApplyDialog,
+          ),
+        ],
+        bottom: AppTabs<StudentDormitoryListSection>(
+          tabs: [
+            const AppTab(
+              value: StudentDormitoryListSection.checkRecords,
+              label: '查寝记录',
+            ),
+            AppTab(
+              value: StudentDormitoryListSection.makeupApplications,
+              label: '补卡申请',
+              count: state.makeupItems.isEmpty
+                  ? null
+                  : state.makeupItems.length,
+            ),
+          ],
+          value: state.listSection,
+          onChanged: (section) => ref
+              .read(studentDormitoryControllerProvider.notifier)
+              .selectListSection(section),
+        ),
       ),
       body: PageInitLoadingShell(
         loading:
@@ -330,172 +350,6 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
 // Banner：返回 + 标题 + 副标题 + 申请补卡按钮
 // =============================================================================
 
-class _DormBanner extends StatelessWidget {
-  const _DormBanner({
-    required this.onBack,
-    required this.studentName,
-    required this.onApplyResubmit,
-    required this.section,
-    required this.onSection,
-  });
-
-  final VoidCallback onBack;
-  final String studentName;
-  final VoidCallback? onApplyResubmit;
-  final StudentDormitoryListSection section;
-  final ValueChanged<StudentDormitoryListSection> onSection;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: smartCampusPageBannerDecoration(ui),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: _BackButton(onTap: onBack),
-          ),
-          Positioned(
-            right: ui(12),
-            top: ui(15),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _ApplyResubmitButton(onTap: onApplyResubmit),
-                SizedBox(width: ui(8)),
-                _MainSectionHeader(section: section, onSection: onSection),
-              ],
-            ),
-          ),
-          Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(56)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '查寝管理',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontWeight: AppFont.w600,
-                      height: 1.1,
-                    ),
-                  ),
-                  SizedBox(height: ui(4)),
-                  RichText(
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        color: _kTextHint,
-                        fontWeight: AppFont.w400,
-                        height: 1.1,
-                      ),
-                      children: [
-                        const TextSpan(text: '仅展示本人'),
-                        TextSpan(
-                          text: '「$studentName」',
-                          style: const TextStyle(color: _kPurple),
-                        ),
-                        const TextSpan(text: '的查寝记录;补卡需宿管/班主任审核。'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BackButton extends StatelessWidget {
-  const _BackButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        width: ui(32),
-        height: ui(32),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Icon(
-          Icons.chevron_left_rounded,
-          size: ui(20),
-          color: AppColors.ink,
-        ),
-      ),
-    );
-  }
-}
-
-class _ApplyResubmitButton extends StatelessWidget {
-  const _ApplyResubmitButton({required this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        height: ui(_kBannerControlHeight),
-        padding: EdgeInsets.symmetric(horizontal: ui(12)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              AppAssets.dormCheckApplyMakeupIcon,
-              width: ui(16),
-              height: ui(16),
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: ui(6)),
-            Text(
-              '申请补卡',
-              style: TextStyle(
-                fontSize: ui(12),
-                color: AppColors.ink,
-                fontWeight: AppFont.w600,
-                height: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // =============================================================================
 // 4 张统计卡
 // =============================================================================
@@ -542,7 +396,7 @@ class _DormStatsRow extends StatelessWidget {
           Expanded(
             child: SmartCampusStatCard(
               backgroundAsset: AppAssets.dormCheckStatCard3,
-              label: '异常（未打/晚归）',
+              label: '异常（未打卡 / 晚归）',
               value: abnormal,
             ),
           ),
@@ -552,7 +406,6 @@ class _DormStatsRow extends StatelessWidget {
               backgroundAsset: AppAssets.dormCheckStatCard4,
               label: '补卡待审',
               value: pendingResubmits,
-              valueSuffix: '共$pendingResubmits条申请',
             ),
           ),
         ],
@@ -566,79 +419,6 @@ class _DormStatsRow extends StatelessWidget {
 // =============================================================================
 
 enum _DormTab { all, abnormal }
-
-class _MainSectionHeader extends StatelessWidget {
-  const _MainSectionHeader({required this.section, required this.onSection});
-
-  final StudentDormitoryListSection section;
-  final ValueChanged<StudentDormitoryListSection> onSection;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      constraints: BoxConstraints(minHeight: ui(_kBannerControlHeight)),
-      padding: EdgeInsets.all(ui(2)),
-      decoration: BoxDecoration(
-        color: _kBoardBg,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _MainSectionTabItem(
-            label: '查寝记录',
-            selected: section == StudentDormitoryListSection.checkRecords,
-            onTap: () => onSection(StudentDormitoryListSection.checkRecords),
-          ),
-          _MainSectionTabItem(
-            label: '补卡申请',
-            selected: section == StudentDormitoryListSection.makeupApplications,
-            onTap: () =>
-                onSection(StudentDormitoryListSection.makeupApplications),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MainSectionTabItem extends StatelessWidget {
-  const _MainSectionTabItem({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(7)),
-        decoration: BoxDecoration(
-          color: selected ? _kTextDark : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: selected ? AppColors.surface : _kTextHint,
-            fontWeight: selected ? AppFont.w500 : AppFont.w400,
-            height: 1.2,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.tab, required this.onTab});
@@ -661,71 +441,16 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        Container(
-          height: ui(44),
-          padding: EdgeInsets.all(ui(4)),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(8)),
-            border: Border.all(color: _kBorderSoft),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _TabPill(
-                label: '全部',
-                active: tab == _DormTab.all,
-                onTap: () => onTab(_DormTab.all),
-              ),
-              SizedBox(width: ui(4)),
-              _TabPill(
-                label: '异常',
-                active: tab == _DormTab.abnormal,
-                onTap: () => onTab(_DormTab.abnormal),
-              ),
-            ],
-          ),
+        AppSegmented<_DormTab>(
+          size: AppControlSize.sm,
+          segments: const [
+            AppSegment(value: _DormTab.all, label: '全部'),
+            AppSegment(value: _DormTab.abnormal, label: '异常'),
+          ],
+          value: tab,
+          onChanged: onTab,
         ),
       ],
-    );
-  }
-}
-
-class _TabPill extends StatelessWidget {
-  const _TabPill({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        height: ui(36),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? _kTextDark : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(14),
-            color: active ? AppColors.surface : _kTextSecondary,
-            fontWeight: AppFont.w500,
-            height: 1,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -744,17 +469,11 @@ class _DormCardsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     if (records.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: ui(40)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(12)),
-        ),
-        child: Text(
-          '当前筛选下没有查寝记录',
-          style: TextStyle(fontSize: ui(13), color: _kTextSecondary),
+      return const AppCard(
+        child: AppEmptyState(
+          icon: Icons.bedtime_outlined,
+          title: '没有符合条件的查寝记录',
+          description: '宿管查寝后，结果会出现在这里',
         ),
       );
     }
@@ -795,14 +514,14 @@ class _DormCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    final note = record.note.trim();
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(16)),
       child: Container(
         padding: EdgeInsets.all(ui(12)),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(16)),
+          borderRadius: AppRadius.br12,
           border: Border.all(color: _kBorderSoft),
         ),
         child: Column(
@@ -859,16 +578,15 @@ class _DormCard extends StatelessWidget {
               stampedTime: record.stampedTime,
               stampedHighlight: record.status == _DormStatus.late,
             ),
-            SizedBox(height: ui(10)),
-            Text(
-              '备注：${record.note}',
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kTextHint,
-                fontWeight: AppFont.w400,
-                height: 1,
+            if (note.isNotEmpty && note != '无') ...[
+              SizedBox(height: ui(10)),
+              Text(
+                '备注：$note',
+                style: AppText.caption12.copyWith(
+                  color: AppColors.textTertiary,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -886,13 +604,11 @@ class _MakeupCardsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     if (items.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: ui(48)),
-        alignment: Alignment.center,
-        child: Text(
-          '暂无补卡申请',
-          style: TextStyle(fontSize: ui(14), color: _kTextHint),
+      return const AppCard(
+        child: AppEmptyState(
+          icon: Icons.event_available_outlined,
+          title: '还没有补卡申请',
+          description: '漏打卡时点右上角「申请补卡」',
         ),
       );
     }
@@ -930,24 +646,21 @@ class _MakeupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final (Color bg, Color fg, String label) = switch (item.status) {
-      0 => (AppColors.warningSoft, AppColors.warning, '待审核'),
-      1 => (AppColors.successSoft, const Color(0xFF1CD097), '已通过'),
-      2 => (AppColors.dangerSoft, _kRed, '已驳回'),
-      _ => (
-        AppColors.surfaceSubtle,
-        _kTextSecondary,
-        item.statusText.isEmpty ? '未知' : item.statusText,
+    final status = switch (item.status) {
+      0 => const AppStatusTag(label: '待审核', tone: AppTone.warning),
+      1 => const AppStatusTag(label: '已通过', tone: AppTone.success),
+      2 => const AppStatusTag(label: '已驳回', tone: AppTone.danger),
+      _ => AppStatusTag(
+        label: item.statusText.isEmpty ? '处理中' : item.statusText,
       ),
     };
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(16)),
       child: Container(
         padding: EdgeInsets.all(ui(12)),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(16)),
+          borderRadius: AppRadius.br12,
           border: Border.all(color: _kBorderSoft),
         ),
         child: Column(
@@ -966,20 +679,7 @@ class _MakeupCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ui(6),
-                    vertical: ui(2),
-                  ),
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(ui(4)),
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(fontSize: ui(12), color: fg),
-                  ),
-                ),
+                status,
               ],
             ),
             SizedBox(height: ui(4)),
@@ -1008,28 +708,11 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final (Color bg, String label) = switch (status) {
-      _DormStatus.normal => (_kPurpleStatus, '正常'),
-      _DormStatus.missed => (_kRed, '未打卡'),
-      _DormStatus.late => (_kBlue, '迟到'),
+    return switch (status) {
+      _DormStatus.normal => const AppTag(label: '正常', tone: AppTone.success),
+      _DormStatus.missed => const AppTag(label: '未打卡', tone: AppTone.danger),
+      _DormStatus.late => const AppTag(label: '迟到', tone: AppTone.warning),
     };
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(6), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: AppColors.surface,
-          fontWeight: AppFont.w400,
-          height: 15.24 / 12,
-        ),
-      ),
-    );
   }
 }
 

@@ -106,6 +106,7 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
     final response = await _repository.examStudentStat(
       examId: exam.id,
       subjectId: exam.subjectId,
+      classId: _activeClassId,
     );
     if (response.isSuccess) {
       sink.add(TeacherExamOverviewStats.fromApi(response.data));
@@ -153,10 +154,12 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
     final listResponse = await _repository.examStudentList(
       examId: examId,
       subjectId: subjectId,
+      classId: _activeClassId,
     );
     final statResponse = await _repository.examStudentStat(
       examId: examId,
       subjectId: subjectId,
+      classId: _activeClassId,
     );
     final subjectName = state.exams
         .firstWhere(

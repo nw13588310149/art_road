@@ -29,7 +29,6 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 // —— 颜色 ————————————————————————————————————————————————————————
 const Color _kPageBg = AppColors.page;
 const Color _kPanelBg = AppColors.surfaceSubtle;
-const Color _kStepBg = AppColors.brandWash;
 const Color _kBorderHair = AppColors.line;
 const Color _kTextDark = AppColors.ink;
 const Color _kTextBlack = AppColors.ink;
@@ -60,9 +59,6 @@ extension _EnrollPersonTypeX on _EnrollPersonType {
 
   String get searchHint =>
       this == _EnrollPersonType.student ? '搜索学生姓名' : '搜索老师姓名';
-
-  String get stepLabel =>
-      this == _EnrollPersonType.student ? '选择在籍学生' : '选择任课教师';
 
   String get loadFailPrefix =>
       this == _EnrollPersonType.student ? '学生加载失败' : '老师加载失败';
@@ -1374,8 +1370,17 @@ class _EnrollCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _StepBar(personType: personType),
-          SizedBox(height: ui(8)),
+          AppSteps(
+            labels: const ['选择人员', '上传照片', '确认提交'],
+            current: selectedPerson == null
+                ? 0
+                : photoBytes == null
+                ? 1
+                : confirmed
+                ? 3
+                : 2,
+          ),
+          SizedBox(height: ui(16)),
           _PickerRow(
             classOptions: classOptions,
             selectedClass: selectedClass,
@@ -1411,8 +1416,7 @@ class _EnrollCard extends StatelessWidget {
           SizedBox(height: ui(8)),
           _SubmitButton(
             loading: submitting,
-            onTap:
-                selectedPerson == null || photoBytes == null || !confirmed
+            onTap: selectedPerson == null || photoBytes == null || !confirmed
                 ? null
                 : onSubmit,
           ),
@@ -1423,124 +1427,6 @@ class _EnrollCard extends StatelessWidget {
 }
 
 // —— 步骤进度条 ————————————————————————————————————————————————————
-
-class _StepBar extends StatelessWidget {
-  const _StepBar({required this.personType});
-
-  final _EnrollPersonType personType;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return SizedBox(
-      height: ui(60),
-      child: Row(
-        children: [
-          Expanded(
-            child: _StepCell(
-              iconAsset: 'assets/images/face/1.png',
-              label: personType.stepLabel,
-              isFirst: true,
-              isLast: false,
-            ),
-          ),
-          Expanded(
-            child: _StepCell(
-              iconAsset: 'assets/images/face/2.png',
-              label: '上传照片或使用摄像头截取正脸',
-              isFirst: false,
-              isLast: false,
-            ),
-          ),
-          Expanded(
-            child: _StepCell(
-              iconAsset: 'assets/images/face/3.png',
-              label: '勾选规范确认后提交，进入待审核状态',
-              isFirst: false,
-              isLast: true,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepCell extends StatelessWidget {
-  const _StepCell({
-    required this.iconAsset,
-    required this.label,
-    required this.isFirst,
-    required this.isLast,
-  });
-
-  static const _dotSize = 24.0;
-  static const _lineHeight = 12.0;
-  static const _lineTop = 9.0;
-
-  final String iconAsset;
-  final String label;
-  final bool isFirst;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    // 圆块垂直中心与横线中心对齐：lineTop + lineHeight/2 == dotTop + dotSize/2
-    final dotTop = _lineTop + (_lineHeight - _dotSize) / 2;
-
-    return Stack(
-      alignment: Alignment.topCenter,
-      children: [
-        Padding(
-          padding: EdgeInsets.only(top: ui(_lineTop)),
-          child: Container(
-            height: ui(_lineHeight),
-            decoration: BoxDecoration(
-              color: _kStepBg,
-              borderRadius: BorderRadius.horizontal(
-                left: isFirst ? Radius.circular(ui(12)) : Radius.zero,
-                right: isLast ? Radius.circular(ui(12)) : Radius.zero,
-              ),
-            ),
-          ),
-        ),
-        Column(
-          children: [
-            SizedBox(height: ui(dotTop)),
-            Container(
-              width: ui(_dotSize),
-              height: ui(_dotSize),
-              decoration: BoxDecoration(
-                color: _kPurple,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.surface, width: 2),
-              ),
-              alignment: Alignment.center,
-              child: Image.asset(
-                iconAsset,
-                width: ui(16),
-                height: ui(16),
-                fit: BoxFit.contain,
-              ),
-            ),
-            SizedBox(height: ui(4)),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kTextSecondary,
-                fontWeight: AppFont.w400,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
 
 // —— 行政班 + 录入对象（学生 / 老师）——————————————————————————————————
 

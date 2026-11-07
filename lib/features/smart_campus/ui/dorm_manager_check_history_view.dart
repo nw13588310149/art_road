@@ -37,6 +37,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/popup_selector_field.dart';
+import 'widgets/smart_campus_page_banner.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/dormitory_check_data.dart';
 import '../data/student_dormitory_data.dart' show DormitoryDetailStudentProfile;
@@ -49,7 +50,6 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kCardGreyBg = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
@@ -59,14 +59,13 @@ const Color _kTextMuted = AppColors.textSecondary;
 const Color _kTextHint = AppColors.textPlaceholder;
 const Color _kCalendarHint = AppColors.line;
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleSolid = AppColors.brandSoft;
 const Color _kRed = AppColors.danger;
 const Color _kBlue = Color(0xFF325BFF);
 const Color _kGreen = Color(0xFF1CD097);
 
 // —— 历史卡状态徽章（与 by-room 视图底部完全一致）—————————————————
 enum _HistoryStatus {
-  normal('正常', _kPurpleSolid),
+  normal('正常', AppColors.success),
   absent('未打卡', _kRed),
   missing('缺勤', _kRed),
   late_('晚归', _kBlue);
@@ -137,8 +136,10 @@ class _DormManagerCheckHistoryViewState
   @override
   void initState() {
     super.initState();
-    _days = _buildDays(DateTime.now());
-    _selectedDayIndex = 6;
+    final now = DateTime.now();
+    _days = _buildDays(now);
+    // 当晚查寝结束前默认看前一天，避免首屏全是 0。
+    _selectedDayIndex = now.hour < 23 ? _days.length - 2 : _days.length - 1;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_bootstrap());
     });
@@ -279,62 +280,68 @@ class _DormManagerCheckHistoryViewState
     final stat = managerState.historyStat;
     final historyItems = managerState.historyItems;
     final loadError = managerState.error;
-    return Container(
-      color: _kPageBg,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: ui(20)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Banner(
-              onBack: widget.onBack,
-              onExport: managerState.exporting ? null : _exportHistory,
-            ),
-            SizedBox(height: ui(16)),
-            _StatsRow(
-              beds: stat.bedCount,
-              normal: stat.normalCount,
-              lateReturn: stat.lateCount,
-              absent: stat.notCheckedCount,
-            ),
-            SizedBox(height: ui(16)),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _DateStripCard(
-                  days: _days,
-                  selectedIndex: _selectedDayIndex,
-                  dateText: _selectedDateText,
-                  statText: '共 ${historyItems.length} 条',
-                  onTapDay: _onTapDay,
-                ),
-                SizedBox(height: ui(16)),
-                _FilterRow(
-                  buildingOptions: managerState.managedBuildings,
-                  floorOptions: managerState.floorOptions,
-                  selectedBuilding: _selectedBuilding,
-                  selectedFloor: _selectedFloor,
-                  floorEnabled:
-                      _selectedBuilding.id.isNotEmpty &&
-                      !managerState.loadingFloors,
-                  onBuildingChanged: (v) => unawaited(_onBuildingChanged(v)),
-                  onFloorChanged: (v) => unawaited(_onFloorChanged(v)),
-                ),
-                SizedBox(height: ui(16)),
-                if (loadError.isNotEmpty)
-                  _LoadErrorHint(message: loadError, onRetry: _reloadAll)
-                else if (historyItems.isEmpty)
-                  const _EmptyState()
-                else
-                  _HistoryTable(
-                    items: historyItems,
-                    onHandleException: _handleException,
-                    onTapDetail: (item) => unawaited(_showCheckDetail(item)),
-                  ),
-              ],
-            ),
-          ],
+    return SmartCampusSecondaryPageShell(
+      header: AppPageHeader(
+        title: '查寝历史',
+        subtitle: '按日期查看管辖楼栋的查寝记录，异常记录可在这里处理',
+        onBack: widget.onBack,
+        actions: [
+          AppButton(
+            label: '导出',
+            icon: Icons.download_rounded,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            loading: managerState.exporting,
+            onTap: managerState.exporting || historyItems.isEmpty
+                ? null
+                : _exportHistory,
+          ),
+        ],
+        bottom: _FilterRow(
+          buildingOptions: managerState.managedBuildings,
+          floorOptions: managerState.floorOptions,
+          selectedBuilding: _selectedBuilding,
+          selectedFloor: _selectedFloor,
+          floorEnabled:
+              _selectedBuilding.id.isNotEmpty && !managerState.loadingFloors,
+          onBuildingChanged: (v) => unawaited(_onBuildingChanged(v)),
+          onFloorChanged: (v) => unawaited(_onFloorChanged(v)),
         ),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StatsRow(
+            beds: stat.bedCount,
+            normal: stat.normalCount,
+            lateReturn: stat.lateCount,
+            absent: stat.notCheckedCount,
+          ),
+          SizedBox(height: ui(16)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _DateStripCard(
+                days: _days,
+                selectedIndex: _selectedDayIndex,
+                dateText: _selectedDateText,
+                statText: '共 ${historyItems.length} 条',
+                onTapDay: _onTapDay,
+              ),
+              SizedBox(height: ui(16)),
+              if (loadError.isNotEmpty)
+                _LoadErrorHint(message: loadError, onRetry: _reloadAll)
+              else if (historyItems.isEmpty)
+                const _EmptyState()
+              else
+                _HistoryTable(
+                  items: historyItems,
+                  onHandleException: _handleException,
+                  onTapDetail: (item) => unawaited(_showCheckDetail(item)),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -343,107 +350,6 @@ class _DormManagerCheckHistoryViewState
 // =============================================================================
 // Banner
 // =============================================================================
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack, this.onExport});
-
-  final VoidCallback onBack;
-  final VoidCallback? onExport;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft, width: 1),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(56)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '查寝历史',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontWeight: AppFont.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (onExport != null)
-            Positioned(
-              right: ui(12),
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: InkWell(
-                  onTap: onExport,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  child: Container(
-                    height: ui(32),
-                    padding: EdgeInsets.symmetric(horizontal: ui(12)),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(ui(8)),
-                      border: Border.all(color: _kBorderSoft),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '导出',
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        color: _kPurple,
-                        fontWeight: AppFont.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
 
 class _FilterRow extends StatelessWidget {
   const _FilterRow({
@@ -807,7 +713,7 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: SmartCampusStatCard(
             backgroundAsset: AppAssets.dormCheckStatCard2,
-            label: '正常',
+            label: '已归寝',
             value: normal,
           ),
         ),
@@ -1267,27 +1173,11 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: ui(48)),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(16)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '当日暂无查寝记录',
-            style: TextStyle(
-              fontSize: ui(13),
-              color: _kTextHint,
-              fontWeight: AppFont.w400,
-              height: 1.5,
-            ),
-          ),
-        ],
+    return const AppCard(
+      child: AppEmptyState(
+        icon: Icons.bedtime_outlined,
+        title: '当日暂无查寝记录',
+        description: '查寝结束后会显示查寝结果',
       ),
     );
   }
@@ -1297,17 +1187,17 @@ class _EmptyState extends StatelessWidget {
 // 14 天日历构建
 // =============================================================================
 
+/// 最近 14 天（今天在最后一格），不出现未来日期。
 List<_CalendarDay> _buildDays(DateTime today) {
-  // 沿用 teacher 端布局：今日固定在 index 6，前 6 天 + 今 + 后 7 天，共 14 天。
   const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
   return List<_CalendarDay>.generate(14, (i) {
-    final d = today.add(Duration(days: i - 6));
-    final isToday = i == 6;
+    final d = today.add(Duration(days: i - 13));
+    final isToday = i == 13;
     final wd = (d.weekday - 1) % 7;
     return _CalendarDay(
       date: d,
-      weekdayLabel: isToday ? '今' : weekdayLabels[wd],
-      dayLabel: d.day.toString().padLeft(2, '0'),
+      weekdayLabel: isToday ? '今天' : weekdayLabels[wd],
+      dayLabel: d.day.toString(),
     );
   });
 }

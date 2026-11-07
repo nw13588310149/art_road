@@ -38,7 +38,7 @@ class HomeTodoItem {
   final String title;
   final String subtitle;
 
-  /// 右侧的数字或时间（如「7」「22:10」）；为空时只显示箭头。
+  /// 右侧的数字或时间（如「7」「22:30」）；为空时只显示箭头。
   final String value;
   final String unit;
 

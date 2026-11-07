@@ -37,10 +37,12 @@ class StudentDashboardLayout extends ConsumerStatefulWidget {
       _StudentDashboardLayoutState();
 }
 
-class _StudentDashboardLayoutState extends ConsumerState<StudentDashboardLayout> {
+class _StudentDashboardLayoutState
+    extends ConsumerState<StudentDashboardLayout> {
   List<SmartCampusStatCardData> _stats = _placeholderStudentStats();
-  List<SmartCampusQuickActionData> _actions =
-      smartCampusDashboardDataForRole(SmartCampusRole.student).actions;
+  List<SmartCampusQuickActionData> _actions = smartCampusDashboardDataForRole(
+    SmartCampusRole.student,
+  ).actions;
   String? _studentDormBedLabel;
 
   @override
@@ -94,8 +96,9 @@ class _StudentDashboardLayoutState extends ConsumerState<StudentDashboardLayout>
         examPending: examPending,
         leavePending: leavePending,
       );
-      final baseActions =
-          smartCampusDashboardDataForRole(SmartCampusRole.student).actions;
+      final baseActions = smartCampusDashboardDataForRole(
+        SmartCampusRole.student,
+      ).actions;
 
       setState(() {
         if (indexResp.isSuccess) {
@@ -103,8 +106,9 @@ class _StudentDashboardLayoutState extends ConsumerState<StudentDashboardLayout>
         }
         _actions = applyStudentActionBadges(baseActions, badges);
         if (dormResp.isSuccess) {
-          _studentDormBedLabel =
-              StudentDormitoryInfo.fromJson(dormResp.data).displayLabel;
+          _studentDormBedLabel = StudentDormitoryInfo.fromJson(
+            dormResp.data,
+          ).displayLabel;
         } else {
           _studentDormBedLabel = '—';
         }
@@ -346,7 +350,6 @@ class _StudentDashboardScheduleSection extends ConsumerStatefulWidget {
 
 class _StudentDashboardScheduleSectionState
     extends ConsumerState<_StudentDashboardScheduleSection> {
-  _LessonScheduleData? _currentLesson;
   List<_LessonScheduleData> _todayLessons = const [];
 
   @override
@@ -376,7 +379,6 @@ class _StudentDashboardScheduleSectionState
           AppToast.show(context, courseResp.msg);
         }
         setState(() {
-          _currentLesson = null;
           _todayLessons = const [];
         });
         return;
@@ -385,8 +387,7 @@ class _StudentDashboardScheduleSectionState
       final rows = _extractStudentCourseRows(courseResp);
       final classId = _studentClassIdFromRows(rows);
       if (classId != null && classId.isNotEmpty) {
-        final tcResp =
-            await schoolRepo.schoolTimeConfigList(classId: classId);
+        final tcResp = await schoolRepo.schoolTimeConfigList(classId: classId);
         if (tcResp.isSuccess) {
           final parsed = _parseDashboardTimeConfigs(tcResp);
           if (parsed.isNotEmpty) timeConfigs = parsed;
@@ -401,13 +402,11 @@ class _StudentDashboardScheduleSectionState
         now: today,
       );
       setState(() {
-        _currentLesson = built.current;
         _todayLessons = built.today;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _currentLesson = null;
         _todayLessons = const [];
       });
     }
@@ -415,82 +414,12 @@ class _StudentDashboardScheduleSectionState
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-
-    Widget sectionTitle(String title) => Text(
-      title,
-      style: TextStyle(
-        fontSize: ui(18),
-        height: 1.2,
-        color: const Color(0xFF1A1A1A),
-        fontWeight: AppFont.w500,
-        fontFamily: 'PingFang SC',
-      ),
-    );
-
-    final currentPanel = _CurrentLessonPanel(
-      lesson: _currentLesson,
-      fillHeight: widget.fillRemaining,
-      onOpenSchedule: ({TeacherScheduleFocusTarget? focus}) =>
-          widget.onOpenCheckIn(),
-    );
-    final todayPanel = _TodaySchedulePanel(
+    return _TodayLessonsBoard(
       lessons: _todayLessons,
       fillHeight: widget.fillRemaining,
-      onOpenSchedule: ({TeacherScheduleFocusTarget? focus}) =>
-          widget.onOpenMySchedule(),
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cw = constraints.maxWidth;
-        final stackVertically = !cw.isFinite || cw < ui(690);
-
-        if (stackVertically) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              sectionTitle('当前课程'),
-              SizedBox(height: ui(12)),
-              currentPanel,
-              SizedBox(height: ui(16)),
-              sectionTitle('今日课表'),
-              SizedBox(height: ui(12)),
-              todayPanel,
-            ],
-          );
-        }
-
-        final cardsRow = Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: currentPanel),
-            SizedBox(width: ui(16)),
-            Expanded(child: todayPanel),
-          ],
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: widget.fillRemaining ? MainAxisSize.max : MainAxisSize.min,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: sectionTitle('当前课程')),
-                SizedBox(width: ui(16)),
-                Expanded(child: sectionTitle('今日课表')),
-              ],
-            ),
-            SizedBox(height: ui(12)),
-            if (widget.fillRemaining)
-              Expanded(child: cardsRow)
-            else
-              IntrinsicHeight(child: cardsRow),
-          ],
-        );
-      },
+      onOpenAll: widget.onOpenMySchedule,
+      moreLabel: '我的课表',
+      onTapLesson: (_) => widget.onOpenCheckIn(),
     );
   }
 }
@@ -500,16 +429,14 @@ List<SmartCampusStatCardData> _placeholderStudentStats() {
     SmartCampusStatCardData(label: '今日课程', value: '0'),
     SmartCampusStatCardData(label: '待交作业', value: '0'),
     SmartCampusStatCardData(label: '学期均分', value: '0'),
-    SmartCampusStatCardData(label: '未读通知', value: '0'),
-    SmartCampusStatCardData(label: '最近考试', value: '0'),
+    SmartCampusStatCardData(label: '未读班级通知', value: '0'),
+    SmartCampusStatCardData(label: '下次月考', value: '—'),
     SmartCampusStatCardData(label: '距离省统考', value: '0'),
   ];
 }
 
 List<SmartCampusStatCardData> _parseStudentIndexStats(dynamic raw) {
-  final map = raw is Map
-      ? Map<String, dynamic>.from(raw)
-      : <String, dynamic>{};
+  final map = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
 
   num? avgScore;
   final avgRaw = map['avgScore'];
@@ -535,21 +462,18 @@ List<SmartCampusStatCardData> _parseStudentIndexStats(dynamic raw) {
       label: '今日课程',
       value: displayInt('todayCourseCount'),
     ),
-    SmartCampusStatCardData(
-      label: '待交作业',
-      value: displayInt('homeworkCount'),
-    ),
+    SmartCampusStatCardData(label: '待交作业', value: displayInt('homeworkCount')),
     SmartCampusStatCardData(
       label: '学期均分',
       value: avgScore == null ? '0' : avgScore.toStringAsFixed(1),
     ),
     SmartCampusStatCardData(
-      label: '未读通知',
+      label: '未读班级通知',
       value: displayInt('classNoticeCount'),
     ),
     SmartCampusStatCardData(
-      label: '最近考试',
-      value: _formatStudentExamWeekday(map['monthlyExamDate']?.toString()),
+      label: _studentExamLabel(map['monthlyExamDate']?.toString()),
+      value: _formatStudentExamDate(map['monthlyExamDate']?.toString()),
     ),
     SmartCampusStatCardData(
       label: '距离省统考',
@@ -558,12 +482,16 @@ List<SmartCampusStatCardData> _parseStudentIndexStats(dynamic raw) {
   ];
 }
 
-String _formatStudentExamWeekday(String? isoDate) {
-  if (isoDate == null || isoDate.trim().isEmpty) return '0';
-  final d = DateTime.tryParse(isoDate.trim());
-  if (d == null) return '0';
-  const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-  return weekdays[d.weekday - 1];
+/// 「11 月月考」：下一场月考的名称（按月考日期取月份）。
+String _studentExamLabel(String? isoDate) {
+  final d = DateTime.tryParse(isoDate?.trim() ?? '');
+  return d == null ? '下次月考' : '${d.month} 月月考';
+}
+
+/// 下一场月考的日期「11-15」。
+String _formatStudentExamDate(String? isoDate) {
+  final d = DateTime.tryParse(isoDate?.trim() ?? '');
+  return d == null ? '—' : campusMonthDay(d);
 }
 
 String _formatStudentDaysUntil(String? isoDate) {
@@ -593,10 +521,7 @@ String? _studentClassIdFromRows(List<Map<String, dynamic>> rows) {
 Map<String, dynamic> _flattenStudentCourseRow(Map<String, dynamic> row) {
   final flat = Map<String, dynamic>.from(row);
 
-  void mergeNested(
-    String key,
-    List<MapEntry<String, String>> fieldMap,
-  ) {
+  void mergeNested(String key, List<MapEntry<String, String>> fieldMap) {
     final nested = row[key];
     if (nested is! Map) return;
     final m = Map<String, dynamic>.from(nested);
@@ -674,15 +599,18 @@ _BuiltDashboardSchedule _buildStudentDashboardSchedule({
     final times = _resolveRowTimes(row, timeConfigs);
     if (times.start.isEmpty || times.end.isEmpty) continue;
     final key = '${times.lineNum}|${times.start}|${times.end}';
-    groups.putIfAbsent(
-      key,
-      () => _DashboardSlotGroup(
-        lineNum: times.lineNum,
-        start: times.start,
-        end: times.end,
-        sortKey: _hmSortKey(times.start),
-      ),
-    ).rows.add(row);
+    groups
+        .putIfAbsent(
+          key,
+          () => _DashboardSlotGroup(
+            lineNum: times.lineNum,
+            start: times.start,
+            end: times.end,
+            sortKey: _hmSortKey(times.start),
+          ),
+        )
+        .rows
+        .add(row);
   }
 
   final sorted = groups.values.toList()
@@ -785,12 +713,8 @@ _LessonRowData _lessonRowFromStudentCourse(
       : (className.isNotEmpty ? className : '—');
   final avatarSeed = displayName.isEmpty ? '?' : displayName;
 
-  var courseColor = isSmall
-      ? const Color(0xFF0CAC40)
-      : const Color(0xFF715EFE);
-  var courseBg = isSmall
-      ? const Color(0xFFDFFCF0)
-      : const Color(0xFFE3DFFF);
+  var courseColor = isSmall ? AppColors.success : AppColors.brand;
+  var courseBg = isSmall ? AppColors.successSoft : AppColors.brandTint;
   var tagDotColor = courseColor;
 
   final hex = _schedulePickString(flat, ['color'], '');

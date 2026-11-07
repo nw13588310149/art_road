@@ -255,7 +255,7 @@ List<HomeQuickAction> buildQuickActions({bool isStaff = false, String role = ''}
         campus: HomeCampusTarget.teacherManagement,
       ),
       HomeQuickAction(
-        name: '班级编辑',
+        name: '班级管理',
         icon: Icons.class_outlined,
         campus: HomeCampusTarget.classManagement,
       ),

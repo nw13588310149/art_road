@@ -76,7 +76,6 @@ const Color _kTextHint = AppColors.textPlaceholder;
 const Color _kTextMuted = AppColors.textSecondary;
 const Color _kTextDivider = AppColors.textTertiary;
 const Color _kPurple = AppColors.brand;
-const Color _kBlue = Color(0xFF325BFF);
 const Color _kRed = AppColors.danger;
 const Color _kOrange = AppColors.warning;
 
@@ -101,8 +100,8 @@ extension _NPriorityX on _NPriority {
     _NPriority.urgent => '紧急',
   };
   Color get color => switch (this) {
-    _NPriority.normal => _kTextDark,
-    _NPriority.important => _kBlue,
+    _NPriority.normal => AppColors.textSecondary,
+    _NPriority.important => _kOrange,
     _NPriority.urgent => _kRed,
   };
 
@@ -159,7 +158,7 @@ enum _NStatus { published, scheduled, withdrawn }
 
 extension _NStatusX on _NStatus {
   String get label => switch (this) {
-    _NStatus.published => '已通过',
+    _NStatus.published => '已发布',
     _NStatus.scheduled => '定时中',
     _NStatus.withdrawn => '已撤回',
   };
@@ -228,14 +227,14 @@ class _NotificationRecord {
   /// 推送范围展示文案。
   ///
   /// 「全选」（包含全部角色，或显式包含「全校师生」，或为空表示默认全员）
-  /// 统一展示为「全校师生及访客端」；否则按角色顿号拼接。
+  /// 统一展示为「全校师生及访客」；否则按角色顿号拼接。
   String get scopeLabel {
     final roleLabels = kAdminNoticeScopeLabelToApi.keys;
     final isAll =
         scopes.isEmpty ||
         scopes.contains('全校师生') ||
         roleLabels.every(scopes.contains);
-    return isAll ? '全校师生及访客端' : scopes.join('、');
+    return isAll ? '全校师生及访客' : scopes.join('、');
   }
 }
 
@@ -512,7 +511,19 @@ class _AdminNotificationManagementViewState
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
-      header: _Banner(onBack: widget.onBack, onCreate: _openCreateDrawer),
+      header: AppPageHeader(
+        title: '通知管理',
+        subtitle: '发布、定时与撤回校级通知',
+        onBack: widget.onBack,
+        actions: [
+          AppButton(
+            label: '发布通知',
+            icon: Icons.add_rounded,
+            size: AppButtonSize.sm,
+            onTap: _openCreateDrawer,
+          ),
+        ],
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -550,140 +561,6 @@ class _AdminNotificationManagementViewState
 // =============================================================================
 // banner —— 返回 + 标题 + 副标题 + 新建通知按钮
 // =============================================================================
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack, required this.onCreate});
-
-  final VoidCallback onBack;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: const DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft, width: 1),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(160)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '通知管理',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontWeight: AppFont.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: ui(2)),
-                  Text(
-                    '按类型维护校级通知，支持定时与即时发布，并配置推送范围（学生 / 教师 / 宿管等）',
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontWeight: AppFont.w400,
-                      height: 1.4,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: ui(14),
-            child: _CreateButton(onTap: onCreate),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CreateButton extends StatelessWidget {
-  const _CreateButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: ui(34),
-        padding: EdgeInsets.symmetric(horizontal: ui(10)),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: AppColors.lineSoft),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Image.asset(
-              AppAssets.adminNotificationCreateNoticeIcon,
-              width: ui(18),
-              height: ui(18),
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: ui(4)),
-            Text(
-              '新建通知',
-              style: TextStyle(
-                color: AppColors.ink,
-                fontSize: ui(12),
-                fontWeight: AppFont.w500,
-                height: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // =============================================================================
 // 4 张统计卡 —— 已发布 / 定时中 / 已撤回 / 全部
@@ -1075,7 +952,12 @@ class _TableRow extends StatelessWidget {
               child: _TitleCell(title: record.title, author: record.author),
             ),
             const _HeaderGap(),
-            Expanded(child: _TextCell(text: record.type)),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: AppTag(label: record.type),
+              ),
+            ),
             const _HeaderGap(),
             Expanded(child: _PriorityCell(priority: record.priority)),
             const _HeaderGap(),
@@ -1209,24 +1091,15 @@ class _StatusCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return Align(
       alignment: Alignment.centerLeft,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-        decoration: BoxDecoration(
-          color: status.bg,
-          borderRadius: BorderRadius.circular(ui(4)),
-        ),
-        child: Text(
-          status.label,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: status.fg,
-            fontWeight: AppFont.w400,
-            height: 15.24 / 12,
-          ),
-        ),
+      child: AppStatusTag(
+        label: status.label,
+        tone: switch (status) {
+          _NStatus.published => AppTone.success,
+          _NStatus.scheduled => AppTone.warning,
+          _NStatus.withdrawn => AppTone.neutral,
+        },
       ),
     );
   }
@@ -1247,51 +1120,30 @@ class _ActionCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     // 已撤回：仅「查看」；已发布：「查看 + 删除」；定时中：「编辑 + 删除」。
-    if (status == _NStatus.withdrawn) {
-      return Row(
-        children: [
-          _actionText(text: '查看', color: _kBlue, onTap: onView, ui: ui),
-        ],
-      );
-    }
-    if (status == _NStatus.published) {
-      return Row(
-        children: [
-          _actionText(text: '查看', color: _kBlue, onTap: onView, ui: ui),
-          SizedBox(width: ui(12)),
-          _actionText(text: '删除', color: _kRed, onTap: onDelete, ui: ui),
-        ],
-      );
-    }
+    Widget action(String label, VoidCallback onTap) => AppButton(
+      label: label,
+      variant: AppButtonVariant.text,
+      size: AppButtonSize.sm,
+      onTap: onTap,
+    );
+    final delete = AppButton(
+      label: '删除',
+      variant: AppButtonVariant.danger,
+      size: AppButtonSize.sm,
+      onTap: onDelete,
+    );
     return Row(
       children: [
-        _actionText(text: '编辑', color: _kPurple, onTap: onEdit, ui: ui),
-        SizedBox(width: ui(12)),
-        _actionText(text: '删除', color: _kRed, onTap: onDelete, ui: ui),
+        if (status == _NStatus.scheduled)
+          action('编辑', onEdit)
+        else
+          action('查看', onView),
+        if (status != _NStatus.withdrawn) ...[
+          const SizedBox(width: AppSpace.s4),
+          delete,
+        ],
       ],
-    );
-  }
-
-  Widget _actionText({
-    required String text,
-    required Color color,
-    required VoidCallback onTap,
-    required double Function(num) ui,
-  }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: ui(13),
-          color: color,
-          fontWeight: AppFont.w400,
-          height: 20 / 13,
-        ),
-      ),
     );
   }
 }

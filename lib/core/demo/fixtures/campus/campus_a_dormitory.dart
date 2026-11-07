@@ -33,8 +33,7 @@ class CampusDormCheck {
   /// 场次尚未结束且未打卡（查寝进行中 / 未开始）。
   final bool pending;
 
-  String get id =>
-      '${CampusA.compact(day)}$session${CampusA.two(personIndex)}';
+  String get id => '${CampusA.compact(day)}$session${CampusA.two(personIndex)}';
 
   String get key => '${CampusA.date(day)}|$session|$personIndex';
 
@@ -91,16 +90,17 @@ abstract final class CampusADorm {
         bed,
   ];
 
-  static Map<String, dynamic> _placeFields(DemoDormBed bed) => <String, dynamic>{
-    'buildingId': buildingIdOf(bed.building),
-    'buildingName': bed.building,
-    'floorId': floorIdOf(bed),
-    'floorName': bed.floor,
-    'roomId': roomIdOf(bed),
-    'roomName': bed.room,
-    'bedId': '${roomIdOf(bed)}${bed.bed}',
-    'bedName': '${bed.bed}号床',
-  };
+  static Map<String, dynamic> _placeFields(DemoDormBed bed) =>
+      <String, dynamic>{
+        'buildingId': buildingIdOf(bed.building),
+        'buildingName': bed.building,
+        'floorId': floorIdOf(bed),
+        'floorName': bed.floor,
+        'roomId': roomIdOf(bed),
+        'roomName': bed.room,
+        'bedId': '${roomIdOf(bed)}${bed.bed}',
+        'bedName': '${bed.bed}号床',
+      };
 
   static Map<String, dynamic> _studentFields(int index) {
     final p = CampusA.person(index);
@@ -146,10 +146,7 @@ abstract final class CampusADorm {
     '请假离校未及时销假',
   ];
 
-  static const _morningMissRemarks = <String>[
-    '晨检未刷脸，宿管现场确认在寝',
-    '人脸识别设备故障，待补卡',
-  ];
+  static const _morningMissRemarks = <String>['晨检未刷脸，宿管现场确认在寝', '人脸识别设备故障，待补卡'];
 
   /// 稳定生成的「场次结束后」结果。
   static ({String status, String time, String remark}) _generated(
@@ -248,10 +245,11 @@ abstract final class CampusADorm {
             ? null
             : CampusA.at(day, generated.time);
         final inWindow = !now.isBefore(CampusA.at(day, spec.open));
-        pending = !(inWindow &&
-            checkedAt != null &&
-            !checkedAt.isAfter(now) &&
-            generated.status != '未打卡');
+        pending =
+            !(inWindow &&
+                checkedAt != null &&
+                !checkedAt.isAfter(now) &&
+                generated.status != '未打卡');
       }
     }
     if (pending) {
@@ -285,7 +283,10 @@ abstract final class CampusADorm {
     );
     final session = int.tryParse(id.substring(8, 9));
     final index = int.tryParse(id.substring(9));
-    if (day == null || session == null || index == null || bedOf(index) == null) {
+    if (day == null ||
+        session == null ||
+        index == null ||
+        bedOf(index) == null) {
       return null;
     }
     return check(day, session, index, now);
@@ -294,6 +295,16 @@ abstract final class CampusADorm {
   /// 「当前场次」：当天 12 点前为晨查寝，之后为晚查寝；其它日期按晚查寝。
   static int currentSession(DateTime day, DateTime now) =>
       day == CampusA.dayOf(now) && now.hour < 12 ? 2 : 1;
+
+  /// 最近一个已经开始的查寝批次：晨查寝 06:40 起、晚查寝 21:30 起；
+  /// 当天晨查寝开始前取前一晚的晚查寝。工作台指标按这个批次统计。
+  static ({DateTime day, int session}) latestBatch(DateTime now) {
+    final today = CampusA.dayOf(now);
+    final clock = CampusA.hm(now);
+    if (clock.compareTo('21:30') >= 0) return (day: today, session: 1);
+    if (clock.compareTo('06:40') >= 0) return (day: today, session: 2);
+    return (day: today.subtract(const Duration(days: 1)), session: 1);
+  }
 
   static Map<String, dynamic> record(CampusDormCheck c) {
     final bed = bedOf(c.personIndex);
@@ -350,7 +361,10 @@ abstract final class CampusADorm {
     return list;
   }
 
-  static ({DateTime from, DateTime to}) _range(DemoRequest req, int fallbackDays) {
+  static ({DateTime from, DateTime to}) _range(
+    DemoRequest req,
+    int fallbackDays,
+  ) {
     final today = CampusA.today();
     final to = CampusA.parseDay(req.str('endDate')) ?? today;
     final from =
@@ -489,7 +503,8 @@ abstract final class CampusADorm {
 
   // ── 统计 ────────────────────────────────────────────────────────────
 
-  static Iterable<int> get _allPeople => DemoCampusData.beds.map((b) => b.personIndex);
+  static Iterable<int> get _allPeople =>
+      DemoCampusData.beds.map((b) => b.personIndex);
 
   static ({int beds, int normal, int late, int notChecked}) _sessionStat(
     Iterable<int> people,
@@ -527,8 +542,8 @@ abstract final class CampusADorm {
   static Map<String, dynamic> _index() {
     final now = DateTime.now();
     final today = CampusA.dayOf(now);
-    final session = currentSession(today, now);
-    final stat = _sessionStat(_allPeople, today, session);
+    final batch = latestBatch(now);
+    final stat = _sessionStat(_allPeople, batch.day, batch.session);
     final recent = checks(
       from: CampusA.daysAgo(1),
       to: today,
@@ -560,14 +575,16 @@ abstract final class CampusADorm {
       'todayNormalCount': stat.normal,
       'todayLateCount': stat.late,
       'todayAbsentCount': stat.notChecked,
+      'checkType': sessionName(batch.session),
+      'checkDate': CampusA.date(batch.day),
       'pendingMakeupCount': makeupList().where((m) => m['status'] == 0).length,
       'unhandledExceptionCount': unhandled,
       'managedAreaList': [
-        for (final b in _buildings()) <String, dynamic>{'buildingName': b['buildingName']},
+        for (final b in _buildings())
+          <String, dynamic>{'buildingName': b['buildingName']},
       ],
       'currentTask': current ?? duties.first,
       'todayDutyList': duties,
-      'checkType': sessionName(session),
     };
   }
 
@@ -668,8 +685,9 @@ abstract final class CampusADorm {
     return value.isEmpty ? null : value;
   }
 
-  static Iterable<int> _classPeople(String classId) =>
-      CampusA.studentsOf(classId).map((p) => p.index).where((i) => bedOf(i) != null);
+  static Iterable<int> _classPeople(String classId) => CampusA.studentsOf(
+    classId,
+  ).map((p) => p.index).where((i) => bedOf(i) != null);
 
   /// 学生最近一次已有结果的查寝（班级查寝动态）。
   static CampusDormCheck _latest(int index, DateTime now) {
@@ -705,7 +723,21 @@ abstract final class CampusADorm {
     return CampusAXlsx.build(
       sheetName: '查寝记录',
       rows: [
-        const ['查寝日期', '场次', '宿舍楼', '楼层', '宿舍', '床位', '学生', '学号', '班级', '查寝状态', '打卡时间', '备注', '处理状态'],
+        const [
+          '查寝日期',
+          '场次',
+          '宿舍楼',
+          '楼层',
+          '宿舍',
+          '床位',
+          '学生',
+          '学号',
+          '班级',
+          '查寝状态',
+          '打卡时间',
+          '备注',
+          '处理状态',
+        ],
         for (final c in list)
           () {
             final r = record(c);
@@ -720,7 +752,9 @@ abstract final class CampusADorm {
               r['studentNo'].toString(),
               r['className'].toString(),
               r['status'].toString(),
-              r['checkTime'].toString().isEmpty ? '—' : r['checkTime'].toString(),
+              r['checkTime'].toString().isEmpty
+                  ? '—'
+                  : r['checkTime'].toString(),
               r['remark'].toString(),
               c.abnormal ? r['handleStatusText'].toString() : '—',
             ];
@@ -752,7 +786,8 @@ abstract final class CampusADorm {
         'checkInDate': '2026-07-12',
         'roommates': [
           for (final other in _beds(roomId: roomIdOf(bed)))
-            if (other.personIndex != index) CampusA.person(other.personIndex).name,
+            if (other.personIndex != index)
+              CampusA.person(other.personIndex).name,
         ],
         'dormManager': manager.name,
         'dormManagerPhone': manager.phone,
@@ -767,7 +802,9 @@ abstract final class CampusADorm {
         'totalCount': list.length,
         'normalCount': list.where((c) => c.status == '正常').length,
         'lateCount': list.where((c) => c.status == '晚归').length,
-        'absentCount': list.where((c) => c.status != '正常' && c.status != '晚归').length,
+        'absentCount': list
+            .where((c) => c.status != '正常' && c.status != '晚归')
+            .length,
         'pendingMakeupCount': makeupList()
             .where((m) => m['personIndex'] == index && m['status'] == 0)
             .length,
@@ -868,10 +905,10 @@ abstract final class CampusADorm {
     const base = '/app/school/v2/dormitory';
 
     r.post('$base/noticeList', (req) {
-      return CampusA.page(
-        [for (final n in CampusANotices.forScope('dormitory')) CampusANotices.row(n)],
-        req,
-      );
+      return CampusA.page([
+        for (final n in CampusANotices.forScope('dormitory'))
+          CampusANotices.row(n),
+      ], req);
     });
 
     r.post('$base/noticeDetail', (req) {
@@ -1056,13 +1093,10 @@ abstract final class CampusADorm {
             return (c, record(c));
           }(),
       ];
-      return CampusA.page(
-        [
-          for (final item in list)
-            if (_statusMatches(item.$1, status)) item.$2,
-        ],
-        req,
-      );
+      return CampusA.page([
+        for (final item in list)
+          if (_statusMatches(item.$1, status)) item.$2,
+      ], req);
     });
 
     r.post('$base/classDormitoryCheckStat', (req) {
@@ -1074,7 +1108,9 @@ abstract final class CampusADorm {
         'studentCount': people.length,
         'normalCount': list.where((c) => c.status == '正常').length,
         'lateCount': list.where((c) => c.status == '晚归').length,
-        'absentCount': list.where((c) => c.status != '正常' && c.status != '晚归').length,
+        'absentCount': list
+            .where((c) => c.status != '正常' && c.status != '晚归')
+            .length,
         'makeupApprovedCount': makeupList()
             .where(
               (m) =>

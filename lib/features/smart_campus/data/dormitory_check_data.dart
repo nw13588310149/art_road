@@ -1,6 +1,7 @@
 /// 宿管端「按宿舍查寝」API 数据模型与 JSON 解析。
 library;
 
+import 'campus_format.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/network/snowflake_id.dart';
 import '../../school/data/school_config_data.dart';
@@ -303,6 +304,7 @@ class DormitoryIndexOverview {
     this.managedAreas = const [],
     this.currentTask,
     this.todayDutyTasks = const [],
+    this.batchLabel = '',
   });
 
   final int managedBuildingCount;
@@ -315,6 +317,9 @@ class DormitoryIndexOverview {
   final List<String> managedAreas;
   final DormitoryDutyTask? currentTask;
   final List<DormitoryDutyTask> todayDutyTasks;
+
+  /// 指标统计的查寝批次，如「11-07 晨查寝」；接口未给出时为空。
+  final String batchLabel;
 
   static const zero = DormitoryIndexOverview();
 
@@ -329,6 +334,7 @@ class DormitoryIndexOverview {
     List<String>? managedAreas,
     DormitoryDutyTask? currentTask,
     List<DormitoryDutyTask>? todayDutyTasks,
+    String? batchLabel,
   }) {
     return DormitoryIndexOverview(
       managedBuildingCount: managedBuildingCount ?? this.managedBuildingCount,
@@ -342,6 +348,7 @@ class DormitoryIndexOverview {
       managedAreas: managedAreas ?? this.managedAreas,
       currentTask: currentTask ?? this.currentTask,
       todayDutyTasks: todayDutyTasks ?? this.todayDutyTasks,
+      batchLabel: batchLabel ?? this.batchLabel,
     );
   }
 }
@@ -568,7 +575,15 @@ DormitoryIndexOverview parseDormitoryIndexOverview(dynamic raw) {
     managedAreas: areas.where((v) => v.trim().isNotEmpty).toList(),
     currentTask: currentTask,
     todayDutyTasks: dutyTasks,
+    batchLabel: _batchLabel(map),
   );
+}
+
+String _batchLabel(Map<String, dynamic> map) {
+  final type = map['checkType']?.toString().trim() ?? '';
+  final day = campusParseTime(map['checkDate']);
+  if (type.isEmpty) return '';
+  return day == null ? type : '${campusMonthDay(day)} $type';
 }
 
 List<DormitoryCheckHistoryItem> parseDormitoryCheckHistoryList(dynamic raw) {

@@ -45,7 +45,10 @@ class TeacherNoticeListItem {
         : record.author;
     return TeacherNoticeListItem(
       id: record.id,
-      tag: record.type.isNotEmpty ? record.type : '通知',
+      // 「紧急」是优先级而不是类型：紧急通知在列表里显示「紧急」标签。
+      tag: record.priority.label == '紧急'
+          ? '紧急'
+          : (record.type.isNotEmpty ? record.type : '通知'),
       title: record.title,
       time: record.time,
       content: record.content,

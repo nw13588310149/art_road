@@ -41,14 +41,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
-import '../../../core/widgets/segment_toggle.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../../core/widgets/smooth_circle_network_avatar.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/admin_repository.dart';
 import '../data/course_sign_data.dart';
-import '../data/smart_campus_count_badge.dart';
 import 'widgets/course_sign_status_picker.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
@@ -69,9 +67,9 @@ const Color _kPurpleSoftBg = AppColors.brandTint;
 const Color _kGreen = AppColors.success;
 const Color _kGreenBg = AppColors.successSoft;
 const Color _kOrange = AppColors.warning;
-const Color _kOrangeBg = Color(0xFFFFF7E6);
+const Color _kOrangeBg = AppColors.warningSoft;
 const Color _kRed = AppColors.danger;
-const Color _kRedBg = Color(0xFFFFEEEF);
+const Color _kRedBg = AppColors.dangerSoft;
 
 const double _kSignBadgeHeight = 22;
 const double _kSignBadgeHorizontalPadding = 8;
@@ -102,15 +100,32 @@ class _AdminSignManagementViewState extends State<AdminSignManagementView> {
     return SmartCampusSecondaryPageShell(
       backgroundColor: Colors.transparent,
       bodyTopClipRadius: 8,
-      header: _SignBanner(
+      header: AppPageHeader(
+        title: '签课管理',
+        subtitle: '大课批量签到 · 小课签到审核 · 补签审核',
         onBack: widget.onBack,
-        selectedTab: _tab,
-        onSelectTab: (t) {
-          if (_tab == t) return;
-          setState(() => _tab = t);
-        },
-        pendingMakeupCount: _pendingMakeupCount,
-        onOpenMakeupAudit: _openMakeupAuditDrawer,
+        actions: [
+          AppButton(
+            label: _pendingMakeupCount > 0
+                ? '补签审核（$_pendingMakeupCount）'
+                : '补签审核',
+            icon: Icons.fact_check_outlined,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: _openMakeupAuditDrawer,
+          ),
+        ],
+        bottom: AppTabs<_SignTab>(
+          tabs: const [
+            AppTab(value: _SignTab.large, label: '大课管理'),
+            AppTab(value: _SignTab.small, label: '小课管理'),
+          ],
+          value: _tab,
+          onChanged: (t) {
+            if (_tab == t) return;
+            setState(() => _tab = t);
+          },
+        ),
       ),
       bodyScrollable: false,
       body: IndexedStack(
@@ -181,209 +196,6 @@ class _AdminSignManagementViewState extends State<AdminSignManagementView> {
 }
 
 // ─── banner ────────────────────────────────────────────────────────────────
-
-class _SignBanner extends StatelessWidget {
-  const _SignBanner({
-    required this.onBack,
-    required this.selectedTab,
-    required this.onSelectTab,
-    required this.pendingMakeupCount,
-    required this.onOpenMakeupAudit,
-  });
-
-  final VoidCallback onBack;
-  final _SignTab selectedTab;
-  final ValueChanged<_SignTab> onSelectTab;
-  final int pendingMakeupCount;
-  final VoidCallback onOpenMakeupAudit;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(62),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          // 返回按钮
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _kCardBg,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-          // 标题（居中）
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '签课管理',
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    color: _kTextDark,
-                    fontWeight: AppFont.w600,
-                    height: 1.2,
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                Text(
-                  '大课一键入册 · 小课全流程签到 · 补签审核',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: _kTextHint,
-                    fontWeight: AppFont.w400,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // 右侧：大课 / 小课切换 + 补签审核入口
-          Positioned(
-            right: ui(12),
-            top: ui(14),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _SegmentControl(selected: selectedTab, onSelect: onSelectTab),
-                SizedBox(width: ui(8)),
-                _MakeupBadgeButton(
-                  count: pendingMakeupCount,
-                  onTap: onOpenMakeupAudit,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentControl extends StatelessWidget {
-  const _SegmentControl({required this.selected, required this.onSelect});
-
-  final _SignTab selected;
-  final ValueChanged<_SignTab> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return SegmentToggle(
-      selectedIndex: selected == _SignTab.large ? 0 : 1,
-      fontSize: 12,
-      trackColor: _kPageBg,
-      thumbColor: _kTextDark,
-      options: const [
-        SegmentToggleOption(label: '大课管理'),
-        SegmentToggleOption(label: '小课管理'),
-      ],
-      onChanged: (i) => onSelect(i == 0 ? _SignTab.large : _SignTab.small),
-    );
-  }
-}
-
-class _MakeupBadgeButton extends StatelessWidget {
-  const _MakeupBadgeButton({required this.count, required this.onTap});
-
-  final int count;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            height: ui(32),
-            padding: EdgeInsets.symmetric(horizontal: ui(12)),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(ui(8)),
-              border: Border.all(color: _kBorderSoft),
-            ),
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  AppAssets.adminSignManagementMakeupAuditIcon,
-                  width: ui(18),
-                  height: ui(18),
-                  fit: BoxFit.contain,
-                ),
-                SizedBox(width: ui(4)),
-                Text(
-                  '补签审核',
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: AppColors.ink,
-                    fontWeight: AppFont.w600,
-                    height: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (count > 0)
-            Positioned(
-              right: ui(-6),
-              top: ui(-6),
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: ui(4),
-                  vertical: ui(2),
-                ),
-                decoration: BoxDecoration(
-                  color: _kRed,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                ),
-                child: Text(
-                  smartCampusCountBadgeLabel(count)!,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: AppColors.surface,
-                    fontWeight: AppFont.w500,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
 
 // =============================================================================
 // 大课管理 Tab
@@ -3106,7 +2918,7 @@ class _SignProgressPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(ui(6)),
       ),
       child: Text(
-        '$signed / $total 已签',
+        '已签 $signed / $total',
         style: TextStyle(
           fontSize: ui(12),
           color: isAll ? _kGreen : _kOrange,
@@ -3374,7 +3186,7 @@ String _largeClassSessionSubtitle(CourseSignSession session) {
   if (session.teacherName.isNotEmpty) {
     parts.add('任课：${session.teacherName}');
   }
-  parts.add('${session.students.length}名学生');
+  parts.add('${session.students.length} 人');
   return parts.join(' · ');
 }
 
@@ -3393,7 +3205,7 @@ String _smallClassSessionSubtitle(CourseSignSession session) {
   if (session.classroom.isNotEmpty && session.classroom != '--') {
     parts.add(session.classroom);
   }
-  parts.add('${session.students.length}名学生');
+  parts.add('${session.students.length} 人');
   return parts.join(' · ');
 }
 

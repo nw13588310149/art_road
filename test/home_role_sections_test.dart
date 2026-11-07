@@ -199,8 +199,8 @@ Future<void> _pumpHome(WidgetTester tester, String role) async {
         ),
         schoolDormitoryCheckConfigProvider.overrideWith(
           (ref) async => const SchoolDormitoryCheckConfig(
-            eveningDeadline: '22:10前',
-            morningDeadline: '07:10前',
+            eveningDeadline: '22:30前',
+            morningDeadline: '07:20前',
           ),
         ),
         homeEbookShelfProvider.overrideWith(
@@ -367,10 +367,10 @@ void main() {
 
       final dorm = buildHomeTodos(
         'dormManager',
-        const HomeTodoInput(eveningCheck: '22:10前', morningCheck: '07:10前'),
+        const HomeTodoInput(eveningCheck: '22:30前', morningCheck: '07:20前'),
       );
-      expect(dorm.first.value, '22:10');
-      expect(dorm[1].value, '07:10');
+      expect(dorm.first.value, '22:30');
+      expect(dorm[1].value, '07:20');
       expect(dorm.map((i) => i.action), contains(HomeTodoAction.dormCheckIn));
       expect(dorm.last.attention, isFalse);
 
@@ -451,7 +451,7 @@ void main() {
       );
       expect(find.text('今日待办'), findsOneWidget);
       expect(find.text('晚查寝'), findsOneWidget);
-      expect(find.text('22:10'), findsOneWidget);
+      expect(find.text('22:30'), findsOneWidget);
       expect(find.text('按宿舍查寝'), findsWidgets);
       expect(find.textContaining('学情速览'), findsNothing);
       expect(find.text('今日课程'), findsNothing);

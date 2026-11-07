@@ -73,12 +73,13 @@ class StudyNumberText extends StatelessWidget {
   }
 }
 
-/// 名次：「第 7 名 / 38 人」；[totalUnit] 可改为「人参考」等说明分母口径。
+/// 名次：「第 7 名 / 38 人参考」。分母是本场实际参考人数（缺考不计），会小于
+/// 在读或班级人数，所以默认写明「人参考」。
 class StudyRankText extends StatelessWidget {
   const StudyRankText({
     required this.rank,
     this.total,
-    this.totalUnit = '人',
+    this.totalUnit = '人参考',
     this.size = 16,
     this.color = AppColors.ink,
     super.key,

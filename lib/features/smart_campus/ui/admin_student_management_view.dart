@@ -44,6 +44,18 @@ const double _kFaceImgPreviewHeight = 132;
 
 enum _StudentStatus { enrolled, suspended, transferring, graduated }
 
+/// 「女生公寓1号楼 · 1层 · 101 · 1号床」→「女生公寓1号楼 101 · 1号床」。
+String _compactDorm(String raw) {
+  final parts = raw
+      .split('·')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty && !s.endsWith('层'))
+      .toList();
+  if (parts.isEmpty) return raw.trim();
+  if (parts.length == 1) return parts.first;
+  return '${parts.first} ${parts.sublist(1).join(' · ')}';
+}
+
 /// 把后端 `status` 字段（数字 / 字符串 / 中文）兜底映射到本地枚举：
 /// - 1 / 'enrolled' / '在籍' → enrolled
 /// - 2 / 'suspended' / '休学' → suspended
@@ -81,32 +93,6 @@ extension on _StudentStatus {
         return '毕业';
     }
   }
-
-  Color get bg {
-    switch (this) {
-      case _StudentStatus.enrolled:
-        return _kPurpleSoft;
-      case _StudentStatus.suspended:
-        return const Color(0xFFFFE7C2);
-      case _StudentStatus.transferring:
-        return const Color(0xFFD2EAFF);
-      case _StudentStatus.graduated:
-        return const Color(0xFFE0E0E0);
-    }
-  }
-
-  Color get fg {
-    switch (this) {
-      case _StudentStatus.enrolled:
-        return _kPurple;
-      case _StudentStatus.suspended:
-        return const Color(0xFFE89B30);
-      case _StudentStatus.transferring:
-        return const Color(0xFF1F77E0);
-      case _StudentStatus.graduated:
-        return AppColors.textSecondary;
-    }
-  }
 }
 
 class _Student {
@@ -127,7 +113,7 @@ class _Student {
     this.phone = '17656287947',
     this.parentPhone = '17656287947',
     this.recentChange = '无',
-    this.remark = '专业主项稳定，文化科需跟进英语作文。',
+    this.remark = '专业课稳定，文化课需跟进英语作文。',
     this.gender = '',
   });
 
@@ -266,7 +252,7 @@ class _Student {
     final classInfo = className.isEmpty ? '—' : className;
 
     final dormInfo = isLiving
-        ? (dormName.isEmpty ? '宿舍' : '宿舍·$dormName')
+        ? (dormName.isEmpty ? '住校' : _compactDorm(dormName))
         : '走读';
 
     // 后端主键（雪花 long）→ 只接受 String，禁止 num.toString() 污染精度。
@@ -333,7 +319,9 @@ class _Student {
     final bedInfo = _pickString(dormitoryUser, ['bedInfo'], '');
     final bedId = _pickString(dormitoryUser, ['bedId'], '');
     final isLiving = bedInfo.isNotEmpty || (bedId.isNotEmpty && bedId != '0');
-    final dormInfo = isLiving ? (bedInfo.isEmpty ? '宿舍' : '宿舍·$bedInfo') : '走读';
+    final dormInfo = isLiving
+        ? (bedInfo.isEmpty ? '住校' : _compactDorm(bedInfo))
+        : '走读';
     final dorm = isLiving ? (bedInfo.isEmpty ? '宿舍' : bedInfo) : '走读';
 
     final phone = _pickString(user, ['mobile', 'phone'], '');
@@ -692,7 +680,11 @@ class _AdminStudentManagementViewState
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kBg,
       bodyTopClipRadius: 8,
-      header: _Banner(onBack: widget.onBack),
+      header: AppPageHeader(
+        title: '学生管理',
+        subtitle: '管理全部学生的班级、学籍与住宿信息',
+        onBack: widget.onBack,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -722,7 +714,7 @@ class _AdminStudentManagementViewState
           ),
           SizedBox(height: ui(20)),
           Text(
-            '当前结果 ${list.length}人',
+            '共 ${list.length} 人',
             style: TextStyle(
               fontSize: ui(12),
               height: 1.2,
@@ -740,82 +732,6 @@ class _AdminStudentManagementViewState
 // ============================================================================
 // Banner
 // ============================================================================
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(62),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onBack,
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorder, width: 1),
-                ),
-                child: Icon(
-                  Icons.chevron_left,
-                  size: ui(20),
-                  color: _kTextPrimary,
-                ),
-              ),
-            ),
-          ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '学生管理',
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    height: 1.2,
-                    fontWeight: AppFont.w600,
-                    color: _kTextPrimary,
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                Text(
-                  '全量在籍视图：行政班、学籍状态、住宿与联系方式；支持检索与导出。与学生端名册同源口径。',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    height: 1.2,
-                    color: _kTextHint,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ============================================================================
 // 4 统计卡
@@ -1268,31 +1184,18 @@ class _StudentCard extends StatelessWidget {
                 ],
               ),
             ),
-            // 右上角状态徽章
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                height: ui(22),
-                padding: EdgeInsets.symmetric(horizontal: ui(8)),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: student.status.bg,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(ui(12)),
-                    bottomLeft: Radius.circular(ui(12)),
-                  ),
-                ),
-                child: Text(
-                  student.status.label,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    height: 1.0,
-                    color: student.status.fg,
-                  ),
+            // 只有非在籍（休学 / 转学 / 毕业）才显示状态。
+            if (student.status != _StudentStatus.enrolled)
+              Positioned(
+                right: ui(12),
+                top: ui(10),
+                child: AppStatusTag(
+                  label: student.status.label,
+                  tone: student.status == _StudentStatus.graduated
+                      ? AppTone.neutral
+                      : AppTone.warning,
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -1310,38 +1213,7 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final initial = name.isEmpty ? '·' : name.characters.first;
-    final placeholder = Container(
-      width: ui(size),
-      height: ui(size),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: _kPurpleSoft,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: ui(size * 0.4),
-          height: 1.0,
-          fontWeight: AppFont.w600,
-          color: _kPurple,
-        ),
-      ),
-    );
-    if (avatarUrl.isEmpty) {
-      return placeholder;
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Image.network(
-        avatarUrl,
-        width: ui(size),
-        height: ui(size),
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => placeholder,
-      ),
-    );
+    return AppAvatar(name: name, url: avatarUrl, size: ui(size));
   }
 }
 

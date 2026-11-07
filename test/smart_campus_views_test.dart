@@ -153,4 +153,29 @@ void main() {
       '群聊': (c) => c.openGroupChat(),
     });
   });
+
+  testWidgets('dorm manager campus pages render without overflow', (
+    tester,
+  ) async {
+    await _visitAll(tester, DemoAccounts.dormManager, {
+      '按宿舍查寝': (c) => c.openDormCheckByRoom(),
+      '查寝动态': (c) => c.openDormDynamic(),
+      '查寝历史': (c) => c.openDormHistory(),
+      '到岗打卡': (c) => c.openDormCheckInManagement(),
+      '宿管请假': (c) => c.openMyTeacherLeave(),
+    });
+  });
+
+  testWidgets('admin campus pages render without overflow', (tester) async {
+    await _visitAll(tester, DemoAccounts.admin, {
+      '学生管理': (c) => c.openStudentManagement(),
+      '教师管理': (c) => c.openTeacherManagement(),
+      '班级管理': (c) => c.openClassManagement(),
+      '排课与课表': (c) => c.openScheduleManagement(),
+      '签课管理': (c) => c.openSignManagement(),
+      '教职工请假审批': (c) => c.openDormLeaveApproval(),
+      '人脸库': (c) => c.openFaceLibrary(),
+      '通知管理': (c) => c.openNotificationManagement(),
+    });
+  });
 }

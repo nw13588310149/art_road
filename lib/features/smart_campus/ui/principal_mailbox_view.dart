@@ -38,13 +38,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../courseware/state/cloud_drive_controller.dart';
 import '../../courseware/ui/courseware_file_picker.dart';
+import '../data/campus_format.dart';
+import 'widgets/smart_campus_page_banner.dart';
 import '../../shell/ui/shell_layout.dart';
-import '../../../core/constants/app_assets.dart';
 import '../data/principal_mailbox_repository.dart';
 import 'mailbox_attachment_widgets.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPageBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
@@ -85,17 +85,6 @@ extension _MailboxStatusX on _MailboxStatus {
         return '已回复';
       case _MailboxStatus.closed:
         return '已关闭';
-    }
-  }
-
-  Color get color {
-    switch (this) {
-      case _MailboxStatus.sent:
-        return AppColors.brand;
-      case _MailboxStatus.replied:
-        return AppColors.success;
-      case _MailboxStatus.closed:
-        return AppColors.textPlaceholder;
     }
   }
 }
@@ -159,7 +148,7 @@ class _PrincipalMailboxViewState extends ConsumerState<PrincipalMailboxView> {
 
   // compose
   _MsgKind _kind = _MsgKind.suggestion;
-  bool _anonymous = true;
+  bool _anonymous = false;
   final _bodyCtrl = TextEditingController();
   _AttachmentSlot? _attachment;
   bool _submitting = false;
@@ -373,7 +362,10 @@ class _PrincipalMailboxViewState extends ConsumerState<PrincipalMailboxView> {
       case _MailboxMode.compose:
         return _ComposeForm(
           kind: _kind,
-          onKindChanged: (k) => setState(() => _kind = k),
+          onKindChanged: (k) => setState(() {
+            _kind = k;
+            if (k == _MsgKind.report) _anonymous = true;
+          }),
           anonymous: _anonymous,
           onAnonymousChanged: (v) => setState(() => _anonymous = v),
           bodyCtrl: _bodyCtrl,
@@ -396,232 +388,29 @@ class _PrincipalMailboxViewState extends ConsumerState<PrincipalMailboxView> {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: _kPageBg,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(ui(16)),
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
+    return SmartCampusSecondaryPageShell(
+      bodyScrollable: false,
+      header: AppPageHeader(
+        title: '校长信箱',
+        subtitle: '写给画室负责人（校长）的建议、举报或其他诉求，只有校长能看到',
+        onBack: widget.onBack,
+        bottom: AppTabs<_MailboxMode>(
+          tabs: const [
+            AppTab(value: _MailboxMode.compose, label: '写信'),
+            AppTab(value: _MailboxMode.submitted, label: '已提交'),
+          ],
+          value: _mode,
+          onChanged: _switchMode,
+        ),
+      ),
+      body: Container(
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(
           color: _kCardBg,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _HeaderGradientBar(
-                onBack: widget.onBack,
-                mode: _mode,
-                onCompose: () => _switchMode(_MailboxMode.compose),
-                onSubmitted: () => _switchMode(_MailboxMode.submitted),
-              ),
-              Expanded(child: _buildBody()),
-            ],
-          ),
+          borderRadius: AppRadius.br12,
         ),
-      ),
-    );
-  }
-}
-
-class _HeaderGradientBar extends StatelessWidget {
-  const _HeaderGradientBar({
-    required this.onBack,
-    required this.mode,
-    required this.onCompose,
-    required this.onSubmitted,
-  });
-
-  final VoidCallback onBack;
-  final _MailboxMode mode;
-  final VoidCallback onCompose;
-  final VoidCallback onSubmitted;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final String title;
-    final String subtitle;
-    switch (mode) {
-      case _MailboxMode.compose:
-        title = '校长信箱';
-        subtitle = '支持匿名、文字与附件上传';
-        break;
-      case _MailboxMode.submitted:
-        title = '校长信箱';
-        subtitle = '我提交的信件，可在下方按状态筛选';
-        break;
-    }
-    return SizedBox(
-      height: ui(82),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              AppAssets.xiaoquanHeaderBg,
-              fit: BoxFit.cover,
-              alignment: Alignment.centerRight,
-            ),
-          ),
-          Positioned(
-            left: ui(20),
-            top: ui(20),
-            child: _BackChip(onTap: onBack),
-          ),
-          Positioned(
-            top: ui(20),
-            left: 0,
-            right: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    color: _kTextDark,
-                    fontWeight: AppFont.w600,
-                    height: 1.2,
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: _kTextHint,
-                    fontWeight: AppFont.w400,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            right: ui(20),
-            top: ui(25),
-            child: _MailboxModeSegment(
-              mode: mode,
-              onCompose: onCompose,
-              onSubmitted: onSubmitted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BackChip extends StatelessWidget {
-  const _BackChip({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        width: ui(32),
-        height: ui(32),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Icon(
-          Icons.chevron_left_rounded,
-          size: ui(20),
-          color: AppColors.ink,
-        ),
-      ),
-    );
-  }
-}
-
-class _MailboxModeSegment extends StatelessWidget {
-  const _MailboxModeSegment({
-    required this.mode,
-    required this.onCompose,
-    required this.onSubmitted,
-  });
-
-  final _MailboxMode mode;
-  final VoidCallback onCompose;
-  final VoidCallback onSubmitted;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(32),
-      padding: EdgeInsets.all(ui(2)),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _SegmentItem(
-            label: '写信',
-            selected: mode == _MailboxMode.compose,
-            weight: FontWeight.w500,
-            onTap: onCompose,
-          ),
-          _SegmentItem(
-            label: '已提交',
-            selected: mode == _MailboxMode.submitted,
-            weight: FontWeight.w500,
-            onTap: onSubmitted,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentItem extends StatelessWidget {
-  const _SegmentItem({
-    required this.label,
-    required this.selected,
-    required this.weight,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final FontWeight weight;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? _kPurple : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: selected ? AppColors.surface : _kTextHint,
-            fontWeight: weight,
-            height: 1,
-          ),
-        ),
+        child: _buildBody(),
       ),
     );
   }
@@ -656,56 +445,81 @@ class _ComposeForm extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Padding(
-      padding: EdgeInsets.fromLTRB(ui(16), ui(14), ui(16), ui(0)),
+      padding: EdgeInsets.fromLTRB(ui(16), ui(14), ui(16), ui(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle('消息类型'),
-          SizedBox(height: ui(12)),
-          _MsgKindRow(kind: kind, onChanged: onKindChanged),
-          SizedBox(height: ui(20)),
-          const _SectionTitle('匿名'),
-          SizedBox(height: ui(12)),
+          const _SectionTitle('留言类型'),
+          SizedBox(height: ui(8)),
+          AppSegmented<_MsgKind>(
+            segments: const [
+              AppSegment(value: _MsgKind.suggestion, label: '建议'),
+              AppSegment(value: _MsgKind.report, label: '举报'),
+              AppSegment(value: _MsgKind.other, label: '其他'),
+            ],
+            value: kind,
+            onChanged: onKindChanged,
+          ),
+          SizedBox(height: ui(16)),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _AnonymousSwitch(value: anonymous, onChanged: onAnonymousChanged),
+              const _SectionTitle('匿名'),
+              SizedBox(width: ui(12)),
+              AppSwitch(
+                value: anonymous,
+                onChanged: onAnonymousChanged,
+                semanticLabel: '匿名提交',
+              ),
               SizedBox(width: ui(8)),
-              Text(
-                '开启后发送者将显示为「匿名」',
-                style: TextStyle(
-                  fontSize: ui(13),
-                  color: _kTextHint,
-                  fontWeight: AppFont.w500,
-                  height: 20 / 13,
+              Expanded(
+                child: Text(
+                  anonymous
+                      ? '校长看到的发信人显示为「匿名」，回复在「已提交」里查看'
+                      : '校长能看到你的姓名，方便当面跟进',
+                  style: AppText.caption12.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: ui(20)),
-          const _SectionTitle('正文'),
-          SizedBox(height: ui(12)),
-          _BodyField(controller: bodyCtrl, hint: '写给校长的内容...(支持举报、建议或其他诉求)'),
+          if (kind == _MsgKind.report) ...[
+            SizedBox(height: ui(8)),
+            Row(
+              children: [
+                const Icon(
+                  Icons.lock_outline_rounded,
+                  size: 14,
+                  color: AppColors.textSecondary,
+                ),
+                SizedBox(width: ui(4)),
+                Text(
+                  '举报内容只有校长能看到，默认匿名提交',
+                  style: AppText.caption12.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
           SizedBox(height: ui(16)),
+          const _SectionTitle('正文'),
+          SizedBox(height: ui(8)),
+          _BodyField(controller: bodyCtrl, hint: '请写下你想反映的问题或建议'),
+          SizedBox(height: ui(12)),
+          _UploadTile(
+            slot: attachment,
+            onTap: onUploadTap,
+            onRemove: onRemoveAttachment,
+          ),
+          const Spacer(),
           Align(
             alignment: Alignment.centerRight,
-            child: _UploadTile(
-              slot: attachment,
-              onTap: onUploadTap,
-              onRemove: onRemoveAttachment,
-            ),
-          ),
-          Expanded(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: ui(61)),
-                child: _SubmitButton(
-                  label: submitting ? '提交中…' : '提交给校长',
-                  onTap: submitting ? null : onSubmit,
-                  busy: submitting,
-                ),
-              ),
+            child: AppButton(
+              label: '提交',
+              icon: Icons.send_rounded,
+              loading: submitting,
+              onTap: submitting ? null : onSubmit,
             ),
           ),
         ],
@@ -743,6 +557,23 @@ class _BodyField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _bodyInput(ui),
+        SizedBox(height: ui(4)),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, _) => Text(
+            '${value.text.characters.length} / $_kMailboxMaxChars',
+            style: AppText.caption12.copyWith(color: AppColors.textTertiary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _bodyInput(double Function(double) ui) {
     return Container(
       height: ui(140),
       decoration: BoxDecoration(
@@ -753,6 +584,7 @@ class _BodyField extends StatelessWidget {
         controller: controller,
         maxLines: null,
         expands: true,
+        maxLength: _kMailboxMaxChars,
         textAlignVertical: TextAlignVertical.top,
         cursorColor: _kPurple,
         cursorWidth: 1.5,
@@ -772,6 +604,7 @@ class _BodyField extends StatelessWidget {
             height: 20 / 12,
           ),
           border: InputBorder.none,
+          counterText: '',
           contentPadding: EdgeInsets.all(ui(16)),
         ),
       ),
@@ -779,113 +612,7 @@ class _BodyField extends StatelessWidget {
   }
 }
 
-class _MsgKindRow extends StatelessWidget {
-  const _MsgKindRow({required this.kind, required this.onChanged});
-
-  final _MsgKind kind;
-  final ValueChanged<_MsgKind> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _KindChip(
-          label: '举报',
-          selected: kind == _MsgKind.report,
-          onTap: () => onChanged(_MsgKind.report),
-        ),
-        SizedBox(width: ui(12)),
-        _KindChip(
-          label: '建议',
-          selected: kind == _MsgKind.suggestion,
-          onTap: () => onChanged(_MsgKind.suggestion),
-        ),
-        SizedBox(width: ui(12)),
-        _KindChip(
-          label: '其他',
-          selected: kind == _MsgKind.other,
-          onTap: () => onChanged(_MsgKind.other),
-        ),
-      ],
-    );
-  }
-}
-
-class _KindChip extends StatelessWidget {
-  const _KindChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        height: ui(32),
-        padding: EdgeInsets.symmetric(horizontal: ui(24)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? _kTextDark : _kInnerGray,
-          borderRadius: BorderRadius.circular(ui(8)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(14),
-            color: selected ? AppColors.surface : _kTextDark,
-            fontWeight: AppFont.w400,
-            height: 1,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AnonymousSwitch extends StatelessWidget {
-  const _AnonymousSwitch({required this.value, required this.onChanged});
-
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      onTap: () => onChanged(!value),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        width: ui(44),
-        height: ui(24),
-        padding: EdgeInsets.all(ui(2)),
-        alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-        decoration: BoxDecoration(
-          color: value ? _kPurple : _kTextHint.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(ui(999)),
-        ),
-        child: Container(
-          width: ui(20),
-          height: ui(20),
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            shape: BoxShape.circle,
-          ),
-        ),
-      ),
-    );
-  }
-}
+const int _kMailboxMaxChars = 500;
 
 /// 单文件附件状态：与 courseware 上传对话框中的 `_UploadSlot` 等价的最小子集。
 /// `bytes`（web）/ `path`（native）二选一，由 `pickCoursewareFiles` 决定。
@@ -1082,75 +809,6 @@ class _UploadTile extends StatelessWidget {
   }
 }
 
-class _SubmitButton extends StatelessWidget {
-  const _SubmitButton({
-    required this.label,
-    required this.onTap,
-    this.busy = false,
-  });
-
-  final String label;
-  final VoidCallback? onTap;
-  final bool busy;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final disabled = onTap == null || busy;
-    return InkWell(
-      onTap: disabled ? null : onTap,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Opacity(
-        opacity: disabled ? 0.7 : 1.0,
-        child: Container(
-          width: ui(240),
-          height: ui(52),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.centerRight,
-              end: Alignment.centerLeft,
-              colors: [AppColors.brandSoft, AppColors.brand],
-            ),
-            borderRadius: BorderRadius.circular(ui(12)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0x599585FF),
-                blurRadius: ui(20),
-                offset: Offset(0, ui(16)),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (busy)
-                const AppLoadingIndicator(size: 16, color: AppColors.surface)
-              else
-                Icon(
-                  Icons.send_rounded,
-                  color: AppColors.surface,
-                  size: ui(22),
-                ),
-              SizedBox(width: ui(8)),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: ui(16),
-                  color: AppColors.surface,
-                  fontWeight: AppFont.w500,
-                  height: 28 / 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ============================================================================
 // 「我提交的」列表
 // ============================================================================
@@ -1207,59 +865,16 @@ class _StatusFilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      children: [
-        for (final s in _MailboxStatus.values) ...[
-          _StatusFilterChip(
-            label: s.label,
-            color: s.color,
-            selected: current == s,
-            onTap: () => onChanged(s),
-          ),
-          if (s != _MailboxStatus.values.last) SizedBox(width: ui(12)),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: AppSegmented<_MailboxStatus>(
+        size: AppControlSize.sm,
+        segments: [
+          for (final s in _MailboxStatus.values)
+            AppSegment(value: s, label: s.label),
         ],
-      ],
-    );
-  }
-}
-
-class _StatusFilterChip extends StatelessWidget {
-  const _StatusFilterChip({
-    required this.label,
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        height: ui(32),
-        padding: EdgeInsets.symmetric(horizontal: ui(20)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? color : _kInnerGray,
-          borderRadius: BorderRadius.circular(ui(8)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(13),
-            color: selected ? AppColors.surface : _kTextDark,
-            fontWeight: AppFont.w500,
-            height: 1,
-          ),
-        ),
+        value: current,
+        onChanged: onChanged,
       ),
     );
   }
@@ -1273,7 +888,6 @@ class _EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     final String hint;
     switch (status) {
       case _MailboxStatus.sent:
@@ -1287,53 +901,11 @@ class _EmptyHint extends StatelessWidget {
         break;
     }
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.mark_email_read_outlined,
-            size: ui(48),
-            color: _kPlaceholder,
-          ),
-          SizedBox(height: ui(12)),
-          Text(
-            hint,
-            style: TextStyle(
-              fontSize: ui(14),
-              color: _kTextHint,
-              fontWeight: AppFont.w400,
-              height: 1.4,
-            ),
-          ),
-          SizedBox(height: ui(20)),
-          InkWell(
-            onTap: onWriteNew,
-            borderRadius: BorderRadius.circular(ui(8)),
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: ui(20),
-                vertical: ui(10),
-              ),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [AppColors.brandSoft, AppColors.brand],
-                ),
-                borderRadius: BorderRadius.circular(ui(8)),
-              ),
-              child: Text(
-                '写一封新信',
-                style: TextStyle(
-                  fontSize: ui(13),
-                  color: AppColors.surface,
-                  fontWeight: AppFont.w500,
-                  height: 1.2,
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: AppEmptyState(
+        icon: Icons.mark_email_read_outlined,
+        title: hint,
+        actionLabel: '写一封新信',
+        onAction: onWriteNew,
       ),
     );
   }
@@ -1366,16 +938,15 @@ class _MailboxRecordTile extends StatelessWidget {
               if (record.msgType.isNotEmpty) _KindBadge(label: record.msgType),
               if (record.isAnonymous) ...[
                 SizedBox(width: ui(8)),
-                _KindBadge(
-                  label: '匿名',
-                  color: const Color(0xFFFFEFE3),
-                  textColor: const Color(0xFFEC7D2F),
-                ),
+                const _KindBadge(label: '匿名'),
               ],
               const Spacer(),
               if (record.createTime.isNotEmpty)
                 Text(
-                  record.createTime,
+                  campusListTimeOf(
+                    record.createTime,
+                    fallback: record.createTime,
+                  ),
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextHint,
@@ -1445,7 +1016,10 @@ class _MailboxRecordTile extends StatelessWidget {
                       const Spacer(),
                       if (record.replyTime.isNotEmpty)
                         Text(
-                          record.replyTime,
+                          campusListTimeOf(
+                            record.replyTime,
+                            fallback: record.replyTime,
+                          ),
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextHint,
@@ -1482,57 +1056,24 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: status.color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: status.color,
-          fontWeight: AppFont.w500,
-          height: 1.4,
-        ),
-      ),
+    return AppStatusTag(
+      label: status.label,
+      tone: switch (status) {
+        _MailboxStatus.sent => AppTone.brand,
+        _MailboxStatus.replied => AppTone.success,
+        _MailboxStatus.closed => AppTone.neutral,
+      },
     );
   }
 }
 
 class _KindBadge extends StatelessWidget {
-  const _KindBadge({
-    required this.label,
-    this.color = const Color(0xFFEFEAFF),
-    this.textColor = _kPurple,
-  });
+  const _KindBadge({required this.label});
 
   final String label;
-  final Color color;
-  final Color textColor;
 
   @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: textColor,
-          fontWeight: AppFont.w500,
-          height: 1.4,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppTag(label: label);
 }
 
 // ============================================================================

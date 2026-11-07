@@ -274,7 +274,7 @@ void main() {
       )['configValue'];
       expect(
         byType(list, ShellNoticeTargetType.campus)!['content'],
-        contains('今晚 $evening 晚查寝'),
+        contains('$evening 截止'),
       );
     });
 

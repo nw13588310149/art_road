@@ -118,7 +118,7 @@ void main() {
   ) async {
     await _pumpToolbox(tester, size: const Size(950, 740), tool: '冷暖');
     expect(find.text('上传图片'), findsOneWidget);
-    expect(find.text('使用示例画作'), findsOneWidget);
+    expect(find.text('选一张画作，开始使用「冷暖分布」'), findsOneWidget);
     expect(find.text('暖调静物'), findsOneWidget);
   });
 

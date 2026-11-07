@@ -635,7 +635,7 @@ abstract final class CampusAChat {
           _pick(const [
             '收到，我这边马上安排。',
             '好的，没问题，会后同步给组里的老师。',
-            '收到～我们组周日上午全员到岗。',
+            '收到，我们组周日上午全员到岗。',
           ], seed),
         );
       }
@@ -651,7 +651,7 @@ abstract final class CampusAChat {
         g.headUserId,
         _has(text, ['坏', '修', '热水', '灯', '空调'])
             ? '收到，我这就联系维修师傅，今天之内处理好。'
-            : '收到～宿舍有问题随时在群里说，记得 22:30 前按时归寝哦。',
+            : '收到，宿舍有问题随时在群里说，记得 22:30 前按时归寝。',
       );
     }
     final head = g.headUserId;
@@ -703,13 +703,13 @@ abstract final class CampusAChat {
         _pick(classmates, seed),
         _pick(const [
           '同感，今晚一起去画室加练吧',
-          '哈哈收到～',
+          '收到',
           '我这有多的柠檬黄和白色，需要的话找我拿',
           '联考加油，一起冲刺。',
         ], seed),
       );
     }
-    return (head, '好的，收到～有问题随时在群里问，老师们都会看。');
+    return (head, '好的，收到，有问题随时在群里问，老师们都会看。');
   }
 
   static void _scheduleReply(

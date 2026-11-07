@@ -14,7 +14,6 @@ import '../data/teacher_notice_data.dart';
 import '../state/smart_campus_controller.dart';
 import '../state/smart_campus_state.dart';
 import 'widgets/role_switcher_buttons.dart';
-import 'widgets/smart_campus_avatar_role_badge.dart';
 import 'widgets/smart_campus_home_card.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
 import 'widgets/smart_campus_stat_card.dart';
@@ -332,70 +331,19 @@ class _DormDutySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final currentPanel = _CurrentTaskCard(
-      task: currentTask,
-      fillHeight: fillRemaining,
-    );
     final todayPanel = _TodayDutyCard(
       tasks: todayDutyTasks,
+      currentTask: currentTask,
       fillHeight: fillRemaining,
     );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cw = constraints.maxWidth;
-        // 两块面板并排至少各需约 280 宽；更窄时上下排列。
-        final stackVertically = !cw.isFinite || cw < ui(560);
-
-        if (stackVertically) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const _SectionTitle(title: '当前事项'),
-              SizedBox(height: ui(12)),
-              currentPanel,
-              SizedBox(height: ui(16)),
-              _TodayDutyHeader(onOpenDormCheckByRoom: onOpenDormCheckByRoom),
-              SizedBox(height: ui(12)),
-              todayPanel,
-            ],
-          );
-        }
-
-        final cardsRow = Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: currentPanel),
-            SizedBox(width: ui(16)),
-            Expanded(child: todayPanel),
-          ],
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: fillRemaining ? MainAxisSize.max : MainAxisSize.min,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Expanded(child: _SectionTitle(title: '当前事项')),
-                SizedBox(width: ui(16)),
-                Expanded(
-                  child: _TodayDutyHeader(
-                    onOpenDormCheckByRoom: onOpenDormCheckByRoom,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: ui(12)),
-            if (fillRemaining)
-              Expanded(child: cardsRow)
-            else
-              IntrinsicHeight(child: cardsRow),
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: fillRemaining ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        const _SectionTitle(title: '今日值班'),
+        SizedBox(height: ui(12)),
+        if (fillRemaining) Expanded(child: todayPanel) else todayPanel,
+      ],
     );
   }
 }
@@ -422,7 +370,7 @@ const _dormQuickActions = <_QuickAction>[
   _QuickAction('按宿舍查寝', 'assets/images/new/智慧校园/宿管/按宿舍查寝.png'),
   _QuickAction('查寝动态', 'assets/images/new/智慧校园/班主任/查寝动态.png'),
   _QuickAction('查寝历史', 'assets/images/new/智慧校园/宿管/查寝历史.png'),
-  _QuickAction('打卡管理', 'assets/images/new/智慧校园/宿管/打卡管理.png'),
+  _QuickAction('到岗打卡', 'assets/images/new/智慧校园/宿管/打卡管理.png'),
   _QuickAction('宿管请假', 'assets/images/new/智慧校园/宿管/宿管请假.png'),
   _QuickAction('校圈', 'assets/images/new/智慧校园/宿管/校圈.png'),
   _QuickAction('群聊', 'assets/images/new/智慧校园/宿管/群聊.png'),
@@ -488,16 +436,18 @@ class _DormStatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
+    final returned = index.todayNormalCount + index.todayLateCount;
     final rate = index.bedCount == 0
-        ? '0'
-        : '${(index.todayNormalCount * 100 / index.bedCount).round()}%';
+        ? '—'
+        : '${(returned * 100 / index.bedCount).round()}%';
+    final batch = index.batchLabel.split(' ').last;
     final items = <_StatItem>[
       _StatItem('${index.managedBuildingCount}', '管辖楼数'),
       _StatItem('${index.bedCount}', '在册床位'),
-      _StatItem('${index.todayNormalCount}', '今日正常'),
-      _StatItem('${index.todayLateCount}', '晚归登记'),
+      _StatItem('${index.todayNormalCount}', '已归寝'),
+      _StatItem('${index.todayLateCount}', '晚归'),
       _StatItem('${index.todayAbsentCount}', '未打卡'),
-      _StatItem(rate, '在寝率'),
+      _StatItem(rate, batch.isEmpty ? '在寝率' : '在寝率（$batch）'),
     ];
     return SizedBox(
       height: ui(67),
@@ -508,8 +458,7 @@ class _DormStatsRow extends StatelessWidget {
             Expanded(child: _StatCard(item: items[i])),
             SizedBox(width: ui(16)),
           ],
-          SizedBox(
-            width: ui(123),
+          Expanded(
             child: _PendingCard(
               value: '${index.pendingMakeupCount}',
               label: '待审补卡',
@@ -641,8 +590,6 @@ class _DormQuickActionsCard extends StatelessWidget {
     switch (label) {
       case '查寝动态':
         return smartCampusCountBadgeLabel(pendingMakeupCount);
-      case '宿管请假':
-        return smartCampusCountBadgeLabel(teacherLeavePendingCount);
       default:
         return null;
     }
@@ -662,7 +609,7 @@ class _DormQuickActionsCard extends StatelessWidget {
         return onOpenDormDynamic;
       case '查寝历史':
         return onOpenDormCheckHistory;
-      case '打卡管理':
+      case '到岗打卡':
         return onOpenCheckInManagement;
       case '宿管请假':
         return onOpenDormManagerLeave;
@@ -687,84 +634,26 @@ class _DormQuickActionsCard extends StatelessWidget {
 }
 
 // ============================================================================
-// 3. 当前事项卡（左 340 大白卡）
+// 3. 今日值班（当前进行的一项高亮）
 // ============================================================================
-
-class _CurrentTaskCard extends StatelessWidget {
-  const _CurrentTaskCard({this.task, this.fillHeight = false});
-
-  final DormitoryDutyTask? task;
-  final bool fillHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final duty = task == null
-        ? const _DutyTask(
-            tag: '查寝',
-            title: '暂无当前事项',
-            timeFrom: '--',
-            timeTo: '--',
-          )
-        : _mapDutyTask(task!);
-    final card = SmartCampusHomeCard(
-      height: fillHeight ? null : ui(340),
-      padding: EdgeInsets.all(ui(12)),
-      child: _DutyTaskTile(task: duty),
-    );
-    return fillHeight ? SizedBox.expand(child: card) : card;
-  }
-}
-
-// ============================================================================
-// 4. 今日值班 header（右上「按宿舍查寝 ›」link）
-// ============================================================================
-
-class _TodayDutyHeader extends StatelessWidget {
-  const _TodayDutyHeader({this.onOpenDormCheckByRoom});
-
-  final VoidCallback? onOpenDormCheckByRoom;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Expanded(child: _SectionTitle(title: '今日值班')),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onOpenDormCheckByRoom,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '按宿舍查寝',
-                style: TextStyle(
-                  fontSize: ui(14),
-                  height: 1.2,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              SizedBox(width: ui(4)),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: ui(16),
-                color: AppColors.textTertiary,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _TodayDutyCard extends StatelessWidget {
-  const _TodayDutyCard({required this.tasks, this.fillHeight = false});
+  const _TodayDutyCard({
+    required this.tasks,
+    this.currentTask,
+    this.fillHeight = false,
+  });
 
   final List<DormitoryDutyTask> tasks;
+  final DormitoryDutyTask? currentTask;
   final bool fillHeight;
+
+  bool _isCurrent(_DutyTask task) {
+    final current = currentTask;
+    return current != null &&
+        current.title == task.title &&
+        current.timeFrom == task.timeFrom;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -781,7 +670,10 @@ class _TodayDutyCard extends StatelessWidget {
         padding: EdgeInsets.zero,
         itemCount: dutyTasks.length,
         separatorBuilder: (_, _) => SizedBox(height: ui(12)),
-        itemBuilder: (_, i) => _DutyTaskTile(task: dutyTasks[i]),
+        itemBuilder: (_, i) => _DutyTaskTile(
+          task: dutyTasks[i],
+          current: _isCurrent(dutyTasks[i]),
+        ),
       ),
     );
     return fillHeight ? SizedBox.expand(child: card) : card;
@@ -794,9 +686,12 @@ class _TodayDutyCard extends StatelessWidget {
 /// 时间段 18/600 Barlow（"-" 用 `#B6B5BB`，前后用 `#1A1A1A`）；
 /// 标题 14/600 `#0B081A`。
 class _DutyTaskTile extends StatelessWidget {
-  const _DutyTaskTile({required this.task});
+  const _DutyTaskTile({required this.task, this.current = false});
 
   final _DutyTask task;
+
+  /// 正在进行的值班项：浅紫底 + 「进行中」。
+  final bool current;
 
   @override
   Widget build(BuildContext context) {
@@ -805,30 +700,21 @@ class _DutyTaskTile extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(12)),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSubtle,
+        color: current ? AppColors.brandWash : AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(ui(12)),
+        border: current ? Border.all(color: AppColors.brandTint) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-              decoration: BoxDecoration(
-                color: AppColors.brandTint,
-                borderRadius: BorderRadius.circular(ui(4)),
-              ),
-              child: Text(
-                task.tag,
-                style: TextStyle(
-                  fontSize: ui(12),
-                  height: 1.27,
-                  color: AppColors.brand,
-                ),
-              ),
-            ),
+          Row(
+            children: [
+              AppTag(label: task.tag),
+              const Spacer(),
+              if (current)
+                const AppStatusTag(label: '进行中', tone: AppTone.brand),
+            ],
           ),
           SizedBox(height: ui(8)),
           RichText(
@@ -841,9 +727,9 @@ class _DutyTaskTile extends StatelessWidget {
                 color: AppColors.ink,
               ),
               children: [
-                TextSpan(text: '${task.timeFrom} '),
+                TextSpan(text: task.timeFrom),
                 const TextSpan(
-                  text: '- ',
+                  text: '–',
                   style: TextStyle(color: AppColors.textPlaceholder),
                 ),
                 TextSpan(text: task.timeTo),
@@ -971,124 +857,58 @@ class _ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
 
-    return Stack(
-      clipBehavior: Clip.none,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: ui(72),
-              height: ui(72),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.brandTint,
-                image: avatarUrl.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(avatarUrl),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: avatarUrl.isEmpty
-                  ? Center(
-                      child: Text(
-                        displayName.isEmpty
-                            ? 'D'
-                            : displayName.characters.first,
-                        style: TextStyle(
-                          fontSize: ui(24),
-                          height: 1.0,
-                          color: AppColors.brand,
-                          fontWeight: AppFont.w500,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-            SizedBox(width: ui(12)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        AppAvatar(
+          name: displayName.isEmpty ? '宿管' : displayName,
+          url: avatarUrl,
+          size: ui(72),
+        ),
+        SizedBox(width: ui(12)),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: ui(8)),
+              Row(
                 children: [
-                  SizedBox(height: ui(8)),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          displayName.isEmpty ? '宿管老师' : displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: ui(16),
-                            height: 1.2,
-                            fontWeight: AppFont.w500,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: ui(6)),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: ui(6),
-                          vertical: ui(3),
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(ui(4)),
-                          border: Border.all(
-                            color: AppColors.lineSoft,
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: ui(6),
-                              height: ui(6),
-                              decoration: const BoxDecoration(
-                                color: AppColors.success,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            SizedBox(width: ui(4)),
-                            Text(
-                              '在岗',
-                              style: TextStyle(
-                                fontSize: ui(12),
-                                height: 1.0,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (institutionName.trim().isNotEmpty) ...[
-                    SizedBox(height: ui(4)),
-                    Text(
-                      institutionName.trim(),
-                      maxLines: 2,
+                  Flexible(
+                    child: Text(
+                      displayName.isEmpty ? '宿管老师' : displayName,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: ui(12),
+                        fontSize: ui(16),
                         height: 1.2,
-                        color: AppColors.textSecondary,
-                        fontFamily: 'Source Han Sans SC',
-                        fontWeight: AppFont.w400,
+                        fontWeight: AppFont.w500,
+                        color: AppColors.ink,
                       ),
                     ),
-                  ],
+                  ),
+                  SizedBox(width: ui(6)),
+                  const AppTag(label: '宿管老师', tone: AppTone.brand),
+                  SizedBox(width: ui(6)),
+                  const AppStatusTag(label: '在岗', tone: AppTone.success),
                 ],
               ),
-            ),
-          ],
-        ),
-        const SmartCampusAvatarRoleBadge(
-          label: '宿管老师',
-          role: SmartCampusRole.dormManager,
+              if (institutionName.trim().isNotEmpty) ...[
+                SizedBox(height: ui(4)),
+                Text(
+                  institutionName.trim(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: ui(12),
+                    height: 1.2,
+                    color: AppColors.textSecondary,
+                    fontFamily: 'Source Han Sans SC',
+                    fontWeight: AppFont.w400,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     );
@@ -1106,14 +926,13 @@ class _ProfileDetailRows extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final rows = areas.isEmpty ? const ['暂无管辖区域'] : areas;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) SizedBox(height: ui(4)),
-          _AreaLine(label: '区域：', value: rows[i]),
-        ],
+        _AreaLine(
+          label: '管辖区域：',
+          value: areas.isEmpty ? '暂无管辖区域' : areas.join('、'),
+        ),
         SizedBox(height: ui(4)),
         const _AreaLine(label: '权限：', value: _permission),
         SizedBox(height: ui(4)),

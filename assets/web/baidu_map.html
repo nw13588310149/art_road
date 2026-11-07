@@ -69,7 +69,10 @@
       return m ? decodeURIComponent(m[1]) : '';
     }
 
-    function showError(title, detail) {
+    // 页面只显示面向用户的文案；AK、白名单等配置细节写到控制台，并通知宿主改显示占位。
+    function showError(reason, title, detail, devDetail) {
+      if (devDetail) console.warn('[baidu_map] ' + devDetail);
+      notifyHost({ type: 'error', reason: reason });
       const el = document.getElementById('map');
       el.innerHTML = '';
       const wrap = document.createElement('div');
@@ -141,8 +144,10 @@
     function bootFromParams(params) {
       if (typeof BMap === 'undefined') {
         showError(
-          '百度地图未就绪',
-          '请确认已配置浏览器端 AK，并将当前域名加入白名单。'
+          'not_ready',
+          '地图暂不可用',
+          '打卡以定位结果为准',
+          'BMap 未就绪：确认已配置浏览器端 AK，并将当前域名加入白名单。'
         );
         return;
       }
@@ -153,7 +158,7 @@
       const zoom = parseInt(params.zoom || '17', 10);
 
       if (!isFinite(lat) || !isFinite(lng)) {
-        showError('暂无定位', '允许访问位置后会自动定位。');
+        showError('no_position', '暂无定位', '允许访问位置后会自动定位');
         return;
       }
 
@@ -171,7 +176,7 @@
     function loadBaiduAndBoot(params) {
       const ak = params.ak || getQuery('ak');
       if (!ak) {
-        showError('百度地图未配置', '缺少浏览器端 AK。');
+        showError('no_ak', '地图暂不可用', '打卡以定位结果为准', '缺少浏览器端 AK。');
         return;
       }
 
@@ -185,7 +190,12 @@
       script.src = 'https://api.map.baidu.com/api?v=3.0&ak=' + encodeURIComponent(ak);
       script.onload = function () { bootFromParams(params); };
       script.onerror = function () {
-        showError('百度地图加载失败', '请检查 AK 与白名单配置。');
+        showError(
+          'load_failed',
+          '地图加载失败',
+          '请检查网络后重试，打卡以定位结果为准',
+          '地图脚本加载失败：检查网络、AK 与白名单配置。'
+        );
       };
       document.head.appendChild(script);
     }
