@@ -1,12 +1,73 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:the_road_of_art_flutter/core/demo/demo_backend.dart';
+import 'package:the_road_of_art_flutter/core/network/api_client.dart';
+import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
+import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
+import 'package:the_road_of_art_flutter/core/ui/app_pressable.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/data/schedule_course_card_builder.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/ui/teacher_lesson_schedule_view.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/ui/widgets/schedule_course_card.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/ui/widgets/schedule_grid_shell.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/ui/widgets/schedule_idle_slot.dart';
 
 void main() {
   const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+  testWidgets('教师课表首屏加载完成后保留用户已选的教学周', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final storage = AppStorage(await SharedPreferences.getInstance());
+    final classes = Completer<List<Object?>>();
+    final requestedDates = <String>[];
+    const prefix = '/app/school/v2/teacher';
+    final router = DemoRouter('schedule-regression')
+      ..post('$prefix/classList', (_) => classes.future)
+      ..post('$prefix/classroomList', (_) => [])
+      ..post('$prefix/schoolSmallCourseApplyList', (_) => [])
+      ..post('$prefix/courseList', (request) {
+        requestedDates.add(request.str('beginDate'));
+        return [];
+      });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appStorageProvider.overrideWithValue(storage),
+          apiClientProvider.overrideWithValue(
+            ApiClient(storage: storage, demoRouter: router),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(body: TeacherLessonScheduleView(onBack: () {})),
+        ),
+      ),
+    );
+    final next = find.byWidgetPredicate(
+      (widget) => widget is AppPressable && widget.semanticLabel == '下一周',
+    );
+    await tester.tap(next);
+    await tester.tap(next);
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    final targetWeek = find.textContaining(
+      RegExp(r'教学周第\s*14\s*周'),
+      findRichText: true,
+    );
+    expect(targetWeek, findsOneWidget);
+    final lastSelectedDate = requestedDates.last;
+    classes.complete([]);
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(requestedDates.length, greaterThanOrEqualTo(3));
+    expect(requestedDates.last, lastSelectedDate);
+    expect(targetWeek, findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final width in [950.0, 814.0]) {
     testWidgets('课表固定节次列，日期表头和内容同步滚动 · $width', (tester) async {

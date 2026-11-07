@@ -66,6 +66,8 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
 
   List<_TimeConfig> _timeConfigs = const [];
   late List<List<List<ScheduleCourseCardData>>> _serverCells;
+  // 请求中的教学周可能早于画面提交。首屏资料加载完成后继续使用最后一次选择。
+  ({DateTime start, int number})? _requestedWeek;
   int _scheduleLoadGeneration = 0;
   bool _initialLoadDone = false;
   String _loadError = '';
@@ -90,6 +92,7 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
 
   Future<void> _bootstrap() async {
     await _loadTimeConfigs();
+    if (!mounted) return;
     await _loadSchedule();
   }
 
@@ -155,8 +158,10 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
   }
 
   Future<void> _loadSchedule({DateTime? weekStart, int? weekNumber}) async {
-    final targetWeekStart = weekStart ?? _weekStart;
-    final targetWeekNumber = weekNumber ?? _currentWeek;
+    final targetWeekStart = weekStart ?? _requestedWeek?.start ?? _weekStart;
+    final targetWeekNumber =
+        weekNumber ?? _requestedWeek?.number ?? _currentWeek;
+    _requestedWeek = (start: targetWeekStart, number: targetWeekNumber);
     final generation = ++_scheduleLoadGeneration;
 
     final start = targetWeekStart;
@@ -232,8 +237,10 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
   void _gotoPrev() {
     unawaited(
       _loadSchedule(
-        weekStart: _weekStart.subtract(const Duration(days: 7)),
-        weekNumber: _currentWeek - 1,
+        weekStart: (_requestedWeek?.start ?? _weekStart).subtract(
+          const Duration(days: 7),
+        ),
+        weekNumber: (_requestedWeek?.number ?? _currentWeek) - 1,
       ),
     );
   }
@@ -241,8 +248,10 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
   void _gotoNext() {
     unawaited(
       _loadSchedule(
-        weekStart: _weekStart.add(const Duration(days: 7)),
-        weekNumber: _currentWeek + 1,
+        weekStart: (_requestedWeek?.start ?? _weekStart).add(
+          const Duration(days: 7),
+        ),
+        weekNumber: (_requestedWeek?.number ?? _currentWeek) + 1,
       ),
     );
   }

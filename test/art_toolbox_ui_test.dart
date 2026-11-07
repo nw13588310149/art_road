@@ -190,6 +190,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the workspace retains the original across tools and back', (
+    tester,
+  ) async {
+    final image = await _sampleImage(tester);
+    await _pumpToolbox(tester, size: const Size(950, 740), image: image);
+    expect(find.text('测试图'), findsOneWidget);
+    await tester.tap(find.text(ArtTool.mirror.label));
+    await tester.pump();
+    await tester.tap(find.text('切换工具'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(ArtTool.grid.label));
+    await tester.pumpAndSettle();
+    expect(find.text(ArtTool.grid.label), findsOneWidget);
+    expect(find.text('测试图'), findsOneWidget);
+    expect(find.text('选一张画作，开始使用「构图网格」'), findsNothing);
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pumpAndSettle();
+    expect(find.text('分析工具'), findsOneWidget);
+    expect(find.text('测试图'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the grid slider supports single steps in either direction', (
     tester,
   ) async {

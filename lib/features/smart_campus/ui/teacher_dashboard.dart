@@ -29,6 +29,7 @@ import '../data/teacher_repository.dart';
 import '../state/smart_campus_controller.dart';
 import '../state/smart_campus_state.dart';
 import 'widgets/role_switcher_buttons.dart';
+import 'widgets/smart_campus_avatar_role_badge.dart';
 import 'widgets/smart_campus_home_card.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'widgets/smart_campus_quick_action_icon.dart';
@@ -1111,11 +1112,16 @@ class _TeacherSidebar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
       children: [
-        _TeacherProfileHeader(
-          data: data,
-          shellDisplayName: shellDisplayName,
+        SmartCampusProfileHeader(
+          displayName: shellDisplayName.isNotEmpty
+              ? shellDisplayName
+              : data.profile.name,
           avatarUrl: avatarUrl,
           institutionName: institutionName,
+          role: data.role,
+          roleLabel: data.profile.badgeLabel.isNotEmpty
+              ? data.profile.badgeLabel
+              : data.role.label,
         ),
         SizedBox(height: ui(20)),
         _TeacherProfileInfoRows(
@@ -1127,18 +1133,13 @@ class _TeacherSidebar extends StatelessWidget {
           SizedBox(height: ui(20)),
           Text('身份切换', style: AppText.body14Strong),
           SizedBox(height: ui(10)),
-          // 多身份用户（admin / 跨端教师）走通用按钮组；普通「任课老师 +
-          // 班主任」仍走原 2 Tab，保留单身份教师本地预览班主任视图的体验。
-          _hasExtraRoles
-              ? RoleSwitcherButtons(
-                  availableRoles: availableRoles,
-                  selectedRole: selectedTab!,
-                  onSelectRole: onTabSelected!,
-                )
-              : _TeacherRoleTabs(
-                  selected: selectedTab!,
-                  onChanged: onTabSelected!,
-                ),
+          RoleSwitcherButtons(
+            availableRoles: _hasExtraRoles
+                ? availableRoles
+                : const [SmartCampusRole.teacher, SmartCampusRole.headTeacher],
+            selectedRole: selectedTab!,
+            onSelectRole: onTabSelected!,
+          ),
         ],
         SizedBox(height: ui(24)),
         Text('校级通知', style: AppText.title16),
@@ -1160,72 +1161,6 @@ class _TeacherSidebar extends StatelessWidget {
       child: panel,
     );
     return fillHeight ? SizedBox.expand(child: card) : card;
-  }
-}
-
-class _TeacherProfileHeader extends StatelessWidget {
-  const _TeacherProfileHeader({
-    required this.data,
-    required this.shellDisplayName,
-    required this.avatarUrl,
-    this.institutionName = '',
-  });
-
-  final SmartCampusDashboardData data;
-  final String shellDisplayName;
-  final String avatarUrl;
-  final String institutionName;
-
-  @override
-  Widget build(BuildContext context) {
-    final profile = data.profile;
-    final displayName = shellDisplayName.isNotEmpty
-        ? shellDisplayName
-        : profile.name;
-    final isStudent = data.role == SmartCampusRole.student;
-    final isHeadTeacher = data.role == SmartCampusRole.headTeacher;
-    final roleLabel = isStudent ? '学生' : (isHeadTeacher ? '班主任' : '任课老师');
-    final statusLabel = isStudent ? '在校' : '在岗';
-    final name = displayName.isEmpty ? roleLabel : displayName;
-    return Row(
-      children: [
-        AppAvatar(name: name, url: avatarUrl, size: 56),
-        const SizedBox(width: AppSpace.s12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: AppSpace.s8,
-                runSpacing: AppSpace.s4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(name, style: AppText.title16),
-                  AppTag(label: roleLabel, tone: AppTone.brand),
-                ],
-              ),
-              const SizedBox(height: AppSpace.s4),
-              Row(
-                children: [
-                  AppStatusTag(label: statusLabel, tone: AppTone.success),
-                  if (institutionName.trim().isNotEmpty) ...[
-                    const SizedBox(width: AppSpace.s8),
-                    Flexible(
-                      child: Text(
-                        institutionName.trim(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.caption12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -1346,27 +1281,6 @@ class _TeacherProfileInfoRowsState
           ),
         ],
       ],
-    );
-  }
-}
-
-class _TeacherRoleTabs extends StatelessWidget {
-  const _TeacherRoleTabs({required this.selected, required this.onChanged});
-
-  final SmartCampusRole selected;
-  final ValueChanged<SmartCampusRole> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppSegmented<SmartCampusRole>(
-      expand: true,
-      size: AppControlSize.sm,
-      segments: const [
-        AppSegment(value: SmartCampusRole.teacher, label: '任课老师'),
-        AppSegment(value: SmartCampusRole.headTeacher, label: '班主任'),
-      ],
-      value: selected,
-      onChanged: onChanged,
     );
   }
 }

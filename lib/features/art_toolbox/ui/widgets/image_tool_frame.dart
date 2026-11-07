@@ -8,26 +8,24 @@ import '../../data/toolbox_image_source.dart';
 import '../../state/toolbox_image_controller.dart';
 import 'tool_panel.dart';
 
-/// 页面带 `imageUrl` 参数进入、但下载尚未发起的那一帧，让工具直接显示处理中，
-/// 避免选图引导一闪而过。
-class ToolboxImagePending extends InheritedWidget {
-  const ToolboxImagePending({
+/// 工具箱共享的入口加载状态及分析工具切换。
+class ToolboxWorkspaceScope extends InheritedWidget {
+  const ToolboxWorkspaceScope({
     required this.pending,
+    required this.onSwitchTool,
     required super.child,
     super.key,
   });
 
   final bool pending;
+  final ValueChanged<ArtTool> onSwitchTool;
 
-  static bool of(BuildContext context) =>
-      context
-          .dependOnInheritedWidgetOfExactType<ToolboxImagePending>()
-          ?.pending ??
-      false;
+  static ToolboxWorkspaceScope? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ToolboxWorkspaceScope>();
 
   @override
-  bool updateShouldNotify(ToolboxImagePending oldWidget) =>
-      oldWidget.pending != pending;
+  bool updateShouldNotify(ToolboxWorkspaceScope oldWidget) =>
+      oldWidget.pending != pending || oldWidget.onSwitchTool != onSwitchTool;
 }
 
 /// 所有工具页共用返回、用法说明与操作按钮，绘画和控制区域由工具提供。
@@ -173,6 +171,7 @@ class ImageToolScaffold extends ConsumerWidget {
     final state = ref.watch(toolboxImageControllerProvider);
     final controller = ref.read(toolboxImageControllerProvider.notifier);
     final image = state.image;
+    final workspace = ToolboxWorkspaceScope.of(context);
 
     Future<void> pickSample() async {
       final sample = await showToolboxSamplePicker(context);
@@ -185,7 +184,7 @@ class ImageToolScaffold extends ConsumerWidget {
     if (image == null) {
       body = ImageSourcePanel(
         tool: tool,
-        loading: state.loading || ToolboxImagePending.of(context),
+        loading: state.loading || (workspace?.pending ?? false),
         onUpload: controller.pickFromAlbum,
         onSample: controller.loadSample,
       );
@@ -209,20 +208,45 @@ class ImageToolScaffold extends ConsumerWidget {
       onBack: onBack,
       subtitle: image?.label,
       bodyTopInset: 0,
-      actions: image == null
-          ? const <Widget>[]
-          : [
-              _PreviewAction(
-                label: '上传图片',
-                icon: Icons.upload_rounded,
-                onTap: state.loading ? null : controller.pickFromAlbum,
-              ),
-              _PreviewAction(
-                label: '使用示例画作',
-                icon: Icons.collections_outlined,
-                onTap: state.loading ? null : pickSample,
-              ),
-            ],
+      actions: [
+        if (workspace != null)
+          Builder(
+            builder: (anchor) => _PreviewAction(
+              label: '切换工具',
+              icon: Icons.swap_horiz_rounded,
+              onTap: () async {
+                final selected = await showAppMenu<ArtTool>(
+                  context: anchor,
+                  width: 180,
+                  items: [
+                    for (final candidate in ArtToolGroup.analysis.tools)
+                      AppMenuItem(
+                        value: candidate,
+                        label: candidate.label,
+                        icon: candidate.icon,
+                        enabled: candidate != tool,
+                      ),
+                  ],
+                );
+                if (anchor.mounted && selected != null) {
+                  workspace.onSwitchTool(selected);
+                }
+              },
+            ),
+          ),
+        if (image != null) ...[
+          _PreviewAction(
+            label: '上传图片',
+            icon: Icons.upload_rounded,
+            onTap: state.loading ? null : controller.pickFromAlbum,
+          ),
+          _PreviewAction(
+            label: '使用示例画作',
+            icon: Icons.collections_outlined,
+            onTap: state.loading ? null : pickSample,
+          ),
+        ],
+      ],
       body: body,
     );
   }

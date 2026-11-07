@@ -5,7 +5,7 @@
 const nav = (label) => ({ click: label, after: 1800 });
 // 身份第一次进首页会弹新手引导（弹出即记为已看过），截首页本身前先关掉；没弹就跳过这一步。
 const skipGuide = { click: '跳过', optional: true, attempts: 4, after: 800 };
-const homeStep = { id: 'home', route: '/', actions: [skipGuide] };
+const homeStep = { id: 'home', route: '/', actions: [skipGuide], settle: 1800 };
 const guideStep = {
   id: 'guide',
   route: '/help-guide',
@@ -186,6 +186,18 @@ export const ROLES = [
     chip: '学生 · 林小雨',
     steps: [
       homeStep,
+      {
+        id: 'home-schedule', route: '/', actions: [
+          skipGuide, { click: /^完整课表$/, after: 1500 },
+          { check: /^节次$/ }, { check: '教学周' },
+        ],
+      },
+      {
+        id: 'home-toolbox-return', route: '/', actions: [
+          skipGuide, { click: /^画室工具箱$/, nth: 1 },
+          { check: '分析工具' }, /^返回$/, { check: '今日练习' },
+        ],
+      },
       guideStep,
       noticeStep,
       { id: 'demo-tag', route: '/', actions: [skipGuide, { click: '演示版', after: 1200 }] },
@@ -208,6 +220,14 @@ export const ROLES = [
           { check: /^我的原卷/ },
         ],
       },
+      {
+        id: 'gallery-toolbox-return', route: '/gallery', actions: [
+          /大卫石膏像 · 侧转头像/, /^临摹网格$/,
+          { check: /^构图网格$/ }, { check: /^大卫石膏像 · 侧转头像$/ },
+          /^切换工具$/, /^镜像翻转$/, { check: /^镜像翻转$/ },
+          /^返回$/, { check: /^临摹网格$/, role: 'button' },
+        ],
+      },
       { id: 'ebooks', route: '/ebooks' },
       {
         id: 'ebook-detail',
@@ -220,7 +240,15 @@ export const ROLES = [
           { check: '目录与书签', role: 'button' },
         ],
       },
-      { id: 'toolbox', route: '/toolbox' },
+      { id: 'toolbox', route: '/toolbox', settle: 1600 },
+      {
+        id: 'toolbox-workspace-flow', route: '/toolbox', actions: [
+          /^使用示例画作$/, /大卫石膏像/, { check: /^大卫石膏像$/ },
+          /^镜像翻转/, { check: /^切换工具$/, role: 'button' },
+          /^切换工具$/, /^构图网格$/, { check: /^构图网格$/ },
+          { check: /^大卫石膏像$/ },
+        ],
+      },
       ...toolSteps,
       ...sharedContent,
       { id: 'quiz', route: '/camp', actions: [{ check: '练习方式' }] },
@@ -234,7 +262,7 @@ export const ROLES = [
           { check: /^第 \d+ 题$/ },
         ],
       },
-      { id: 'campus', route: '/smart-campus' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('my-class', '我的班级'),
       campusAction('my-schedule', '我的课表'),
       scheduleNextWeek('我的课表'),
@@ -268,8 +296,13 @@ export const ROLES = [
         actions: [{ click: '点评标签', after: 1800 }],
       },
       { id: 'gallery', route: '/gallery' },
-      { id: 'campus', route: '/smart-campus' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('schedule', '授课课表'),
+      {
+        id: 'campus-switch-role', route: '/smart-campus', actions: [
+          { click: /^班主任$/, after: 1400 }, { check: /^班级工作台$/, role: 'button' },
+        ],
+      },
       scheduleNextWeek('授课课表'),
       campusAction('sign', '签课管理'),
       campusAction('homework-review', '作业批改'),
@@ -295,7 +328,7 @@ export const ROLES = [
     steps: [
       homeStep,
       guideStep,
-      { id: 'campus', route: '/smart-campus' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('workbench', '班级工作台'),
       campusAction('leave-approval', '请假审批'),
       campusAction('home-school', '家校沟通'),
@@ -310,7 +343,7 @@ export const ROLES = [
     steps: [
       homeStep,
       guideStep,
-      { id: 'campus', route: '/smart-campus' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('check-by-room', '按宿舍查寝'),
       campusAction('dorm-dynamic', '查寝动态'),
       campusAction('dorm-history', '查寝历史'),
@@ -327,7 +360,7 @@ export const ROLES = [
     steps: [
       homeStep,
       guideStep,
-      { id: 'campus', route: '/smart-campus' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('students', '学生管理'),
       campusAction('teachers', '教师管理'),
       campusAction('classes', '班级管理'),

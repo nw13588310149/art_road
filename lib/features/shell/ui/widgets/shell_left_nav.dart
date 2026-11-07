@@ -8,9 +8,9 @@ import '../../state/shell_state.dart';
 
 /// 侧栏：艺考网标识 + 导航项 + 底部「意见反馈」与收起按钮。
 ///
-/// 当前路由按 [shellActiveNavIndex] 对应到唯一的导航项（品牌紫实底 + 白字），
+/// 当前路由按 [shellActiveNavIndex] 对应到唯一的导航项（墨蓝实底 + 白字），
 /// 不属于任何导航项的页面不高亮。收起 / 展开、选中都立即切换，没有过渡动画。
-class ShellLeftNav extends StatelessWidget {
+class ShellLeftNav extends StatefulWidget {
   const ShellLeftNav({
     required this.state,
     required this.currentRoute,
@@ -24,11 +24,43 @@ class ShellLeftNav extends StatelessWidget {
   final VoidCallback onToggleCollapse;
   final ValueChanged<String> onNavigate;
 
+  @override
+  State<ShellLeftNav> createState() => _ShellLeftNavState();
+}
+
+class _ShellLeftNavState extends State<ShellLeftNav> {
   static const double _tileHeight = 48;
   static const double _tileGap = 4;
+  final _scroll = ScrollController();
+  (int, double, double)? _revealed;
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _revealActive(int index, double tileHeight, double viewport) {
+    final target = (index, tileHeight, viewport);
+    if (_revealed == target) return;
+    _revealed = target;
+    if (index < 0) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients || _revealed != target) return;
+      final start = index * (tileHeight + _tileGap);
+      final end = start + tileHeight;
+      final offset = _scroll.offset;
+      if (start < offset || end > offset + viewport) {
+        final next = start < offset ? start : end - viewport;
+        _scroll.jumpTo(next.clamp(0.0, _scroll.position.maxScrollExtent));
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final currentRoute = widget.currentRoute;
     final collapsed = state.collapsed;
     final items = state.navItems;
     final activeIndex = shellActiveNavIndex([
@@ -59,17 +91,19 @@ class ShellLeftNav extends StatelessWidget {
                     ),
             ),
           ),
-          const SizedBox(height: AppSpace.s20),
+          const SizedBox(height: 22),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final tileHeight = collapsed
+                final tileHeight = collapsed || items.isEmpty
                     ? 40.0
                     : ((constraints.maxHeight + _tileGap) / items.length -
                               _tileGap)
                           .floorToDouble()
                           .clamp(44.0, _tileHeight);
+                _revealActive(activeIndex, tileHeight, constraints.maxHeight);
                 return ListView.separated(
+                  controller: _scroll,
                   padding: EdgeInsets.symmetric(horizontal: horizontal),
                   physics: const ClampingScrollPhysics(),
                   itemCount: items.length,
@@ -79,13 +113,12 @@ class ShellLeftNav extends StatelessWidget {
                     active: index == activeIndex,
                     collapsed: collapsed,
                     height: tileHeight,
-                    onTap: () => onNavigate(items[index].route),
+                    onTap: () => widget.onNavigate(items[index].route),
                   ),
                 );
               },
             ),
           ),
-          const Divider(height: 1, thickness: 1, color: AppColors.lineSoft),
           Padding(
             padding: EdgeInsets.fromLTRB(
               horizontal,
@@ -99,8 +132,8 @@ class ShellLeftNav extends StatelessWidget {
                   footer != null &&
                   shellNavOwnerOf(currentRoute) == footer.route,
               collapsed: collapsed,
-              onNavigate: onNavigate,
-              onToggleCollapse: onToggleCollapse,
+              onNavigate: widget.onNavigate,
+              onToggleCollapse: widget.onToggleCollapse,
             ),
           ),
         ],
@@ -127,7 +160,7 @@ class _NavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = active ? AppColors.onBrand : AppColors.textSecondary;
-    final icon = _NavIcon(item: item, color: color);
+    final icon = _NavIcon(item: item, active: active, color: color);
     final Widget content;
     if (collapsed) {
       content = Stack(
@@ -172,7 +205,7 @@ class _NavTile extends StatelessWidget {
             : const EdgeInsets.only(left: AppSpace.s16, right: 10),
         alignment: collapsed ? Alignment.center : Alignment.centerLeft,
         decoration: BoxDecoration(
-          color: active ? AppColors.brand : null,
+          color: active ? AppColors.navSelection : null,
           borderRadius: AppRadius.br12,
         ),
         child: content,
@@ -182,23 +215,30 @@ class _NavTile extends StatelessWidget {
 }
 
 class _NavIcon extends StatelessWidget {
-  const _NavIcon({required this.item, required this.color});
+  const _NavIcon({
+    required this.item,
+    required this.active,
+    required this.color,
+  });
 
   final ShellNavItem item;
+  final bool active;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final size = item.iconSize ?? 20;
+    final size = item.iconSize ?? 24;
     final data = item.iconData;
     if (data != null) {
       return Icon(data, size: size, color: color);
     }
     return AppAssetGraphic(
-      item.icon,
+      active ? item.activeIcon : item.icon,
       width: size,
       height: size,
-      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      colorFilter: active
+          ? const ColorFilter.mode(AppColors.onBrand, BlendMode.srcIn)
+          : null,
     );
   }
 }

@@ -12,6 +12,7 @@ abstract final class AppColors {
 
   /// 一级文字、图标。
   static const ink = Color(0xFF0B081A);
+  static const navSelection = Color(0xFF0D1535);
   static const textSecondary = Color(0xFF6D6B75);
   static const textTertiary = Color(0xFF8B8993);
 

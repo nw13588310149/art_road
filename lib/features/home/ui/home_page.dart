@@ -345,13 +345,16 @@ class _HomeBannerState extends State<_HomeBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final images = [
+    final slides = [
       for (final item in widget.items)
-        if (MediaUrl.resolve(item.imageUrl).isNotEmpty)
-          MediaUrl.resolve(item.imageUrl),
+        if (item.imageUrl.trim().isNotEmpty)
+          (url: MediaUrl.resolve(item.imageUrl), title: item.title),
     ];
+    final caption = slides.isEmpty
+        ? ''
+        : slides[_index.clamp(0, slides.length - 1)].title;
     return ClipRRect(
-      borderRadius: AppRadius.br12,
+      borderRadius: AppRadius.br16,
       child: Stack(
         children: [
           const Positioned.fill(
@@ -359,8 +362,8 @@ class _HomeBannerState extends State<_HomeBanner> {
           ),
           Positioned.fill(
             child: SeamlessBannerCarousel(
-              imageUrls: images,
-              placeholder: const ColoredBox(color: AppColors.surfaceSubtle),
+              imageUrls: [for (final slide in slides) slide.url],
+              placeholder: const AppSkeleton(radius: 16),
               empty: const ColoredBox(color: AppColors.surfaceSubtle),
               onPageChanged: (index) {
                 if (mounted && _index != index) {
@@ -369,13 +372,39 @@ class _HomeBannerState extends State<_HomeBanner> {
               },
             ),
           ),
-          if (images.length > 1)
+          if (caption.isNotEmpty)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0xB30B081A)],
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 78, 13),
+                    child: Text(
+                      caption,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.title16.copyWith(color: AppColors.onBrand),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (slides.length > 1)
             Positioned(
               right: AppSpace.s16,
               bottom: AppSpace.s12,
               child: Row(
                 children: [
-                  for (var i = 0; i < images.length; i++)
+                  for (var i = 0; i < slides.length; i++)
                     Container(
                       margin: EdgeInsets.only(left: i == 0 ? 0 : AppSpace.s4),
                       width: i == _index ? 20 : 6,
@@ -523,11 +552,11 @@ class _CoursePanel extends StatefulWidget {
 }
 
 class _CoursePanelState extends State<_CoursePanel> {
-  static const double _dayWidth = 56;
   static const double _dayGap = AppSpace.s8;
+  static const int _visibleDays = 4;
 
   final _weekScroll = ScrollController();
-  String _scrolledFor = '';
+  (int, int, double)? _scrolledFor;
 
   @override
   void dispose() {
@@ -535,18 +564,20 @@ class _CoursePanelState extends State<_CoursePanel> {
     super.dispose();
   }
 
-  /// 周条默认把今天放在可视区第二格，周末也不会被挡在屏幕外。
-  void _scrollToToday() {
+  /// 周一至周四显示前四格，周五起显示末四格，每格完整可见。
+  void _scrollToToday(double dayWidth) {
     final todayIndex = widget.weekItems.indexWhere((day) => day.isToday);
-    final key = '${widget.weekItems.length}-$todayIndex';
-    if (todayIndex < 0 || _scrolledFor == key) return;
+    final count = widget.weekItems.length;
+    final key = (count, todayIndex, dayWidth);
+    if (_scrolledFor == key) return;
+    _scrolledFor = key;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_weekScroll.hasClients) return;
-      final target = (todayIndex - 1) * (_dayWidth + _dayGap);
+      if (!mounted || !_weekScroll.hasClients || _scrolledFor != key) return;
+      final first = todayIndex < _visibleDays ? 0 : count - _visibleDays;
+      final target = first * (dayWidth + _dayGap);
       _weekScroll.jumpTo(
         target.clamp(0.0, _weekScroll.position.maxScrollExtent),
       );
-      _scrolledFor = key;
     });
   }
 
@@ -568,26 +599,19 @@ class _CoursePanelState extends State<_CoursePanel> {
     final subtitle = isToday || courseDate.length < 10
         ? null
         : '${courseDate.substring(5)} ${_weekdayOf(courseDate)}';
-    if (widget.weekItems.isNotEmpty) {
-      _scrollToToday();
-    }
-
     return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           AppSectionHeader(
-            title: title,
-            subtitle: subtitle,
-            trailing: AppButton(
-              label: '完整课表',
-              variant: AppButtonVariant.text,
-              size: AppButtonSize.sm,
-              onTap: widget.onOpenSchedule,
-            ),
+            title: '课表',
+            titleStyle: AppText.title16,
+            moreLabel: '完整课表',
+            onMore: widget.onOpenSchedule,
           ),
-          const SizedBox(height: AppSpace.s8),
+          const SizedBox(height: 6),
           if (widget.loading) ...[
             const AppSkeleton(height: 88, radius: AppRadius.card),
             const SizedBox(height: AppSpace.s12),
@@ -596,21 +620,37 @@ class _CoursePanelState extends State<_CoursePanel> {
             if (widget.weekItems.isNotEmpty) ...[
               SizedBox(
                 height: 88,
-                child: ListView.separated(
-                  controller: _weekScroll,
-                  scrollDirection: Axis.horizontal,
-                  physics: const ClampingScrollPhysics(),
-                  itemCount: widget.weekItems.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: _dayGap),
-                  itemBuilder: (context, index) => _WeekDayChip(
-                    item: widget.weekItems[index],
-                    width: _dayWidth,
-                    onTap: widget.onOpenSchedule,
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final dayWidth =
+                        (constraints.maxWidth - (_visibleDays - 1) * _dayGap) /
+                        _visibleDays;
+                    _scrollToToday(dayWidth);
+                    return ListView.separated(
+                      controller: _weekScroll,
+                      padding: EdgeInsets.zero,
+                      scrollDirection: Axis.horizontal,
+                      physics: const ClampingScrollPhysics(),
+                      itemCount: widget.weekItems.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(width: _dayGap),
+                      itemBuilder: (context, index) => _WeekDayChip(
+                        item: widget.weekItems[index],
+                        width: dayWidth,
+                        onTap: widget.onOpenSchedule,
+                      ),
+                    );
+                  },
                 ),
               ),
-              const SizedBox(height: AppSpace.s12),
+              const SizedBox(height: 14),
             ],
+            AppSectionHeader(
+              title: title,
+              subtitle: subtitle,
+              titleStyle: AppText.title16,
+            ),
+            const SizedBox(height: AppSpace.s8),
             if (courses.isEmpty)
               const SizedBox(
                 height: 168,

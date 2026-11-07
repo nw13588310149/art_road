@@ -102,10 +102,7 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
         loading: false,
         role: role,
         bannerItems: banners,
-        quickActions: buildQuickActions(
-          isStaff: isStaffRole(role),
-          role: role,
-        ),
+        quickActions: buildQuickActions(isStaff: isStaffRole(role), role: role),
         newsItems: newsItems,
         weekItems: alignWeekWithCourses(weekItems, notices),
         courseNotices: notices,
@@ -147,7 +144,12 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
       if (image.isEmpty) {
         continue;
       }
-      result.add(HomeBannerItem(imageUrl: image));
+      result.add(
+        HomeBannerItem(
+          imageUrl: image,
+          title: item['title']?.toString().trim() ?? '',
+        ),
+      );
     }
     return result;
   }
@@ -268,8 +270,7 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
           status: _resolveCourseStatus(now, date, beginTime, endTime),
           date: date.length >= 10 ? date.substring(0, 10) : date,
           isSmallCourse: type == 1,
-          cardColorHex:
-              colorHex.isEmpty || colorHex.toLowerCase() == '#ffffff'
+          cardColorHex: colorHex.isEmpty || colorHex.toLowerCase() == '#ffffff'
               ? null
               : colorHex,
         ),

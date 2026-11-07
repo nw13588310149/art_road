@@ -28,7 +28,7 @@ enum ArtTool {
     'value',
     '明度检查',
     ArtToolGroup.analysis,
-    '灰度、色阶与黑白剪影，检查黑白灰关系',
+    '对照灰度、色阶与剪影',
     '切换色阶数看明暗层次，剪影模式拖动阈值只看黑白两大块',
     Icons.contrast_rounded,
     ArtSubject.sketch,
@@ -37,7 +37,7 @@ enum ArtTool {
     'blur',
     '眯眼模糊',
     ArtToolGroup.analysis,
-    '模糊掉细节，像眯眼一样看大的形和色块',
+    '检查画面的大形和色块',
     '加大模糊程度只看大关系，与原图对比检查整体是否成立',
     Icons.blur_on_rounded,
     ArtSubject.sketch,
@@ -46,7 +46,7 @@ enum ArtTool {
     'simplify',
     '色块简化',
     ArtToolGroup.analysis,
-    '把画面归纳成 3–12 个色块，看色彩布局',
+    '归纳色块与面积比例',
     '减少颜色数看大的色块分布，色卡列出每种颜色的面积占比',
     Icons.palette_outlined,
     ArtSubject.color,
@@ -55,7 +55,7 @@ enum ArtTool {
     'temperature',
     '冷暖分布',
     ArtToolGroup.analysis,
-    '标出暖色、冷色和中性灰的区域与占比',
+    '对照冷暖色的分布',
     '暖色显示为橙、冷色为蓝、中性灰为灰，对照原图看冷暖关系',
     Icons.thermostat_rounded,
     ArtSubject.color,
@@ -64,7 +64,7 @@ enum ArtTool {
     'edges',
     '轮廓线稿',
     ArtToolGroup.analysis,
-    '提取轮廓线，检查形体结构与比例',
+    '提取轮廓线，检查形体',
     '阈值越大线条越少，概括程度越大越只保留大的结构线',
     Icons.gesture_rounded,
     ArtSubject.sketch,
@@ -73,7 +73,7 @@ enum ArtTool {
     'mirror',
     '镜像翻转',
     ArtToolGroup.analysis,
-    '左右 / 上下翻转与反相，发现比例与透视问题',
+    '左右、上下翻转或反相',
     '翻转后像换了一双眼睛看画面，反相可以单独检查明暗关系',
     Icons.flip_rounded,
     ArtSubject.sketch,
@@ -82,7 +82,7 @@ enum ArtTool {
     'color',
     '取色与色卡',
     ArtToolGroup.analysis,
-    '点击取色，提取主色并生成配色色环',
+    '取色并查看配色关系',
     '点击画面取色，查看互补、邻近、三角与分裂互补配色',
     Icons.colorize_rounded,
     ArtSubject.color,
@@ -91,7 +91,7 @@ enum ArtTool {
     'measure',
     '比例测量',
     ArtToolGroup.analysis,
-    '点选两段长度，量比例和倾斜角度',
+    '测量线段比例与角度',
     '每点两个点成一段，后面的线段都和 A 段比较；可显示铅垂线和水平线',
     Icons.straighten_rounded,
     ArtSubject.sketch,
@@ -100,7 +100,7 @@ enum ArtTool {
     'grid',
     '构图网格',
     ArtToolGroup.analysis,
-    '三分法、黄金分割、对角线与画纸比例裁切',
+    '叠加构图线，预览裁切',
     '叠加构图线检查主体位置，选画纸比例预览裁切范围',
     Icons.grid_4x4_rounded,
     ArtSubject.sketch,
@@ -109,7 +109,7 @@ enum ArtTool {
     'perspective',
     '透视辅助',
     ArtToolGroup.analysis,
-    '视平线与一至三个灭点，检查透视是否统一',
+    '标出视平线与灭点',
     '拖动视平线和灭点，让辅助线与画中物体的边线对齐',
     Icons.view_in_ar_rounded,
     ArtSubject.sketch,
@@ -118,7 +118,7 @@ enum ArtTool {
     'portrait',
     '头像比例',
     ArtToolGroup.analysis,
-    '三庭五眼框，对照五官的位置',
+    '对照三庭五眼比例',
     '拖动方框对齐发际线和下巴，再拖眉线、鼻底线量出三庭比例',
     Icons.face_rounded,
     ArtSubject.sketch,
@@ -253,22 +253,23 @@ enum ArtTool {
 }
 
 class ToolboxSample {
-  const ToolboxSample(this.asset, this.label);
+  const ToolboxSample(this.asset, this.label, {this.featured = false});
 
   final String asset;
   final String label;
+  final bool featured;
 }
 
 /// 「使用示例画作」可选的演示图片。
 const toolboxSamples = <ToolboxSample>[
-  ToolboxSample('assets/demo/art/color-still-1.jpg', '暖调静物'),
+  ToolboxSample('assets/demo/art/color-still-1.jpg', '暖调静物', featured: true),
   ToolboxSample('assets/demo/art/color-still-4.jpg', '冷调静物'),
   ToolboxSample('assets/demo/art/color-flower-1.jpg', '花卉静物'),
   ToolboxSample('assets/demo/art/color-landscape-1.jpg', '秋日风景'),
   ToolboxSample('assets/demo/art/sketch-still-2.jpg', '素描静物'),
-  ToolboxSample('assets/demo/art/sketch-bust-1.jpg', '大卫石膏像'),
+  ToolboxSample('assets/demo/art/sketch-bust-1.jpg', '大卫石膏像', featured: true),
   ToolboxSample('assets/demo/art/sketch-geometry-1.jpg', '石膏几何体'),
-  ToolboxSample('assets/demo/art/speed-figure-3.jpg', '双人速写'),
+  ToolboxSample('assets/demo/art/speed-figure-3.jpg', '双人速写', featured: true),
 ];
 
 const _figureRefs = <String>[

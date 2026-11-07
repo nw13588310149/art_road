@@ -226,6 +226,8 @@ class _TeacherLessonScheduleViewState
 
   /// 当前周的网格数据，[7 天][N 节] → 多张课卡。
   late List<List<List<_ScheduleCardData>>> _serverCells;
+  // 请求中的教学周可能早于画面提交。首屏资料加载完成后继续使用最后一次选择。
+  ({DateTime start, int number})? _requestedWeek;
   int _scheduleLoadGeneration = 0;
 
   String _isoDate(DateTime d) => campusDate(d);
@@ -241,8 +243,10 @@ class _TeacherLessonScheduleViewState
   void _gotoPrev() {
     unawaited(
       _loadSchedule(
-        weekStart: _weekStart.subtract(const Duration(days: 7)),
-        weekNumber: _currentWeek - 1,
+        weekStart: (_requestedWeek?.start ?? _weekStart).subtract(
+          const Duration(days: 7),
+        ),
+        weekNumber: (_requestedWeek?.number ?? _currentWeek) - 1,
       ),
     );
   }
@@ -250,8 +254,10 @@ class _TeacherLessonScheduleViewState
   void _gotoNext() {
     unawaited(
       _loadSchedule(
-        weekStart: _weekStart.add(const Duration(days: 7)),
-        weekNumber: _currentWeek + 1,
+        weekStart: (_requestedWeek?.start ?? _weekStart).add(
+          const Duration(days: 7),
+        ),
+        weekNumber: (_requestedWeek?.number ?? _currentWeek) + 1,
       ),
     );
   }
@@ -292,11 +298,9 @@ class _TeacherLessonScheduleViewState
       final focus = ref
           .read(smartCampusControllerProvider)
           .teacherScheduleFocus;
-      DateTime weekStart = _weekStart;
-      var weekNumber = _currentWeek;
       if (focus != null) {
-        weekStart = scheduleMondayOf(focus.courseDate);
-        weekNumber = scheduleTeachingWeekOf(weekStart);
+        final weekStart = scheduleMondayOf(focus.courseDate);
+        final weekNumber = scheduleTeachingWeekOf(weekStart);
         if (mounted) {
           setState(() {
             _weekStart = weekStart;
@@ -311,7 +315,7 @@ class _TeacherLessonScheduleViewState
       if (!mounted) return;
       await Future.wait([_loadTimeConfig(), _loadDirectories()]);
       if (!mounted) return;
-      await _loadSchedule(weekStart: weekStart, weekNumber: weekNumber);
+      await _loadSchedule();
     });
   }
 
@@ -463,8 +467,10 @@ class _TeacherLessonScheduleViewState
   }
 
   Future<void> _loadSchedule({DateTime? weekStart, int? weekNumber}) async {
-    final targetWeekStart = weekStart ?? _weekStart;
-    final targetWeekNumber = weekNumber ?? _currentWeek;
+    final targetWeekStart = weekStart ?? _requestedWeek?.start ?? _weekStart;
+    final targetWeekNumber =
+        weekNumber ?? _requestedWeek?.number ?? _currentWeek;
+    _requestedWeek = (start: targetWeekStart, number: targetWeekNumber);
     final generation = ++_scheduleLoadGeneration;
     final repo = ref.read(teacherRepositoryProvider);
     final start = targetWeekStart;

@@ -311,7 +311,20 @@ class _UserMenuButtonState extends State<_UserMenuButton> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppAvatar(name: _name, url: widget.user.avatarUrl, size: 30),
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                shape: BoxShape.circle,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: AppAvatar(
+                  name: _name,
+                  url: widget.user.avatarUrl,
+                  size: 36,
+                ),
+              ),
+            ),
             if (widget.showName) ...[
               const SizedBox(width: AppSpace.s8),
               ConstrainedBox(

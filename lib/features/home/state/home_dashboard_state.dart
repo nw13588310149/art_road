@@ -4,9 +4,10 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
 
 class HomeBannerItem {
-  const HomeBannerItem({required this.imageUrl});
+  const HomeBannerItem({required this.imageUrl, this.title = ''});
 
   final String imageUrl;
+  final String title;
 }
 
 /// 打开智慧校园里的某个视图（宿管、管理员首页的工作入口）。
@@ -308,18 +309,19 @@ List<HomeQuickAction> buildQuickActions({
       name: isStaff ? '作品点评' : '作品档案',
       iconAsset: isStaff
           ? '$campusIcons/teacher/homework_review.png'
-          : AppAssets.cloudFolderIcon,
+          : '$campusIcons/student/my_homework.png',
       route: RoutePaths.artworks,
     ),
     const HomeQuickAction(
       name: '范画库',
-      iconAsset: AppAssets.coursewareFileTypeImage,
+      iconAsset: '$campusIcons/admin/class_management.png',
       route: RoutePaths.gallery,
     ),
     const HomeQuickAction(
       name: '画室工具箱',
       iconAsset: '$campusIcons/head_teacher/class_workbench.png',
       route: RoutePaths.artToolbox,
+      arguments: <String, dynamic>{'returnToSource': true},
     ),
     const HomeQuickAction(
       name: '速写计时练习',

@@ -15,6 +15,7 @@ import '../state/admin_home_state.dart';
 import '../state/smart_campus_controller.dart';
 import '../state/smart_campus_state.dart';
 import 'widgets/role_switcher_buttons.dart';
+import 'widgets/smart_campus_avatar_role_badge.dart';
 import 'widgets/smart_campus_home_card.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
 import 'widgets/smart_campus_stat_card.dart';
@@ -1228,11 +1229,11 @@ class _AdminSidePanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
       children: [
-        _ProfileHeader(
+        SmartCampusProfileHeader(
           displayName: displayName,
           avatarUrl: avatarUrl,
           institutionName: institutionName,
-          roleBadge: selectedRole.label,
+          roleLabel: selectedRole.label,
           role: selectedRole,
         ),
         SizedBox(height: ui(20)),
@@ -1389,83 +1390,6 @@ class _SchoolNoticeList extends StatelessWidget {
             onTap: onNoticeTap == null ? null : () => onNoticeTap!(notices[i]),
           ),
         ],
-      ],
-    );
-  }
-}
-
-class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({
-    required this.displayName,
-    required this.avatarUrl,
-    this.institutionName = '',
-    this.roleBadge = '教务老师',
-    this.role = SmartCampusRole.admin,
-  });
-
-  final String displayName;
-  final String avatarUrl;
-  final String institutionName;
-  final String roleBadge;
-  final SmartCampusRole role;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppAvatar(
-          name: displayName.isEmpty ? '教务' : displayName,
-          url: avatarUrl,
-          size: ui(72),
-        ),
-        SizedBox(width: ui(12)),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: ui(8)),
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      displayName.isEmpty ? '教务老师' : displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: ui(16),
-                        height: 1.2,
-                        fontWeight: AppFont.w500,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: ui(6)),
-                  AppTag(label: roleBadge, tone: AppTone.brand),
-                  SizedBox(width: ui(6)),
-                  const AppStatusTag(label: '在岗', tone: AppTone.success),
-                ],
-              ),
-              if (institutionName.trim().isNotEmpty) ...[
-                SizedBox(height: ui(4)),
-                Text(
-                  institutionName.trim(),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    height: 1.2,
-                    color: AppColors.textSecondary,
-                    fontFamily: 'Source Han Sans SC',
-                    fontWeight: AppFont.w400,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
       ],
     );
   }

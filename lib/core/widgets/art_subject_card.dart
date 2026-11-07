@@ -6,10 +6,7 @@ import '../ui/app_pressable.dart';
 import '../ui/app_spacing.dart';
 import '../ui/app_text.dart';
 
-/// 三科入口卡：范画封面 + 科目色遮罩 + 科目名称与要点。
-///
-/// 文字所在的左侧 70% 用接近实色的科目色铺底，要点小字不再压在图像细节上；
-/// 右侧逐渐露出范画。
+/// 首页科目入口：浅色底图、左上标题和右下范画缩略图。
 class ArtSubjectCard extends StatelessWidget {
   const ArtSubjectCard({
     required this.subject,
@@ -31,50 +28,38 @@ class ArtSubjectCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
-              subject.coverAsset,
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              filterQuality: FilterQuality.medium,
-            ),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
                   colors: [
-                    subject.accent.withValues(alpha: 0.96),
-                    subject.accent.withValues(alpha: 0.9),
-                    subject.accent.withValues(alpha: 0.3),
+                    AppColors.tint(subject.accent, 0.28),
+                    subject.accentSoft,
                   ],
-                  stops: const [0, 0.7, 1],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpace.s16,
-                AppSpace.s8,
-                AppSpace.s12,
-                AppSpace.s8,
+            Positioned(
+              right: AppSpace.s12,
+              bottom: AppSpace.s12,
+              width: 64,
+              height: 56,
+              child: ClipRRect(
+                borderRadius: AppRadius.br8,
+                child: Image.asset(
+                  subject.coverAsset,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                  filterQuality: FilterQuality.medium,
+                  excludeFromSemantics: true,
+                ),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    subject.label,
-                    style: AppText.title20.copyWith(color: AppColors.onBrand),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subject.tagline,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.caption12.copyWith(color: AppColors.onBrand),
-                  ),
-                ],
-              ),
+            ),
+            Positioned(
+              top: AppSpace.s12,
+              left: AppSpace.s16,
+              child: Text(subject.label, style: AppText.title16),
             ),
           ],
         ),

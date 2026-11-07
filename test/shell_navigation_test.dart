@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:the_road_of_art_flutter/app/router/route_paths.dart';
+import 'package:the_road_of_art_flutter/core/constants/app_assets.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_asset_graphic.dart';
 import 'package:the_road_of_art_flutter/features/shell/navigation/shell_nav_routes.dart';
@@ -115,12 +116,13 @@ void main() {
     expect(teacher, containsAll(['班级学情', '作品点评']));
   });
 
-  test('小美同学 uses an icon without the letters AI', () {
+  test('小美同学 uses the original navigation icon', () {
     final ai = buildDefaultNavItems(
       schoolCoursewareEnabled: false,
     ).firstWhere((item) => item.route == RoutePaths.personalAi);
     expect(ai.label, '小美同学');
-    expect(ai.iconData, Icons.chat_bubble_outline_rounded);
+    expect(ai.icon, AppAssets.leftNavAi);
+    expect(ai.iconData, isNull);
   });
 
   group('ShellLeftNav', () {
@@ -128,10 +130,11 @@ void main() {
       WidgetTester tester, {
       required String route,
       bool collapsed = false,
+      double height = 820,
       VoidCallback? onToggle,
       ValueChanged<String>? onNavigate,
     }) async {
-      tester.view.physicalSize = const Size(1180, 820);
+      tester.view.physicalSize = Size(1180, height);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
@@ -139,7 +142,7 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               width: collapsed ? 56 : 178,
-              height: 820,
+              height: height,
               child: ShellLeftNav(
                 state: _state(collapsed: collapsed),
                 currentRoute: route,
@@ -162,9 +165,11 @@ void main() {
       return (container.decoration as BoxDecoration?)?.color;
     }
 
-    testWidgets('only the current item uses the brand fill', (tester) async {
+    testWidgets('only the current item uses the original navy fill', (
+      tester,
+    ) async {
       await pumpNav(tester, route: RoutePaths.gallery);
-      expect(tileColorOf(tester, '范画库'), AppColors.brand);
+      expect(tileColorOf(tester, '范画库'), AppColors.navSelection);
       expect(tileColorOf(tester, '首页'), isNull);
       expect(tileColorOf(tester, '智慧校园'), isNull);
       expect(tester.takeException(), isNull);
@@ -176,6 +181,15 @@ void main() {
         expect(tileColorOf(tester, item.label), isNull, reason: item.label);
       }
     });
+
+    testWidgets(
+      'a lower navigation destination is revealed on narrow screens',
+      (tester) async {
+        await pumpNav(tester, route: RoutePaths.personalCenter, height: 650);
+        expect(find.text('个人中心').hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('feedback link and collapse button live in the footer', (
       tester,
