@@ -195,6 +195,7 @@ class _StudentMyGradesViewState extends ConsumerState<StudentMyGradesView> {
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
       header: AppPageHeader(
+        centerTitle: true,
         title: '我的考试',
         subtitle: '考试安排、考场座位与线上测评提交，成绩公布后在「我的成绩」查看',
         onBack: widget.onBack,

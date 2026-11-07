@@ -36,6 +36,7 @@ export 'app_select.dart';
 export 'app_shadows.dart';
 export 'app_skeleton.dart';
 export 'app_spacing.dart';
+export 'app_split_panel.dart';
 export 'app_stat_tile.dart';
 export 'app_status_tag.dart';
 export 'app_steps.dart';

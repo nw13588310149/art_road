@@ -139,13 +139,11 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
       header: AppPageHeader(
+        centerTitle: true,
         title: '我的班级',
         subtitle: info == null
             ? '班级信息、班级通知、师资与同学'
-            : [
-                info.name,
-                info.subtitle,
-              ].where((s) => s.isNotEmpty).join(' · '),
+            : [info.name, info.subtitle].where((s) => s.isNotEmpty).join(' · '),
         onBack: widget.onBack,
       ),
       body: Column(
@@ -701,10 +699,7 @@ class _ClassInfoCard extends StatelessWidget {
                         ),
                         Expanded(
                           flex: 2,
-                          child: _InfoPair(
-                            label: '教室',
-                            value: data.classroom,
-                          ),
+                          child: _InfoPair(label: '教室', value: data.classroom),
                         ),
                       ],
                     ),
@@ -796,12 +791,7 @@ class _StatBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 88,
-      child: AppStatTile(
-        label: label,
-        value: '$value',
-        unit: '人',
-        boxed: true,
-      ),
+      child: AppStatTile(label: label, value: '$value', unit: '人', boxed: true),
     );
   }
 }
@@ -1211,11 +1201,7 @@ class _FacultyCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppAvatar(
-                name: member.name,
-                url: member.avatarUrl,
-                size: ui(40),
-              ),
+              AppAvatar(name: member.name, url: member.avatarUrl, size: ui(40)),
               SizedBox(width: ui(8)),
               Expanded(
                 child: Column(

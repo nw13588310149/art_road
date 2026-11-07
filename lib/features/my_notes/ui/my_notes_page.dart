@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_loading_indicator.dart'
@@ -492,60 +493,22 @@ class _NotesListView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(myNotesControllerProvider.notifier);
-    final navigator = Navigator.of(context);
     return Stack(
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppPageHeader(
-              title: '我的笔记',
-              subtitle: '手写讲评要点、构图小稿与改进方法',
-              onBack: navigator.canPop() ? navigator.pop : null,
-              actions: [
-                AppButton(
-                  label: '新建笔记',
-                  icon: Icons.add_rounded,
-                  size: AppButtonSize.sm,
-                  onTap: onCreate,
-                ),
-              ],
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpace.page,
-                  AppSpace.s4,
-                  AppSpace.page,
-                  AppSpace.s24,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      width: 208,
-                      child: _NotesSidebar(
-                        state: state,
-                        onSelectCategory: controller.selectCategory,
-                        onAddCategory: onAddCategory,
-                        onCategoryAction: onCategoryAction,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpace.s16),
-                    Expanded(
-                      child: _NotesContentArea(
-                        state: state,
-                        onSelectFilter: controller.selectFilter,
-                        onOpenNote: onOpenNote,
-                        onCreate: onCreate,
-                        onNoteAction: onNoteAction,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        AppSplitPanel(
+          sidebar: _NotesSidebar(
+            state: state,
+            onSelectCategory: controller.selectCategory,
+            onAddCategory: onAddCategory,
+            onCategoryAction: onCategoryAction,
+          ),
+          child: _NotesContentArea(
+            state: state,
+            onSelectFilter: controller.selectFilter,
+            onOpenNote: onOpenNote,
+            onCreate: onCreate,
+            onNoteAction: onNoteAction,
+          ),
         ),
         if (state.busy) const Positioned.fill(child: AppLoadingOverlay()),
       ],
@@ -596,7 +559,7 @@ class _NotesSidebar extends StatelessWidget {
         },
       );
     }
-    return AppCard(
+    return Padding(
       padding: const EdgeInsets.all(AppSpace.s8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -740,7 +703,7 @@ class _NotesContentArea extends StatelessWidget {
       );
     } else if (notes.isEmpty) {
       body = AppEmptyState(
-        icon: Icons.edit_note_rounded,
+        illustration: AppAssets.emptyNotesPlaceholder,
         title: '这个分类还没有笔记',
         description: '用手写笔记记录老师讲评的要点、构图小稿和改进方法',
         actionLabel: '新建笔记',
@@ -776,16 +739,29 @@ class _NotesContentArea extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppSegmented<MyNotesFilter>(
-          segments: [
-            for (final filter in _visibleFilters)
-              AppSegment(value: filter, label: filter.label),
-          ],
-          value: state.activeFilter,
-          onChanged: onSelectFilter,
+        Align(
+          alignment: Alignment.center,
+          child: AppSegmented<MyNotesFilter>(
+            segments: [
+              for (final filter in _visibleFilters)
+                AppSegment(value: filter, label: filter.label),
+            ],
+            value: state.activeFilter,
+            onChanged: onSelectFilter,
+          ),
         ),
         const SizedBox(height: AppSpace.s16),
         Expanded(child: body),
+        Align(
+          alignment: Alignment.centerRight,
+          child: AppButton(
+            label: '新建笔记',
+            icon: Icons.add_rounded,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: onCreate,
+          ),
+        ),
       ],
     );
   }

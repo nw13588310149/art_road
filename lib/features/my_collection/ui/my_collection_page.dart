@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/class_share_drawer.dart';
@@ -60,7 +61,6 @@ class MyCollectionPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(myCollectionControllerProvider);
     final controller = ref.read(myCollectionControllerProvider.notifier);
-    final navigator = Navigator.of(context);
     final loadingItems =
         (state.loading || state.fetchingItems) && state.items.isEmpty;
     final label = CollectionType.labelOf(state.activeType);
@@ -79,7 +79,7 @@ class MyCollectionPage extends ConsumerWidget {
     } else if (state.items.isEmpty) {
       final source = _collectSources[state.activeType];
       body = AppEmptyState(
-        icon: Icons.bookmark_border_rounded,
+        illustration: AppAssets.emptyCollectionPlaceholder,
         title: source == null ? '还没有收藏内容' : '还没有收藏的$label',
         description: '在${source ?? _allSourcesText()}里点击收藏，内容会出现在这里',
       );
@@ -94,43 +94,35 @@ class MyCollectionPage extends ConsumerWidget {
     }
 
     final tabs = state.tabs;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '我的收藏',
-          subtitle: loadingItems || state.items.isEmpty
-              ? '范画、视频、资讯与书刊收藏'
-              : '共 ${state.items.length} 条收藏',
-          onBack: navigator.canPop() ? navigator.pop : null,
-          bottom: tabs.length < 2
-              ? null
-              : Align(
-                  alignment: Alignment.centerLeft,
-                  child: tabs.length <= 5
-                      ? AppSegmented<int>(
-                          segments: [
-                            for (final tab in tabs)
-                              AppSegment(value: tab.type, label: tab.label),
-                          ],
-                          value: state.activeType,
-                          onChanged: controller.selectType,
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: AppTabs<int>(
-                            tabs: [
-                              for (final tab in tabs)
-                                AppTab(value: tab.type, label: tab.label),
-                            ],
-                            value: state.activeType,
-                            onChanged: controller.selectType,
-                          ),
-                        ),
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (tabs.length >= 2)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.page,
+                AppSpace.s20,
+                AppSpace.page,
+                AppSpace.s12,
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: AppSegmented<int>(
+                  segments: [
+                    for (final tab in tabs)
+                      AppSegment(value: tab.type, label: tab.label),
+                  ],
+                  value: state.activeType,
+                  onChanged: controller.selectType,
                 ),
-        ),
-        Expanded(child: body),
-      ],
+              ),
+            ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 
@@ -426,16 +418,13 @@ class _CollectionCover extends StatelessWidget {
         borderRadius: AppRadius.br8,
       ),
       alignment: Alignment.center,
-      child: Icon(
-        switch (item.type) {
-          CollectionType.video => Icons.play_circle_outline_rounded,
-          CollectionType.news => Icons.feed_outlined,
-          CollectionType.artwork => Icons.palette_outlined,
-          CollectionType.ebook => Icons.menu_book_outlined,
-          _ => Icons.bookmark_border_rounded,
-        },
-        color: AppColors.textPlaceholder,
-      ),
+      child: Icon(switch (item.type) {
+        CollectionType.video => Icons.play_circle_outline_rounded,
+        CollectionType.news => Icons.feed_outlined,
+        CollectionType.artwork => Icons.palette_outlined,
+        CollectionType.ebook => Icons.menu_book_outlined,
+        _ => Icons.bookmark_border_rounded,
+      }, color: AppColors.textPlaceholder),
     );
   }
 }

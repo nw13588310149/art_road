@@ -101,6 +101,7 @@ class _AdminSignManagementViewState extends State<AdminSignManagementView> {
       backgroundColor: Colors.transparent,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
+        centerTitle: true,
         title: '签课管理',
         subtitle: '大课批量签到 · 小课签到审核 · 补签审核',
         onBack: widget.onBack,

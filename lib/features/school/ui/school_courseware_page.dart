@@ -16,7 +16,6 @@ class SchoolCoursewareV2Page extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(schoolPageControllerProvider);
     final ctrl = ref.read(schoolPageControllerProvider.notifier);
-    final navigator = Navigator.of(context);
     final empty =
         state.courseVideos.isEmpty &&
         state.learningItems.isEmpty &&
@@ -35,19 +34,7 @@ class SchoolCoursewareV2Page extends ConsumerWidget {
       body = _SchoolBody(state: state, onRefresh: ctrl.refresh);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '校园课件',
-          subtitle: state.schoolName.isEmpty
-              ? '画室的课程视频、练习与资讯'
-              : '${state.schoolName}的课程视频、练习与资讯',
-          onBack: navigator.canPop() ? navigator.pop : null,
-        ),
-        Expanded(child: body),
-      ],
-    );
+    return body;
   }
 }
 
@@ -68,11 +55,7 @@ class _SchoolBody extends StatelessWidget {
     final videos = _CourseVideosCard(state: state);
     final side = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _LearningProgressCard(items: state.learningItems),
-        const SizedBox(height: AppSpace.s16),
-        _QuickEntriesCard(state: state),
-      ],
+      children: [_LearningProgressCard(items: state.learningItems)],
     );
     return AppRefreshIndicator(
       onRefresh: onRefresh,
@@ -94,13 +77,24 @@ class _SchoolBody extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: videos),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            videos,
+                            const SizedBox(height: AppSpace.s16),
+                            _QuickEntriesCard(state: state),
+                          ],
+                        ),
+                      ),
                       const SizedBox(width: AppSpace.s16),
                       SizedBox(width: 300, child: side),
                     ],
                   )
                 else ...[
                   videos,
+                  const SizedBox(height: AppSpace.s16),
+                  _QuickEntriesCard(state: state),
                   const SizedBox(height: AppSpace.s16),
                   side,
                 ],

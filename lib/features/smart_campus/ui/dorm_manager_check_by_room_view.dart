@@ -223,6 +223,7 @@ class _DormManagerCheckByRoomViewState
     final rooms = state.roomChecks;
     return SmartCampusSecondaryPageShell(
       header: AppPageHeader(
+        centerTitle: true,
         title: '按宿舍查寝',
         subtitle: '按楼栋、楼层逐间查寝，可标记全员到寝或单独修改状态',
         onBack: widget.onBack,

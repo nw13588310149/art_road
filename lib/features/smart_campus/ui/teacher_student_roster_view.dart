@@ -506,6 +506,7 @@ class _TeacherStudentRosterViewState
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
       header: AppPageHeader(
+        centerTitle: true,
         title: '学生名册',
         subtitle: '任教班级学生的学籍、宿舍与家长联系方式',
         onBack: widget.onBack,

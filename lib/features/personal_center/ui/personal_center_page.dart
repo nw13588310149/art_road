@@ -25,8 +25,6 @@ class PersonalCenterPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(personalCenterControllerProvider);
     final controller = ref.read(personalCenterControllerProvider.notifier);
-    final navigator = Navigator.of(context);
-
     final Widget body;
     if (state.loading && state.user.isEmpty) {
       body = const _PersonalCenterSkeleton();
@@ -44,17 +42,7 @@ class PersonalCenterPage extends ConsumerWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '个人中心',
-          subtitle: '账号资料、会员与常用服务',
-          onBack: navigator.canPop() ? navigator.pop : null,
-        ),
-        Expanded(child: body),
-      ],
-    );
+    return body;
   }
 }
 
@@ -219,53 +207,24 @@ class _PersonalCenterBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final main = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ListView(
+      padding: const EdgeInsets.only(bottom: AppSpace.s16),
       children: [
         _ProfileCard(state: state, onEdit: actions.editProfile),
         if (state.checkStatusEnabled) ...[
-          const SizedBox(height: AppSpace.s16),
+          const SizedBox(height: AppSpace.s12),
           _MembershipCard(
             state: state,
             daysRemaining: controller.vipDaysRemaining(),
             onOpenPlan: actions.openPlan,
           ),
         ],
+        const SizedBox(height: AppSpace.s16),
+        _ServiceCard(
+          checkStatusEnabled: state.checkStatusEnabled,
+          actions: actions,
+        ),
       ],
-    );
-    final services = _ServiceCard(
-      checkStatusEnabled: state.checkStatusEnabled,
-      actions: actions,
-    );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 760;
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpace.page,
-            AppSpace.s4,
-            AppSpace.page,
-            AppSpace.s24,
-          ),
-          child: wide
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: main),
-                    const SizedBox(width: AppSpace.s16),
-                    SizedBox(width: 320, child: services),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    main,
-                    const SizedBox(height: AppSpace.s16),
-                    services,
-                  ],
-                ),
-        );
-      },
     );
   }
 }
@@ -287,75 +246,87 @@ class _ProfileCard extends StatelessWidget {
       user['school']?.toString().trim() ?? '',
       user['campus']?.toString().trim() ?? '',
     ].where((e) => e.isNotEmpty).join(' · ');
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpace.s20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              AppAvatar(
-                name: name,
-                url: user['headUrl']?.toString() ?? '',
-                size: 64,
-              ),
-              const SizedBox(width: AppSpace.s16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Wrap(
-                      spacing: AppSpace.s8,
-                      runSpacing: AppSpace.s4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(name, style: AppText.title20),
-                        if (role != null)
-                          AppTag(label: role, tone: AppTone.brand),
-                      ],
-                    ),
-                    if (meta.isNotEmpty) ...[
-                      const SizedBox(height: AppSpace.s4),
-                      Text(meta, style: AppText.body13),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpace.s12),
-              AppButton(
-                label: '编辑资料',
-                icon: Icons.edit_outlined,
-                variant: AppButtonVariant.quiet,
-                size: AppButtonSize.sm,
-                onTap: onEdit,
-              ),
-            ],
-          ),
-          if (state.checkStatusEnabled) ...[
-            const SizedBox(height: AppSpace.s16),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        borderRadius: AppRadius.br16,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.brandTint, AppColors.brandWash],
+        ),
+      ),
+      child: AppCard(
+        color: Colors.transparent,
+        bordered: false,
+        padding: const EdgeInsets.all(AppSpace.s20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Row(
               children: [
+                AppAvatar(
+                  name: name,
+                  url: user['headUrl']?.toString() ?? '',
+                  size: 64,
+                ),
+                const SizedBox(width: AppSpace.s16),
                 Expanded(
-                  child: AppStatTile(
-                    label: '钱包余额',
-                    value: state.walletText,
-                    unit: '元',
-                    boxed: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Wrap(
+                        spacing: AppSpace.s8,
+                        runSpacing: AppSpace.s4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(name, style: AppText.title20),
+                          if (role != null)
+                            AppTag(label: role, tone: AppTone.brand),
+                        ],
+                      ),
+                      if (meta.isNotEmpty) ...[
+                        const SizedBox(height: AppSpace.s4),
+                        Text(meta, style: AppText.body13),
+                      ],
+                    ],
                   ),
                 ),
                 const SizedBox(width: AppSpace.s12),
-                Expanded(
-                  child: AppStatTile(
-                    label: '我的积分',
-                    value: state.pointsText,
-                    boxed: true,
-                  ),
+                AppButton(
+                  label: '编辑资料',
+                  icon: Icons.edit_outlined,
+                  variant: AppButtonVariant.quiet,
+                  size: AppButtonSize.sm,
+                  onTap: onEdit,
                 ),
               ],
             ),
+            if (state.checkStatusEnabled) ...[
+              const SizedBox(height: AppSpace.s16),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppStatTile(
+                      label: '钱包余额',
+                      value: state.walletText,
+                      unit: '元',
+                      boxed: true,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpace.s12),
+                  Expanded(
+                    child: AppStatTile(
+                      label: '我的积分',
+                      value: state.pointsText,
+                      boxed: true,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

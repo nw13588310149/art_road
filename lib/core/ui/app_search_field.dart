@@ -17,6 +17,7 @@ class AppSearchField extends StatefulWidget {
     this.onSubmitted,
     this.onCleared,
     this.size = AppControlSize.md,
+    this.toolbar = false,
     this.autofocus = false,
     this.focusNode,
     this.enabled = true,
@@ -31,6 +32,7 @@ class AppSearchField extends StatefulWidget {
   /// 点击清空按钮后回调（[onChanged] 也会收到空字符串）。
   final VoidCallback? onCleared;
   final AppControlSize size;
+  final bool toolbar;
   final bool autofocus;
   final FocusNode? focusNode;
   final bool enabled;
@@ -92,21 +94,20 @@ class _AppSearchFieldState extends State<AppSearchField> {
   @override
   Widget build(BuildContext context) {
     final md = widget.size == AppControlSize.md;
+    final fill = widget.toolbar ? AppColors.surface : AppColors.surfaceSubtle;
     final showClear = widget.enabled && _controller.text.isNotEmpty;
     final textStyle = (md ? AppText.body14 : AppText.body13).copyWith(
       color: AppColors.ink,
     );
     final field = Container(
-      height: md ? AppSize.control : AppSize.controlSm,
+      height: widget.toolbar
+          ? AppSize.iconButton
+          : (md ? AppSize.control : AppSize.controlSm),
       padding: EdgeInsets.only(left: 10, right: showClear ? 2 : 10),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSubtle,
-        borderRadius: AppRadius.br8,
-        border: Border.all(
-          color: _focusNode.hasFocus
-              ? AppColors.brand
-              : AppColors.surfaceSubtle,
-        ),
+        color: fill,
+        borderRadius: widget.toolbar ? AppRadius.br12 : AppRadius.br8,
+        border: Border.all(color: _focusNode.hasFocus ? AppColors.brand : fill),
       ),
       child: Row(
         children: [

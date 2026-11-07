@@ -35,14 +35,19 @@ class AppSectionHeader extends StatelessWidget {
             ? null
             : AppPressable(
                 onTap: onMore,
-                child: SizedBox(
-                  height: 32,
+                child: Container(
+                  height: 30,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: AppRadius.br12,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         moreLabel,
-                        style: AppText.body13.copyWith(
+                        style: AppText.body14.copyWith(
                           color: AppColors.textTertiary,
                         ),
                       ),
@@ -67,7 +72,7 @@ class AppSectionHeader extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.title16,
+                  style: AppText.title20,
                 ),
               ),
               if (note != null && note.isNotEmpty) ...[

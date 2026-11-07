@@ -5,7 +5,7 @@ import 'app_pressable.dart';
 import 'app_spacing.dart';
 import 'app_text.dart';
 
-/// 内容卡片：白底 + 1px 浅描边 + 圆角 12，静止时没有阴影。
+/// 内容卡片：白底 + 1px 浅描边 + 圆角 16，静止时没有阴影。
 ///
 /// 传 [title] 时顶部带标题行，[trailing] 放在标题行右侧（如「更多」、筛选）。
 class AppCard extends StatelessWidget {

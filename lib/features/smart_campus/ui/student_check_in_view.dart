@@ -206,6 +206,7 @@ class _StudentCheckInViewState extends ConsumerState<StudentCheckInView>
       bodyTopClipRadius: 8,
       bodyScrollable: false,
       header: AppPageHeader(
+        centerTitle: true,
         title: '课堂签到',
         subtitle: '小课签到、签退与课堂评价，大课由班主任统一考勤',
         onBack: widget.onBack,

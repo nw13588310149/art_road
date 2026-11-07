@@ -208,6 +208,7 @@ class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
   Widget build(BuildContext context) {
     return SmartCampusSecondaryPageShell(
       header: AppPageHeader(
+        centerTitle: true,
         title: '到岗打卡',
         subtitle: '在指定区域内打卡，下方可查看本人记录',
         onBack: widget.onBack,
@@ -378,7 +379,7 @@ class _PunchPanel extends StatelessWidget {
   }
 }
 
-/// 中央圆形打卡按钮：品牌紫实底；没有定位时转灰并在下方说明原因。
+/// 中央圆形打卡按钮。定位不可用时展示浅色禁用态和原因。
 class _PunchButton extends StatelessWidget {
   const _PunchButton({
     required this.label,
@@ -395,7 +396,7 @@ class _PunchButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
-    final fg = enabled ? AppColors.surface : AppColors.textTertiary;
+    final fg = enabled ? AppColors.surface : AppColors.textSecondary;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -404,13 +405,19 @@ class _PunchButton extends StatelessWidget {
           enabled: enabled,
           semanticLabel: label,
           child: Container(
-            width: 152,
-            height: 152,
+            width: 160,
+            height: 160,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: enabled ? AppColors.brand : AppColors.surfaceSubtle,
-              border: enabled ? null : Border.all(color: AppColors.line),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: enabled
+                    ? const [AppColors.brandDeep, AppColors.brand]
+                    : const [AppColors.brandTint, AppColors.brandWash],
+              ),
+              border: Border.all(color: AppColors.brandTint, width: 3),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

@@ -106,8 +106,6 @@ class _MyCloudDrivePageState extends ConsumerState<MyCloudDrivePage> {
     final state = ref.watch(cloudDriveControllerProvider);
     final controller = ref.read(cloudDriveControllerProvider.notifier);
     final previewing = state.previewingFile;
-    final navigator = Navigator.of(context);
-
     final Widget content;
     if (previewing != null) {
       content = _CoursewarePreviewPage(
@@ -122,71 +120,27 @@ class _MyCloudDrivePageState extends ConsumerState<MyCloudDrivePage> {
         },
       );
     } else {
-      final categoryName = state.selectedCategory?.name ?? '';
-      content = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppPageHeader(
-            title: '我的云盘',
-            subtitle: state.isFolderView
-                ? '$categoryName · ${state.currentFolderName}'
-                : '课件、范画与示范视频统一存放，随时调用',
-            onBack: navigator.canPop() ? navigator.pop : null,
-            actions: [
-              AppButton(
-                label: state.isFolderView ? '上传资料' : '新建文件夹',
-                icon: state.isFolderView
-                    ? Icons.upload_rounded
-                    : Icons.create_new_folder_outlined,
-                size: AppButtonSize.sm,
-                onTap: state.isFolderView
-                    ? _showUploadDialog
-                    : _showCreateFolderDialog,
-              ),
-            ],
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpace.page,
-                AppSpace.s4,
-                AppSpace.page,
-                AppSpace.s24,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    width: 208,
-                    child: _CloudSidebar(
-                      state: state,
-                      onSelectCategory: controller.selectCategory,
-                      onAddCategory: _showAddCategoryDialog,
-                      onCategoryAction: _handleCategoryAction,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpace.s16),
-                  Expanded(
-                    child: _CloudContentArea(
-                      state: state,
-                      keyword: _keyword,
-                      searchController: _searchController,
-                      onClearSearch: _clearSearch,
-                      onRefresh: controller.refresh,
-                      onSortChanged: controller.setSortType,
-                      onBackToOverview: controller.backToOverview,
-                      onOpenFolder: controller.openFolder,
-                      onCreateFolder: _showCreateFolderDialog,
-                      onFolderAction: _handleFolderAction,
-                      onFileAction: _handleFileAction,
-                      onUpload: _showUploadDialog,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+      content = AppSplitPanel(
+        sidebar: _CloudSidebar(
+          state: state,
+          onSelectCategory: controller.selectCategory,
+          onAddCategory: _showAddCategoryDialog,
+          onCategoryAction: _handleCategoryAction,
+        ),
+        child: _CloudContentArea(
+          state: state,
+          keyword: _keyword,
+          searchController: _searchController,
+          onClearSearch: _clearSearch,
+          onRefresh: controller.refresh,
+          onSortChanged: controller.setSortType,
+          onBackToOverview: controller.backToOverview,
+          onOpenFolder: controller.openFolder,
+          onCreateFolder: _showCreateFolderDialog,
+          onFolderAction: _handleFolderAction,
+          onFileAction: _handleFileAction,
+          onUpload: _showUploadDialog,
+        ),
       );
     }
 
@@ -533,9 +487,12 @@ class _NameDialog extends StatefulWidget {
 }
 
 class _NameDialogState extends State<_NameDialog> {
-  late final TextEditingController _ctrl = TextEditingController(
-    text: widget.initial,
-  )..selection = TextSelection(baseOffset: 0, extentOffset: widget.initial.length);
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.initial)
+        ..selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: widget.initial.length,
+        );
   String? _error;
 
   @override
@@ -626,7 +583,7 @@ class _CloudSidebar extends StatelessWidget {
         },
       );
     }
-    return AppCard(
+    return Padding(
       padding: const EdgeInsets.all(AppSpace.s8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -812,7 +769,7 @@ class _CloudContentArea extends StatelessWidget {
       );
     } else if (state.categories.isEmpty) {
       body = const AppEmptyState(
-        icon: Icons.cloud_outlined,
+        illustration: AppAssets.emptyCloudPlaceholder,
         title: '还没有资料分类',
         description: '先在左侧新建一个分类，再创建文件夹存放资料',
       );
@@ -915,13 +872,24 @@ class _CloudContentArea extends StatelessWidget {
         Expanded(
           child: AppRefreshIndicator(onRefresh: onRefresh, child: body),
         ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: AppButton(
+            label: state.isFolderView ? '上传资料' : '新建文件夹',
+            icon: state.isFolderView
+                ? Icons.upload_rounded
+                : Icons.create_new_folder_outlined,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: state.isFolderView ? onUpload : onCreateFolder,
+          ),
+        ),
       ],
     );
   }
 }
 
-int _cloudColumnsFor(double width) =>
-    width >= 840 ? 4 : (width >= 620 ? 3 : 2);
+int _cloudColumnsFor(double width) => width >= 840 ? 4 : (width >= 620 ? 3 : 2);
 
 class _CloudFoldersGrid extends StatelessWidget {
   const _CloudFoldersGrid({
@@ -2222,11 +2190,7 @@ class _PreviewCoverFrame extends StatelessWidget {
                 CachedNetworkImage(
                   imageUrl: coverUrl,
                   fit: BoxFit.cover,
-                  memCacheWidth: _coursewareDecodeExtent(
-                    context,
-                    ui(160),
-                    480,
-                  ),
+                  memCacheWidth: _coursewareDecodeExtent(context, ui(160), 480),
                   placeholder: (_, _) => placeholder,
                   errorWidget: (_, _, _) => placeholder,
                 ),
@@ -3620,9 +3584,7 @@ class _UploadDialogState extends State<_UploadDialog> {
                           constraints: BoxConstraints(
                             maxHeight: ui(_kUploadListMaxHeight),
                           ),
-                          child: SingleChildScrollView(
-                            child: uploadZone,
-                          ),
+                          child: SingleChildScrollView(child: uploadZone),
                         ),
                       ],
                     ),
@@ -3740,10 +3702,7 @@ class _UploadDialogState extends State<_UploadDialog> {
     return _wrapUploadZoneWithPicking(_buildUploadImageGridShell(ui), ui);
   }
 
-  double _uploadImageGridTileSize(
-    double maxWidth,
-    double Function(double) ui,
-  ) {
+  double _uploadImageGridTileSize(double maxWidth, double Function(double) ui) {
     final spacing = ui(_kUploadImageGridSpacing);
     final gaps = _kUploadImageGridColumns - 1;
     return (maxWidth - spacing * gaps) / _kUploadImageGridColumns;
@@ -3811,11 +3770,7 @@ class _UploadDialogState extends State<_UploadDialog> {
             ),
             _buildUploadAddTile(tileSize, radius, ui),
           ];
-          return Wrap(
-            spacing: spacing,
-            runSpacing: spacing,
-            children: tiles,
-          );
+          return Wrap(spacing: spacing, runSpacing: spacing, children: tiles);
         },
       ),
     );

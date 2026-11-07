@@ -176,6 +176,7 @@ class _AdminDormLeaveApprovalViewState
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
+        centerTitle: true,
         title: '教职工请假审批',
         subtitle: '审批教职工的请假申请',
         onBack: widget.onBack,

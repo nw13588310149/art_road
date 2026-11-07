@@ -35,8 +35,7 @@ abstract final class AppAssets {
   static const homeRili = 'assets/images/home/rili.png';
 
   /// 课表页控制条 · 日期选择 pill 日历图标。
-  static const iconScheduleCalendar =
-      'assets/images/new/0图标/课表-日历.png';
+  static const iconScheduleCalendar = 'assets/images/new/0图标/课表-日历.png';
 
   /// 学生列表 · 性别图标（男 / 女）。个人信息页性别选择仍用 [infoGenderMale] 等。
   static const iconGenderMale = 'assets/images/new/0图标/男生.png';
@@ -61,6 +60,10 @@ abstract final class AppAssets {
   /// 侧栏底部「需求反馈」入口图标。
   static const homeFeedbackIcon = 'assets/images/home/yj.png';
   static const emptyCoursePlaceholder = 'assets/images/404/kc.png';
+  static const emptyCollectionPlaceholder = 'assets/images/404/sc.png';
+  static const emptyCloudPlaceholder = 'assets/images/404/wx.png';
+  static const emptyNotesPlaceholder = 'assets/images/404/kj.png';
+
   /// 我的收藏页空状态插图。
   /// 考评 / 批改类空状态插图（执笔评卷）。
   /// 考试 / 成绩类空状态插图（翻开的书本）。
@@ -108,6 +111,7 @@ abstract final class AppAssets {
 
   /// 校圈（社区动态）
   static const xiaoquanHeaderBg = 'assets/images/xiaoquan/bg.png';
+
   /// 课表页顶栏背景（auth 模块 bgtop，白→淡紫渐变 + 顶圆角）
   static const authBgTop = 'assets/images/auth/bgtop.png';
 
@@ -163,8 +167,7 @@ abstract final class AppAssets {
       'assets/images/smartCampus/schedule_edit/repeat.png';
 
   /// 管理员 · 排课与课表 · 小课申请审核列表卡片 · 班级图标。
-  static const adminSmallCourseApplyCardClass =
-      'assets/images/new/01/xk.png';
+  static const adminSmallCourseApplyCardClass = 'assets/images/new/01/xk.png';
 
   /// 宿管 · 查寝（按宿舍 / 历史）· 顶部统计卡背景（从左到右）。
   static const dormCheckStatCard1 =
@@ -298,8 +301,7 @@ abstract final class AppAssets {
   static const groupChatSet = 'assets/images/groupChat/set.png';
   static const groupChatInfo = 'assets/images/new/群聊/群聊-群公告.png';
   static const groupChatMessage = 'assets/images/new/群聊/群聊-消息.png';
-  static const groupChatMessageMuted =
-      'assets/images/new/群聊/群聊-消息免打扰0.png';
+  static const groupChatMessageMuted = 'assets/images/new/群聊/群聊-消息免打扰0.png';
   static const groupChatVoice = 'assets/images/groupChat/voice.png';
   static const groupChatVoiceMode = 'assets/images/groupChat/voice1.png';
   static const groupChatMsg = 'assets/images/groupChat/msg.png';

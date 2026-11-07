@@ -391,6 +391,7 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppPageHeader(
+          centerTitle: true,
           title: '我的课表',
           subtitle: _subtitle,
           onBack: widget.onBack,

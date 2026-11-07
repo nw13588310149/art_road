@@ -156,6 +156,7 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
       bodyScrollable: false,
       bodyBorderRadius: 8,
       header: AppPageHeader(
+        centerTitle: true,
         title: '考评管理',
         subtitle: '给任教科目的月考提交评分和点评，评分同步到艺考网阅卷系统，复核后在「班级学情」发布',
         onBack: widget.onBack,

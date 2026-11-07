@@ -14,6 +14,7 @@ class AppEmptyState extends StatelessWidget {
     required this.title,
     this.description,
     this.icon = Icons.inbox_outlined,
+    this.illustration,
     this.actionLabel,
     this.onAction,
     this.action,
@@ -25,6 +26,7 @@ class AppEmptyState extends StatelessWidget {
   final String title;
   final String? description;
   final IconData icon;
+  final String? illustration;
   final String? actionLabel;
   final VoidCallback? onAction;
   final Widget? action;
@@ -56,15 +58,18 @@ class AppEmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: iconBackground,
-                  borderRadius: AppRadius.br12,
+              if (illustration case final asset?)
+                Image.asset(asset, width: 160, height: 160, fit: BoxFit.contain)
+              else
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: iconBackground,
+                    borderRadius: AppRadius.br12,
+                  ),
+                  child: Icon(icon, size: 24, color: iconColor),
                 ),
-                child: Icon(icon, size: 24, color: iconColor),
-              ),
               const SizedBox(height: AppSpace.s12),
               Text(
                 title,

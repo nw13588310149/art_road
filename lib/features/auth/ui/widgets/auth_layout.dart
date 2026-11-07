@@ -11,7 +11,12 @@ import 'auth_design_canvas.dart';
 ///
 /// 内容按 399 宽排版，再随 [AuthDesignCanvas] 的比例整体缩放，与背景插画保持一致。
 class AuthPageFrame extends StatelessWidget {
-  const AuthPageFrame({required this.card, this.below, super.key});
+  const AuthPageFrame({
+    required this.card,
+    this.below,
+    this.cardTop = 163,
+    super.key,
+  });
 
   final Widget card;
 
@@ -20,7 +25,7 @@ class AuthPageFrame extends StatelessWidget {
 
   static const double left = 691;
   static const double logoTop = 96;
-  static const double cardTop = 163;
+  final double cardTop;
   static const double width = 399;
 
   @override
@@ -41,18 +46,23 @@ class AuthPageFrame extends StatelessWidget {
             Positioned(
               left: left * scale,
               top: cardTop * scale,
-              child: _Scaled(
-                scale: scale,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    card,
-                    if (extra != null) ...[
-                      const SizedBox(height: AppSpace.s16),
-                      extra,
+              bottom: 0,
+              width: width * scale,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(bottom: AppSpace.s16 * scale),
+                child: _Scaled(
+                  scale: scale,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      card,
+                      if (extra != null) ...[
+                        const SizedBox(height: AppSpace.s16),
+                        extra,
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -104,7 +114,7 @@ class AuthBrandLogo extends StatelessWidget {
   }
 }
 
-/// 白色大面板：标题 + 说明 + 表单。
+/// 登录、注册和找回密码沿用同一套居中标题和渐变表单面板。
 class AuthCard extends StatelessWidget {
   const AuthCard({
     required this.title,
@@ -120,24 +130,28 @@ class AuthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final note = subtitle;
-    return AppCard(
-      radius: AppRadius.panel,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s24,
-        AppSpace.s24,
-        AppSpace.s24,
-        AppSpace.s20,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(17, 33, 17, 17),
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.br24,
+        border: Border.all(color: AppColors.surface, width: 2),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.brandTint, AppColors.surface, AppColors.surface],
+          stops: [0, 0.25, 1],
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title, style: AppText.title24),
+          Text(title, textAlign: TextAlign.center, style: AppText.title24),
           if (note != null && note.isNotEmpty) ...[
             const SizedBox(height: AppSpace.s4),
-            Text(note, style: AppText.body13),
+            Text(note, textAlign: TextAlign.center, style: AppText.body13),
           ],
-          const SizedBox(height: AppSpace.s24),
+          SizedBox(height: note == null ? 33 : AppSpace.s20),
           ...children,
         ],
       ),
@@ -156,7 +170,10 @@ enum AuthTermsSection {
 }
 
 /// 打开协议页（隐私政策直接定位到对应章节）；协议页「我已阅读并同意」返回 true 时视为同意。
-Future<bool> openAuthTerms(BuildContext context, AuthTermsSection section) async {
+Future<bool> openAuthTerms(
+  BuildContext context,
+  AuthTermsSection section,
+) async {
   final result = await Navigator.of(context).pushNamed<Object?>(
     RoutePaths.xieyi2,
     arguments: section == AuthTermsSection.privacy
@@ -253,7 +270,10 @@ class AuthSwitchLine extends StatelessWidget {
       children: [
         line,
         const SizedBox(width: AppSpace.s12),
-        Text(prompt, style: AppText.body14.copyWith(color: AppColors.textSecondary)),
+        Text(
+          prompt,
+          style: AppText.body14.copyWith(color: AppColors.textSecondary),
+        ),
         AppButton(
           label: action,
           variant: AppButtonVariant.text,

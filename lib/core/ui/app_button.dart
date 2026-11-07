@@ -7,7 +7,7 @@ import 'app_spacing.dart';
 
 /// 按钮变体（与机构端 Button 同名同义）。
 enum AppButtonVariant {
-  /// 品牌紫实底：每个区域只放一个主操作。
+  /// 品牌紫渐变：每个区域只放一个主操作。
   primary,
 
   /// 白底描边：取消、返回等中性操作。
@@ -23,7 +23,7 @@ enum AppButtonVariant {
   text,
 }
 
-/// 统一按钮：md 44 高 16px，sm 34 高 14px，圆角 8。
+/// 统一按钮：md 45 高 16px，sm 34 高 14px，圆角 12。
 ///
 /// [onTap] 为 null 或 [enabled] 为 false 时为禁用态；[loading] 时显示转圈并忽略点击。
 class AppButton extends StatelessWidget {
@@ -85,8 +85,13 @@ class AppButton extends StatelessWidget {
       width: expand ? double.infinity : null,
       padding: EdgeInsets.symmetric(horizontal: horizontal),
       decoration: BoxDecoration(
-        color: background,
-        borderRadius: AppRadius.br8,
+        color: variant == AppButtonVariant.primary ? null : background,
+        gradient: variant == AppButtonVariant.primary
+            ? const LinearGradient(
+                colors: [AppColors.brandDeep, AppColors.brand],
+              )
+            : null,
+        borderRadius: AppRadius.br12,
         border: border == null ? null : Border.all(color: border),
       ),
       child: Row(

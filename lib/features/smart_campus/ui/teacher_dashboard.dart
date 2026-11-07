@@ -1871,6 +1871,7 @@ class _TeacherScheduleSection extends ConsumerStatefulWidget {
 
 class _TeacherScheduleSectionState
     extends ConsumerState<_TeacherScheduleSection> {
+  _LessonScheduleData? _currentLesson;
   List<_LessonScheduleData> _todayLessons = const [];
   int _scheduleLoadGen = 0;
 
@@ -1901,11 +1902,13 @@ class _TeacherScheduleSectionState
       );
       if (!mounted || gen != _scheduleLoadGen) return;
       setState(() {
+        _currentLesson = built.current;
         _todayLessons = built.today;
       });
     } catch (_) {
       if (!mounted || gen != _scheduleLoadGen) return;
       setState(() {
+        _currentLesson = null;
         _todayLessons = const [];
       });
     }
@@ -1922,13 +1925,48 @@ class _TeacherScheduleSectionState
   @override
   Widget build(BuildContext context) {
     final open = widget.onOpenSchedule;
-    return _TodayLessonsBoard(
-      lessons: _todayLessons,
-      fillHeight: widget.fillRemaining,
-      onOpenAll: open == null ? null : () => open(),
-      onTapLesson: open == null
-          ? null
-          : (lesson) => open(focus: lesson.scheduleFocus),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final twoColumns = constraints.maxWidth >= 620;
+        final fill = widget.fillRemaining && twoColumns;
+        void openLesson(_LessonScheduleData lesson) =>
+            open?.call(focus: lesson.scheduleFocus);
+        final current = _TodayLessonsBoard(
+          title: '当前课程',
+          emptyLabel: '暂无当前课程',
+          lessons: [?_currentLesson],
+          fillHeight: fill,
+          onTapLesson: open == null ? null : openLesson,
+        );
+        final today = _TodayLessonsBoard(
+          lessons: _todayLessons,
+          fillHeight: fill,
+          onOpenAll: open == null ? null : () => open(),
+          onTapLesson: open == null ? null : openLesson,
+        );
+        if (twoColumns) {
+          final row = Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: current),
+              const SizedBox(width: AppSpace.s16),
+              Expanded(child: today),
+            ],
+          );
+          return fill ? row : IntrinsicHeight(child: row);
+        }
+        final column = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            current,
+            const SizedBox(height: AppSpace.s16),
+            today,
+          ],
+        );
+        return widget.fillRemaining
+            ? SingleChildScrollView(child: column)
+            : column;
+      },
     );
   }
 }
@@ -1938,6 +1976,8 @@ class _TeacherScheduleSectionState
 class _TodayLessonsBoard extends StatelessWidget {
   const _TodayLessonsBoard({
     required this.lessons,
+    this.title = '今日课表',
+    this.emptyLabel = '今天没有课程',
     this.fillHeight = false,
     this.onOpenAll,
     this.onTapLesson,
@@ -1945,6 +1985,8 @@ class _TodayLessonsBoard extends StatelessWidget {
   });
 
   final List<_LessonScheduleData> lessons;
+  final String title;
+  final String emptyLabel;
   final bool fillHeight;
   final VoidCallback? onOpenAll;
   final void Function(_LessonScheduleData lesson)? onTapLesson;
@@ -1959,9 +2001,9 @@ class _TodayLessonsBoard extends StatelessWidget {
         ? '今天没有课'
         : '共 ${lessons.length} 节${running > 0 ? ' · $running 节进行中' : ''}';
     final Widget body = lessons.isEmpty
-        ? const AppEmptyState(
+        ? AppEmptyState(
             icon: Icons.event_available_outlined,
-            title: '今天没有课程',
+            title: emptyLabel,
             description: '可以在课表里查看本周其他安排',
           )
         : LayoutBuilder(
@@ -1998,8 +2040,8 @@ class _TodayLessonsBoard extends StatelessWidget {
       mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
       children: [
         AppSectionHeader(
-          title: '今日课表',
-          subtitle: subtitle,
+          title: title,
+          subtitle: lessons.isEmpty ? null : subtitle,
           onMore: onOpenAll,
           moreLabel: moreLabel,
         ),

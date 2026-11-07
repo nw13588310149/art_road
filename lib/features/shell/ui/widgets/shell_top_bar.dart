@@ -15,7 +15,7 @@ import '../../state/shell_controller.dart';
 import '../../state/shell_state.dart';
 import 'shell_notice_drawer.dart';
 
-/// 顶栏：全局搜索 +（演示版标识）+ 帮助 / 通知 / 设置 + 账户菜单，放在 40 高的白色条里。
+/// 顶栏：全局搜索 +（演示版标识）+ 帮助 / 通知 / 设置 + 账户菜单，搜索框和快捷按钮各自使用白底。
 ///
 /// 只有图标的按钮都有读屏名称（帮助、通知、设置、账户菜单），走查脚本也按名称点击；
 /// 图标按钮与账户菜单的点击区域都是 40 高，铺满整条顶栏。
@@ -52,61 +52,56 @@ class ShellTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final searchWidth = math.min(360.0, constraints.maxWidth * 0.42);
-        // 白底描边与卡片一致；用 DecoratedBox 让 40 高的按钮铺满整条顶栏。
+        final gap = constraints.maxWidth < 720 ? AppSpace.s8 : AppSpace.s16;
         return SizedBox(
           height: height,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.br12,
-              border: Border.all(color: AppColors.lineSoft),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(left: 3, right: AppSpace.s4),
-              child: Row(
-                children: [
-                  SizedBox(width: searchWidth, child: const _TopSearchBox()),
-                  const Spacer(),
-                  if (demoMode) ...[
-                    const ShellDemoModeTag(),
-                    const SizedBox(width: AppSpace.s8),
-                  ],
-                  AppIconButton(
-                    icon: Icons.help_outline_rounded,
-                    semanticLabel: '帮助',
-                    filled: false,
-                    onTap: () => onNavigate(RoutePaths.helpGuide),
+          child: Row(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 324),
+                    child: const _TopSearchBox(),
                   ),
-                  AppIconButton(
-                    icon: Icons.notifications_none_rounded,
-                    semanticLabel: '通知',
-                    filled: false,
-                    badgeCount: state.unreadCount,
-                    onTap: () => showShellNoticeDrawer(
-                      context,
-                      items: state.noticeItems,
-                      unreadCount: state.unreadCount,
-                      onMarkAllRead: onMarkAllRead,
-                      onOpen: onOpenNotice,
-                    ),
-                  ),
-                  AppIconButton(
-                    icon: Icons.settings_outlined,
-                    semanticLabel: '设置',
-                    filled: false,
-                    onTap: () => onNavigate(RoutePaths.info),
-                  ),
-                  const SizedBox(width: AppSpace.s8),
-                  _UserMenuButton(
-                    user: state.user,
-                    schoolName: state.schoolName,
-                    showName: constraints.maxWidth >= 560,
-                    onSelect: (action) => _onUserMenu(context, action),
-                  ),
-                ],
+                ),
               ),
-            ),
+              if (demoMode) ...[const ShellDemoModeTag(), SizedBox(width: gap)],
+              AppIconButton(
+                icon: Icons.help_outline_rounded,
+                semanticLabel: '帮助',
+                background: AppColors.surface,
+                onTap: () => onNavigate(RoutePaths.helpGuide),
+              ),
+              SizedBox(width: gap),
+              AppIconButton(
+                icon: Icons.notifications_none_rounded,
+                semanticLabel: '通知',
+                background: AppColors.surface,
+                badgeCount: state.unreadCount,
+                onTap: () => showShellNoticeDrawer(
+                  context,
+                  items: state.noticeItems,
+                  unreadCount: state.unreadCount,
+                  onMarkAllRead: onMarkAllRead,
+                  onOpen: onOpenNotice,
+                ),
+              ),
+              SizedBox(width: gap),
+              AppIconButton(
+                icon: Icons.settings_outlined,
+                semanticLabel: '设置',
+                background: AppColors.surface,
+                onTap: () => onNavigate(RoutePaths.info),
+              ),
+              SizedBox(width: gap),
+              _UserMenuButton(
+                user: state.user,
+                schoolName: state.schoolName,
+                showName: constraints.maxWidth >= 560,
+                onSelect: (action) => _onUserMenu(context, action),
+              ),
+            ],
           ),
         );
       },
@@ -446,7 +441,11 @@ enum _SearchTab {
 }
 
 class _SearchItem {
-  const _SearchItem({required this.id, required this.title, required this.type});
+  const _SearchItem({
+    required this.id,
+    required this.title,
+    required this.type,
+  });
 
   /// 后端原始 id（雪花长整型，以字符串承载，避免 53bit 精度丢失）。
   final String id;
@@ -554,7 +553,9 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
     final province = ref.read(shellControllerProvider).user.province;
     try {
       final responses = await Future.wait([
-        ref.read(galleryRepositoryProvider).getWorks(keyword: keyword, size: 30),
+        ref
+            .read(galleryRepositoryProvider)
+            .getWorks(keyword: keyword, size: 30),
         repo.searchTextbookList(keyword: keyword, province: province),
         repo.searchVideoList(keyword: keyword, province: province),
         repo.searchNoteList(keyword: keyword, province: province),
@@ -649,6 +650,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         overlayLocation: OverlayChildLocation.rootOverlay,
         overlayChildBuilder: _buildOverlay,
         child: AppSearchField(
+          toolbar: true,
           controller: _controller,
           focusNode: _focusNode,
           hint: '搜索范画、书刊、资讯、视频、笔记',

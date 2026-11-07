@@ -113,54 +113,46 @@ class _AppFeedbackPageState extends ConsumerState<AppFeedbackPage> {
       records: _records,
       onRetry: _loadFeedback,
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '意见反馈',
-          subtitle: '想要的范画资料、功能建议都可以告诉我们',
-          onBack: navigator.canPop() ? navigator.pop : null,
-        ),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              const padding = EdgeInsets.fromLTRB(
-                AppSpace.page,
-                AppSpace.s4,
-                AppSpace.page,
-                AppSpace.s24,
-              );
-              if (constraints.maxWidth < 760) {
-                return SingleChildScrollView(
-                  padding: padding,
-                  child: Column(
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            title: '意见反馈',
+            centerTitle: true,
+            subtitle: '想要的范画资料、功能建议都可以告诉我们',
+            onBack: navigator.canPop() ? navigator.pop : null,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.s16),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxHeight < 460) {
+                    return ListView(
+                      children: [
+                        SizedBox(height: 240, child: history),
+                        const SizedBox(height: AppSpace.s12),
+                        form,
+                      ],
+                    );
+                  }
+                  return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Expanded(child: history),
+                      const SizedBox(height: AppSpace.s12),
                       form,
-                      const SizedBox(height: AppSpace.s16),
-                      SizedBox(height: 420, child: history),
                     ],
-                  ),
-                );
-              }
-              return Padding(
-                padding: padding,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(child: history),
-                    const SizedBox(width: AppSpace.s16),
-                    SizedBox(
-                      width: 360,
-                      child: SingleChildScrollView(child: form),
-                    ),
-                  ],
-                ),
-              );
-            },
+                  );
+                },
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -184,6 +176,8 @@ class _FeedbackForm extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       title: '写新反馈',
+      padding: EdgeInsets.zero,
+      bordered: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -191,23 +185,25 @@ class _FeedbackForm extends StatelessWidget {
             controller: controller,
             hint: '请描述你的意见或建议，如想要的范画资源、作品点评或画室工具的使用体验',
             multiline: true,
-            minLines: 8,
-            maxLines: 12,
+            minLines: 4,
+            maxLines: 4,
             maxLength: _kMaxLength,
             errorText: errorText,
             onChanged: (_) => onChanged(),
           ),
           const SizedBox(height: AppSpace.s8),
-          Text(
-            '反馈会发送给美术之路产品团队，回复会显示在「我的反馈」中。',
-            style: AppText.caption12,
-          ),
+          Text('反馈会发送给美术之路产品团队，回复会显示在「我的反馈」中。', style: AppText.caption12),
           const SizedBox(height: AppSpace.s16),
-          AppButton(
-            label: '提交反馈',
-            loading: submitting,
-            expand: true,
-            onTap: onSubmit,
+          Center(
+            child: SizedBox(
+              width: 240,
+              child: AppButton(
+                label: '提交反馈',
+                loading: submitting,
+                expand: true,
+                onTap: onSubmit,
+              ),
+            ),
           ),
         ],
       ),

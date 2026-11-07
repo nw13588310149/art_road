@@ -101,34 +101,42 @@ class CirclePage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AppPageHeader(
-                title: governance ? '校圈治理' : '校圈',
-                subtitle: governance
-                    ? '处理同学和老师举报的动态，删除时需写明原因'
-                    : '画室同学和老师分享的作品与日常',
-                onBack: () => _handleBack(context, controller),
-                actions: [
-                  if (showFeed)
-                    AppSegmented<CircleMode>(
-                      segments: const [
-                        AppSegment(value: CircleMode.list, label: '卡片'),
-                        AppSegment(value: CircleMode.immersive, label: '大图'),
-                      ],
-                      value: state.mode,
-                      onChanged: controller.setMode,
-                    ),
-                  if (!governance)
-                    AppButton(
-                      label: '发布动态',
-                      icon: Icons.add_rounded,
-                      size: AppButtonSize.sm,
-                      onTap: () => showCirclePublishDialog(context),
-                    ),
-                ],
-                bottom: governance
-                    ? _GovernanceTabs(onLeaveFeed: controller.stopMediaPlayback)
-                    : null,
+              AppCard(
+                padding: EdgeInsets.zero,
+                bordered: false,
+                child: AppPageHeader(
+                  centerTitle: true,
+                  title: governance ? '校圈治理' : '校圈',
+                  subtitle: governance
+                      ? '处理同学和老师举报的动态，删除时需写明原因'
+                      : '画室同学和老师分享的作品与日常',
+                  onBack: () => _handleBack(context, controller),
+                  actions: [
+                    if (showFeed)
+                      AppSegmented<CircleMode>(
+                        segments: const [
+                          AppSegment(value: CircleMode.list, label: '卡片'),
+                          AppSegment(value: CircleMode.immersive, label: '大图'),
+                        ],
+                        value: state.mode,
+                        onChanged: controller.setMode,
+                      ),
+                    if (!governance)
+                      AppButton(
+                        label: '发布动态',
+                        icon: Icons.add_rounded,
+                        size: AppButtonSize.sm,
+                        onTap: () => showCirclePublishDialog(context),
+                      ),
+                  ],
+                  bottom: governance
+                      ? _GovernanceTabs(
+                          onLeaveFeed: controller.stopMediaPlayback,
+                        )
+                      : null,
+                ),
               ),
+              const SizedBox(height: AppSpace.s12),
               Expanded(
                 child: !showFeed
                     ? const CircleGovernanceView()

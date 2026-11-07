@@ -56,16 +56,21 @@ class QuizPracticeView extends ConsumerWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: title,
-          subtitle: subtitle,
-          onBack: navigator.canPop() ? navigator.pop : null,
-        ),
-        Expanded(child: body),
-      ],
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            centerTitle: true,
+            title: title,
+            subtitle: subtitle,
+            onBack: navigator.canPop() ? navigator.pop : null,
+          ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 

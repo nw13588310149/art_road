@@ -681,6 +681,7 @@ class _AdminStudentManagementViewState
       backgroundColor: _kBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
+        centerTitle: true,
         title: '学生管理',
         subtitle: '管理全部学生的班级、学籍与住宿信息',
         onBack: widget.onBack,

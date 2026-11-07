@@ -57,9 +57,7 @@ class _ConsultationPageState extends ConsumerState<ConsultationPage> {
     final category = tabs.contains(_category)
         ? _category
         : ConsultationCategory.all;
-    final visible = state.items
-        .where(category.matches)
-        .toList(growable: false);
+    final visible = state.items.where(category.matches).toList(growable: false);
 
     final Widget body;
     if (state.loading && state.items.isEmpty) {
@@ -86,41 +84,47 @@ class _ConsultationPageState extends ConsumerState<ConsultationPage> {
     } else {
       body = _ConsultationGrid(
         items: visible,
+        showBanner: category == ConsultationCategory.all,
         loadingMore: state.loadingMore,
         sourceName: args.sourceName,
         onLoadMore: controller.loadMore,
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: args.schoolMode ? '校园资讯' : '资讯',
-          subtitle: args.schoolMode
-              ? '${args.sourceName ?? '画室'}发布的通知与动态'
-              : '联考政策、院校校考与备考经验',
-          onBack: _back,
-          bottom: tabs.length > 2
-              ? SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: AppTabs<ConsultationCategory>(
-                    tabs: [
-                      for (final tab in tabs)
-                        AppTab(
-                          value: tab,
-                          label: tab.label,
-                          count: counts[tab],
-                        ),
-                    ],
-                    value: category,
-                    onChanged: (value) => setState(() => _category = value),
-                  ),
-                )
-              : null,
-        ),
-        Expanded(child: body),
-      ],
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            centerTitle: true,
+            title: args.schoolMode ? '校园资讯' : '资讯',
+            subtitle: args.schoolMode
+                ? '${args.sourceName ?? '画室'}发布的通知与动态'
+                : '联考政策、院校校考与备考经验',
+            onBack: _back,
+            bottom: tabs.length > 2
+                ? SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: AppTabs<ConsultationCategory>(
+                      tabs: [
+                        for (final tab in tabs)
+                          AppTab(
+                            value: tab,
+                            label: tab.label,
+                            count: counts[tab],
+                          ),
+                      ],
+                      value: category,
+                      onChanged: (value) => setState(() => _category = value),
+                    ),
+                  )
+                : null,
+          ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 
@@ -159,12 +163,14 @@ const _cardExtent = 104.0;
 class _ConsultationGrid extends StatefulWidget {
   const _ConsultationGrid({
     required this.items,
+    required this.showBanner,
     required this.loadingMore,
     required this.onLoadMore,
     this.sourceName,
   });
 
   final List<ConsultationItem> items;
+  final bool showBanner;
   final bool loadingMore;
   final String? sourceName;
   final Future<void> Function() onLoadMore;
@@ -205,6 +211,21 @@ class _ConsultationGridState extends State<_ConsultationGrid> {
         return CustomScrollView(
           controller: _scrollController,
           slivers: [
+            if (widget.showBanner)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.page,
+                  AppSpace.s16,
+                  AppSpace.page,
+                  AppSpace.s12,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: _ConsultationBanner(
+                    item: widget.items.first,
+                    sourceName: widget.sourceName,
+                  ),
+                ),
+              ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpace.page,
@@ -243,6 +264,66 @@ class _ConsultationGridState extends State<_ConsultationGrid> {
   }
 }
 
+void _openItem(
+  BuildContext context,
+  ConsultationItem item,
+  String? sourceName,
+) {
+  Navigator.pushNamed(
+    context,
+    RoutePaths.consultationDetail,
+    arguments: ConsultationDetailArgs(id: item.id, sourceName: sourceName),
+  );
+}
+
+class _ConsultationBanner extends StatelessWidget {
+  const _ConsultationBanner({required this.item, this.sourceName});
+
+  final ConsultationItem item;
+  final String? sourceName;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: () => _openItem(context, item, sourceName),
+      child: ClipRRect(
+        borderRadius: AppRadius.br12,
+        child: SizedBox(
+          height: 200,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AppImage(src: item.coverUrl),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Color(0xD90B081A), Colors.transparent],
+                    stops: [0, 0.75],
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpace.s20),
+                  child: Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title20.copyWith(color: AppColors.onBrand),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ConsultationCard extends StatelessWidget {
   const _ConsultationCard({
     required this.item,
@@ -258,11 +339,7 @@ class _ConsultationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       padding: const EdgeInsets.all(AppSpace.s12),
-      onTap: () => Navigator.pushNamed(
-        context,
-        RoutePaths.consultationDetail,
-        arguments: ConsultationDetailArgs(id: item.id, sourceName: sourceName),
-      ),
+      onTap: () => _openItem(context, item, sourceName),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

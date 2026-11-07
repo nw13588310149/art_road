@@ -287,6 +287,7 @@ class _StudentLeaveManagementViewState
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
+        centerTitle: true,
         title: '我的请假',
         subtitle: '先由家长确认，再由班主任审批；已和家长沟通好的可直接交班主任审批',
         onBack: widget.onBack,

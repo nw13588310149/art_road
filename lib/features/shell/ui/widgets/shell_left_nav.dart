@@ -24,19 +24,18 @@ class ShellLeftNav extends StatelessWidget {
   final VoidCallback onToggleCollapse;
   final ValueChanged<String> onNavigate;
 
-  static const double _tileHeight = 44;
+  static const double _tileHeight = 48;
   static const double _tileGap = 4;
 
   @override
   Widget build(BuildContext context) {
     final collapsed = state.collapsed;
     final items = state.navItems;
-    final activeIndex = shellActiveNavIndex(
-      [for (final item in items) item.route],
-      currentRoute,
-    );
+    final activeIndex = shellActiveNavIndex([
+      for (final item in items) item.route,
+    ], currentRoute);
     final footer = state.footerNavItem;
-    final horizontal = collapsed ? AppSpace.s8 : AppSpace.s12;
+    final horizontal = collapsed ? AppSpace.s8 : AppSpace.s16;
 
     return ColoredBox(
       color: AppColors.surface,
@@ -62,17 +61,28 @@ class ShellLeftNav extends StatelessWidget {
           ),
           const SizedBox(height: AppSpace.s20),
           Expanded(
-            child: ListView.separated(
-              padding: EdgeInsets.symmetric(horizontal: horizontal),
-              physics: const ClampingScrollPhysics(),
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: _tileGap),
-              itemBuilder: (context, index) => _NavTile(
-                item: items[index],
-                active: index == activeIndex,
-                collapsed: collapsed,
-                onTap: () => onNavigate(items[index].route),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final tileHeight = collapsed
+                    ? 40.0
+                    : ((constraints.maxHeight + _tileGap) / items.length -
+                              _tileGap)
+                          .floorToDouble()
+                          .clamp(44.0, _tileHeight);
+                return ListView.separated(
+                  padding: EdgeInsets.symmetric(horizontal: horizontal),
+                  physics: const ClampingScrollPhysics(),
+                  itemCount: items.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: _tileGap),
+                  itemBuilder: (context, index) => _NavTile(
+                    item: items[index],
+                    active: index == activeIndex,
+                    collapsed: collapsed,
+                    height: tileHeight,
+                    onTap: () => onNavigate(items[index].route),
+                  ),
+                );
+              },
             ),
           ),
           const Divider(height: 1, thickness: 1, color: AppColors.lineSoft),
@@ -104,12 +114,14 @@ class _NavTile extends StatelessWidget {
     required this.item,
     required this.active,
     required this.collapsed,
+    required this.height,
     required this.onTap,
   });
 
   final ShellNavItem item;
   final bool active;
   final bool collapsed;
+  final double height;
   final VoidCallback onTap;
 
   @override
@@ -131,7 +143,7 @@ class _NavTile extends StatelessWidget {
       content = Row(
         children: [
           icon,
-          const SizedBox(width: AppSpace.s12),
+          const SizedBox(width: AppSpace.s8),
           Expanded(
             child: Text(
               item.label,
@@ -154,14 +166,14 @@ class _NavTile extends StatelessWidget {
       selected: active,
       semanticLabel: collapsed ? item.label : null,
       child: Container(
-        height: ShellLeftNav._tileHeight,
+        height: height,
         padding: collapsed
             ? EdgeInsets.zero
-            : const EdgeInsets.symmetric(horizontal: AppSpace.s12),
+            : const EdgeInsets.only(left: AppSpace.s16, right: 10),
         alignment: collapsed ? Alignment.center : Alignment.centerLeft,
         decoration: BoxDecoration(
           color: active ? AppColors.brand : null,
-          borderRadius: AppRadius.br8,
+          borderRadius: AppRadius.br12,
         ),
         child: content,
       ),
@@ -251,7 +263,11 @@ class _NavFooter extends StatelessWidget {
     if (collapsed) {
       return Column(
         mainAxisSize: MainAxisSize.min,
-        children: [link, const SizedBox(height: AppSpace.s4), toggle],
+        children: [
+          link,
+          const SizedBox(height: AppSpace.s4),
+          toggle,
+        ],
       );
     }
     return Row(

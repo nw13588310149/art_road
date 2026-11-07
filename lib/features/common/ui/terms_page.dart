@@ -16,7 +16,7 @@ class TermsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final anchor = ModalRoute.of(context)?.settings.arguments;
     return Scaffold(
-      backgroundColor: AppColors.page,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: TermsContent(
           initialAnchor: anchor is String ? anchor : null,
@@ -66,80 +66,56 @@ class _TermsContentState extends State<TermsContent> {
   @override
   Widget build(BuildContext context) {
     final onAgree = widget.onAgree;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '服务协议与隐私政策',
-          subtitle: '更新日期 2026-11-01 · 生效日期 2026-11-01',
-          onBack: widget.onBack,
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              AppSpace.s24,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: AppCard(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpace.s24,
-                    AppSpace.s24,
-                    AppSpace.s24,
-                    AppSpace.s12,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final section in _sections)
-                        _TermsSectionView(
-                          key: section.anchor == TermsPage.privacyAnchor
-                              ? _privacyKey
-                              : null,
-                          section: section,
-                        ),
-                    ],
-                  ),
-                ),
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            title: '服务协议与隐私政策',
+            subtitle: '更新日期 2026-11-01 · 生效日期 2026-11-01',
+            onBack: widget.onBack,
+            centerTitle: true,
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final section in _sections)
+                    _TermsSectionView(
+                      key: section.anchor == TermsPage.privacyAnchor
+                          ? _privacyKey
+                          : null,
+                      section: section,
+                    ),
+                ],
               ),
             ),
           ),
-        ),
-        if (onAgree != null)
-          DecoratedBox(
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              border: Border(top: BorderSide(color: AppColors.lineSoft)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpace.page,
-                vertical: AppSpace.s12,
+          if (onAgree != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.s16,
+                AppSpace.s8,
+                AppSpace.s16,
+                AppSpace.s20,
               ),
               child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '请阅读完整内容，同意后返回登录或注册页继续',
-                          style: AppText.caption12,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpace.s16),
-                      AppButton(label: '我已阅读并同意', onTap: onAgree),
-                    ],
+                child: SizedBox(
+                  width: 230,
+                  child: AppButton(
+                    label: '我已阅读并同意',
+                    onTap: onAgree,
+                    expand: true,
                   ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -249,10 +225,15 @@ const _sections = <_TermsSection>[
     '我们可能因业务调整或法律法规变化更新本协议，更新后将在应用内显著位置提示。您注销账号或严重违反本协议时，'
         '我们可以终止向您提供服务，并依法处理相关数据。',
   ]),
-  _TermsSection('美术之路隐私政策', [
-    '我们重视您的个人信息与隐私保护，遵循合法、正当、必要和诚信的原则处理个人信息。以下说明我们如何收集、使用、共享、'
-        '存储和保护您的信息，以及您享有的权利。',
-  ], major: true, anchor: TermsPage.privacyAnchor),
+  _TermsSection(
+    '美术之路隐私政策',
+    [
+      '我们重视您的个人信息与隐私保护，遵循合法、正当、必要和诚信的原则处理个人信息。以下说明我们如何收集、使用、共享、'
+          '存储和保护您的信息，以及您享有的权利。',
+    ],
+    major: true,
+    anchor: TermsPage.privacyAnchor,
+  ),
   _TermsSection('一、我们收集的信息', [
     '1. 账号信息：手机号、姓名或昵称、头像、性别、出生日期、所在地区、就读画室、专业方向和目标院校。',
     '2. 学习数据：您上传的作品照片及老师点评，考试原卷图片，各科成绩、档位、评语与排名，题库练习记录、笔记、收藏，'

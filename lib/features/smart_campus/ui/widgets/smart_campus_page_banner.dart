@@ -10,9 +10,15 @@ BoxDecoration smartCampusPageBannerDecoration(
   double borderRadius = 16,
 }) {
   return BoxDecoration(
-    color: AppColors.surface,
     borderRadius: BorderRadius.circular(ui(borderRadius)),
-    border: Border.all(color: AppColors.lineSoft),
+    gradient: const LinearGradient(
+      colors: [AppColors.surface, AppColors.brandWash],
+    ),
+    image: const DecorationImage(
+      image: AssetImage(AppAssets.xiaoquanHeaderBg),
+      fit: BoxFit.cover,
+      alignment: Alignment.centerRight,
+    ),
   );
 }
 
@@ -41,7 +47,14 @@ class SmartCampusScheduleTopBar extends StatelessWidget {
           topLeft: Radius.circular(ui(borderRadius)),
           topRight: Radius.circular(ui(borderRadius)),
         ),
-        color: AppColors.surface,
+        gradient: const LinearGradient(
+          colors: [AppColors.surface, AppColors.brandWash],
+        ),
+        image: const DecorationImage(
+          image: AssetImage(AppAssets.authBgTop),
+          fit: BoxFit.cover,
+          alignment: Alignment.centerRight,
+        ),
       ),
       child: child,
     );
@@ -89,38 +102,31 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
   /// 为 `false` 时由调用方自行提供滚动（如下拉刷新场景）。
   final bool bodyScrollable;
 
-  /// 页头用 [AppPageHeader]（自带左右 20 版心与底部 12 留白），主体与页头左右对齐，
-  /// 卡片直接落在页面底色上；[headerGap]、[bodyBorderRadius]、[bodyTopClipRadius]
-  /// 为旧参数，保留以兼容调用方。
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final topRadius = Radius.circular(
+      ui(bodyTopClipRadius ?? bodyBorderRadius),
+    );
+    final bottomRadius = Radius.circular(ui(bodyBorderRadius));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        header,
-        const SizedBox(height: AppSpace.s4),
+        DecoratedBox(
+          decoration: smartCampusPageBannerDecoration(ui),
+          child: header,
+        ),
+        SizedBox(height: ui(headerGap)),
         Expanded(
-          child: ColoredBox(
-            color: backgroundColor,
-            child: bodyScrollable
-                ? SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpace.page,
-                      0,
-                      AppSpace.page,
-                      AppSpace.page,
-                    ),
-                    child: body,
-                  )
-                : Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpace.page,
-                      0,
-                      AppSpace.page,
-                      AppSpace.page,
-                    ),
-                    child: body,
-                  ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.vertical(
+              top: topRadius,
+              bottom: bottomRadius,
+            ),
+            child: ColoredBox(
+              color: backgroundColor,
+              child: bodyScrollable ? SingleChildScrollView(child: body) : body,
+            ),
           ),
         ),
       ],

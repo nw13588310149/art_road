@@ -451,6 +451,7 @@ class _TeacherClassAttendanceViewState
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
       header: AppPageHeader(
+        centerTitle: true,
         title: '签课管理',
         subtitle: '查看授课签到统计，给今日课程签到、签退并登记学生出勤',
         onBack: widget.onBack,
@@ -2656,6 +2657,7 @@ class _HistoryView extends StatelessWidget {
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
       header: AppPageHeader(
+        centerTitle: true,
         title: '签到历史',
         subtitle: '按日期查看全部授课签到记录',
         onBack: onBack,

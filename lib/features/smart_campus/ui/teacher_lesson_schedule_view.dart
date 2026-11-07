@@ -1114,6 +1114,7 @@ class _TeacherLessonScheduleViewState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppPageHeader(
+          centerTitle: true,
           title: '授课课表',
           subtitle: _subtitle,
           onBack: widget.onBack,
@@ -1447,18 +1448,9 @@ class _ApplyStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (status) {
-      _ApplyStatus.pending => const AppTag(
-        label: '待审核',
-        tone: AppTone.warning,
-      ),
-      _ApplyStatus.rejected => const AppTag(
-        label: '已驳回',
-        tone: AppTone.danger,
-      ),
-      _ApplyStatus.passed => const AppTag(
-        label: '已通过',
-        tone: AppTone.success,
-      ),
+      _ApplyStatus.pending => const AppTag(label: '待审核', tone: AppTone.warning),
+      _ApplyStatus.rejected => const AppTag(label: '已驳回', tone: AppTone.danger),
+      _ApplyStatus.passed => const AppTag(label: '已通过', tone: AppTone.success),
     };
   }
 }

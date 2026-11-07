@@ -5,7 +5,7 @@ import 'app_colors.dart';
 import 'app_pressable.dart';
 import 'app_spacing.dart';
 
-/// 方形图标按钮：md 40 / sm 34，圆角 8。
+/// 方形图标按钮：md 40（圆角 12）/ sm 34（圆角 8）。
 ///
 /// [semanticLabel] 必填，同时作为读屏文字与悬停提示。[badgeCount] 大于 0 时
 /// 右上角显示计数。
@@ -16,6 +16,7 @@ class AppIconButton extends StatelessWidget {
     required this.onTap,
     this.size = AppButtonSize.md,
     this.filled = true,
+    this.background = AppColors.surfaceSubtle,
     this.color = AppColors.ink,
     this.badgeCount = 0,
     this.enabled = true,
@@ -30,6 +31,7 @@ class AppIconButton extends StatelessWidget {
 
   /// 浅灰底；false 时无底色，用于页头、弹窗右上角。
   final bool filled;
+  final Color background;
   final Color color;
   final int badgeCount;
   final bool enabled;
@@ -44,8 +46,8 @@ class AppIconButton extends StatelessWidget {
       height: extent,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: filled ? AppColors.surfaceSubtle : null,
-        borderRadius: AppRadius.br8,
+        color: filled ? background : null,
+        borderRadius: md ? AppRadius.br12 : AppRadius.br8,
       ),
       child: Icon(icon, size: md ? 20 : 18, color: color),
     );

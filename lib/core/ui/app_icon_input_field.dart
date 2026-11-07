@@ -7,11 +7,11 @@ import 'app_pressable.dart';
 import 'app_spacing.dart';
 import 'app_text.dart';
 
-/// 带前置图标的单行输入框，44 高，与 [AppButtonSize.md] 按钮等高。
+/// 带前置图标的单行输入框，45 高，与 [AppButtonSize.md] 按钮等高。
 ///
 /// 用于登录、注册、找回密码这类输入框与主按钮上下排列的表单（艺考网机构端登录页
 /// 同样是唯一放大输入框的地方）；普通表单仍用 34 高的 [AppInputField]。
-/// 外观与 [AppInputField] 一致：白底、1px 描边、圆角 8，聚焦立即转品牌紫，
+/// 白底、1px 描边、圆角 12，聚焦立即转品牌紫，
 /// 出错立即转红并在下方说明原因。[obscureText] 为 true 时右侧带「显示 / 隐藏密码」。
 class AppIconInputField extends StatefulWidget {
   const AppIconInputField({
@@ -99,7 +99,7 @@ class _AppIconInputFieldState extends State<AppIconInputField> {
     final textStyle = AppText.body14.copyWith(color: AppColors.ink);
     final borderColor = hasError
         ? AppColors.danger
-        : (_focusNode.hasFocus ? AppColors.brand : AppColors.line);
+        : (_focusNode.hasFocus ? AppColors.brand : AppColors.lineSoft);
 
     final box = Container(
       height: AppSize.buttonMd,
@@ -109,13 +109,13 @@ class _AppIconInputFieldState extends State<AppIconInputField> {
       ),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: AppRadius.br8,
+        borderRadius: AppRadius.br12,
         border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
-          Icon(widget.icon, size: 18, color: AppColors.textTertiary),
-          const SizedBox(width: AppSpace.s8),
+          Icon(widget.icon, size: 20, color: AppColors.textSecondary),
+          const SizedBox(width: 10),
           Expanded(
             child: AppTextField(
               controller: _controller,

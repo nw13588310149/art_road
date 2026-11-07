@@ -387,6 +387,7 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
       bodyTopClipRadius: 8,
       bodyScrollable: false,
       header: AppPageHeader(
+        centerTitle: true,
         title: '我的作业',
         subtitle: '老师布置的作业在这里提交照片、视频或文档，批阅结果和点评也在这里查看',
         onBack: widget.onBack,

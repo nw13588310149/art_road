@@ -1299,6 +1299,7 @@ class _AdminScheduleManagementViewState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppPageHeader(
+          centerTitle: true,
           title: '排课与课表',
           subtitle: '按班级查看与调整周课表，审核任课老师的小课申请',
           onBack: widget.onBack,

@@ -253,6 +253,7 @@ class _TeacherMyLeaveViewState extends ConsumerState<TeacherMyLeaveView> {
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
+        centerTitle: true,
         title: widget.title,
         subtitle: '提交后由教务老师审批，审批结果会同步到这里',
         onBack: widget.onBack,

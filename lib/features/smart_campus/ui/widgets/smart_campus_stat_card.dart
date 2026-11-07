@@ -2,8 +2,6 @@ import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-import '../../../shell/ui/shell_layout.dart';
-
 /// 统计卡数值字族：`assets/fonts/Barlow-SemiBold.ttf`
 const smartCampusStatValueFontFamily = 'Barlow SemiBold';
 
@@ -126,10 +124,7 @@ Widget smartCampusHomeStatValue({
   );
 }
 
-/// 智慧校园二级页顶部指标卡：白底描边卡 + [AppStatTile]（标签在上、数字在下）。
-///
-/// [backgroundAsset] 为旧参数，已不再绘制背景图、渐变或装饰图标；状态色只体现在
-/// 列表里的状态标签上。
+/// 智慧校园二级页指标卡。背景插图在右侧，标题与数值在左侧。
 class SmartCampusStatCard extends StatelessWidget {
   const SmartCampusStatCard({
     super.key,
@@ -174,51 +169,59 @@ class SmartCampusStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final custom = child;
-    if (custom != null) {
-      final ui = DashboardScaleScope.of(context).ui;
-      return AppCard(
-        padding: contentPadding ?? const EdgeInsets.all(AppSpace.s16),
-        onTap: onTap,
-        child: SizedBox(height: ui(100) - 2, child: custom),
-      );
-    }
     final display = valueLabel ?? '$value';
-    final Widget content = valueIsText
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.caption12,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                display,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.title16.copyWith(color: valueColor),
-              ),
-            ],
-          )
-        : AppStatTile(
-            label: label,
-            value: display,
-            unit: valueSuffix,
-            valueColor: valueColor,
-          );
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s16,
-        AppSpace.s12,
-        AppSpace.s12,
-        AppSpace.s12,
+    final Widget content =
+        child ??
+        (valueIsText
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption12,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    display,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title16.copyWith(color: valueColor),
+                  ),
+                ],
+              )
+            : AppStatTile(
+                label: label,
+                value: display,
+                unit: valueSuffix,
+                valueColor: valueColor,
+              ));
+    final card = Container(
+      height: 100,
+      width: double.infinity,
+      padding:
+          contentPadding ??
+          EdgeInsets.fromLTRB(
+            AppSpace.s16,
+            AppSpace.s12,
+            rightPadding,
+            AppSpace.s12,
+          ),
+      alignment: Alignment.centerLeft,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.br12,
+        border: Border.all(color: AppColors.surface),
+        image: DecorationImage(
+          image: AssetImage(backgroundAsset),
+          fit: BoxFit.fitHeight,
+          alignment: Alignment.centerRight,
+        ),
       ),
-      onTap: onTap,
-      child: SizedBox(width: double.infinity, child: content),
+      child: content,
     );
+    return onTap == null ? card : AppPressable(onTap: onTap, child: card);
   }
 }

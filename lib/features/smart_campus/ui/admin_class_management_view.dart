@@ -1387,6 +1387,7 @@ class _AdminClassManagementViewState
       backgroundColor: _kBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
+        centerTitle: true,
         title: '班级管理',
         subtitle: '管理行政班、小班与学生分班',
         onBack: widget.onBack,

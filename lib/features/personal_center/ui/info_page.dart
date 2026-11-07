@@ -11,7 +11,7 @@ import '../state/personal_center_controller.dart';
 import '../state/personal_center_state.dart';
 import '../state/profile_format.dart';
 
-/// 个人信息页：头像、基本资料、学籍信息与账号安全，分三张卡片限宽居中。
+/// 个人信息页：在统一白色面板内展示个人资料、学籍与账号安全。
 class InfoPage extends ConsumerWidget {
   const InfoPage({super.key});
 
@@ -33,16 +33,21 @@ class InfoPage extends ConsumerWidget {
       body = _InfoBody(state: state, controller: controller);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '个人信息',
-          subtitle: '头像、资料与登录密码',
-          onBack: () => _backToPrev(context),
-        ),
-        Expanded(child: body),
-      ],
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            centerTitle: true,
+            title: '个人信息',
+            subtitle: '头像、资料与登录密码',
+            onBack: () => _backToPrev(context),
+          ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 }
@@ -80,7 +85,7 @@ class _InfoBody extends StatelessWidget {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: const BoxConstraints(maxWidth: 1000),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -212,11 +217,7 @@ class _InfoBody extends StatelessWidget {
               _FieldGroup(
                 title: '账号安全',
                 rows: [
-                  _fieldRow(
-                    '登录手机号',
-                    maskMobile(field('mobile')),
-                    null,
-                  ),
+                  _fieldRow('登录手机号', maskMobile(field('mobile')), null),
                   AppListRow(
                     title: '修改密码',
                     chevron: true,
@@ -273,6 +274,7 @@ class _FieldGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
+      bordered: false,
       padding: const EdgeInsets.only(bottom: AppSpace.s4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -290,9 +292,7 @@ class _FieldGroup extends StatelessWidget {
             if (i < rows.length - 1)
               DecoratedBox(
                 decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: AppColors.lineSoft),
-                  ),
+                  border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
                 ),
                 child: rows[i],
               )

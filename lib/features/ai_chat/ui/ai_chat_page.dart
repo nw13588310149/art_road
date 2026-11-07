@@ -117,12 +117,16 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     final controller = ref.read(aiChatControllerProvider.notifier);
     _scheduleScrollIfNeeded(state);
 
-    final navigator = Navigator.of(context);
     final panel = DecoratedBox(
       decoration: BoxDecoration(
         border: Border.all(color: _border),
         borderRadius: AppRadius.br16,
-        color: AppColors.surface,
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.brandWash, AppColors.surface],
+          stops: [0, 0.72],
+        ),
       ),
       child: ClipRRect(
         borderRadius: AppRadius.br16,
@@ -168,27 +172,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         ),
       ),
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '小美同学',
-          subtitle: '美术答疑助手 · 回答由模型生成，仅供参考',
-          onBack: navigator.canPop() ? navigator.pop : null,
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              AppSpace.s24,
-            ),
-            child: panel,
-          ),
-        ),
-      ],
-    );
+    return panel;
   }
 
   Widget _buildHistoryPane(AiChatState state, AiChatController controller) {
@@ -419,7 +403,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
 
   Widget _buildTheoryCard() {
     return AppCard(
-      color: AppColors.surfaceSubtle,
+      color: AppColors.brandWash,
       bordered: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,7 +452,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
 
   Widget _buildToolCard() {
     return AppCard(
-      color: AppColors.surfaceSubtle,
+      color: AppColors.brandWash,
       bordered: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

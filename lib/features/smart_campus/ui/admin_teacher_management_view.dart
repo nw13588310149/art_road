@@ -539,6 +539,7 @@ class _AdminTeacherManagementViewState
       backgroundColor: _kBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
+        centerTitle: true,
         title: '教师管理',
         subtitle: '管理教师档案、任课班级与角色',
         onBack: widget.onBack,

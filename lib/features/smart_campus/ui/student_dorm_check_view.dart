@@ -257,6 +257,7 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
       bodyTopClipRadius: 8,
       headerGap: _kStatsBlockGap,
       header: AppPageHeader(
+        centerTitle: true,
         title: '我的查寝',
         subtitle: '只显示$displayName的查寝记录；漏打卡可申请补卡，由宿管或班主任审核',
         onBack: widget.onBack,

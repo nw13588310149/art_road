@@ -222,6 +222,7 @@ class _TeacherDormHistoryViewState
     final exceptionCount = state.stat.lateCount + state.stat.absentCount;
     return SmartCampusSecondaryPageShell(
       header: AppPageHeader(
+        centerTitle: true,
         title: '查寝历史',
         subtitle: '按日期查看本班住宿生的晚查寝结果',
         onBack: widget.onBack,

@@ -512,6 +512,7 @@ class _AdminNotificationManagementViewState
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
+        centerTitle: true,
         title: '通知管理',
         subtitle: '发布、定时与撤回校级通知',
         onBack: widget.onBack,

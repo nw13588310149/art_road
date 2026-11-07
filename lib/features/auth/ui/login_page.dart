@@ -35,7 +35,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return AuthPageFrame(
       card: AuthCard(
         title: '账号登录',
-        subtitle: '使用手机号和密码登录美术之路',
         children: [
           AppIconInputField(
             icon: Icons.phone_iphone_rounded,
@@ -49,7 +48,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             errorText: state.errorOf(AuthField.mobile),
             onChanged: controller.setMobile,
           ),
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: AppSpace.s20),
           AppIconInputField(
             icon: Icons.lock_outline_rounded,
             hint: '请输入密码',
@@ -68,20 +67,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               onTap: () => Navigator.pushNamed(context, RoutePaths.forget),
             ),
           ),
-          const SizedBox(height: AppSpace.s4),
+          const SizedBox(height: AppSpace.s20),
           AppButton(
             label: '立即登录',
             expand: true,
             loading: state.isSubmitting,
             onTap: _onLogin,
           ),
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: AppSpace.s24),
           AuthAgreementRow(
             checked: state.agreeTerms,
             onChanged: controller.setAgreeTerms,
             onOpenTerms: _openTerms,
           ),
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: AppSpace.s24),
           AuthSwitchLine(
             prompt: '没有账号？',
             action: '立即注册',

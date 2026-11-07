@@ -53,6 +53,7 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
     final total = _ForgetStep.values.length;
 
     return AuthPageFrame(
+      cardTop: 194,
       card: AuthCard(
         title: '找回密码',
         subtitle: '第 ${_step.index + 1} 步（共 $total 步）：${_step.label}',

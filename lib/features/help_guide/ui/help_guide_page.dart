@@ -104,88 +104,93 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
         ? state.items.length
         : state.items.where((item) => item.categoryId == categoryId).length;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '操作指南',
-          subtitle: '各功能的操作说明',
-          onBack: _back,
-          actions: [
-            SizedBox(
-              width: 220,
-              child: AppSearchField(
-                controller: _search,
-                hint: '搜索指南',
-                onChanged: (value) => setState(() => _query = value),
-                onCleared: _clearSearch,
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            centerTitle: true,
+            title: '操作指南',
+            subtitle: '各功能的操作说明',
+            onBack: _back,
+            actions: [
+              SizedBox(
+                width: 220,
+                child: AppSearchField(
+                  controller: _search,
+                  hint: '搜索指南',
+                  onChanged: (value) => setState(() => _query = value),
+                  onCleared: _clearSearch,
+                ),
               ),
-            ),
-            AppButton(
-              label: '新手引导',
-              icon: Icons.explore_outlined,
-              variant: AppButtonVariant.quiet,
-              size: AppButtonSize.sm,
-              onTap: () => showRoleGuide(context, role: _currentRole()),
-            ),
-            if (widget.demoMode)
               AppButton(
-                label: '组件库（演示）',
-                icon: Icons.widgets_outlined,
+                label: '新手引导',
+                icon: Icons.explore_outlined,
                 variant: AppButtonVariant.quiet,
                 size: AppButtonSize.sm,
-                onTap: () =>
-                    Navigator.of(context).pushNamed(RoutePaths.designSystem),
+                onTap: () => showRoleGuide(context, role: _currentRole()),
               ),
-          ],
-          bottom: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: AppTabs<String>(
-              tabs: [
-                for (final category in state.categories)
-                  AppTab(
-                    value: category.id,
-                    label: category.label,
-                    count: countOf(category.id),
-                  ),
-              ],
-              value: state.selectedCategoryId,
-              onChanged: controller.selectCategory,
-            ),
-          ),
-        ),
-        if (widget.demoMode)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              AppSpace.s12,
-            ),
-            child: AppNotice(
-              message: _guidesSkipped == true
-                  ? '演示版：新手引导已跳过，各身份进入首页时不再弹出。'
-                  : '演示版：各身份第一次进入首页时会弹出新手引导。',
-              action: AppButton(
-                label: _guidesSkipped == true ? '恢复新手引导' : '跳过新手引导',
-                variant: AppButtonVariant.text,
-                size: AppButtonSize.sm,
-                onTap: _guidesSkipped == null ? null : _toggleGuides,
+              if (widget.demoMode)
+                AppButton(
+                  label: '组件库（演示）',
+                  icon: Icons.widgets_outlined,
+                  variant: AppButtonVariant.quiet,
+                  size: AppButtonSize.sm,
+                  onTap: () =>
+                      Navigator.of(context).pushNamed(RoutePaths.designSystem),
+                ),
+            ],
+            bottom: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: AppTabs<String>(
+                tabs: [
+                  for (final category in state.categories)
+                    AppTab(
+                      value: category.id,
+                      label: category.label,
+                      count: countOf(category.id),
+                    ),
+                ],
+                value: state.selectedCategoryId,
+                onChanged: controller.selectCategory,
               ),
             ),
           ),
-        Expanded(
-          child: items.isEmpty
-              ? AppEmptyState(
-                  icon: Icons.search_off_rounded,
-                  title: '没有找到相关指南',
-                  description: '换个关键词试试，或切换到「全部」分类',
-                  actionLabel: '清除搜索',
-                  onAction: _clearSearch,
-                )
-              : _GuideGrid(items: items),
-        ),
-      ],
+          if (widget.demoMode)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.page,
+                AppSpace.s4,
+                AppSpace.page,
+                AppSpace.s12,
+              ),
+              child: AppNotice(
+                message: _guidesSkipped == true
+                    ? '演示版：新手引导已跳过，各身份进入首页时不再弹出。'
+                    : '演示版：各身份第一次进入首页时会弹出新手引导。',
+                action: AppButton(
+                  label: _guidesSkipped == true ? '恢复新手引导' : '跳过新手引导',
+                  variant: AppButtonVariant.text,
+                  size: AppButtonSize.sm,
+                  onTap: _guidesSkipped == null ? null : _toggleGuides,
+                ),
+              ),
+            ),
+          Expanded(
+            child: items.isEmpty
+                ? AppEmptyState(
+                    icon: Icons.search_off_rounded,
+                    title: '没有找到相关指南',
+                    description: '换个关键词试试，或切换到「全部」分类',
+                    actionLabel: '清除搜索',
+                    onAction: _clearSearch,
+                  )
+                : _GuideGrid(items: items),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -262,35 +267,16 @@ class _GuideCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       onTap: () => _showGuideDetail(context, item),
+      padding: const EdgeInsets.all(AppSpace.s12),
+      radius: 12,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: AppColors.surfaceSubtle,
-                  borderRadius: AppRadius.br8,
-                ),
-                child: Icon(
-                  _iconOf(item.categoryId),
-                  size: 22,
-                  color: AppColors.ink,
-                ),
-              ),
-              const SizedBox(width: AppSpace.s12),
-              Expanded(
-                child: Text(
-                  item.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.title16,
-                ),
-              ),
-            ],
+          Text(
+            item.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.body14Strong,
           ),
           const SizedBox(height: AppSpace.s8),
           Text(
@@ -300,6 +286,24 @@ class _GuideCard extends StatelessWidget {
             style: AppText.body13,
           ),
           const Spacer(),
+          const SizedBox(height: AppSpace.s12),
+          Container(
+            height: 80,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              borderRadius: AppRadius.br8,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.brandWash, AppColors.brandTint],
+              ),
+            ),
+            child: Icon(
+              _iconOf(item.categoryId),
+              size: 32,
+              color: AppColors.brand,
+            ),
+          ),
           const SizedBox(height: AppSpace.s12),
           Row(
             children: [

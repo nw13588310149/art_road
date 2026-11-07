@@ -274,6 +274,7 @@ class _TeacherDormDynamicViewState
     final batchDate = students.isEmpty ? '' : students.first.date;
     return SmartCampusSecondaryPageShell(
       header: AppPageHeader(
+        centerTitle: true,
         title: '查寝动态',
         subtitle: '管辖楼栋的晚查寝结果、异常跟进与补卡审核',
         onBack: widget.onBack,
