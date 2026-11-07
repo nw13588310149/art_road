@@ -273,6 +273,12 @@ List<ShellNavItem> buildDefaultNavItems({
       activeIcon: AppAssets.leftNavFanhua,
     ),
     const ShellNavItem(
+      label: '美术书刊',
+      route: RoutePaths.ebooks,
+      icon: AppAssets.leftNavShukan,
+      activeIcon: AppAssets.leftNavShukan,
+    ),
+    const ShellNavItem(
       label: '画室工具箱',
       route: RoutePaths.artToolbox,
       icon: AppAssets.leftNavGongju,

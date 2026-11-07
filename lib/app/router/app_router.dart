@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/ai_chat/ui/ai_chat_page.dart';
 import '../../features/art_toolbox/ui/art_toolbox_page.dart';
+import '../../features/ebooks/ui/ebooks_page.dart';
 import '../../features/artworks/ui/artworks_page.dart';
 import '../../features/auth/ui/forget_password_page.dart';
 import '../../features/auth/ui/login_page.dart';
@@ -95,6 +96,8 @@ class AppRouter {
         return const GalleryPage();
       case RoutePaths.artToolbox:
         return const ArtToolboxPage();
+      case RoutePaths.ebooks:
+        return const EbooksPage();
       case RoutePaths.school:
         return const SchoolCoursewareV2Page();
       case RoutePaths.circle:

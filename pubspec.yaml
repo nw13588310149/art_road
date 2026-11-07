@@ -204,6 +204,7 @@ flutter:
     - assets/demo/avatars/
     - assets/demo/video/
     - assets/demo/brand/
+    - assets/demo/ebooks/
     - assets/images/circle/
 
   # An image asset can refer to one or more resolution-specific "variants", see

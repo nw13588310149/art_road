@@ -13,6 +13,7 @@ import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../../core/widgets/app_wheel_picker_sheet.dart';
 import '../../data/shell_repository.dart';
+import '../../../ebooks/data/ebook_repository.dart';
 import '../../../gallery/data/gallery_repository.dart';
 import '../../state/shell_controller.dart';
 import '../../state/shell_state.dart';
@@ -807,13 +808,15 @@ class _NoticeEmpty extends StatelessWidget {
 // 视觉上沿用顶部 v2 设计（白底、12px 圆角、40px 高）；下拉浮层使用 Overlay
 // 居中弹出在输入框下方 8px，右下方阴影 + 1px 浅边框，与个人菜单风格一致。
 
-enum _SearchTab { gallery, text, video, note }
+enum _SearchTab { gallery, ebook, text, video, note }
 
 extension _SearchTabExt on _SearchTab {
   String get label {
     switch (this) {
       case _SearchTab.gallery:
         return '范画';
+      case _SearchTab.ebook:
+        return '书刊';
       case _SearchTab.text:
         return '资讯';
       case _SearchTab.video:
@@ -873,6 +876,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
   bool _loading = false;
   Map<_SearchTab, List<_SearchItem>> _results = const {
     _SearchTab.gallery: <_SearchItem>[],
+    _SearchTab.ebook: <_SearchItem>[],
     _SearchTab.text: <_SearchItem>[],
     _SearchTab.video: <_SearchItem>[],
     _SearchTab.note: <_SearchItem>[],
@@ -928,6 +932,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         _loading = false;
         _results = const {
           _SearchTab.gallery: <_SearchItem>[],
+          _SearchTab.ebook: <_SearchItem>[],
     _SearchTab.text: <_SearchItem>[],
           _SearchTab.video: <_SearchItem>[],
                 _SearchTab.note: <_SearchItem>[],
@@ -958,6 +963,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         repo.searchVideoList(keyword: keyword, province: province),
         repo.searchNoteList(keyword: keyword, province: province),
         ref.read(galleryRepositoryProvider).getWorks(keyword: keyword, size: 30),
+        ref.read(ebookRepositoryProvider).searchBooks(keyword),
       ]);
       // 过期请求兜底：在 await 期间用户可能继续打字，老 keyword 的结果应被丢弃。
       if (!mounted || _pendingKeyword != keyword) {
@@ -969,6 +975,10 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
           _SearchTab.gallery: _parseList(
             responses[3].data,
             forcedType: 'gallery',
+          ),
+          _SearchTab.ebook: _parseList(
+            responses[4].data,
+            forcedType: 'ebook',
           ),
           _SearchTab.text: _parseList(
             responses[0].data,
@@ -984,6 +994,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         _loading = false;
         _results = const {
           _SearchTab.gallery: <_SearchItem>[],
+          _SearchTab.ebook: <_SearchItem>[],
     _SearchTab.text: <_SearchItem>[],
           _SearchTab.video: <_SearchItem>[],
                 _SearchTab.note: <_SearchItem>[],
@@ -1049,6 +1060,13 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
       navigator.pushNamed(
         RoutePaths.gallery,
         arguments: <String, dynamic>{'workId': item.id},
+      );
+      return;
+    }
+    if (type == 'ebook') {
+      navigator.pushNamed(
+        RoutePaths.ebooks,
+        arguments: <String, dynamic>{'bookId': item.id},
       );
       return;
     }

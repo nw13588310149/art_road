@@ -16,6 +16,7 @@ import '../../../core/ui/app_course_card.dart';
 import '../../../core/widgets/seamless_banner_carousel.dart';
 import '../state/home_dashboard_controller.dart';
 import '../state/home_dashboard_state.dart';
+import '../../ebooks/ui/home_ebook_shelf_section.dart';
 import 'widgets/home_study_snapshot.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -202,6 +203,8 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                       ),
                       const SizedBox(height: 14),
                       const HomeStudySnapshotCard(),
+                      const SizedBox(height: 14),
+                      const HomeEbookShelfSection(),
                       const SizedBox(height: 14),
                       _buildLatestHeader(),
                       const SizedBox(height: 10),
