@@ -381,12 +381,12 @@ String formatAdminHomeIsoDate(DateTime date) {
       '${date.day.toString().padLeft(2, '0')}';
 }
 
-/// 数据看板查询区间：含今天在内共 7 天（`startDate` … `endDate`）。
+/// 数据看板查询区间：截至昨天的 7 天（`startDate` … `endDate`），当天还没过完，不计入。
 ({String startDate, String endDate}) adminHomeLast7DaysDateRange({
   DateTime? anchor,
 }) {
-  final end = anchor ?? DateTime.now();
-  final endDate = DateTime(end.year, end.month, end.day);
+  final now = anchor ?? DateTime.now();
+  final endDate = DateTime(now.year, now.month, now.day - 1);
   final startDate = endDate.subtract(const Duration(days: 6));
   return (
     startDate: formatAdminHomeIsoDate(startDate),

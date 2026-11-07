@@ -89,7 +89,7 @@ export const ROLES = [
       { id: 'login', route: '/login' },
       { id: 'register', route: '/login', actions: [{ click: '立即注册', after: 1800 }] },
       { id: 'forget', route: '/login', actions: [{ click: '忘记密码', after: 1800 }] },
-      { id: 'terms', route: '/login', actions: [{ click: '服务协议与隐私政策', after: 1800 }] },
+      { id: 'terms', route: '/login', actions: [{ click: '用户服务协议', after: 1800 }] },
     ],
   },
   {
@@ -147,7 +147,7 @@ export const ROLES = [
       {
         id: 'artwork-review',
         route: '/artworks',
-        actions: [{ click: /待我点评/, after: 2500 }],
+        actions: [{ click: '开始点评', after: 2500 }],
       },
       {
         id: 'artwork-tags',

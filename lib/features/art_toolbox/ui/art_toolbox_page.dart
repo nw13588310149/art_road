@@ -166,7 +166,8 @@ class _ToolboxHome extends ConsumerWidget {
     String descriptionOf(ArtTool tool) {
       if (tool == ArtTool.countdown && next != null) {
         final days = next.daysLeftFrom(now);
-        return days == 0 ? '「${next.name}」就是今天' : '距「${next.name}」还有 $days 天';
+        // 卡片描述只有一行，天数放在最前，考试名过长时只截断名称。
+        return days == 0 ? '今天 · ${next.name}' : '还有 $days 天 · ${next.name}';
       }
       return tool.description;
     }

@@ -223,7 +223,7 @@ class _AdminHomeViewState extends ConsumerState<AdminHomeView> {
           onOpenSignManagement: widget.onOpenSignManagement,
         ),
         SizedBox(height: ui(16)),
-        const _SectionTitle(title: '数据看板', trailing: '统计最近七日内学校使用人数'),
+        const _SectionTitle(title: '数据看板', trailing: '截至昨天的近 7 日学校使用人数'),
         SizedBox(height: ui(12)),
         _DataDashboardCard(chart: homeState.loginChart),
         SizedBox(height: ui(16)),
