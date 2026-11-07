@@ -26,6 +26,7 @@ enum HomeCampusTarget {
   leaveApproval,
   faceLibrary,
   notificationManagement,
+  classWorkbench,
 }
 
 /// 首页九宫格入口：名称与侧栏、页头、智慧校园入口保持同一叫法。
@@ -215,7 +216,7 @@ List<HomeQuickAction> buildQuickActions({bool isStaff = false, String role = ''}
         campus: HomeCampusTarget.dormHistory,
       ),
       HomeQuickAction(
-        name: '打卡管理',
+        name: '到岗打卡',
         icon: Icons.how_to_reg_outlined,
         campus: HomeCampusTarget.dormCheckIn,
       ),
@@ -269,7 +270,7 @@ List<HomeQuickAction> buildQuickActions({bool isStaff = false, String role = ''}
         campus: HomeCampusTarget.signManagement,
       ),
       HomeQuickAction(
-        name: '宿管请假审批',
+        name: '教师请假审批',
         icon: Icons.approval_outlined,
         campus: HomeCampusTarget.leaveApproval,
       ),

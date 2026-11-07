@@ -2,26 +2,72 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/demo/demo_accounts.dart';
 import '../../../core/demo/demo_config.dart';
+import '../../../core/providers/app_providers.dart';
 import '../../../core/ui/ui.dart';
+import '../../shell/state/shell_controller.dart';
+import '../data/role_guide_store.dart';
 import '../state/help_guide_controller.dart';
 import '../state/help_guide_state.dart';
+import 'role_guide_dialog.dart';
 
 class HelpGuidePage extends ConsumerStatefulWidget {
-  const HelpGuidePage({super.key});
+  const HelpGuidePage({super.key, this.demoMode = kDemoMode});
+
+  /// 演示版在页头下方提供「跳过 / 恢复新手引导」（演示与截图走查用）。
+  final bool demoMode;
 
   @override
   ConsumerState<HelpGuidePage> createState() => _HelpGuidePageState();
 }
 
 class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
+  static const _guideStore = RoleGuideStore();
+
   final _search = TextEditingController();
   String _query = '';
+
+  /// 全部身份是否都已看过新手引导；读取完成前为 null。
+  bool? _guidesSkipped;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.demoMode) {
+      _guideStore.allSeen().then((value) {
+        if (mounted) setState(() => _guidesSkipped = value);
+      });
+    }
+  }
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  /// 当前身份：`/myInfo` 回包前按登录 token 还原（演示账号）。
+  String _currentRole() {
+    final role = ref.read(shellControllerProvider).user.role.trim();
+    if (role.isNotEmpty) return role;
+    return DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
+  }
+
+  Future<void> _toggleGuides() async {
+    final skipped = _guidesSkipped ?? false;
+    if (skipped) {
+      await _guideStore.resetAll();
+      RoleGuideLauncher.forgetSession();
+    } else {
+      await _guideStore.markAllSeen();
+    }
+    if (!mounted) return;
+    setState(() => _guidesSkipped = !skipped);
+    AppToast.showSuccess(
+      context,
+      skipped ? '已恢复，下次进入首页会显示新手引导' : '已跳过各身份的新手引导',
+    );
   }
 
   void _back() {
@@ -75,7 +121,14 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
                 onCleared: _clearSearch,
               ),
             ),
-            if (kDemoMode)
+            AppButton(
+              label: '新手引导',
+              icon: Icons.explore_outlined,
+              variant: AppButtonVariant.quiet,
+              size: AppButtonSize.sm,
+              onTap: () => showRoleGuide(context, role: _currentRole()),
+            ),
+            if (widget.demoMode)
               AppButton(
                 label: '组件库（演示）',
                 icon: Icons.widgets_outlined,
@@ -101,6 +154,26 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
             ),
           ),
         ),
+        if (widget.demoMode)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s4,
+              AppSpace.page,
+              AppSpace.s12,
+            ),
+            child: AppNotice(
+              message: _guidesSkipped == true
+                  ? '演示版：新手引导已跳过，各身份进入首页时不再弹出。'
+                  : '演示版：各身份第一次进入首页时会弹出新手引导。',
+              action: AppButton(
+                label: _guidesSkipped == true ? '恢复新手引导' : '跳过新手引导',
+                variant: AppButtonVariant.text,
+                size: AppButtonSize.sm,
+                onTap: _guidesSkipped == null ? null : _toggleGuides,
+              ),
+            ),
+          ),
         Expanded(
           child: items.isEmpty
               ? AppEmptyState(

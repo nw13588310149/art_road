@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:the_road_of_art_flutter/app/router/route_paths.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_asset_graphic.dart';
 import 'package:the_road_of_art_flutter/features/shell/navigation/shell_nav_routes.dart';
 import 'package:the_road_of_art_flutter/features/shell/state/shell_state.dart';
 import 'package:the_road_of_art_flutter/features/shell/ui/widgets/shell_left_nav.dart';
@@ -203,6 +204,26 @@ void main() {
       expect(find.bySemanticsLabel('首页'), findsOneWidget);
       expect(find.bySemanticsLabel('展开导航'), findsOneWidget);
       semantics.dispose();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('footer icon targets are at least 40 × 40', (tester) async {
+      for (final collapsed in [false, true]) {
+        await pumpNav(tester, route: RoutePaths.home, collapsed: collapsed);
+        final toggle = tester.getSize(find.byType(AppIconButton));
+        expect(toggle.width, greaterThanOrEqualTo(40));
+        expect(toggle.height, greaterThanOrEqualTo(40));
+        final feedback = tester.getSize(
+          find
+              .ancestor(
+                of: find.byType(AppAssetGraphic).last,
+                matching: find.byType(AppPressable),
+              )
+              .first,
+        );
+        expect(feedback.height, greaterThanOrEqualTo(40), reason: '$collapsed');
+        expect(feedback.width, greaterThanOrEqualTo(40), reason: '$collapsed');
+      }
       expect(tester.takeException(), isNull);
     });
   });

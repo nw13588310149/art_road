@@ -35,7 +35,7 @@ enum ArtTool {
   ),
   blur(
     'blur',
-    '眨眼模糊',
+    '眯眼模糊',
     ArtToolGroup.analysis,
     '模糊掉细节，像眯眼一样看大的形和色块',
     '加大模糊程度只看大关系，与原图对比检查整体是否成立',
@@ -235,7 +235,7 @@ enum ArtTool {
     '色环': ArtTool.color,
     '速写计时': ArtTool.quickSketch,
     '倒计时': ArtTool.countdown,
-    '眨眼': ArtTool.blur,
+    '眯眼': ArtTool.blur,
     '模糊': ArtTool.blur,
     '色块': ArtTool.simplify,
     '冷暖': ArtTool.temperature,

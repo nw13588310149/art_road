@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/ui/ui.dart';
+import '../../navigation/shell_notice_routes.dart';
 import '../../state/shell_state.dart';
 
 /// 通知分类与正文：内容以「【学情】」这类前缀开头时取括号里的词，否则按 targetType。
@@ -10,8 +11,11 @@ import '../../state/shell_state.dart';
     return (kind: match.group(1)!, body: item.content.substring(match.end));
   }
   final kind = switch (item.targetType) {
-    1 => '学情',
-    2 => '作品',
+    ShellNoticeTargetType.study => '学情',
+    ShellNoticeTargetType.artwork => '作品',
+    ShellNoticeTargetType.ebook => '书刊',
+    ShellNoticeTargetType.campus => '校园',
+    ShellNoticeTargetType.toolbox => '工具箱',
     _ => '通知',
   };
   return (kind: kind, body: item.content);
@@ -39,11 +43,14 @@ String formatShellNoticeTime(String raw, DateTime now) {
 }
 
 /// 顶栏铃铛打开的通知抽屉：学情、作品点评与系统消息（班级与学校通知在智慧校园）。
+///
+/// 未读消息带红点；点一条消息会关闭抽屉，标为已读并打开对应页面（[onOpen]）。
 Future<void> showShellNoticeDrawer(
   BuildContext context, {
   required List<ShellNoticeItem> items,
   required int unreadCount,
   required Future<void> Function() onMarkAllRead,
+  ValueChanged<ShellNoticeItem>? onOpen,
 }) {
   const scope = '学情、作品点评与系统消息';
   return showAppDrawer<void>(
@@ -53,7 +60,7 @@ Future<void> showShellNoticeDrawer(
       subtitle: unreadCount > 0 ? '$unreadCount 条未读 · $scope' : scope,
       padding: const EdgeInsets.only(bottom: AppSpace.s16),
       actions: [
-        if (items.isNotEmpty)
+        if (unreadCount > 0)
           AppButton(
             label: '全部标为已读',
             variant: AppButtonVariant.secondary,
@@ -77,7 +84,16 @@ Future<void> showShellNoticeDrawer(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (var i = 0; i < items.length; i++)
-                  _NoticeRow(item: items[i], divider: i < items.length - 1),
+                  _NoticeRow(
+                    item: items[i],
+                    divider: i < items.length - 1,
+                    onTap: onOpen == null
+                        ? null
+                        : () {
+                            Navigator.of(drawerContext).pop();
+                            onOpen(items[i]);
+                          },
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpace.s24,
@@ -97,15 +113,17 @@ Future<void> showShellNoticeDrawer(
 }
 
 class _NoticeRow extends StatelessWidget {
-  const _NoticeRow({required this.item, required this.divider});
+  const _NoticeRow({required this.item, required this.divider, this.onTap});
 
   final ShellNoticeItem item;
   final bool divider;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final notice = parseShellNotice(item);
-    return Container(
+    final linked = shellNoticeDestination(item) != null;
+    final row = Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpace.s24,
         vertical: AppSpace.s16,
@@ -120,6 +138,10 @@ class _NoticeRow extends StatelessWidget {
         children: [
           Row(
             children: [
+              if (!item.read) ...[
+                const AppBadge.dot(),
+                const SizedBox(width: AppSpace.s8),
+              ],
               AppTag(label: notice.kind),
               const Spacer(),
               Text(
@@ -129,9 +151,33 @@ class _NoticeRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpace.s8),
-          Text(notice.body, style: AppText.body14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  notice.body,
+                  style: item.read
+                      ? AppText.body14.copyWith(color: AppColors.textSecondary)
+                      : AppText.body14,
+                ),
+              ),
+              if (linked && onTap != null) ...[
+                const SizedBox(width: AppSpace.s8),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppColors.textPlaceholder,
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
+    if (onTap == null) {
+      return row;
+    }
+    return AppPressable(onTap: onTap, child: row);
   }
 }

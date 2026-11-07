@@ -214,7 +214,6 @@ class _NavFooter extends StatelessWidget {
           ? Icons.keyboard_double_arrow_right_rounded
           : Icons.keyboard_double_arrow_left_rounded,
       semanticLabel: collapsed ? '展开导航' : '收起导航',
-      size: AppButtonSize.sm,
       filled: false,
       color: AppColors.textTertiary,
       onTap: onToggleCollapse,
@@ -229,7 +228,8 @@ class _NavFooter extends StatelessWidget {
       selected: feedbackActive,
       semanticLabel: collapsed ? item.label : null,
       child: SizedBox(
-        height: AppSize.buttonSm,
+        height: AppSize.iconButton,
+        width: collapsed ? AppSize.iconButton : null,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,

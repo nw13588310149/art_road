@@ -45,18 +45,37 @@ class ShellNavItem {
   }
 }
 
+/// 顶栏铃铛里的一条消息。[targetType] + [targetId] 决定点开后去哪一页，
+/// 映射见 `navigation/shell_notice_routes.dart`。
 class ShellNoticeItem {
   const ShellNoticeItem({
     required this.id,
     required this.targetType,
     required this.content,
     required this.createTime,
+    this.targetId = '',
+    this.read = false,
   });
 
   final int id;
   final int targetType;
   final String content;
   final String createTime;
+
+  /// 目标对象 id（考试 / 作品 / 书刊 id、工具 key）；为空时只打开对应模块。
+  final String targetId;
+  final bool read;
+
+  ShellNoticeItem copyWith({bool? read}) {
+    return ShellNoticeItem(
+      id: id,
+      targetType: targetType,
+      content: content,
+      createTime: createTime,
+      targetId: targetId,
+      read: read ?? this.read,
+    );
+  }
 }
 
 class ShellUser {

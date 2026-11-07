@@ -12,7 +12,7 @@ import '../widgets/image_job.dart';
 import '../widgets/image_tool_frame.dart';
 import '../widgets/tool_panel.dart';
 
-/// 眨眼模糊：模糊掉细节只看大的形和色块，可同时去色，与原图对比。
+/// 眯眼模糊：模糊掉细节只看大的形和色块，可同时去色，与原图对比。
 class BlurTool extends StatelessWidget {
   const BlurTool({required this.onBack, super.key});
 

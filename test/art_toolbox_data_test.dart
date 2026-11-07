@@ -48,7 +48,7 @@ void main() {
         'valueOrder': ArtTool.valueOrder,
         'score': ArtTool.score,
         'checklist': ArtTool.checklist,
-        '眨眼': ArtTool.blur,
+        '眯眼': ArtTool.blur,
         '模糊': ArtTool.blur,
         '色块': ArtTool.simplify,
         '冷暖': ArtTool.temperature,

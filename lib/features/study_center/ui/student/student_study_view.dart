@@ -12,6 +12,7 @@ import '../paper/study_paper_viewer_page.dart';
 import '../report/study_report_view.dart';
 import '../standard/grade_standard_dialog.dart';
 import '../widgets/study_common.dart';
+import '../widgets/study_composite_estimate_card.dart';
 import '../widgets/study_hero_card.dart';
 import '../widgets/study_interpretations.dart';
 import '../widgets/study_subject_cards.dart';
@@ -246,6 +247,8 @@ class _OverviewBody extends ConsumerWidget {
               loading: report == null && (reportState?.loading ?? false),
             ),
           ],
+          const SizedBox(height: AppSpace.s16),
+          StudyCompositeEstimateCard(exam: exam),
           const SizedBox(height: AppSpace.s16),
           StudentExamListCard(
             state: state,

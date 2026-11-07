@@ -70,4 +70,9 @@ class HomeRepository {
   Future<ApiResponse> getNextSchoolCourse() {
     return client.post('/app/user/nextSchoolCourse');
   }
+
+  /// 管理员首页的待办数（与智慧校园管理员首页同一接口 `indexSum`）。
+  Future<ApiResponse> getAdminIndexSum() {
+    return client.post('/app/school/v2/manager/indexSum');
+  }
 }

@@ -150,7 +150,7 @@ class BlurRequest {
   final bool grayscale;
 }
 
-/// 眨眼模糊：彩色逐通道模糊，或先转灰度再模糊。
+/// 眯眼模糊：彩色逐通道模糊，或先转灰度再模糊。
 ArtImageData blurImage(BlurRequest request) {
   final source = request.image;
   final w = source.width;

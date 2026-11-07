@@ -85,7 +85,6 @@ class AppDialog extends StatelessWidget {
                           AppIconButton(
                             icon: Icons.close_rounded,
                             semanticLabel: '关闭',
-                            size: AppButtonSize.sm,
                             filled: false,
                             color: AppColors.textSecondary,
                             onTap: () => Navigator.of(context).maybePop(),

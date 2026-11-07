@@ -4,17 +4,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/router/route_paths.dart';
 import '../../../core/art/art_subject.dart';
 import '../../../core/network/media_url.dart';
+import '../../../core/providers/app_providers.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/art_subject_card.dart';
 import '../../../core/widgets/dashboard_course_notice_card.dart';
 import '../../../core/widgets/seamless_banner_carousel.dart';
-import '../../school/state/school_config_controller.dart';
+import '../../shell/navigation/shell_notice_routes.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../smart_campus/state/smart_campus_controller.dart';
 import '../state/home_dashboard_controller.dart';
 import '../state/home_dashboard_state.dart';
+import '../state/home_sections.dart';
+import '../state/home_staff_cards.dart';
+import '../state/home_student_cards.dart';
 import '../../ebooks/ui/home_ebook_shelf_section.dart';
+import 'widgets/home_latest_review_card.dart';
+import 'widgets/home_practice_card.dart';
+import 'widgets/home_review_queue_card.dart';
 import 'widgets/home_study_snapshot.dart';
+import 'widgets/home_todo_card.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -26,9 +34,10 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-/// 首页版式：上方左栏（轮播 + 功能入口 + 三科入口）与右栏（课程），下方学情速览与资讯。
+/// 首页版式：上方左栏（轮播 + 功能入口 + 三科入口）与右栏（课程或今日待办），
+/// 下方按身份排列的卡片（[HomeSections]）、精选书刊与资讯。
 ///
-/// 各区块都是独立的卡片，入口与资讯按条目数排列，后续新增区块直接插入 [_sections]。
+/// 右栏与左栏等高；第二行的卡片左宽右窄，与上方两栏对齐，同一行等高。
 class _HomePageView extends ConsumerStatefulWidget {
   const _HomePageView({required this.state});
 
@@ -44,8 +53,46 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   static const double _boardHeight = 313;
   static const double _subjectWidth = 146;
 
-  Future<void> _refresh() =>
-      ref.read(homeDashboardControllerProvider.notifier).refresh();
+  Future<void> _refresh() {
+    ref
+      ..invalidate(homePracticeProvider)
+      ..invalidate(homeLatestReviewProvider)
+      ..invalidate(homeReviewStatsProvider)
+      ..invalidate(homeAdminTodoProvider);
+    return ref.read(homeDashboardControllerProvider.notifier).refresh();
+  }
+
+  String get _role => resolveHomeRole(
+    widget.state.role,
+    token: ref.read(appStorageProvider).token,
+  );
+
+  void _onTodo(HomeTodoAction action) {
+    switch (action) {
+      case HomeTodoAction.artworks:
+        Navigator.pushNamed(context, RoutePaths.artworks).then((_) {
+          if (mounted) ref.invalidate(homeReviewStatsProvider);
+        });
+      case HomeTodoAction.notices:
+        showShellNotices(context, ref);
+      case HomeTodoAction.classWorkbench:
+        _openCampus(HomeCampusTarget.classWorkbench);
+      case HomeTodoAction.dormCheckByRoom:
+        _openCampus(HomeCampusTarget.dormCheckByRoom);
+      case HomeTodoAction.dormDynamic:
+        _openCampus(HomeCampusTarget.dormDynamic);
+      case HomeTodoAction.dormCheckIn:
+        _openCampus(HomeCampusTarget.dormCheckIn);
+      case HomeTodoAction.dormLeave:
+        _openCampus(HomeCampusTarget.myLeave);
+      case HomeTodoAction.leaveApproval:
+        _openCampus(HomeCampusTarget.leaveApproval);
+      case HomeTodoAction.signManagement:
+        _openCampus(HomeCampusTarget.signManagement);
+      case HomeTodoAction.scheduleManagement:
+        _openCampus(HomeCampusTarget.scheduleManagement);
+    }
+  }
 
   /// 跳转到智慧校园课表：按 `/myInfo` 真实身份进入「授课课表」或「我的课表」。
   void _openMySchedule() {
@@ -101,6 +148,8 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
         campus.openFaceLibrary();
       case HomeCampusTarget.notificationManagement:
         campus.openNotificationManagement();
+      case HomeCampusTarget.classWorkbench:
+        campus.openClassWorkbench();
     }
     Navigator.pushNamed(context, RoutePaths.smartCampus);
   }
@@ -118,6 +167,8 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
       );
     }
     final firstLoad = state.loading && !state.hasContent;
+    final role = _role;
+    final sections = homeSectionsFor(role);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -130,6 +181,8 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: _sections(
+              role: role,
+              sections: sections,
               firstLoad: firstLoad,
               top: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,14 +207,17 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                               Expanded(
                                 child: _QuickActionBoard(
                                   actions: state.quickActions,
+                                  wide: !sections.subjects,
                                   onTap: _onQuickActionTap,
                                 ),
                               ),
-                              const SizedBox(width: _gap),
-                              const SizedBox(
-                                width: _subjectWidth,
-                                child: _SubjectColumn(),
-                              ),
+                              if (sections.subjects) ...[
+                                const SizedBox(width: _gap),
+                                const SizedBox(
+                                  width: _subjectWidth,
+                                  child: _SubjectColumn(),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -171,17 +227,20 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                   const SizedBox(width: _gap),
                   SizedBox(
                     width: _rightWidth,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: leftHeight),
-                      child: state.isDormManager
-                          ? _DutyPanel(onOpen: _openCampus)
-                          : _CoursePanel(
-                              loading: firstLoad,
-                              weekItems: state.weekItems,
-                              courses: state.courseNotices,
-                              onOpenSchedule: _openMySchedule,
-                            ),
-                    ),
+                    height: leftHeight,
+                    child: sections.sideTodo
+                        ? HomeTodoCard(
+                            role: role,
+                            side: true,
+                            onAction: _onTodo,
+                            footer: _sideTodoFooter(role),
+                          )
+                        : _CoursePanel(
+                            loading: firstLoad,
+                            weekItems: state.weekItems,
+                            courses: state.courseNotices,
+                            onOpenSchedule: _openMySchedule,
+                          ),
                   ),
                 ],
               ),
@@ -192,13 +251,61 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
     );
   }
 
-  List<Widget> _sections({required bool firstLoad, required Widget top}) {
+  /// 右栏今日待办底部的主操作：宿管直接开始查寝，管理员进入智慧校园工作台。
+  Widget? _sideTodoFooter(String role) {
+    return switch (role) {
+      'dormManager' => AppButton(
+        label: '按宿舍查寝',
+        expand: true,
+        onTap: () => _onTodo(HomeTodoAction.dormCheckByRoom),
+      ),
+      'admin' => AppButton(
+        label: '进入智慧校园',
+        variant: AppButtonVariant.secondary,
+        expand: true,
+        onTap: () => Navigator.pushNamed(context, RoutePaths.smartCampus),
+      ),
+      _ => null,
+    };
+  }
+
+  /// 第二行：左侧卡片与上方左栏同宽，右侧卡片与右栏同宽，两张卡片等高。
+  Widget _pair(Widget left, Widget right) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: left),
+          const SizedBox(width: _gap),
+          SizedBox(width: _rightWidth, child: right),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _sections({
+    required String role,
+    required HomeSections sections,
+    required bool firstLoad,
+    required Widget top,
+  }) {
     return [
       top,
-      // 宿管不看成绩：不显示学情速览。
-      if (!widget.state.isDormManager) ...[
+      if (sections.practice) ...[
         const SizedBox(height: _gap),
-        const HomeStudySnapshotCard(),
+        _pair(const HomePracticeCard(), const HomeLatestReviewCard()),
+      ],
+      if (sections.studySnapshot) ...[
+        const SizedBox(height: _gap),
+        if (sections.reviewQueue)
+          _pair(const HomeStudySnapshotCard(), const HomeReviewQueueCard())
+        else if (sections.todo)
+          _pair(
+            const HomeStudySnapshotCard(),
+            HomeTodoCard(role: role, onAction: _onTodo),
+          )
+        else
+          const HomeStudySnapshotCard(),
       ],
       const SizedBox(height: _gap),
       const HomeEbookShelfSection(),
@@ -292,14 +399,21 @@ class _HomeBannerState extends State<_HomeBanner> {
 // ─────────────────────── 功能入口 ───────────────────────
 
 class _QuickActionBoard extends StatelessWidget {
-  const _QuickActionBoard({required this.actions, required this.onTap});
+  const _QuickActionBoard({
+    required this.actions,
+    required this.onTap,
+    this.wide = false,
+  });
 
   final List<HomeQuickAction> actions;
   final ValueChanged<HomeQuickAction> onTap;
 
+  /// 没有三科入口、独占左栏时，8 个入口排成 4 × 2。
+  final bool wide;
+
   @override
   Widget build(BuildContext context) {
-    final columns = actions.length > 9 ? 4 : 3;
+    final columns = actions.length > 9 || (wide && actions.length == 8) ? 4 : 3;
     final rows = (actions.length / columns).ceil();
     return AppCard(
       padding: const EdgeInsets.symmetric(
@@ -545,85 +659,6 @@ class _CoursePanelState extends State<_CoursePanel> {
         ended: ended,
       ),
       onTap: widget.onOpenSchedule,
-    );
-  }
-}
-
-/// 宿管首页右栏：今天的查寝时间 + 进入查寝。
-class _DutyPanel extends ConsumerWidget {
-  const _DutyPanel({required this.onOpen});
-
-  final ValueChanged<HomeCampusTarget> onOpen;
-
-  static String _timeOf(String raw) {
-    final time = raw.replaceAll('前', '').trim();
-    return time.isEmpty ? '—' : time;
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final config = ref.watch(schoolDormitoryCheckConfigProvider);
-    Widget row(String title, String subtitle, String time, {bool divider = false}) {
-      return AppListRow(
-        title: title,
-        subtitle: subtitle,
-        padding: const EdgeInsets.symmetric(vertical: AppSpace.s12),
-        divider: divider,
-        trailing: Text(time, style: AppText.number(size: 20)),
-      );
-    }
-
-    return AppCard(
-      title: '今日值班',
-      subtitle: '宿舍查寝时间',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          config.when(
-            loading: () => const SizedBox(
-              height: 96,
-              child: Column(
-                children: [
-                  AppSkeleton(height: 40, radius: AppRadius.control),
-                  SizedBox(height: AppSpace.s12),
-                  AppSkeleton(height: 40, radius: AppRadius.control),
-                ],
-              ),
-            ),
-            error: (_, _) => SizedBox(
-              height: 96,
-              child: Center(
-                child: Text('查寝时间暂时无法获取', style: AppText.body13),
-              ),
-            ),
-            data: (times) => Column(
-              children: [
-                row(
-                  '晚查寝',
-                  '学生在此时间前归寝打卡',
-                  _timeOf(times.eveningDeadline),
-                  divider: true,
-                ),
-                row('早查寝', '起床后在此时间前签到', _timeOf(times.morningDeadline)),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpace.s16),
-          AppButton(
-            label: '按宿舍查寝',
-            expand: true,
-            onTap: () => onOpen(HomeCampusTarget.dormCheckByRoom),
-          ),
-          const SizedBox(height: AppSpace.s8),
-          AppButton(
-            label: '查看查寝动态',
-            variant: AppButtonVariant.secondary,
-            expand: true,
-            onTap: () => onOpen(HomeCampusTarget.dormDynamic),
-          ),
-        ],
-      ),
     );
   }
 }

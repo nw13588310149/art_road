@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/router/app_navigator.dart';
 import '../../../../app/router/route_paths.dart';
+import '../../../../core/demo/demo_config.dart';
 import '../../../../core/ui/ui.dart';
 import '../../../ebooks/data/ebook_repository.dart';
 import '../../../gallery/data/gallery_repository.dart';
@@ -14,9 +15,10 @@ import '../../state/shell_controller.dart';
 import '../../state/shell_state.dart';
 import 'shell_notice_drawer.dart';
 
-/// 顶栏：全局搜索 + 帮助 / 通知 / 设置 + 账户菜单，放在 40 高的白色条里。
+/// 顶栏：全局搜索 +（演示版标识）+ 帮助 / 通知 / 设置 + 账户菜单，放在 40 高的白色条里。
 ///
-/// 只有图标的按钮都有读屏名称（帮助、通知、设置、账户菜单），走查脚本也按名称点击。
+/// 只有图标的按钮都有读屏名称（帮助、通知、设置、账户菜单），走查脚本也按名称点击；
+/// 图标按钮与账户菜单的点击区域都是 40 高，铺满整条顶栏。
 class ShellTopBar extends StatelessWidget {
   const ShellTopBar({
     required this.state,
@@ -25,6 +27,8 @@ class ShellTopBar extends StatelessWidget {
     required this.onMarkAllRead,
     required this.onLoadProvinces,
     required this.onUpdateProvince,
+    this.onOpenNotice,
+    this.demoMode = kDemoMode,
     super.key,
   });
 
@@ -36,6 +40,12 @@ class ShellTopBar extends StatelessWidget {
   onLoadProvinces;
   final Future<String?> Function(String province) onUpdateProvince;
 
+  /// 点开通知抽屉里的一条消息：标为已读并打开对应页面。
+  final ValueChanged<ShellNoticeItem>? onOpenNotice;
+
+  /// 演示版在搜索框右侧常驻「演示版」标识。
+  final bool demoMode;
+
   static const double height = 40;
 
   @override
@@ -43,51 +53,59 @@ class ShellTopBar extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final searchWidth = math.min(360.0, constraints.maxWidth * 0.42);
+        // 白底描边与卡片一致；用 DecoratedBox 让 40 高的按钮铺满整条顶栏。
         return SizedBox(
           height: height,
-          child: AppCard(
-            padding: const EdgeInsets.fromLTRB(2, 2, AppSpace.s8, 2),
-            child: Row(
-              children: [
-                SizedBox(width: searchWidth, child: const _TopSearchBox()),
-                const Spacer(),
-                AppIconButton(
-                  icon: Icons.help_outline_rounded,
-                  semanticLabel: '帮助',
-                  size: AppButtonSize.sm,
-                  filled: false,
-                  onTap: () => onNavigate(RoutePaths.helpGuide),
-                ),
-                const SizedBox(width: AppSpace.s4),
-                AppIconButton(
-                  icon: Icons.notifications_none_rounded,
-                  semanticLabel: '通知',
-                  size: AppButtonSize.sm,
-                  filled: false,
-                  badgeCount: state.unreadCount,
-                  onTap: () => showShellNoticeDrawer(
-                    context,
-                    items: state.noticeItems,
-                    unreadCount: state.unreadCount,
-                    onMarkAllRead: onMarkAllRead,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: AppRadius.br12,
+              border: Border.all(color: AppColors.lineSoft),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 3, right: AppSpace.s4),
+              child: Row(
+                children: [
+                  SizedBox(width: searchWidth, child: const _TopSearchBox()),
+                  const Spacer(),
+                  if (demoMode) ...[
+                    const ShellDemoModeTag(),
+                    const SizedBox(width: AppSpace.s8),
+                  ],
+                  AppIconButton(
+                    icon: Icons.help_outline_rounded,
+                    semanticLabel: '帮助',
+                    filled: false,
+                    onTap: () => onNavigate(RoutePaths.helpGuide),
                   ),
-                ),
-                const SizedBox(width: AppSpace.s4),
-                AppIconButton(
-                  icon: Icons.settings_outlined,
-                  semanticLabel: '设置',
-                  size: AppButtonSize.sm,
-                  filled: false,
-                  onTap: () => onNavigate(RoutePaths.info),
-                ),
-                const SizedBox(width: AppSpace.s12),
-                _UserMenuButton(
-                  user: state.user,
-                  schoolName: state.schoolName,
-                  showName: constraints.maxWidth >= 560,
-                  onSelect: (action) => _onUserMenu(context, action),
-                ),
-              ],
+                  AppIconButton(
+                    icon: Icons.notifications_none_rounded,
+                    semanticLabel: '通知',
+                    filled: false,
+                    badgeCount: state.unreadCount,
+                    onTap: () => showShellNoticeDrawer(
+                      context,
+                      items: state.noticeItems,
+                      unreadCount: state.unreadCount,
+                      onMarkAllRead: onMarkAllRead,
+                      onOpen: onOpenNotice,
+                    ),
+                  ),
+                  AppIconButton(
+                    icon: Icons.settings_outlined,
+                    semanticLabel: '设置',
+                    filled: false,
+                    onTap: () => onNavigate(RoutePaths.info),
+                  ),
+                  const SizedBox(width: AppSpace.s8),
+                  _UserMenuButton(
+                    user: state.user,
+                    schoolName: state.schoolName,
+                    showName: constraints.maxWidth >= 560,
+                    onSelect: (action) => _onUserMenu(context, action),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -163,6 +181,47 @@ class ShellTopBar extends StatelessWidget {
         (route) => false,
       );
     }
+  }
+}
+
+// ─────────────────────── 演示版标识 ───────────────────────
+
+/// 演示版常驻标识：点开说明演示数据保存在哪里、怎么重置。
+class ShellDemoModeTag extends StatelessWidget {
+  const ShellDemoModeTag({super.key});
+
+  static const explanation = '演示数据仅保存在本机浏览器或设备，可在登录页重置';
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: () => showAppDialog<void>(
+        context: context,
+        builder: (dialogContext) => AppDialog(
+          title: '演示版',
+          message: '当前账号、成绩、作品与消息都是演示数据，用于体验各项功能。$explanation。',
+          actions: [
+            AppButton(
+              label: '知道了',
+              onTap: () => Navigator.of(dialogContext).pop(),
+            ),
+          ],
+        ),
+      ),
+      child: const SizedBox(
+        height: ShellTopBar.height,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpace.s4),
+          child: Center(
+            child: AppTag(
+              label: '演示版',
+              tone: AppTone.info,
+              icon: Icons.info_outline_rounded,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -255,7 +314,7 @@ class _UserMenuButtonState extends State<_UserMenuButton> {
       onTap: _open,
       semanticLabel: '账户菜单',
       child: SizedBox(
-        height: AppSize.buttonSm,
+        height: ShellTopBar.height,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

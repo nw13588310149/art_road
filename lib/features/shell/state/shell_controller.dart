@@ -115,39 +115,61 @@ class ShellController extends StateNotifier<ShellState> {
   }
 
   Future<void> markAllNoticeRead() async {
-    final ids = state.noticeItems.map((e) => e.id).toList();
+    final ids = [
+      for (final item in state.noticeItems)
+        if (!item.read) item.id,
+    ];
     if (ids.isEmpty) {
       return;
     }
     final response = await _repository.markRead(ids);
-    if (response.code == 0) {
-      state = state.copyWith(unreadCount: 0, noticeItems: const []);
+    if (response.code == 0 && mounted) {
+      state = state.copyWith(
+        unreadCount: 0,
+        noticeItems: [
+          for (final item in state.noticeItems) item.copyWith(read: true),
+        ],
+      );
     }
   }
 
+  /// 点开一条消息时标为已读：先改本地状态，接口失败时由下一次轮询纠正。
+  Future<void> markNoticeRead(int id) async {
+    final index = state.noticeItems.indexWhere((item) => item.id == id);
+    if (index < 0 || state.noticeItems[index].read) {
+      return;
+    }
+    state = state.copyWith(
+      unreadCount: state.unreadCount > 0 ? state.unreadCount - 1 : 0,
+      noticeItems: [
+        for (final item in state.noticeItems)
+          item.id == id ? item.copyWith(read: true) : item,
+      ],
+    );
+    await _repository.markRead(<int>[id]);
+  }
+
+  /// 未读数决定铃铛角标；列表含已读消息（置灰显示），没有未读时也照常拉取。
   Future<void> refreshNoticeData() async {
     if (_storage.token.isEmpty) {
       return;
     }
     final countResponse = await _repository.getUnreadCount();
-    if (countResponse.code != 0) {
+    if (countResponse.code != 0 || !mounted) {
       return;
     }
-
     final count = _readUnreadCount(countResponse.data);
-    if (count <= 0) {
-      state = state.copyWith(unreadCount: 0, noticeItems: const []);
-      _syncCampusBadge(0);
-      return;
-    }
 
     final listResponse = await _repository.getMessageList();
-    if (listResponse.code != 0) {
+    if (!mounted) {
       return;
     }
-
-    final notices = _parseNoticeList(listResponse.data);
-    state = state.copyWith(unreadCount: count, noticeItems: notices);
+    state = state.copyWith(
+      unreadCount: count,
+      noticeItems: listResponse.code == 0
+          ? _parseNoticeList(listResponse.data)
+          : state.noticeItems,
+    );
     _syncCampusBadge(count);
   }
 
@@ -372,22 +394,36 @@ class ShellController extends StateNotifier<ShellState> {
     return 0;
   }
 
+  /// 兼容直接数组与分页结构 `{records: [...]}`；已读字段兼容 `read` / `isRead` / `readStatus`。
   List<ShellNoticeItem> _parseNoticeList(dynamic data) {
-    if (data is! List) {
+    final list = data is Map ? data['records'] : data;
+    if (list is! List) {
       return const [];
     }
 
+    bool isRead(Map item) {
+      for (final key in const ['read', 'isRead', 'readStatus']) {
+        final value = item[key];
+        if (value is bool) return value;
+        if (value is num) return value == 1;
+      }
+      return false;
+    }
+
     final result = <ShellNoticeItem>[];
-    for (final item in data) {
-      if (item is! Map<String, dynamic>) {
+    for (final item in list) {
+      if (item is! Map) {
         continue;
       }
+      final targetId = item['targetId']?.toString().trim() ?? '';
       result.add(
         ShellNoticeItem(
           id: _toInt(item['id']),
           targetType: _toInt(item['targetType']),
+          targetId: targetId == 'null' ? '' : targetId,
           content: item['content']?.toString() ?? '',
           createTime: item['createTime']?.toString() ?? '',
+          read: isRead(item),
         ),
       );
     }

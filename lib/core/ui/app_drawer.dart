@@ -97,7 +97,6 @@ class AppDrawer extends StatelessWidget {
                     AppIconButton(
                       icon: Icons.close_rounded,
                       semanticLabel: '关闭',
-                      size: AppButtonSize.sm,
                       filled: false,
                       color: AppColors.textSecondary,
                       onTap: onClose ?? () => Navigator.of(context).maybePop(),

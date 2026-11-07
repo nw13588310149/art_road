@@ -7,9 +7,11 @@ import 'package:the_road_of_art_flutter/core/permissions/first_launch_permission
 import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
 import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
+import 'package:the_road_of_art_flutter/features/ebooks/state/home_ebook_shelf.dart';
 import 'package:the_road_of_art_flutter/features/home/data/home_repository.dart';
 import 'package:the_road_of_art_flutter/features/home/state/home_dashboard_controller.dart';
 import 'package:the_road_of_art_flutter/features/home/state/home_dashboard_state.dart';
+import 'package:the_road_of_art_flutter/features/home/state/home_student_cards.dart';
 import 'package:the_road_of_art_flutter/features/home/ui/home_page.dart';
 import 'package:the_road_of_art_flutter/features/home/ui/widgets/home_study_snapshot.dart';
 
@@ -161,7 +163,7 @@ void main() {
     final dorm = buildQuickActions(isStaff: true, role: 'dormManager');
     expect(
       dorm.map((a) => a.name),
-      containsAll(['按宿舍查寝', '查寝动态', '查寝历史', '打卡管理', '宿管请假']),
+      containsAll(['按宿舍查寝', '查寝动态', '查寝历史', '到岗打卡', '宿管请假']),
     );
     expect(dorm.map((a) => a.name), isNot(contains('班级学情')));
     expect(dorm.every((a) => a.campus != null), isTrue);
@@ -242,6 +244,11 @@ void main() {
                 (name: '速写', score: 88, grade: 'B'),
               ],
             ),
+          ),
+          homePracticeProvider.overrideWith((ref) async => buildHomePractices()),
+          homeLatestReviewProvider.overrideWith((ref) async => null),
+          homeEbookShelfProvider.overrideWith(
+            (ref) async => const HomeEbookShelfData(picks: [], reading: []),
           ),
         ],
         child: const MaterialApp(

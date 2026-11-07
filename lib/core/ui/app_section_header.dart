@@ -55,29 +55,35 @@ class AppSectionHeader extends StatelessWidget {
                   ),
                 ),
               ));
+    // 标题与副标题放进 Expanded 内的子 Row，右侧操作才能始终贴右。
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Flexible(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.title16,
+        Expanded(
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.title16,
+                ),
+              ),
+              if (note != null && note.isNotEmpty) ...[
+                const SizedBox(width: AppSpace.s8),
+                Flexible(
+                  child: Text(
+                    note,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption12,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        if (note != null && note.isNotEmpty) ...[
-          const SizedBox(width: AppSpace.s8),
-          Expanded(
-            child: Text(
-              note,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.caption12,
-            ),
-          ),
-        ] else
-          const Spacer(),
         if (action != null) ...[const SizedBox(width: AppSpace.s12), action],
       ],
     );
