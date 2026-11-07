@@ -109,7 +109,7 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
                 ),
                 _section(
                   '数据展示',
-                  'AppStatTile · AppProgressBar · AppAvatar · AppImage',
+                  'AppStatTile · AppProgressBar · AppSteps · AppAvatar · AppImage',
                   _data(),
                 ),
                 _section('课程卡', 'AppCourseCard：300 宽时两个标签也完整显示', _courses()),
@@ -905,6 +905,16 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
           ),
           SizedBox(width: 240, child: AppProgressBar(value: 0)),
         ], spacing: AppSpace.s20),
+        _group('步骤条 AppSteps', const [
+          SizedBox(
+            width: 520,
+            child: AppSteps(labels: ['选择人员', '采集人脸', '确认提交'], current: 1),
+          ),
+          SizedBox(
+            width: 520,
+            child: AppSteps(labels: ['选择人员', '采集人脸', '确认提交'], current: 3),
+          ),
+        ], spacing: AppSpace.s16),
         _group('头像 AppAvatar', const [
           AppAvatar(
             name: '林晓雨',

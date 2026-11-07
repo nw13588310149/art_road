@@ -5,6 +5,7 @@ import '../../data/demo_campus_data.dart';
 import '../../data/demo_marking_data.dart';
 import '../../demo_backend.dart';
 import '../../demo_store.dart';
+import '../interaction_circle.dart' show circlePendingReportCount;
 import 'campus_b_common.dart';
 import 'campus_b_courses.dart';
 import 'campus_b_people.dart';
@@ -97,32 +98,34 @@ Object? _indexSum(DemoRequest req) {
   return <String, dynamic>{
     'studentCount': cbPersons.where(cbIsActive).length,
     'teacherCount': _teacherCount,
-    'classCount': cbClasses().length,
+    'classCount': cbClasses().where((c) => !cbIsSmallClass(c)).length,
     'leaveStatus0Count': leaves,
-    'postStatus0Count': 3,
+    'postStatus0Count': circlePendingReportCount(),
     'smallCourseSignStatus5Count': awaiting,
     'userFaceNotRecordedCount': cbFaceMissingCount(),
     'toDoTodayCount': leaves + applies + faces + makeups + awaiting,
   };
 }
 
+/// 近七日使用人数：只统计已经过完的日子（截至昨天），人数不超过在籍学生 + 教职工。
 Object? _loginCount(DemoRequest req) {
-  final to = cbParseDay(req.str('endDate')) ?? cbToday();
+  var to = cbParseDay(req.str('endDate')) ?? cbToday();
   var from = cbParseDay(req.str('startDate')) ?? cbAddDays(to, -6);
+  final yesterday = cbAddDays(cbToday(), -1);
+  if (to.isAfter(yesterday)) {
+    final shift = to.difference(yesterday).inDays;
+    to = cbAddDays(to, -shift);
+    from = cbAddDays(from, -shift);
+  }
   if (to.difference(from).inDays > 62) {
     from = cbAddDays(to, -62);
   }
+  final total = cbPersons.where(cbIsActive).length + _teacherCount;
   final result = <Map<String, dynamic>>[];
   for (var day = from; !day.isAfter(to); day = cbAddDays(day, 1)) {
-    if (day.isAfter(cbToday())) {
-      continue;
-    }
     final weekend = day.weekday >= 6;
-    final base = weekend ? 31 : 47;
-    var count = base + cbHash('login|${cbDate(day)}') % 12;
-    if (day == cbToday()) {
-      count = (count * (DateTime.now().hour + 2) / 24).round().clamp(3, count);
-    }
+    final base = weekend ? (total * 0.6).round() : total - 2;
+    final count = (base - cbHash('login|${cbDate(day)}') % 6).clamp(1, total);
     result.add(<String, dynamic>{'loginDate': cbDate(day), 'count': count});
   }
   return result;
@@ -188,6 +191,14 @@ Object? _workReminders(DemoRequest req) {
       'tag': '人脸',
       'title': '$faces 条人脸录入待审核',
       'subtitle': '另有 $missing 名在籍学生尚未录入人脸，会影响查寝刷脸打卡。',
+    });
+  }
+  final reports = circlePendingReportCount();
+  if (reports > 0) {
+    reminders.add(<String, dynamic>{
+      'tag': '校圈',
+      'title': '$reports 条校圈举报待处理',
+      'subtitle': '在「校圈治理 · 待处理」中查看举报原因，保留或删除。',
     });
   }
   final reviewing = DemoMarkingData.instance.exams.where((e) => !e.reviewed);

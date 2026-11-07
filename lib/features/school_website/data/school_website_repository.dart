@@ -7,7 +7,9 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/storage/app_storage.dart';
 import '../../school/data/school_repository.dart';
 
-final schoolWebsiteRepositoryProvider = Provider<SchoolWebsiteRepository>((ref) {
+final schoolWebsiteRepositoryProvider = Provider<SchoolWebsiteRepository>((
+  ref,
+) {
   final client = ref.watch(apiClientProvider);
   final storage = ref.watch(appStorageProvider);
   final schoolRepository = ref.watch(schoolRepositoryProvider);

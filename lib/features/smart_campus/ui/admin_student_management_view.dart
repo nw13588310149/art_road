@@ -2,8 +2,8 @@
 // 命名参数，部分条目沿用默认值；analyzer 误报为 unused_element_parameter，整体忽略。
 // ignore_for_file: unused_element_parameter
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,14 +25,14 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 // 颜色常量
 // ============================================================================
 
-const Color _kBg = Color(0xFFEFF3FC);
-const Color _kCardBg = Colors.white;
-const Color _kTextPrimary = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextSub = Color(0xFF6D6B75);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleSoft = Color(0xFFD7D5FF);
-const Color _kBorder = Color(0xFFF3F2F3);
+const Color _kBg = AppColors.page;
+const Color _kCardBg = AppColors.surface;
+const Color _kTextPrimary = AppColors.ink;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextSub = AppColors.textSecondary;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSoft = AppColors.brandTint;
+const Color _kBorder = AppColors.lineSoft;
 
 /// 与人脸库录入截取预览同比例（11:14），学籍档案内略放大展示。
 const double _kFaceImgPreviewWidth = 104;
@@ -43,6 +43,18 @@ const double _kFaceImgPreviewHeight = 132;
 // ============================================================================
 
 enum _StudentStatus { enrolled, suspended, transferring, graduated }
+
+/// 「女生公寓1号楼 · 1层 · 101 · 1号床」→「女生公寓1号楼 101 · 1号床」。
+String _compactDorm(String raw) {
+  final parts = raw
+      .split('·')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty && !s.endsWith('层'))
+      .toList();
+  if (parts.isEmpty) return raw.trim();
+  if (parts.length == 1) return parts.first;
+  return '${parts.first} ${parts.sublist(1).join(' · ')}';
+}
 
 /// 把后端 `status` 字段（数字 / 字符串 / 中文）兜底映射到本地枚举：
 /// - 1 / 'enrolled' / '在籍' → enrolled
@@ -81,32 +93,6 @@ extension on _StudentStatus {
         return '毕业';
     }
   }
-
-  Color get bg {
-    switch (this) {
-      case _StudentStatus.enrolled:
-        return _kPurpleSoft;
-      case _StudentStatus.suspended:
-        return const Color(0xFFFFE7C2);
-      case _StudentStatus.transferring:
-        return const Color(0xFFD2EAFF);
-      case _StudentStatus.graduated:
-        return const Color(0xFFE0E0E0);
-    }
-  }
-
-  Color get fg {
-    switch (this) {
-      case _StudentStatus.enrolled:
-        return _kPurple;
-      case _StudentStatus.suspended:
-        return const Color(0xFFE89B30);
-      case _StudentStatus.transferring:
-        return const Color(0xFF1F77E0);
-      case _StudentStatus.graduated:
-        return const Color(0xFF6D6B75);
-    }
-  }
 }
 
 class _Student {
@@ -127,7 +113,7 @@ class _Student {
     this.phone = '17656287947',
     this.parentPhone = '17656287947',
     this.recentChange = '无',
-    this.remark = '专业主项稳定，文化科需跟进英语作文。',
+    this.remark = '专业课稳定，文化课需跟进英语作文。',
     this.gender = '',
   });
 
@@ -266,7 +252,7 @@ class _Student {
     final classInfo = className.isEmpty ? '—' : className;
 
     final dormInfo = isLiving
-        ? (dormName.isEmpty ? '宿舍' : '宿舍·$dormName')
+        ? (dormName.isEmpty ? '住校' : _compactDorm(dormName))
         : '走读';
 
     // 后端主键（雪花 long）→ 只接受 String，禁止 num.toString() 污染精度。
@@ -333,7 +319,9 @@ class _Student {
     final bedInfo = _pickString(dormitoryUser, ['bedInfo'], '');
     final bedId = _pickString(dormitoryUser, ['bedId'], '');
     final isLiving = bedInfo.isNotEmpty || (bedId.isNotEmpty && bedId != '0');
-    final dormInfo = isLiving ? (bedInfo.isEmpty ? '宿舍' : '宿舍·$bedInfo') : '走读';
+    final dormInfo = isLiving
+        ? (bedInfo.isEmpty ? '住校' : _compactDorm(bedInfo))
+        : '走读';
     final dorm = isLiving ? (bedInfo.isEmpty ? '宿舍' : bedInfo) : '走读';
 
     final phone = _pickString(user, ['mobile', 'phone'], '');
@@ -692,45 +680,48 @@ class _AdminStudentManagementViewState
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kBg,
       bodyTopClipRadius: 8,
-      header: _Banner(onBack: widget.onBack),
+      header: AppPageHeader(
+        title: '学生管理',
+        subtitle: '管理全部学生的班级、学籍与住宿信息',
+        onBack: widget.onBack,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _StatsRow(
-              enrolled: enrolled,
-              dormCount: dormCount,
-              inactive: inactive,
-              total: total,
+            enrolled: enrolled,
+            dormCount: dormCount,
+            inactive: inactive,
+            total: total,
+          ),
+          SizedBox(height: ui(16)),
+          _FilterRow(
+            statusFilter: _statusFilter,
+            selectedClassId: _selectedClassId,
+            classOptions: _classOptions,
+            onStatusChanged: (s) {
+              setState(() => _statusFilter = s);
+              _loadStudents();
+            },
+            onClassChanged: (id) {
+              setState(() => _selectedClassId = id);
+              _loadStudents();
+            },
+            onSearchChanged: (kw) {
+              setState(() => _searchKw = kw);
+              _loadStudents();
+            },
+          ),
+          SizedBox(height: ui(20)),
+          Text(
+            '共 ${list.length} 人',
+            style: TextStyle(
+              fontSize: ui(12),
+              height: 1.2,
+              color: _kTextPrimary,
             ),
-            SizedBox(height: ui(16)),
-            _FilterRow(
-              statusFilter: _statusFilter,
-              selectedClassId: _selectedClassId,
-              classOptions: _classOptions,
-              onStatusChanged: (s) {
-                setState(() => _statusFilter = s);
-                _loadStudents();
-              },
-              onClassChanged: (id) {
-                setState(() => _selectedClassId = id);
-                _loadStudents();
-              },
-              onSearchChanged: (kw) {
-                setState(() => _searchKw = kw);
-                _loadStudents();
-              },
-            ),
-            SizedBox(height: ui(20)),
-            Text(
-              '当前结果 ${list.length}人',
-              style: TextStyle(
-                fontSize: ui(12),
-                height: 1.2,
-                color: _kTextPrimary,
-                fontFamily: 'PingFang SC',
-              ),
-            ),
-            SizedBox(height: ui(12)),
+          ),
+          SizedBox(height: ui(12)),
           _StudentGrid(students: list, onTap: _openProfile),
         ],
       ),
@@ -741,84 +732,6 @@ class _AdminStudentManagementViewState
 // ============================================================================
 // Banner
 // ============================================================================
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(62),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onBack,
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorder, width: 1),
-                ),
-                child: Icon(
-                  Icons.chevron_left,
-                  size: ui(20),
-                  color: _kTextPrimary,
-                ),
-              ),
-            ),
-          ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '学生管理',
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    height: 1.2,
-                    fontWeight: AppFont.w600,
-                    color: _kTextPrimary,
-                    fontFamily: 'PingFang SC',
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                Text(
-                  '全量在籍视图：行政班、学籍状态、住宿与联系方式；支持检索与导出。与学生端名册同源口径。',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    height: 1.2,
-                    color: _kTextHint,
-                    fontFamily: 'PingFang SC',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ============================================================================
 // 4 统计卡
@@ -928,7 +841,7 @@ class _FilterRowState extends State<_FilterRow> {
           height: ui(44),
           padding: EdgeInsets.all(ui(4)),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorder, width: 1),
           ),
@@ -955,7 +868,7 @@ class _FilterRowState extends State<_FilterRow> {
           width: ui(324),
           height: ui(44),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(12)),
           ),
           padding: EdgeInsets.symmetric(horizontal: ui(16)),
@@ -979,7 +892,6 @@ class _FilterRowState extends State<_FilterRow> {
                     fontSize: ui(14),
                     height: 1.2,
                     color: _kTextPrimary,
-                    fontFamily: 'PingFang SC',
                   ),
                   decoration: InputDecoration(
                     isCollapsed: true,
@@ -987,8 +899,7 @@ class _FilterRowState extends State<_FilterRow> {
                     hintText: '搜索姓名、学号、手机、宿舍、家长',
                     hintStyle: TextStyle(
                       fontSize: ui(14),
-                      color: const Color(0xFFD1D1D1),
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.textPlaceholder,
                     ),
                   ),
                 ),
@@ -1052,7 +963,7 @@ class _ClassFilterFieldState extends State<_ClassFilterField> {
         width: ui(220),
         height: ui(44),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorder),
         ),
@@ -1068,7 +979,6 @@ class _ClassFilterFieldState extends State<_ClassFilterField> {
                   fontSize: ui(14),
                   height: 1.2,
                   color: _kTextPrimary,
-                  fontFamily: 'PingFang SC',
                 ),
               ),
             ),
@@ -1078,7 +988,7 @@ class _ClassFilterFieldState extends State<_ClassFilterField> {
               child: Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: ui(22),
-                color: const Color(0xFFC6C6C6),
+                color: AppColors.textPlaceholder,
               ),
             ),
           ],
@@ -1120,8 +1030,7 @@ class _StatusPill extends StatelessWidget {
             fontSize: ui(14),
             height: 1,
             fontWeight: AppFont.w500,
-            color: active ? Colors.white : _kTextSub,
-            fontFamily: 'PingFang SC',
+            color: active ? AppColors.surface : _kTextSub,
           ),
         ),
       ),
@@ -1147,16 +1056,12 @@ class _StudentGrid extends StatelessWidget {
         height: ui(120),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
         ),
         child: Text(
           '暂无符合条件的学生',
-          style: TextStyle(
-            fontSize: ui(14),
-            color: _kTextHint,
-            fontFamily: 'PingFang SC',
-          ),
+          style: TextStyle(fontSize: ui(14), color: _kTextHint),
         ),
       );
     }
@@ -1235,7 +1140,6 @@ class _StudentCard extends StatelessWidget {
                                   height: 1.0,
                                   fontWeight: AppFont.w500,
                                   color: _kTextPrimary,
-                                  fontFamily: 'PingFang SC',
                                 ),
                               ),
                             ),
@@ -1247,7 +1151,6 @@ class _StudentCard extends StatelessWidget {
                                   fontSize: ui(12),
                                   height: 1.2,
                                   color: _kTextHint,
-                                  fontFamily: 'PingFang SC',
                                 ),
                               ),
                             ],
@@ -1262,7 +1165,6 @@ class _StudentCard extends StatelessWidget {
                             fontSize: ui(12),
                             height: 1.2,
                             color: _kTextPrimary,
-                            fontFamily: 'PingFang SC',
                           ),
                         ),
                         SizedBox(height: ui(6)),
@@ -1274,7 +1176,6 @@ class _StudentCard extends StatelessWidget {
                             fontSize: ui(12),
                             height: 1.2,
                             color: _kTextSub,
-                            fontFamily: 'PingFang SC',
                           ),
                         ),
                       ],
@@ -1283,32 +1184,18 @@ class _StudentCard extends StatelessWidget {
                 ],
               ),
             ),
-            // 右上角状态徽章
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                height: ui(22),
-                padding: EdgeInsets.symmetric(horizontal: ui(8)),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: student.status.bg,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(ui(12)),
-                    bottomLeft: Radius.circular(ui(12)),
-                  ),
-                ),
-                child: Text(
-                  student.status.label,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    height: 1.0,
-                    color: student.status.fg,
-                    fontFamily: 'PingFang SC',
-                  ),
+            // 只有非在籍（休学 / 转学 / 毕业）才显示状态。
+            if (student.status != _StudentStatus.enrolled)
+              Positioned(
+                right: ui(12),
+                top: ui(10),
+                child: AppStatusTag(
+                  label: student.status.label,
+                  tone: student.status == _StudentStatus.graduated
+                      ? AppTone.neutral
+                      : AppTone.warning,
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -1326,39 +1213,7 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final initial = name.isEmpty ? '·' : name.characters.first;
-    final placeholder = Container(
-      width: ui(size),
-      height: ui(size),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: _kPurpleSoft,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: ui(size * 0.4),
-          height: 1.0,
-          fontWeight: AppFont.w600,
-          color: _kPurple,
-          fontFamily: 'PingFang SC',
-        ),
-      ),
-    );
-    if (avatarUrl.isEmpty) {
-      return placeholder;
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Image.network(
-        avatarUrl,
-        width: ui(size),
-        height: ui(size),
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => placeholder,
-      ),
-    );
+    return AppAvatar(name: name, url: avatarUrl, size: ui(size));
   }
 }
 
@@ -1453,11 +1308,7 @@ class _StudentProfileDialogState extends ConsumerState<_StudentProfileDialog> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        _Avatar(
-                          name: s.name,
-                          avatarUrl: s.avatarUrl,
-                          size: 56,
-                        ),
+                        _Avatar(name: s.name, avatarUrl: s.avatarUrl, size: 56),
                         SizedBox(width: ui(12)),
                         Expanded(
                           child: Column(
@@ -1473,8 +1324,7 @@ class _StudentProfileDialogState extends ConsumerState<_StudentProfileDialog> {
                                         fontSize: ui(16),
                                         height: 1.2,
                                         fontWeight: AppFont.w600,
-                                        color: Colors.black,
-                                        fontFamily: 'PingFang SC',
+                                        color: AppColors.ink,
                                       ),
                                     ),
                                   ),
@@ -1491,7 +1341,6 @@ class _StudentProfileDialogState extends ConsumerState<_StudentProfileDialog> {
                                   fontSize: ui(12),
                                   height: 1.2,
                                   color: _kTextSub,
-                                  fontFamily: 'PingFang SC',
                                 ),
                               ),
                               SizedBox(height: ui(2)),
@@ -1501,7 +1350,6 @@ class _StudentProfileDialogState extends ConsumerState<_StudentProfileDialog> {
                                   fontSize: ui(12),
                                   height: 1.2,
                                   color: _kTextHint,
-                                  fontFamily: 'PingFang SC',
                                 ),
                               ),
                             ],
@@ -1571,21 +1419,13 @@ class _StudentExamRecordsSection extends StatelessWidget {
           children: [
             Text(
               '考试记录',
-              style: TextStyle(
-                fontSize: ui(14),
-                color: _kTextHint,
-                fontFamily: 'PingFang SC',
-              ),
+              style: TextStyle(fontSize: ui(14), color: _kTextHint),
             ),
             if (loading) ...[
               SizedBox(width: ui(8)),
               Text(
                 '加载中…',
-                style: TextStyle(
-                  fontSize: ui(12),
-                  color: _kTextHint,
-                  fontFamily: 'PingFang SC',
-                ),
+                style: TextStyle(fontSize: ui(12), color: _kTextHint),
               ),
             ],
           ],
@@ -1594,11 +1434,7 @@ class _StudentExamRecordsSection extends StatelessWidget {
         if (!loading && records.isEmpty)
           Text(
             '暂无考试成绩',
-            style: TextStyle(
-              fontSize: ui(13),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(13), color: _kTextHint),
           )
         else
           ConstrainedBox(
@@ -1648,7 +1484,6 @@ class _StudentExamRecordCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextPrimary,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                   ),
                 ),
@@ -1668,21 +1503,13 @@ class _StudentExamRecordCard extends StatelessWidget {
             '${record.examDate.isEmpty ? '--' : record.examDate} · '
             '班级第 ${record.classRank == 0 ? '--' : record.classRank} · '
             '年级第 ${record.schoolRank == 0 ? '--' : record.schoolRank}',
-            style: TextStyle(
-              fontSize: ui(11),
-              color: _kTextSub,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(12), color: _kTextSub),
           ),
           if (subjects.isNotEmpty) ...[
             SizedBox(height: ui(5)),
             Text(
               subjects,
-              style: TextStyle(
-                fontSize: ui(11),
-                color: _kTextSub,
-                fontFamily: 'PingFang SC',
-              ),
+              style: TextStyle(fontSize: ui(12), color: _kTextSub),
             ),
           ],
         ],
@@ -1721,12 +1548,7 @@ class _StudentFaceImgPreview extends StatelessWidget {
           SizedBox(height: ui(6)),
           Text(
             '暂未录入',
-            style: TextStyle(
-              fontSize: ui(10),
-              height: 1.2,
-              color: _kTextSub,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(12), height: 1.2, color: _kTextSub),
           ),
         ],
       );
@@ -1745,7 +1567,7 @@ class _StudentFaceImgPreview extends StatelessWidget {
         height: ui(_kFaceImgPreviewHeight),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: const Color(0xFFEDE6FF),
+          color: AppColors.brandTint,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kPurpleSoft, width: 1),
         ),
@@ -1767,14 +1589,13 @@ class _StudentFaceImgPreview extends StatelessWidget {
                 bottom: 0,
                 child: Container(
                   padding: EdgeInsets.symmetric(vertical: ui(4)),
-                  color: Colors.black.withValues(alpha: 0.35),
+                  color: AppColors.ink.withValues(alpha: 0.35),
                   alignment: Alignment.center,
                   child: Text(
                     '点击放大',
                     style: TextStyle(
-                      fontSize: ui(10),
-                      color: Colors.white,
-                      fontFamily: 'PingFang SC',
+                      fontSize: ui(12),
+                      color: AppColors.surface,
                       fontWeight: AppFont.w400,
                       height: 1.0,
                     ),
@@ -1801,23 +1622,13 @@ class _StudentTagsSection extends StatelessWidget {
       children: [
         Text(
           '学生标签',
-          style: TextStyle(
-            fontSize: ui(14),
-            height: 1.4,
-            color: _kTextHint,
-            fontFamily: 'PingFang SC',
-          ),
+          style: TextStyle(fontSize: ui(14), height: 1.4, color: _kTextHint),
         ),
         SizedBox(height: ui(8)),
         if (tags.isEmpty)
           Text(
             '暂无标签',
-            style: TextStyle(
-              fontSize: ui(14),
-              height: 1.4,
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(14), height: 1.4, color: _kTextHint),
           )
         else
           Wrap(
@@ -1840,7 +1651,6 @@ class _StudentTagsSection extends StatelessWidget {
                       fontSize: ui(12),
                       height: 1.2,
                       color: _kPurple,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                     ),
                   ),
@@ -1881,7 +1691,6 @@ class _ProfileRow extends StatelessWidget {
                 fontSize: ui(14),
                 height: 1.4,
                 color: _kTextHint,
-                fontFamily: 'PingFang SC',
               ),
             ),
           ),
@@ -1892,7 +1701,6 @@ class _ProfileRow extends StatelessWidget {
                 fontSize: ui(14),
                 height: 1.4,
                 color: _kTextPrimary,
-                fontFamily: 'PingFang SC',
               ),
             ),
           ),

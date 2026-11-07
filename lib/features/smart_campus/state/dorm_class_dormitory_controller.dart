@@ -21,7 +21,8 @@ final dormClassDormitoryControllerProvider =
       );
     });
 
-class DormClassDormitoryController extends StateNotifier<TeacherDormitoryState> {
+class DormClassDormitoryController
+    extends StateNotifier<TeacherDormitoryState> {
   DormClassDormitoryController({
     required DormitoryRepository repository,
     required AdminRepository adminRepository,
@@ -211,7 +212,9 @@ class DormClassDormitoryController extends StateNotifier<TeacherDormitoryState> 
   Future<void> _reloadMakeups() async {
     final classId = state.selectedClassId;
     if (classId.isEmpty) return;
-    final response = await _repository.classDormitoryMakeupList(classId: classId);
+    final response = await _repository.classDormitoryMakeupList(
+      classId: classId,
+    );
     if (!response.isSuccess) return;
     final makeupItems = parseTeacherDormitoryMakeupList(response.data);
     final pendingMakeupCount = makeupItems
@@ -219,9 +222,7 @@ class DormClassDormitoryController extends StateNotifier<TeacherDormitoryState> 
         .length;
     state = state.copyWith(
       makeupItems: makeupItems,
-      overview: state.overview.copyWith(
-        pendingMakeupCount: pendingMakeupCount,
-      ),
+      overview: state.overview.copyWith(pendingMakeupCount: pendingMakeupCount),
     );
   }
 }

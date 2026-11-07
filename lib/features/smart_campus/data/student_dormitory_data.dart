@@ -171,15 +171,15 @@ class StudentDormitoryMakeupItem {
 }
 
 List<StudentDormitoryCheckItem> parseStudentDormitoryCheckHistory(dynamic raw) {
-  return _unwrapList(raw)
-      .map(StudentDormitoryCheckItem.fromJson)
-      .toList(growable: false);
+  return _unwrapList(
+    raw,
+  ).map(StudentDormitoryCheckItem.fromJson).toList(growable: false);
 }
 
 List<StudentDormitoryMakeupItem> parseStudentDormitoryMakeupList(dynamic raw) {
-  return _unwrapList(raw)
-      .map(StudentDormitoryMakeupItem.fromJson)
-      .toList(growable: false);
+  return _unwrapList(
+    raw,
+  ).map(StudentDormitoryMakeupItem.fromJson).toList(growable: false);
 }
 
 String studentDormitoryIsoDate(DateTime value) {
@@ -200,15 +200,27 @@ List<DormitoryDetailField> parseStudentDormitoryCheckDetailFields(dynamic raw) {
   final status = map['status']?.toString().trim() ?? '';
   final handleStatus = _pickInt(map, ['handleStatus']);
   return [
-    DormitoryDetailField('查寝场次', _pickString(map, ['checkType', 'scene'], '查寝')),
+    DormitoryDetailField(
+      '查寝场次',
+      _pickString(map, ['checkType', 'scene'], '查寝'),
+    ),
     DormitoryDetailField('查寝日期', _pickString(map, ['checkDate', 'date'])),
     DormitoryDetailField('学生宿舍', _dormName(map)),
-    DormitoryDetailField('规定时间', _pickString(map, ['checkDeadline', 'deadline'])),
-    DormitoryDetailField('打卡时间', _clock(_pickString(map, ['checkTime', 'stampTime']))),
+    DormitoryDetailField(
+      '规定时间',
+      _pickString(map, ['checkDeadline', 'deadline']),
+    ),
+    DormitoryDetailField(
+      '打卡时间',
+      _clock(_pickString(map, ['checkTime', 'stampTime'])),
+    ),
     DormitoryDetailField('查寝状态', status.isEmpty ? '—' : status),
     DormitoryDetailField('查寝备注', _pickString(map, ['remark', 'note'], '无')),
     if (handleStatus > 0)
-      DormitoryDetailField('处理状态', _pickString(map, ['handleStatusText'], '$handleStatus')),
+      DormitoryDetailField(
+        '处理状态',
+        _pickString(map, ['handleStatusText'], '$handleStatus'),
+      ),
     DormitoryDetailField(
       '处理说明',
       _pickString(map, ['handleRemark', 'handleReason']),
@@ -216,17 +228,27 @@ List<DormitoryDetailField> parseStudentDormitoryCheckDetailFields(dynamic raw) {
   ];
 }
 
-List<DormitoryDetailField> parseStudentDormitoryMakeupDetailFields(dynamic raw) {
+List<DormitoryDetailField> parseStudentDormitoryMakeupDetailFields(
+  dynamic raw,
+) {
   final map = _unwrapMap(raw) ?? const <String, dynamic>{};
   return [
-    DormitoryDetailField('补卡场次', _pickString(map, ['checkType', 'scene'], '补卡')),
+    DormitoryDetailField(
+      '补卡场次',
+      _pickString(map, ['checkType', 'scene'], '补卡'),
+    ),
     DormitoryDetailField('补卡日期', _pickString(map, ['checkDate', 'date'])),
     DormitoryDetailField('申请原因', _pickString(map, ['reason'], '未填写')),
     DormitoryDetailField(
       '审批状态',
-      _pickString(map, ['statusText'], _makeupStatusLabel(_pickInt(map, ['status']))),
+      _pickString(map, [
+        'statusText',
+      ], _makeupStatusLabel(_pickInt(map, ['status']))),
     ),
-    DormitoryDetailField('审批意见', _pickString(map, ['auditReason', 'auditRemark'])),
+    DormitoryDetailField(
+      '审批意见',
+      _pickString(map, ['auditReason', 'auditRemark']),
+    ),
     DormitoryDetailField('申请时间', _pickString(map, ['createTime', 'applyTime'])),
     DormitoryDetailField('审批时间', _pickString(map, ['auditTime', 'updateTime'])),
   ];

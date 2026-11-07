@@ -7,15 +7,11 @@ import 'circle_state.dart';
 /// 拉取 `teacherRole` 并判断当前用户是否拥有管理员身份。
 ///
 /// 身份集合中只要包含 `headmaster` / `manager` / `principal` / `admin`
-/// 任一 token，即视为最高权限管理员（可删任意帖与评论）。
+/// 任一 token，即视为最高权限管理员（可删任意评论；帖子在「校圈治理」里删除）。
 final circleTeacherRoleAdminProvider = FutureProvider<bool>((ref) async {
   final user = ref.watch(
     shellControllerProvider.select(
-      (s) => (
-        id: s.user.id,
-        role: s.user.role,
-        identity: s.user.identity,
-      ),
+      (s) => (id: s.user.id, role: s.user.role, identity: s.user.identity),
     ),
   );
   if (user.id.isEmpty) return false;

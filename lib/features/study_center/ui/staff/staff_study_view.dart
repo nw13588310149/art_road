@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/art/art_subject.dart';
-import '../../../../core/art/art_tokens.dart';
-import '../../../../core/widgets/app_loading_indicator.dart';
+import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/app_refresh_indicator.dart';
-import '../../../../core/widgets/app_toast.dart';
-import '../../../../core/widgets/art_widgets.dart';
 import '../../../shell/state/shell_controller.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
@@ -20,7 +16,7 @@ import 'staff_exam_selector.dart';
 import 'staff_score_charts.dart';
 import 'staff_student_list.dart';
 
-/// 「班级学情」：班级总览 / 学生成绩报告 / 学生成绩曲线三个页内视图。
+/// 「班级学情」：班级总览 / 学生成绩报告 / 学生成绩曲线三个页内视图，切换立即生效。
 class StaffStudyView extends ConsumerWidget {
   const StaffStudyView({required this.args, super.key});
 
@@ -33,17 +29,20 @@ class StaffStudyView extends ConsumerWidget {
     final controller = ref.read(provider.notifier);
     ref.listen<StaffStudyState>(provider, (previous, next) {
       final message = next.errorMessage;
-      if (message.isEmpty || message == previous?.errorMessage) return;
+      if (message.isEmpty || message == previous?.errorMessage) {
+        return;
+      }
       AppToast.showError(context, message);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (controller.mounted) controller.clearError();
+        if (controller.mounted) {
+          controller.clearError();
+        }
       });
     });
 
     final student = state.student;
-    final Widget child;
     if (state.section == StaffStudySection.report && student != null) {
-      child = StudyReportView(
+      return StudyReportView(
         key: ValueKey<String>(
           'staff-report-${student.archiveId}-${state.examId}',
         ),
@@ -55,8 +54,9 @@ class StaffStudyView extends ConsumerWidget {
         onBack: controller.back,
         onOpenTrend: controller.openTrend,
       );
-    } else if (state.section == StaffStudySection.trend && student != null) {
-      child = StudyGrowthView(
+    }
+    if (state.section == StaffStudySection.trend && student != null) {
+      return StudyGrowthView(
         key: ValueKey<String>('staff-trend-${student.archiveId}'),
         archiveId: student.archiveId,
         title: '${student.studentName} · 成绩曲线',
@@ -66,16 +66,11 @@ class StaffStudyView extends ConsumerWidget {
         ].join(' · '),
         onBack: controller.back,
       );
-    } else {
-      child = _StaffOverview(
-        key: const ValueKey<String>('staff-overview'),
-        state: state,
-        controller: controller,
-      );
     }
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      child: child,
+    return _StaffOverview(
+      key: const ValueKey<String>('staff-overview'),
+      state: state,
+      controller: controller,
     );
   }
 }
@@ -96,12 +91,12 @@ class _StaffOverview extends ConsumerWidget {
       shellControllerProvider.select((s) => s.schoolName),
     );
     final exam = state.exam;
-    final header = ArtPageHeader(
+    final header = AppPageHeader(
       title: '班级学情',
       subtitle: [
         if (schoolName.isNotEmpty) schoolName,
         if (state.exams.isNotEmpty) '共 ${state.exams.length} 场考试',
-        '成绩来自艺考网阅卷系统',
+        '成绩经艺考网阅卷系统复核后发布',
       ].join(' · '),
       bottom: state.exams.isEmpty
           ? null
@@ -115,27 +110,47 @@ class _StaffOverview extends ConsumerWidget {
     final Widget body;
     if (state.exams.isEmpty) {
       if (state.loading) {
-        body = const SizedBox.shrink();
+        body = const _StaffSkeleton();
       } else if (state.loadFailed) {
-        body = StudyErrorView(message: '考试列表加载失败', onRetry: controller.refresh);
+        body = AppErrorState(
+          title: '考试列表加载失败',
+          description: '请检查网络后重试',
+          onRetry: controller.refresh,
+        );
       } else {
-        body = const ArtEmptyState(
-          message: '暂无考试记录',
+        body = const AppEmptyState(
           icon: Icons.event_busy_outlined,
+          title: '暂无考试记录',
+          description: '阅卷系统发布考试成绩后，会在这里汇总班级学情',
         );
       }
     } else if (exam == null) {
-      body = const ArtEmptyState(
-        message: '考试均在阅卷中，出分后可查看班级学情',
+      body = const AppEmptyState(
         icon: Icons.hourglass_top_rounded,
+        title: '考试均在阅卷中',
+        description: '出分后可查看分数段分布、校区对比与成绩排名',
       );
     } else {
       body = _StaffBody(state: state, controller: controller, exam: exam);
     }
 
-    return PageInitLoadingShell(
-      loading: state.loading && state.exams.isEmpty,
-      child: StudyPageFrame(header: header, body: body),
+    return StudyPageFrame(header: header, body: body);
+  }
+}
+
+class _StaffSkeleton extends StatelessWidget {
+  const _StaffSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: studyBodyPadding,
+      physics: const NeverScrollableScrollPhysics(),
+      children: const [
+        StudyCardSkeleton(lines: 2),
+        SizedBox(height: AppSpace.s16),
+        StudyCardSkeleton(lines: 6),
+      ],
     );
   }
 }
@@ -173,8 +188,8 @@ class _StaffBody extends StatelessWidget {
       ]);
     }
     final accent = subject == null
-        ? ArtColors.brand
-        : artSubjectColor(subjectName);
+        ? AppColors.brand
+        : studySubjectColor(subjectName);
     final subjectLabel = subject == null ? '总分' : subjectName;
     final groups = groupStats<ScoreQueryRow>(
       rows,
@@ -182,9 +197,9 @@ class _StaffBody extends StatelessWidget {
       (row) => rowScore(row, subjectName),
     );
 
-    final distribution = StudyCard(
+    final distribution = AppCard(
       title: '分数段分布',
-      subtitle: subject == null ? '按总分分段统计' : '按$subjectName档位统计',
+      subtitle: subject == null ? '按总分分段统计人数' : '按$subjectName档位统计人数',
       child: SizedBox(
         height: _chartHeight,
         child: ScoreDistributionChart(buckets: buckets, color: accent),
@@ -195,6 +210,7 @@ class _StaffBody extends StatelessWidget {
       overallAverage: summary.average,
       fullScore: fullScore,
       subjectLabel: subjectLabel,
+      color: accent,
     );
 
     return AppRefreshIndicator(
@@ -203,97 +219,129 @@ class _StaffBody extends StatelessWidget {
         key: const PageStorageKey<String>('staff-study-overview'),
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          SliverToBoxAdapter(
-            child: StudyCard(
-              title: exam.examName,
-              subtitle: '${studyDateText(exam.examTime)} · $subjectLabel',
-              trailing: ArtSegmentTabs<String>(
-                items: ['', for (final item in exam.subjects) item.subjectName],
-                value: subjectName,
-                onChanged: controller.selectSubject,
-                labelOf: (name) => name.isEmpty ? '总分' : name,
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s4,
+              AppSpace.page,
+              0,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: AppCard(
+                title: exam.examName,
+                subtitle: '${studyDateText(exam.examTime)} · $subjectLabel',
+                trailing: AppSegmented<String>(
+                  size: AppControlSize.sm,
+                  segments: [
+                    const AppSegment(value: '', label: '总分'),
+                    for (final item in exam.subjects)
+                      AppSegment(
+                        value: item.subjectName,
+                        label: item.subjectName,
+                      ),
+                  ],
+                  value: subjectName,
+                  onChanged: controller.selectSubject,
+                ),
+                child: state.rowsLoading && rows.isEmpty
+                    ? const AppSkeleton(height: 72, radius: AppRadius.card)
+                    : StaffStatTiles(summary: summary, fullScore: fullScore),
               ),
-              child: state.rowsLoading && rows.isEmpty
-                  ? const StudyLoadingBlock(height: 96)
-                  : StaffStatTiles(summary: summary, fullScore: fullScore),
             ),
           ),
-          if (state.rowsFailed)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: StudyCard(
-                  child: StudyErrorView(
-                    message: '成绩数据加载失败',
-                    onRetry: controller.reloadRows,
-                  ),
-                ),
-              ),
-            )
-          else if (!state.rowsLoading && rows.isEmpty)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: StudyCard(
-                  child: ArtEmptyState(
-                    message: '本场考试暂无成绩',
-                    icon: Icons.inbox_outlined,
-                  ),
-                ),
-              ),
-            )
-          else if (rows.isNotEmpty) ...[
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverToBoxAdapter(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth < 760) {
-                    return Column(
-                      children: [
-                        distribution,
-                        const SizedBox(height: 12),
-                        campus,
-                      ],
-                    );
-                  }
-                  return IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(flex: 3, child: distribution),
-                        const SizedBox(width: 12),
-                        Expanded(flex: 2, child: campus),
-                      ],
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s16,
+              AppSpace.page,
+              0,
+            ),
+            sliver: SliverMainAxisGroup(
+              slivers: [
+                if (state.rowsFailed)
+                  SliverToBoxAdapter(
+                    child: AppCard(
+                      child: SizedBox(
+                        height: 200,
+                        child: AppErrorState(
+                          title: '成绩数据加载失败',
+                          description: '请检查网络后重试',
+                          onRetry: controller.reloadRows,
+                        ),
+                      ),
                     ),
-                  );
-                },
-              ),
+                  )
+                else if (!state.rowsLoading && rows.isEmpty)
+                  const SliverToBoxAdapter(
+                    child: AppCard(
+                      child: SizedBox(
+                        height: 200,
+                        child: AppEmptyState(
+                          icon: Icons.inbox_outlined,
+                          title: '本场考试暂无成绩',
+                          description: '阅卷完成并发布成绩后会显示在这里',
+                        ),
+                      ),
+                    ),
+                  )
+                else if (rows.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth < 760) {
+                          return Column(
+                            children: [
+                              distribution,
+                              const SizedBox(height: AppSpace.s16),
+                              campus,
+                            ],
+                          );
+                        }
+                        return IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(flex: 3, child: distribution),
+                              const SizedBox(width: AppSpace.s16),
+                              Expanded(flex: 2, child: campus),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: AppSpace.s16),
+                  ),
+                  SliverToBoxAdapter(
+                    child: StaffSubjectAverages(
+                      exam: exam,
+                      rows: rows,
+                      selectedSubject: subjectName,
+                      onSelect: controller.selectSubject,
+                    ),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: AppSpace.s16),
+                  ),
+                  StaffStudentListSliver(
+                    rows: rankedScoreRows(
+                      rows,
+                      subjectName: subjectName,
+                      keyword: state.keyword,
+                    ),
+                    subjectName: subjectName,
+                    totalCount: rows.length,
+                    overflowCount: state.rowsTotal - rows.length,
+                    keyword: state.keyword,
+                    onKeywordChanged: controller.setKeyword,
+                    onOpen: controller.openStudent,
+                  ),
+                ],
+              ],
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverToBoxAdapter(
-              child: StaffSubjectAverages(
-                exam: exam,
-                rows: rows,
-                selectedSubject: subjectName,
-                onSelect: controller.selectSubject,
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            StaffStudentListSliver(
-              rows: rankedScoreRows(
-                rows,
-                subjectName: subjectName,
-                keyword: state.keyword,
-              ),
-              subjectName: subjectName,
-              totalCount: rows.length,
-              overflowCount: state.rowsTotal - rows.length,
-              keyword: state.keyword,
-              onKeywordChanged: controller.setKeyword,
-              onOpen: controller.openStudent,
-            ),
-          ],
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: AppSpace.s24)),
         ],
       ),
     );

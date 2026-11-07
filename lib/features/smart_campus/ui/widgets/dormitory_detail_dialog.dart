@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/scaled_dialog.dart';
@@ -5,12 +6,12 @@ import '../../../shell/ui/shell_layout.dart';
 import '../../data/student_dormitory_data.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kBoardBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kPurple = Color(0xFF715EFE);
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kBoardBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kPurple = AppColors.brand;
 
 const _profileHiddenFieldLabels = {'学生姓名', '学生', '姓名', '学生学号', '学号'};
 
@@ -31,7 +32,7 @@ Future<void> showDormitoryDetailDialog(
       : fields;
   return showScaledDialog<void>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.18),
+    barrierColor: AppColors.ink.withValues(alpha: 0.18),
     builder: (ctx) => GradientHeaderDialog(
       title: title,
       width: 460,
@@ -88,7 +89,6 @@ Future<void> showDormitoryDetailDialog(
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                 ),
               ),
@@ -125,7 +125,6 @@ class _StudentProfileHeader extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(16),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w600,
                   height: 1.2,
                 ),
@@ -139,7 +138,6 @@ class _StudentProfileHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -171,16 +169,15 @@ class _StudentAvatar extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: const Color(0xFFE3DFFF),
+          color: AppColors.brandTint,
           borderRadius: BorderRadius.circular(radius),
         ),
         alignment: Alignment.center,
         child: Text(
           initial,
           style: TextStyle(
-            fontSize: ui(18),
+            fontSize: ui(16),
             color: _kPurple,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w500,
             height: 1.0,
           ),
@@ -213,11 +210,7 @@ class _DetailRow extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     return RichText(
       text: TextSpan(
-        style: TextStyle(
-          fontSize: ui(13),
-          height: 1.5,
-          fontFamily: 'PingFang SC',
-        ),
+        style: TextStyle(fontSize: ui(13), height: 1.5),
         children: [
           TextSpan(
             text: '${field.label}：',

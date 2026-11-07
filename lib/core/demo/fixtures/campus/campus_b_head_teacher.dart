@@ -88,7 +88,7 @@ Object? _index(DemoRequest req) {
     for (final m in cbStudentLeaves())
       if (classSet.contains(cbStr(m['classId']))) m,
   ]..sort((a, b) => cbStr(b['createTime']).compareTo(cbStr(a['createTime'])));
-  final pendingLeaves = leaves.where((m) => cbInt(m['status']) <= 1).toList();
+  final pendingLeaves = leaves.where((m) => cbInt(m['status']) == 1).toList();
   final makeups = [
     for (final m in cbDormMakeups())
       if (classSet.contains(cbDormMakeupClassId(m)) && cbInt(m['status']) == 0)
@@ -106,22 +106,28 @@ Object? _index(DemoRequest req) {
     for (final m in pendingLeaves.take(2))
       <String, dynamic>{
         'title': cbInt(m['status']) == 1 ? '待我审批' : '待家长确认',
+        'time': _shortTime(m['createTime']),
         'desc':
-            '${cbPerson(m['studentId'])?.name ?? ''} ${_leaveTypeLabel(m['type'])}'
+            '${cbPerson(m['studentId'])?.name ?? ''}${_leaveTypeLabel(m['type'])}'
             '：${cbStr(m['leaveReason'])}',
         'tag': '请假',
       },
-    for (final m in makeups.take(1))
+    if (makeups.isNotEmpty)
       <String, dynamic>{
-        'title': '待审核 · ${_shortTime(m['createTime'])}',
-        'desc':
-            '${cbPerson(m['studentId'])?.name ?? ''} 申请 ${cbStr(m['checkDate']).substring(5)} '
-            '${cbStr(m['checkType'])}补卡',
+        'title': '待审核',
+        'time': _shortTime(makeups.first['createTime']),
+        'desc': makeups.length == 1
+            ? '${cbPerson(makeups.first['studentId'])?.name ?? ''}申请 '
+                  '${cbStr(makeups.first['checkDate']).substring(5)} '
+                  '${cbStr(makeups.first['checkType'])}补卡'
+            : '${cbPerson(makeups.first['studentId'])?.name ?? ''}等 '
+                  '${makeups.length} 人申请查寝补卡',
         'tag': '补卡',
       },
     for (final check in issues.take(1))
       <String, dynamic>{
-        'title':
+        'title': '需处理',
+        'time':
             '${check.day == cbToday() ? (check.evening ? '今晚' : '今晨') : '昨晚'}'
             '${check.evening ? '查寝' : '晨检'}',
         'desc':
@@ -139,7 +145,8 @@ Object? _index(DemoRequest req) {
   final recent = <Map<String, dynamic>>[
     for (final c in chats.where((c) => c['waitingReply'] == true).take(1))
       <String, dynamic>{
-        'title': _shortTime(c['lastMessageTime']),
+        'title': '',
+        'time': _shortTime(c['lastMessageTime']),
         'desc':
             '${cbStr(c['parentName'])}（${cbPerson(c['studentId'])?.name ?? ''}${cbStr(c['parentRelation'])}）'
             '：${cbStr(c['lastMessage'])}',
@@ -147,15 +154,17 @@ Object? _index(DemoRequest req) {
       },
     for (final n in notices.take(1))
       <String, dynamic>{
-        'title': _shortTime(n['createTime']),
+        'title': '',
+        'time': _shortTime(n['createTime']),
         'desc': '发布班级通知「${cbStr(n['title'])}」',
         'tag': '班级',
       },
     for (final m in approved.take(1))
       <String, dynamic>{
-        'title': _shortTime(m['teacherAuditTime'] ?? m['createTime']),
+        'title': '',
+        'time': _shortTime(m['teacherAuditTime'] ?? m['createTime']),
         'desc':
-            '已批准 ${cbPerson(m['studentId'])?.name ?? ''} 的${_leaveTypeLabel(m['type'])}',
+            '已批准${cbPerson(m['studentId'])?.name ?? ''}的${_leaveTypeLabel(m['type'])}',
         'tag': '请假',
       },
   ];
@@ -199,7 +208,7 @@ Object? _classOverview(DemoRequest req) {
     'femaleCount': persons.where((p) => p.gender == '女').length,
     'residentCount': persons.where((p) => cbBedInfo(p).isNotEmpty).length,
     'pendingLeaveCount': cbStudentLeaves()
-        .where((m) => cbStr(m['classId']) == classId && cbInt(m['status']) <= 1)
+        .where((m) => cbStr(m['classId']) == classId && cbInt(m['status']) == 1)
         .length,
     'focusCount': cbFocus().where((m) => cbStr(m['classId']) == classId).length,
     'todayAbnormalDormCount': issues.length,

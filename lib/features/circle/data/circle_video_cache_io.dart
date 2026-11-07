@@ -9,9 +9,7 @@ bool circleVideoCacheNeedsLocal(String url) {
   if (uri.scheme != 'http' && uri.scheme != 'https') return false;
 
   final path = uri.path.toLowerCase();
-  return path.endsWith('.mov') ||
-      path.endsWith('.m4v') ||
-      path.endsWith('.qt');
+  return path.endsWith('.mov') || path.endsWith('.m4v') || path.endsWith('.qt');
 }
 
 final Map<String, String> _resolvedPaths = <String, String>{};
@@ -48,7 +46,9 @@ Future<String> _downloadToTemp(String url) async {
   final uri = Uri.parse(url);
   final ext = _extensionFromPath(uri.path);
   final fileName = 'circle_video_${url.hashCode.abs()}.$ext';
-  final file = File('${Directory.systemTemp.path}${Platform.pathSeparator}$fileName');
+  final file = File(
+    '${Directory.systemTemp.path}${Platform.pathSeparator}$fileName',
+  );
 
   if (await file.exists()) {
     final length = await file.length();

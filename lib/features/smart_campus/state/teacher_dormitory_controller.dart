@@ -21,9 +21,15 @@ class TeacherDormitoryController extends StateNotifier<TeacherDormitoryState> {
     : _repository = repository,
       super(
         TeacherDormitoryState(
-          selectedDate: teacherDormitoryIsoDate(DateTime.now()),
+          selectedDate: teacherDormitoryIsoDate(
+            _latestCheckedDay(DateTime.now()),
+          ),
         ),
       );
+
+  /// 晚查寝 21:30 开始、22:30 前结束；当晚查完之前默认看前一天的结果。
+  static DateTime _latestCheckedDay(DateTime now) =>
+      now.hour < 23 ? now.subtract(const Duration(days: 1)) : now;
 
   final TeacherRepository _repository;
   bool _initialized = false;

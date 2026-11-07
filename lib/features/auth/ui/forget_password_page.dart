@@ -3,15 +3,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
-import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_toast.dart';
+import '../../../core/ui/ui.dart';
 import '../state/auth_controller.dart';
 import '../state/auth_state.dart';
-import 'widgets/auth_design_canvas.dart';
-import 'widgets/auth_figma_components.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import 'widgets/auth_layout.dart';
+import 'widgets/auth_sms_code_row.dart';
 
-enum _ForgetStep { mobile, sms, password }
+enum _ForgetStep {
+  mobile('验证手机号'),
+  sms('输入验证码'),
+  password('设置新密码');
+
+  const _ForgetStep(this.label);
+
+  final String label;
+}
 
 class ForgetPasswordPage extends ConsumerStatefulWidget {
   const ForgetPasswordPage({super.key});
@@ -21,339 +27,198 @@ class ForgetPasswordPage extends ConsumerStatefulWidget {
 }
 
 class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
-  static final _mobileReg = RegExp(r'^\d{11}$');
-
   _ForgetStep _step = _ForgetStep.mobile;
-  String _confirmPassword = '';
-  String _maskedMobile = '';
+
+  // 三步分屏显示，输入框重建后仍保留已填内容（返回上一步时可见）。
+  final _mobile = TextEditingController();
+  final _smsCode = TextEditingController();
+  final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
+
+  AuthController get _controller =>
+      ref.read(authControllerProvider(AuthScene.forgetPassword).notifier);
+
+  @override
+  void dispose() {
+    _mobile.dispose();
+    _smsCode.dispose();
+    _password.dispose();
+    _confirmPassword.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider(AuthScene.forgetPassword));
-    final controller = ref.read(
-      authControllerProvider(AuthScene.forgetPassword).notifier,
-    );
+    final total = _ForgetStep.values.length;
 
-    return Scaffold(
-      // 与登录页同理：键盘弹出时不要让 Scaffold 压缩 body 触发 canvas 重缩放。
-      resizeToAvoidBottomInset: false,
-      body: AuthDesignCanvas(
-        builder: (scale) => Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: _s(scale, 691),
-              top: _s(scale, 127),
-              child: AuthBrandLogo(scale: scale),
-            ),
-            Positioned(
-              left: _s(scale, 691),
-              top: _s(scale, 194),
-              width: _s(scale, 399),
-              height: _s(scale, _cardHeight),
-              child: AuthFigmaCardFrame(
-                scale: scale,
-                title: '找回密码',
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ...switch (_step) {
-                      _ForgetStep.mobile => _buildMobileStep(
-                        context,
-                        scale,
-                        state,
-                        controller,
-                      ),
-                      _ForgetStep.sms => _buildSmsStep(
-                        context,
-                        scale,
-                        state,
-                        controller,
-                      ),
-                      _ForgetStep.password => _buildPasswordStep(
-                        context,
-                        scale,
-                        state,
-                        controller,
-                      ),
-                    },
-                  ],
+    return AuthPageFrame(
+      card: AuthCard(
+        title: '找回密码',
+        subtitle: '第 ${_step.index + 1} 步（共 $total 步）：${_step.label}',
+        children: [
+          ...switch (_step) {
+            _ForgetStep.mobile => _mobileStep(state),
+            _ForgetStep.sms => _smsStep(state),
+            _ForgetStep.password => _passwordStep(state),
+          },
+          const SizedBox(height: AppSpace.s20),
+          AppButton(
+            label: _step == _ForgetStep.password ? '确认修改' : '下一步',
+            expand: true,
+            loading: state.isSubmitting,
+            onTap: _onPrimaryTap,
+          ),
+          const SizedBox(height: AppSpace.s8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (_step != _ForgetStep.mobile) ...[
+                AppButton(
+                  label: '上一步',
+                  variant: AppButtonVariant.text,
+                  size: AppButtonSize.sm,
+                  onTap: () => setState(
+                    () => _step = _ForgetStep.values[_step.index - 1],
+                  ),
                 ),
+                const SizedBox(width: AppSpace.s16),
+              ],
+              AppButton(
+                label: '返回登录',
+                variant: AppButtonVariant.text,
+                size: AppButtonSize.sm,
+                onTap: _backToLogin,
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  List<Widget> _buildMobileStep(
-    BuildContext context,
-    double scale,
-    AuthState state,
-    AuthController controller,
-  ) {
+  List<Widget> _mobileStep(AuthState state) {
     return [
-      Positioned(
-        left: _s(scale, 17),
-        top: _s(scale, 100),
-        width: _s(scale, 365),
-        height: _s(scale, 45),
-        child: AuthFigmaInputField(
-          scale: scale,
-          hintText: '请输入手机号',
-          keyboardType: TextInputType.phone,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(11),
-          ],
-          prefixIcon: AuthImageIcon(
-            scale: scale,
-            asset: AppAssets.authPhone,
-            width: 18,
-            height: 18,
-            leftPadding: 13,
-          ),
-          onChanged: controller.setMobile,
-        ),
-      ),
-      Positioned(
-        left: _s(scale, 20),
-        top: _s(scale, 163),
-        width: _s(scale, 365),
-        height: _s(scale, 45),
-        child: AuthFigmaPrimaryButton(
-          scale: scale,
-          text: '下一步',
-          loading: state.isSubmitting,
-          onPressed: () => _onPrimaryTap(context, state, controller),
-          fontFamily: 'PingFang SC',
-        ),
+      AppIconInputField(
+        key: const ValueKey('mobile'),
+        controller: _mobile,
+        icon: Icons.phone_iphone_rounded,
+        hint: '请输入注册时使用的手机号',
+        keyboardType: TextInputType.phone,
+        textInputAction: TextInputAction.done,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(11),
+        ],
+        errorText: state.errorOf(AuthField.mobile),
+        onChanged: _controller.setMobile,
+        onSubmitted: (_) => _onPrimaryTap(),
       ),
     ];
   }
 
-  List<Widget> _buildSmsStep(
-    BuildContext context,
-    double scale,
-    AuthState state,
-    AuthController controller,
-  ) {
+  List<Widget> _smsStep(AuthState state) {
     return [
-      Positioned(
-        left: _s(scale, 20),
-        top: _s(scale, 101),
-        width: _s(scale, 345),
-        child: Text(
-          '若您的手机号 $_maskedMobile 可接收短信，请点击获取验证码。',
-          style: TextStyle(
-            color: const Color(0xFFB6B5BB),
-            fontSize: _s(scale, 14),
-            fontFamily: 'PingFang SC',
-            fontFamilyFallback: const ['Harmony'],
-            fontWeight: AppFont.w400,
-            height: 12 / 14,
-          ),
-        ),
+      Text(
+        '点击「获取验证码」，验证码将以短信发送到 ${_maskMobile(state.mobile)}。',
+        style: AppText.body13,
       ),
-      Positioned(
-        left: _s(scale, 20),
-        top: _s(scale, 138),
-        width: _s(scale, 240),
-        height: _s(scale, 45),
-        child: AuthFigmaInputField(
-          scale: scale,
-          hintText: '请输入短信验证码',
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(6),
-          ],
-          prefixIcon: AuthImageIcon(
-            scale: scale,
-            asset: AppAssets.authCode,
-            width: 18,
-            height: 18,
-            leftPadding: 13,
-          ),
-          onChanged: controller.setSmsCode,
-        ),
-      ),
-      Positioned(
-        left: _s(scale, 265),
-        top: _s(scale, 138),
-        width: _s(scale, 117),
-        height: _s(scale, 45),
-        child: AuthFigmaSmsButton(
-          scale: scale,
-          text: state.isSendingSms ? '重新获取(${state.smsCountDown})' : '获取验证码',
-          enabled: !state.isSendingSms,
-          onTap: () => _onSendSms(context, controller),
-        ),
-      ),
-      Positioned(
-        left: _s(scale, 20),
-        top: _s(scale, 210),
-        width: _s(scale, 365),
-        height: _s(scale, 45),
-        child: AuthFigmaPrimaryButton(
-          scale: scale,
-          text: '下一步',
-          loading: state.isSubmitting,
-          onPressed: () => _onPrimaryTap(context, state, controller),
-          fontFamily: 'PingFang SC',
-        ),
+      const SizedBox(height: AppSpace.s12),
+      AuthSmsCodeRow(
+        key: const ValueKey('smsCode'),
+        controller: _smsCode,
+        state: state,
+        onChanged: _controller.setSmsCode,
+        onSend: _onSendSms,
       ),
     ];
   }
 
-  List<Widget> _buildPasswordStep(
-    BuildContext context,
-    double scale,
-    AuthState state,
-    AuthController controller,
-  ) {
+  List<Widget> _passwordStep(AuthState state) {
+    final passwordError = state.errorOf(AuthField.password);
     return [
-      Positioned(
-        left: _s(scale, 20),
-        top: _s(scale, 93),
-        width: _s(scale, 365),
-        height: _s(scale, 45),
-        child: AuthFigmaInputField(
-          scale: scale,
-          hintText: '请输入新密码',
-          obscureText: true,
-          prefixIcon: AuthImageIcon(
-            scale: scale,
-            asset: AppAssets.authPassword,
-            width: 17,
-            height: 17,
-            leftPadding: 14,
-          ),
-          onChanged: controller.setPassword,
-        ),
+      AppIconInputField(
+        key: const ValueKey('password'),
+        controller: _password,
+        icon: Icons.lock_outline_rounded,
+        hint: '请输入新密码',
+        obscureText: true,
+        textInputAction: TextInputAction.next,
+        inputFormatters: [
+          LengthLimitingTextInputFormatter(AuthController.passwordMaxLength),
+        ],
+        errorText: passwordError,
+        onChanged: _controller.setPassword,
       ),
-      Positioned(
-        left: _s(scale, 20),
-        top: _s(scale, 159),
-        width: _s(scale, 365),
-        height: _s(scale, 45),
-        child: AuthFigmaInputField(
-          scale: scale,
-          hintText: '请确认密码',
-          obscureText: true,
-          prefixIcon: AuthImageIcon(
-            scale: scale,
-            asset: AppAssets.authPassword,
-            width: 17,
-            height: 17,
-            leftPadding: 14,
-          ),
-          onChanged: (value) => _confirmPassword = value,
-        ),
-      ),
-      Positioned(
-        left: _s(scale, 20),
-        top: _s(scale, 231),
-        width: _s(scale, 365),
-        height: _s(scale, 45),
-        child: AuthFigmaPrimaryButton(
-          scale: scale,
-          text: '确认修改',
-          loading: state.isSubmitting,
-          onPressed: () => _onPrimaryTap(context, state, controller),
-          fontFamily: 'PingFang SC',
-        ),
+      if (passwordError == null) ...[
+        const SizedBox(height: AppSpace.s4),
+        Text('密码为 6–20 位，建议同时包含字母和数字', style: AppText.caption12),
+      ],
+      const SizedBox(height: AppSpace.s12),
+      AppIconInputField(
+        key: const ValueKey('confirmPassword'),
+        controller: _confirmPassword,
+        icon: Icons.lock_outline_rounded,
+        hint: '请再次输入新密码',
+        obscureText: true,
+        textInputAction: TextInputAction.done,
+        inputFormatters: [
+          LengthLimitingTextInputFormatter(AuthController.passwordMaxLength),
+        ],
+        errorText: state.errorOf(AuthField.confirmPassword),
+        onChanged: _controller.setConfirmPassword,
+        onSubmitted: (_) => _onPrimaryTap(),
       ),
     ];
   }
 
-  Future<void> _onPrimaryTap(
-    BuildContext context,
-    AuthState state,
-    AuthController controller,
-  ) async {
+  Future<void> _onPrimaryTap() async {
+    final controller = _controller;
     switch (_step) {
       case _ForgetStep.mobile:
-        if (state.mobile.isEmpty) {
-          _showMessage(context, '请输入手机号');
-          return;
+        if (controller.validateMobileStep().success) {
+          setState(() => _step = _ForgetStep.sms);
         }
-        if (!_mobileReg.hasMatch(state.mobile)) {
-          _showMessage(context, '请输入11位手机号');
-          return;
-        }
-        setState(() {
-          _step = _ForgetStep.sms;
-          _maskedMobile = _maskMobile(state.mobile);
-        });
         return;
       case _ForgetStep.sms:
-        if (state.smsCode.isEmpty) {
-          _showMessage(context, '请输入短信验证码');
-          return;
+        if (controller.validateSmsStep().success) {
+          setState(() => _step = _ForgetStep.password);
         }
-        setState(() {
-          _step = _ForgetStep.password;
-        });
         return;
       case _ForgetStep.password:
-        if (state.password.isEmpty || _confirmPassword.isEmpty) {
-          _showMessage(context, '请输入并确认新密码');
-          return;
-        }
-        if (state.password.length < 6) {
-          _showMessage(context, '密码不少于6位');
-          return;
-        }
-        if (state.password != _confirmPassword) {
-          _showMessage(context, '两次输入的密码不一致');
-          return;
-        }
         final result = await controller.submitForgetPassword();
-        if (!context.mounted) {
+        if (!mounted || result.field != null) {
           return;
         }
-        _showMessage(context, result.message);
+        AppToast.show(context, result.message);
         if (result.success) {
-          Navigator.pushReplacementNamed(context, RoutePaths.login);
+          _backToLogin();
         }
         return;
     }
   }
 
-  Future<void> _onSendSms(
-    BuildContext context,
-    AuthController controller,
-  ) async {
-    final result = await controller.sendSms();
-    if (!context.mounted) {
+  Future<void> _onSendSms() async {
+    final result = await _controller.sendSms();
+    if (!mounted || result.field != null) {
       return;
     }
-    _showMessage(context, result.message);
+    AppToast.show(context, result.message);
   }
 
-  String _maskMobile(String mobile) {
-    if (mobile.length < 8) {
+  void _backToLogin() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacementNamed(RoutePaths.login);
+    }
+  }
+
+  static String _maskMobile(String mobile) {
+    if (mobile.length != 11) {
       return mobile;
     }
-    return '${mobile.substring(0, 3)}******${mobile.substring(mobile.length - 2)}';
+    return '${mobile.substring(0, 3)}****${mobile.substring(7)}';
   }
-
-  double get _cardHeight {
-    switch (_step) {
-      case _ForgetStep.mobile:
-        return 232;
-      case _ForgetStep.sms:
-        return 286;
-      case _ForgetStep.password:
-        return 307;
-    }
-  }
-
-  void _showMessage(BuildContext context, String message) {
-    AppToast.show(context, message);
-  }
-
-  static double _s(double scale, double value) => value * scale;
 }

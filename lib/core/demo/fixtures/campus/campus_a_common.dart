@@ -2,8 +2,10 @@ import '../../data/demo_campus_data.dart';
 import '../../data/demo_marking_data.dart';
 import '../../demo_accounts.dart';
 import '../../demo_backend.dart';
-import '../../demo_store.dart';
+import '../../demo_clock.dart';
 import '../../media/demo_media.dart';
+import 'campus_b_common.dart';
+import 'campus_b_records.dart';
 
 /// 智慧校园演示接口（学生 / 群聊 / 宿管 / 信箱）共用的日期、身份与媒体工具。
 ///
@@ -55,13 +57,20 @@ abstract final class CampusA {
     );
   }
 
-  /// 「现在往前推」的时间点（列表种子用）。
+  /// 「现在往前推」的时间点（列表种子用）：以 [DemoClock.now] 为基准，只在白天
+  /// 里往前数，秒数归零，不会出现凌晨或未来时间（见 [cbAgo]）。
   static String ago({int days = 0, int hours = 0, int minutes = 0}) =>
-      dateTime(
-        DateTime.now().subtract(
-          Duration(days: days, hours: hours, minutes: minutes),
-        ),
-      );
+      dateTime(cbAgo(Duration(hours: hours, minutes: minutes), days: days));
+
+  /// [daysAgo] 天前的固定时刻 `HH:mm`；晚于 [DemoClock.now] 时逐日前移。
+  static DateTime pastAt(int daysAgo, String clock) {
+    final limit = DemoClock.now();
+    var t = at(today().subtract(Duration(days: daysAgo)), clock);
+    while (t.isAfter(limit)) {
+      t = t.subtract(const Duration(days: 1));
+    }
+    return t;
+  }
 
   /// 某月第三个周日（月考惯例日期，与学情中心 4–10 月考试一致）。
   static DateTime thirdSunday(int year, int month) {
@@ -284,152 +293,20 @@ abstract final class CampusA {
   ]) => (b[key]?.toString() ?? '').compareTo(a[key]?.toString() ?? '');
 }
 
-/// 校级通知（学生端 / 宿管端首页通知列表共用一份）。
+/// 校级通知：与老师端、管理端读同一份（[cbNotices]），管理员发布或撤回后
+/// 学生端、宿管端同步看到。
 abstract final class CampusANotices {
-  static const _key = 'campusA:schoolNotices';
-
-  static List<Map<String, dynamic>> all() => DemoStore.list(_key, _seed);
+  static List<Map<String, dynamic>> all() => [
+    for (final n in cbNotices()) cbNoticeJson(n),
+  ];
 
   /// 推送范围包含 [scope]（student / dormitory / ...）的已发布通知，按发布时间倒序。
-  static List<Map<String, dynamic>> forScope(String scope) {
-    final list = [
-      for (final n in all())
-        if ((n['pushScope']?.toString() ?? '').split(',').contains(scope))
-          n,
-    ]..sort((a, b) => CampusA.compareTimeDesc(a, b, 'publishedAt'));
-    return list;
-  }
-
-  static List<Map<String, dynamic>> _seed() {
-    final exam = CampusA.nextMonthlyExamDay();
-    final unified = CampusA.unifiedExamDay();
-    final examLabel = '${exam.month} 月 ${exam.day} 日（周日）';
-    final days = unified.difference(CampusA.today()).inDays;
-    Map<String, dynamic> notice({
-      required String id,
-      required String title,
-      required String content,
-      required String type,
-      required String priority,
-      required String scope,
-      required String creator,
-      required String dept,
-      required String time,
-    }) => <String, dynamic>{
-      'id': id,
-      'title': title,
-      'content': content,
-      'type': type,
-      'priority': priority,
-      'pushScope': scope,
-      'creator': creator,
-      'deptName': dept,
-      'status': 1,
-      'publishMode': 1,
-      'publishedAt': time,
-      'createTime': time,
-      'updateTime': time,
-    };
-
-    return [
-      notice(
-        id: '8101',
-        title: '${exam.month} 月月考安排',
-        content:
-            '$examLabel举行${exam.month} 月月考，科目为素描（08:30—11:30）、色彩（13:30—16:30）、速写（17:00—18:00）。请各班于考前一天完成考场布置，考生凭准考证入场，画具自备。',
-        type: '通知',
-        priority: '重要',
-        scope: 'student,course_teacher,head_teacher,parent',
-        creator: '王敏',
-        dept: '教务处',
-        time: CampusA.ago(hours: 3),
-      ),
-      notice(
-        id: '8102',
-        title: '寒潮降温安全提示',
-        content:
-            '本周起兰州将迎来大幅降温，最低气温 -6℃。请同学们增添衣物，晚自习后结伴回宿舍；宿舍内严禁使用电热毯、暖手宝等大功率电器，宿管老师将加强夜间巡查。',
-        type: '紧急',
-        priority: '紧急',
-        scope: 'student,course_teacher,head_teacher,dormitory,parent',
-        creator: '王敏',
-        dept: '后勤保障部',
-        time: CampusA.ago(days: 1, hours: 2),
-      ),
-      notice(
-        id: '8103',
-        title: '黄河岸边色彩写生活动报名',
-        content:
-            '本周六下午组织色彩写生活动，地点：中山桥—白塔山沿线。请自备水粉工具、小马扎和水桶，13:30 在城东校区门口集合乘车，16:30 返校。报名请联系各班班主任。',
-        type: '活动',
-        priority: '普通',
-        scope: 'student,course_teacher,head_teacher',
-        creator: '刘芳',
-        dept: '色彩教研组',
-        time: CampusA.ago(days: 2, hours: 1),
-      ),
-      notice(
-        id: '8104',
-        title: '距甘肃省美术统考还有 $days 天',
-        content:
-            '甘肃省美术与设计类专业统考定于 ${unified.year} 年 ${unified.month} 月 ${unified.day} 日举行。冲刺阶段每周六上午安排一次全真模拟考试，请同学们调整作息，保证睡眠，按时归寝。',
-        type: '通知',
-        priority: '重要',
-        scope: 'student,course_teacher,head_teacher,parent',
-        creator: '王敏',
-        dept: '教务处',
-        time: CampusA.ago(days: 3, hours: 4),
-      ),
-      notice(
-        id: '8105',
-        title: '宿舍用电安全专项检查',
-        content:
-            '本周五 16:00 起对女生公寓 1 号楼、男生公寓 2 号楼进行用电安全专项检查，重点排查违规电器与私拉电线。请同学们提前自查，检查期间请留一名同学在宿舍配合。',
-        type: '督导',
-        priority: '重要',
-        scope: 'student,dormitory,head_teacher',
-        creator: '马红梅',
-        dept: '宿管中心',
-        time: CampusA.ago(days: 4, hours: 2),
-      ),
-      notice(
-        id: '8106',
-        title: '西安美术学院校考线上咨询会',
-        content:
-            '西安美术学院招生办将于下周三 19:30 举办线上校考咨询会，介绍造型、设计类专业考试要求。意向报考的同学请在班级群内接龙报名，届时在多媒体教室统一观看。',
-        type: '活动',
-        priority: '普通',
-        scope: 'student,head_teacher',
-        creator: '吴雨桐',
-        dept: '升学指导中心',
-        time: CampusA.ago(days: 5, hours: 3),
-      ),
-      notice(
-        id: '8107',
-        title: '宿管值班表调整',
-        content:
-            '自下周一起，晚查寝时间调整为 21:30—22:30，晨查寝 06:40—07:20。值班宿管请在查寝结束后 30 分钟内完成异常登记，并同步至班主任。',
-        type: '会议',
-        priority: '普通',
-        scope: 'dormitory',
-        creator: '王敏',
-        dept: '后勤保障部',
-        time: CampusA.ago(days: 6, hours: 1),
-      ),
-      notice(
-        id: '8108',
-        title: '教学研讨会通知',
-        content:
-            '下周二 10:00 在城东校区会议室召开冲刺阶段教学研讨会，议题：模考数据分析、各科提分方案、校考班课程调整。请各教研组长准备 10 分钟汇报。',
-        type: '会议',
-        priority: '普通',
-        scope: 'course_teacher,head_teacher',
-        creator: '王敏',
-        dept: '教务处',
-        time: CampusA.ago(days: 2, hours: 6),
-      ),
-    ];
-  }
+  static List<Map<String, dynamic>> forScope(String scope) => [
+    for (final n in cbSortedNotices())
+      if (cbNoticeStatus(n) == 1 &&
+          (n['pushScope']?.toString() ?? '').split(',').contains(scope))
+        cbNoticeJson(n),
+  ];
 
   /// 通知行（`parseAdminNoticeList` 结构）。
   static Map<String, dynamic> row(Map<String, dynamic> n) =>

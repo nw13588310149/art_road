@@ -2,10 +2,10 @@
 library;
 
 import '../../../core/network/media_url.dart';
+import 'campus_format.dart';
 
 /// 家长尚未审批时，班主任同意默认填写的审批意见。
-const String kHeadTeacherLeaveApproveReasonWithoutParent =
-    '已和家长沟通获得允许，故同意请假';
+const String kHeadTeacherLeaveApproveReasonWithoutParent = '已和家长沟通获得允许，故同意请假';
 
 /// 家长已同意后，班主任同意默认填写的审批意见。
 const String kHeadTeacherLeaveApproveReasonDefault = '同意请假';
@@ -15,11 +15,11 @@ const String kHeadTeacherLeaveRejectReasonDefault = '不予批准请假';
 
 /// API `status`：0-待家长审批 / 1-家长同意 / 2-家长拒绝 / 3-老师同意 / 4-老师拒绝
 enum StudentLeaveStatus {
-  waitingParent(0, '待家长审批'),
+  waitingParent(0, '待家长确认'),
   waitingTeacher(1, '待我审批'),
-  parentRejected(2, '家长已拒绝'),
+  parentRejected(2, '家长已驳回'),
   approved(3, '已通过'),
-  teacherRejected(4, '已拒绝');
+  teacherRejected(4, '已驳回');
 
   const StudentLeaveStatus(this.code, this.label);
 
@@ -43,7 +43,7 @@ enum StudentLeaveStatus {
 enum StudentLeaveStepStatus {
   pending('待审批'),
   approved('已通过'),
-  rejected('已拒绝');
+  rejected('已驳回');
 
   const StudentLeaveStepStatus(this.label);
   final String label;
@@ -84,8 +84,7 @@ class StudentLeaveRecord {
 
   String get durationLabel {
     if (duration.isEmpty || duration == '—') return '—';
-    if (duration.startsWith('时长')) return duration;
-    return '时长$duration';
+    return campusDuration(duration, prefix: '时长');
   }
 
   factory StudentLeaveRecord.fromJson(Map<String, dynamic> json) {
@@ -95,12 +94,14 @@ class StudentLeaveRecord {
         : const <String, dynamic>{};
 
     final name = _pickString(student, ['realname', 'nickname'], '');
-    final studentNo = _pickString(
-      json,
-      ['studentId'],
-      _pickString(student, ['studentNo', 'stuNo', 'no', 'id'], ''),
-    );
-    final headUrlRaw = _pickString(student, ['headUrl', 'avatar', 'headImg'], '');
+    final studentNo = _pickString(json, [
+      'studentId',
+    ], _pickString(student, ['studentNo', 'stuNo', 'no', 'id'], ''));
+    final headUrlRaw = _pickString(student, [
+      'headUrl',
+      'avatar',
+      'headImg',
+    ], '');
     final headUrl = headUrlRaw.isNotEmpty ? MediaUrl.resolve(headUrlRaw) : '';
 
     final typeRaw = int.tryParse(json['type']?.toString() ?? '');
@@ -110,14 +111,15 @@ class StudentLeaveRecord {
       _ => '请假',
     };
 
-    final start = _formatDateTime(json['startTime']);
-    final end = _formatDateTime(json['endTime']);
-    final timeRange = start.isNotEmpty && end.isNotEmpty
-        ? '$start - $end'
-        : (start.isNotEmpty ? start : end);
+    final timeRange = campusRange(
+      json['startTime'],
+      json['endTime'],
+      fallback: '',
+    );
 
     final statusCode = int.tryParse(json['status']?.toString() ?? '') ?? 0;
-    final status = StudentLeaveStatus.fromApi(statusCode) ??
+    final status =
+        StudentLeaveStatus.fromApi(statusCode) ??
         StudentLeaveStatus.waitingParent;
 
     final parentReason = _pickString(json, ['parentAuditReason'], '');
@@ -135,8 +137,8 @@ class StudentLeaveRecord {
       duration: _formatDuration(_pickString(json, ['leaveDuration'], '—')),
       timeRange: timeRange.isNotEmpty ? timeRange : '—',
       reason: _pickString(json, ['leaveReason'], '—'),
-      appliedAt: _formatDateTime(json['createTime']),
-      path: '家长小程序 → 班主任',
+      appliedAt: campusDateTimeOf(json['createTime']),
+      path: '家长确认 → 班主任审批',
       status: status,
       parentStep: _parentStepFromStatus(statusCode),
       headTeacherStep: _headTeacherStepFromStatus(statusCode),
@@ -273,18 +275,6 @@ String _formatDuration(String raw) {
     return trimmed;
   }
   return trimmed;
-}
-
-String _formatDateTime(dynamic raw) {
-  if (raw == null) return '';
-  final s = raw.toString().trim();
-  if (s.isEmpty) return '';
-  final dt = DateTime.tryParse(s);
-  if (dt == null) return s;
-  final local = dt.toLocal();
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${local.year}-${two(local.month)}-${two(local.day)} '
-      '${two(local.hour)}:${two(local.minute)}:${two(local.second)}';
 }
 
 /// 学生端「我的请假」审批中数量（待家长 / 待班主任审批）。

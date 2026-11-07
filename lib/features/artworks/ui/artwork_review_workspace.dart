@@ -3,13 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/art/art_tokens.dart';
-import '../../../core/theme/app_font.dart';
-import '../../../core/widgets/app_loading_indicator.dart';
-import '../../../core/widgets/app_text_field.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/art_widgets.dart';
+import '../../../core/ui/ui.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
-import '../../../core/widgets/scaled_dialog.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/artwork_review_controller.dart';
@@ -135,11 +130,12 @@ class _ArtworkReviewWorkspaceState
   }
 
   Future<void> _confirmClear(int imageIndex) async {
-    final confirmed = await showConfirmDialog(
+    final confirmed = await showAppConfirm(
       context: context,
       title: '清空批注',
-      content: '清空这张图上你的全部批注？保存批注后生效。',
+      message: '清空这张图上你的全部批注？保存批注后生效。',
       confirmLabel: '清空',
+      danger: true,
     );
     if (confirmed && mounted) {
       ref.read(_provider.notifier).clear(imageIndex);
@@ -186,7 +182,7 @@ class _ArtworkReviewWorkspaceState
     if (!next) {
       AppToast.showSuccess(context, '点评已保存');
     } else if (nextId == null) {
-      AppToast.showSuccess(context, '已保存，待点评的作品都完成了');
+      AppToast.showSuccess(context, '已保存，待点评的作品都已完成');
     } else {
       AppToast.showSuccess(context, '已保存，进入下一份');
       widget.onOpenArtwork(nextId);
@@ -200,10 +196,10 @@ class _ArtworkReviewWorkspaceState
         return;
       }
       if (!saved) {
-        final leave = await showConfirmDialog(
+        final leave = await showAppConfirm(
           context: context,
           title: '批注未保存',
-          content: '批注还没有保存成功，仍要返回列表吗？',
+          message: '批注还没有保存成功，仍要返回列表吗？',
           confirmLabel: '返回',
           cancelLabel: '留下',
         );
@@ -213,12 +209,13 @@ class _ArtworkReviewWorkspaceState
       }
     }
     if (_formDirty) {
-      final leave = await showConfirmDialog(
+      final leave = await showAppConfirm(
         context: context,
         title: '放弃未保存的点评？',
-        content: '分数、标签或评语还没有保存，返回后这些修改将丢失。',
+        message: '分数、标签或评语还没有保存，返回后这些修改将丢失。',
         confirmLabel: '放弃修改',
         cancelLabel: '继续点评',
+        danger: true,
       );
       if (!leave || !mounted) {
         return;
@@ -275,38 +272,30 @@ class _ArtworkReviewWorkspaceState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ArtPageHeader(
-            title: work?.title ?? '作品点评',
+          AppPageHeader(
+            title: work == null || work.studentName.isEmpty
+                ? '作品点评'
+                : '点评 · ${work.studentName}',
             subtitle: work == null
                 ? null
                 : <String>[
-                    work.studentName,
-                    work.organizationName,
+                    work.title,
                     work.subject,
+                    if (work.createTime.isNotEmpty)
+                      '提交于 ${ArtworkRules.shortTime(work.createTime)}',
                   ].where((s) => s.isNotEmpty).join(' · '),
             onBack: _back,
-            actions: [
-              if (work != null)
-                ArtworkStatusBadge(
-                  done: work.myReviewed,
-                  label: work.myReviewed ? '我已点评' : '待我点评',
-                ),
-            ],
           ),
           Expanded(
-            child: PageInitLoadingShell(
-              loading: state.loading && detail == null,
-              child: detail == null
-                  ? (state.loading
-                        ? const SizedBox.shrink()
-                        : ArtEmptyState(
-                            icon: Icons.image_not_supported_outlined,
-                            message: '作品加载失败',
-                            actionLabel: '重新加载',
-                            onAction: controller.load,
-                          ))
-                  : _buildBody(detail, state, tagsState),
-            ),
+            child: detail == null
+                ? (state.loading
+                      ? const Center(child: AppLoadingIndicator(size: 36))
+                      : AppErrorState(
+                          title: '作品加载失败',
+                          description: '请检查网络后重试',
+                          onRetry: controller.load,
+                        ))
+                : _buildBody(detail, state, tagsState),
           ),
         ],
       ),
@@ -323,28 +312,34 @@ class _ArtworkReviewWorkspaceState
         final imagePanel = _buildImagePanel(detail, state);
         final form = _buildFormSections(detail, tagsState);
         final actions = _buildActions(state);
+        const padding = EdgeInsets.fromLTRB(
+          AppSpace.page,
+          AppSpace.s4,
+          AppSpace.page,
+          AppSpace.s16,
+        );
         if (constraints.maxWidth >= 820) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            padding: padding,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: imagePanel),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppSpace.s16),
                 SizedBox(
-                  width: 372,
+                  width: 380,
                   child: Column(
                     children: [
                       Expanded(
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.only(bottom: AppSpace.s8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: form,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpace.s12),
                       actions,
                     ],
                   ),
@@ -354,7 +349,7 @@ class _ArtworkReviewWorkspaceState
           );
         }
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          padding: padding,
           child: Column(
             children: [
               Expanded(
@@ -363,18 +358,18 @@ class _ArtworkReviewWorkspaceState
                   physics: _annotating
                       ? const NeverScrollableScrollPhysics()
                       : null,
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: AppSpace.s8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SizedBox(height: 440, child: imagePanel),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpace.s16),
                       ...form,
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpace.s12),
               actions,
             ],
           ),
@@ -385,16 +380,14 @@ class _ArtworkReviewWorkspaceState
 
   Widget _buildImagePanel(ArtworkDetail detail, ArtworkReviewState state) {
     final images = detail.images;
-    final decoration = BoxDecoration(
-      color: const Color(0xFFF2F3F7),
-      borderRadius: BorderRadius.circular(16),
-    );
     if (images.isEmpty) {
-      return DecoratedBox(
-        decoration: decoration,
-        child: const ArtEmptyState(
+      return const AppCard(
+        color: AppColors.surfaceSubtle,
+        bordered: false,
+        child: AppEmptyState(
           icon: Icons.image_outlined,
-          message: '这份作品没有图片',
+          title: '这份作品没有图片',
+          description: '请联系学生重新上传作品照片',
         ),
       );
     }
@@ -410,19 +403,20 @@ class _ArtworkReviewWorkspaceState
           : null,
       onStrokeEnd: controller.addStroke,
     );
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: decoration,
+    return AppCard(
+      color: AppColors.surfaceSubtle,
+      bordered: false,
+      padding: const EdgeInsets.all(AppSpace.s12),
       child: Column(
         children: [
           if (_annotating)
             _buildAnnotationToolbar(state, index, strokes)
           else
             _buildViewerToolbar(state, images, index, strokes),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpace.s12),
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.br8,
               child: _annotating
                   // 保留当前缩放位置绘制；不放在 InteractiveViewer 里，避免手势相互抢占。
                   ? Transform(transform: _transform.value, child: image)
@@ -435,7 +429,7 @@ class _ArtworkReviewWorkspaceState
             ),
           ),
           if (images.length > 1) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpace.s12),
             ArtworkThumbnailStrip(
               images: images,
               selectedIndex: index,
@@ -465,18 +459,23 @@ class _ArtworkReviewWorkspaceState
             parts.join(' · '),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: ArtText.caption(),
+            style: AppText.caption12,
           ),
         ),
-        ArtworkIconAction(
+        AppIconButton(
           icon: Icons.center_focus_strong_outlined,
-          tooltip: '还原缩放',
+          semanticLabel: '还原缩放',
+          size: AppButtonSize.sm,
+          filled: false,
+          color: AppColors.textSecondary,
           onTap: () => _transform.value = Matrix4.identity(),
         ),
-        const SizedBox(width: 6),
-        ArtworkIconAction(
+        AppIconButton(
           icon: Icons.fullscreen_rounded,
-          tooltip: '全屏查看',
+          semanticLabel: '全屏查看原图',
+          size: AppButtonSize.sm,
+          filled: false,
+          color: AppColors.textSecondary,
           onTap: () => showImageGallery(
             context,
             images: images.map((e) => e.url).toList(),
@@ -484,12 +483,12 @@ class _ArtworkReviewWorkspaceState
             heroTagPrefix: 'review_${widget.artworkId}',
           ),
         ),
-        const SizedBox(width: 8),
-        ArtButton(
+        const SizedBox(width: AppSpace.s8),
+        AppButton(
           label: '批注改画',
-          primary: false,
           icon: Icons.brush_outlined,
-          height: 32,
+          variant: AppButtonVariant.quiet,
+          size: AppButtonSize.sm,
           onTap: () => setState(() => _annotating = true),
         ),
       ],
@@ -502,16 +501,12 @@ class _ArtworkReviewWorkspaceState
     List<AnnotationStroke> strokes,
   ) {
     final controller = ref.read(_provider.notifier);
-    Widget divider() => Container(
-      width: 1,
-      height: 20,
-      color: ArtColors.ink4.withValues(alpha: 0.4),
-    );
+    Widget divider() => Container(width: 1, height: 20, color: AppColors.line);
     return Align(
       alignment: Alignment.centerLeft,
       child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+        spacing: AppSpace.s8,
+        runSpacing: AppSpace.s8,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           for (final color in kAnnotationPenColors)
@@ -529,27 +524,33 @@ class _ArtworkReviewWorkspaceState
               onTap: () => setState(() => _penWidth = width),
             ),
           divider(),
-          ArtworkIconAction(
+          AppIconButton(
             icon: Icons.undo_rounded,
-            tooltip: '撤销',
+            semanticLabel: '撤销',
+            size: AppButtonSize.sm,
+            filled: false,
+            color: AppColors.textSecondary,
             onTap: strokes.isEmpty ? null : () => controller.undo(index),
           ),
-          ArtworkIconAction(
+          AppIconButton(
             icon: Icons.layers_clear_outlined,
-            tooltip: '清空本张',
+            semanticLabel: '清空本张',
+            size: AppButtonSize.sm,
+            filled: false,
+            color: AppColors.textSecondary,
             onTap: strokes.isEmpty ? null : () => _confirmClear(index),
           ),
-          ArtButton(
+          AppButton(
             label: '保存批注',
             icon: Icons.save_outlined,
-            height: 32,
+            size: AppButtonSize.sm,
             loading: state.savingStrokes,
             onTap: state.hasUnsavedStrokes ? _saveStrokes : null,
           ),
-          ArtButton(
+          AppButton(
             label: '完成',
-            primary: false,
-            height: 32,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
             onTap: state.savingStrokes ? null : _finishAnnotating,
           ),
         ],
@@ -563,57 +564,48 @@ class _ArtworkReviewWorkspaceState
   ) {
     return <Widget>[
       _StudentCard(detail: detail),
-      const SizedBox(height: 16),
-      ArtworkSectionTitle(
-        title: '评分',
-        trailing: Text('可以只写评语、不打分', style: ArtText.caption(size: 11)),
-      ),
-      _buildScoreInputs(detail),
-      const SizedBox(height: 18),
-      ArtworkSectionTitle(
-        title: '问题标签',
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+      const SizedBox(height: AppSpace.s12),
+      AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              '${_tagIds.length}/${ArtworkRules.tagsPerReview}',
-              style: ArtText.caption(),
-            ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => showArtworkTagManager(context),
-              child: Text(
-                '管理标签',
-                style: ArtText.body(
-                  size: 12,
-                  color: ArtColors.brandDeep,
-                  weight: AppFont.w500,
-                ),
+            const AppSectionHeader(title: '评分', subtitle: '可以只写评语、不打分'),
+            const SizedBox(height: AppSpace.s12),
+            _buildScoreInputs(detail),
+            const SizedBox(height: AppSpace.s20),
+            AppSectionHeader(
+              title: '点评标签',
+              subtitle:
+                  '已选 ${_tagIds.length} 个，最多 ${ArtworkRules.tagsPerReview} 个',
+              trailing: AppButton(
+                label: '管理标签',
+                variant: AppButtonVariant.text,
+                size: AppButtonSize.sm,
+                onTap: () => showArtworkTagManager(context),
               ),
+            ),
+            const SizedBox(height: AppSpace.s8),
+            _buildTagPicker(detail, tagsState),
+            const SizedBox(height: AppSpace.s20),
+            const AppSectionHeader(title: '评语'),
+            const SizedBox(height: AppSpace.s12),
+            AppInputField(
+              controller: _comment,
+              hint: '写下这张画的优点和需要改进的地方',
+              multiline: true,
+              minLines: 4,
+              maxLines: 8,
+              maxLength: ArtworkRules.commentLimit,
             ),
           ],
         ),
       ),
-      _buildTagPicker(detail, tagsState),
-      const SizedBox(height: 18),
-      const ArtworkSectionTitle(title: '评语'),
-      AppTextField(
-        controller: _comment,
-        minLines: 4,
-        maxLines: 8,
-        maxLength: ArtworkRules.commentLimit,
-        keyboardType: TextInputType.multiline,
-        style: ArtText.body(height: 1.6),
-        decoration: artworkInputDecoration(
-          hint: '写下这张画的优点和需要改进的地方',
-          showCounter: true,
-        ),
-      ),
       if (detail.otherReviews.isNotEmpty) ...[
-        const SizedBox(height: 14),
-        const ArtworkSectionTitle(title: '其他老师的点评'),
-        _OtherReviews(detail: detail),
+        const SizedBox(height: AppSpace.s12),
+        AppCard(
+          title: '其他老师的点评',
+          child: _OtherReviews(detail: detail),
+        ),
       ],
     ];
   }
@@ -622,65 +614,43 @@ class _ArtworkReviewWorkspaceState
     final required = detail.requiredFullScore;
     final locked = required != null;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
-          width: 116,
-          child: AppTextField(
+          width: 104,
+          child: AppInputField(
             controller: _score,
+            hint: '分数',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_scoreFormatter],
-            textAlign: TextAlign.center,
-            style: ArtText.number(size: 20, color: ArtColors.brandDeep),
-            decoration: artworkInputDecoration(hint: '分数'),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
           child: Text(
             '/',
-            style: ArtText.number(size: 20, color: ArtColors.ink4),
+            style: AppText.number(size: 16, color: AppColors.textTertiary),
           ),
         ),
         SizedBox(
-          width: 88,
-          child: AppTextField(
+          width: 80,
+          child: AppInputField(
             controller: _maxScore,
-            enabled: !locked,
+            hint: '满分',
+            readOnly: locked,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_scoreFormatter],
-            textAlign: TextAlign.center,
-            style: ArtText.number(
-              size: 16,
-              color: locked ? ArtColors.ink3 : ArtColors.ink,
-            ),
-            decoration: artworkInputDecoration(hint: '满分'),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpace.s12),
         Expanded(
-          child: locked
-              ? Row(
-                  children: [
-                    const Icon(
-                      Icons.lock_outline_rounded,
-                      size: 14,
-                      color: ArtColors.ink3,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '已有老师按 ${ArtworkRules.formatScore(required)} 分制评分，满分保持一致',
-                        maxLines: 3,
-                        style: ArtText.caption(size: 11),
-                      ),
-                    ),
-                  ],
-                )
-              : Text(
-                  '满分默认 100，可修改',
-                  maxLines: 2,
-                  style: ArtText.caption(size: 11),
-                ),
+          child: Text(
+            locked
+                ? '已有老师按 ${ArtworkRules.formatScore(required)} 分制评分，满分保持一致'
+                : '满分默认 100，可修改',
+            maxLines: 3,
+            style: AppText.caption12,
+          ),
         ),
       ],
     );
@@ -695,36 +665,71 @@ class _ArtworkReviewWorkspaceState
         if (!known.contains(tag.id) && _tagIds.contains(tag.id)) tag,
     ];
     if (tagsState.loading && tags.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 10),
-        child: Center(child: AppLoadingIndicator(size: 28)),
-      );
+      return const AppSkeletonText(lines: 2, lineHeight: 30);
     }
     if (tags.isEmpty && retired.isEmpty) {
       return Text(
-        '还没有点评标签，点击「管理标签」把常见问题做成标签，点评时一键选用。',
-        style: ArtText.caption(),
+        '还没有点评标签，点「管理标签」把常见问题和亮点做成标签，点评时一键选用',
+        style: AppText.caption12,
       );
     }
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    final problems = [
+      for (final tag in tags)
+        if (!ArtworkRules.isHighlightTag(tag.color)) tag,
+    ];
+    final highlights = [
+      for (final tag in tags)
+        if (ArtworkRules.isHighlightTag(tag.color)) tag,
+    ];
+    Widget chip(ArtworkTag tag, {String? label}) {
+      final Widget item = AppChip(
+        label: label ?? tag.name,
+        selected: _tagIds.contains(tag.id),
+        onTap: () => _toggleTag(tag.id),
+      );
+      return tag.explanation.isEmpty
+          ? item
+          : Tooltip(
+              message: tag.explanation,
+              triggerMode: TooltipTriggerMode.longPress,
+              child: item,
+            );
+    }
+
+    Widget group(String title, List<Widget> chips) => Padding(
+      padding: const EdgeInsets.only(top: AppSpace.s8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 36,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(title, style: AppText.caption12),
+            ),
+          ),
+          Expanded(
+            child: Wrap(
+              spacing: AppSpace.s8,
+              runSpacing: AppSpace.s8,
+              children: chips,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final tag in tags)
-          ArtworkTagChip(
-            name: tag.name,
-            color: tag.color,
-            selected: _tagIds.contains(tag.id),
-            tooltip: tag.explanation,
-            onTap: () => _toggleTag(tag.id),
-          ),
-        for (final tag in retired)
-          ArtworkTagChip(
-            name: '${tag.name}（已删除）',
-            color: tag.color,
-            selected: true,
-            onTap: () => _toggleTag(tag.id),
-          ),
+        if (problems.isNotEmpty)
+          group('问题', [for (final tag in problems) chip(tag)]),
+        if (highlights.isNotEmpty)
+          group('亮点', [for (final tag in highlights) chip(tag)]),
+        if (retired.isNotEmpty)
+          group('已删除', [
+            for (final tag in retired) chip(tag, label: '${tag.name}（已删除）'),
+          ]),
       ],
     );
   }
@@ -734,20 +739,20 @@ class _ArtworkReviewWorkspaceState
     return Row(
       children: [
         Expanded(
-          child: ArtButton(
+          child: AppButton(
             label: '保存',
-            primary: false,
-            height: 42,
+            variant: AppButtonVariant.secondary,
+            expand: true,
             loading: busy && !_savingNext,
             onTap: busy ? null : () => _save(next: false),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpace.s12),
         Expanded(
-          child: ArtButton(
+          child: AppButton(
             label: '保存并下一份',
             icon: Icons.skip_next_rounded,
-            height: 42,
+            expand: true,
             loading: busy && _savingNext,
             onTap: busy ? null : () => _save(next: true),
           ),
@@ -767,16 +772,14 @@ class _StudentCard extends StatelessWidget {
     final work = detail.work;
     final myId = detail.myReview?.teacherId;
     final finalScore = work.finalScore;
-    return ArtCard(
-      color: ArtColors.subtle,
-      padding: const EdgeInsets.all(14),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              ArtAvatar(name: work.studentName, url: work.avatarUrl, size: 40),
-              const SizedBox(width: 10),
+              AppAvatar(name: work.studentName, url: work.avatarUrl, size: 40),
+              const SizedBox(width: AppSpace.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,105 +788,72 @@ class _StudentCard extends StatelessWidget {
                       work.studentName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: ArtText.body(size: 15, weight: AppFont.w600),
+                      style: AppText.title16,
                     ),
                     Text(
                       <String>[
                         work.organizationName,
-                        if (work.archiveId.isNotEmpty) '档案号 ${work.archiveId}',
+                        if (work.studentNo.isNotEmpty) '学号 ${work.studentNo}',
                       ].where((s) => s.isNotEmpty).join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: ArtText.caption(size: 11),
+                      style: AppText.caption12,
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpace.s8),
               if (work.reviewed && finalScore != null)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('最终得分', style: ArtText.caption(size: 11)),
+                    Text('最终得分', style: AppText.caption12),
                     ArtworkScore(score: finalScore, maxScore: work.maxScore),
                   ],
-                ),
+                )
+              else
+                ArtworkStatusTag(done: work.myReviewed),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.s12),
           Wrap(
-            spacing: 8,
-            runSpacing: 6,
+            spacing: AppSpace.s8,
+            runSpacing: AppSpace.s4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              ArtworkSubjectChip(subject: work.subject),
+              ArtworkSubjectTag(subject: work.subject),
               Text(
-                '绘于 ${ArtworkRules.dotDate(work.drawingDate)}',
-                style: ArtText.caption(size: 11),
+                '绘于 ${ArtworkRules.dateText(work.drawingDate)}',
+                style: AppText.caption12,
               ),
               Text(
                 '提交于 ${ArtworkRules.shortTime(work.createTime)}',
-                style: ArtText.caption(size: 11),
+                style: AppText.caption12,
               ),
             ],
           ),
           if (work.description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              work.description,
-              style: ArtText.body(size: 13, color: ArtColors.ink2, height: 1.6),
-            ),
+            const SizedBox(height: AppSpace.s8),
+            Text(work.description, style: AppText.body13),
           ],
           if (detail.teachers.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpace.s12),
             Wrap(
-              spacing: 6,
-              runSpacing: 6,
+              spacing: AppSpace.s8,
+              runSpacing: AppSpace.s8,
               children: [
                 for (final teacher in detail.teachers)
-                  _TeacherPill(
-                    teacher: teacher,
-                    mine: teacher.teacherId == myId,
+                  AppTag(
+                    label:
+                        '${teacher.teacherName}${teacher.teacherId == myId ? '（我）' : ''} · ${teacher.reviewed ? '已点评' : '待点评'}',
+                    tone: teacher.reviewed ? AppTone.success : AppTone.warning,
+                    icon: teacher.reviewed
+                        ? Icons.check_rounded
+                        : Icons.schedule_rounded,
                   ),
               ],
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _TeacherPill extends StatelessWidget {
-  const _TeacherPill({required this.teacher, required this.mine});
-
-  final ArtworkTeacher teacher;
-  final bool mine;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = teacher.reviewed ? ArtColors.success : ArtColors.warn;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: ArtColors.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            teacher.reviewed
-                ? Icons.check_circle_rounded
-                : Icons.schedule_rounded,
-            size: 13,
-            color: color,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '${teacher.teacherName}${mine ? '（我）' : ''} · ${teacher.reviewed ? '已点评' : '未点评'}',
-            style: ArtText.caption(size: 11, color: ArtColors.ink2),
-          ),
         ],
       ),
     );
@@ -898,51 +868,29 @@ class _OtherReviews extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final others = detail.otherReviews;
+    final others = artworkReviewsByTime(detail.otherReviews);
     if (!detail.work.myReviewed) {
-      return ArtCard(
-        color: ArtColors.subtle,
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.visibility_off_outlined,
-                  size: 16,
-                  color: ArtColors.ink3,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '保存你的点评后，即可查看其他老师的分数与评语',
-                    style: ArtText.body(size: 13, weight: AppFont.w500),
-                  ),
-                ),
-              ],
-            ),
-            for (final review in others) ...[
-              const SizedBox(height: 10),
-              _PendingTeacherRow(review: review),
-            ],
-          ],
-        ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const AppNotice(
+            tone: AppTone.neutral,
+            icon: Icons.visibility_off_outlined,
+            message: '保存你的点评后，即可查看其他老师的分数与评语',
+          ),
+          for (final review in others) _PendingTeacherRow(review: review),
+        ],
       );
     }
     return Column(
       children: [
-        for (final review in others)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: review.visible
-                ? ArtworkReviewCard(review: review)
-                : ArtCard(
-                    color: ArtColors.subtle,
-                    padding: const EdgeInsets.all(12),
-                    child: _PendingTeacherRow(review: review),
-                  ),
-          ),
+        for (var i = 0; i < others.length; i++) ...[
+          if (i > 0) const SizedBox(height: AppSpace.s8),
+          if (others[i].visible)
+            ArtworkReviewCard(review: others[i])
+          else
+            _PendingTeacherRow(review: others[i]),
+        ],
       ],
     );
   }
@@ -955,18 +903,14 @@ class _PendingTeacherRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        ArtAvatar(name: review.teacherName, size: 26),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text('${review.teacherName}老师', style: ArtText.body(size: 13)),
-        ),
-        ArtworkStatusBadge(
-          done: review.reviewed,
-          label: review.reviewed ? '已点评' : '尚未点评',
-        ),
-      ],
+    return AppListRow(
+      title: '${review.teacherName}老师',
+      leading: AppAvatar(name: review.teacherName, size: 28),
+      trailing: ArtworkStatusTag(done: review.reviewed),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s4,
+        vertical: AppSpace.s8,
+      ),
     );
   }
 }
@@ -985,18 +929,19 @@ class _PenColorButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tone = ArtColors.fromHex(color);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return AppPressable(
       onTap: onTap,
+      selected: selected,
+      semanticLabel: '批注颜色',
       child: Container(
         width: 32,
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(9),
+          color: AppColors.surface,
+          borderRadius: AppRadius.br8,
           border: Border.all(
-            color: selected ? tone : ArtColors.line,
+            color: selected ? tone : AppColors.line,
             width: selected ? 2 : 1,
           ),
         ),
@@ -1026,18 +971,19 @@ class _PenWidthButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dot = 4 + width * 1.6;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return AppPressable(
       onTap: onTap,
+      selected: selected,
+      semanticLabel: '笔画粗细',
       child: Container(
         width: 32,
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? ArtColors.brandWash : Colors.white,
-          borderRadius: BorderRadius.circular(9),
+          color: selected ? AppColors.brandWash : AppColors.surface,
+          borderRadius: AppRadius.br8,
           border: Border.all(
-            color: selected ? ArtColors.brandLight : ArtColors.line,
+            color: selected ? AppColors.brand : AppColors.line,
           ),
         ),
         child: Container(

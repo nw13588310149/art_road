@@ -23,11 +23,15 @@ class TeacherArtworksState {
     this.page = 0,
     this.total = 0,
     this.hasMore = false,
+    this.listFailed = false,
     this.errorMessage = '',
   });
 
   final bool loading;
   final bool loaded;
+
+  /// 列表首屏加载失败（没有可展示的旧数据），页面显示错误状态。
+  final bool listFailed;
   final bool loadingList;
   final bool loadingMore;
 
@@ -53,9 +57,11 @@ class TeacherArtworksState {
     int? page,
     int? total,
     bool? hasMore,
+    bool? listFailed,
     String? errorMessage,
   }) {
     return TeacherArtworksState(
+      listFailed: listFailed ?? this.listFailed,
       loading: loading ?? this.loading,
       loaded: loaded ?? this.loaded,
       loadingList: loadingList ?? this.loadingList,
@@ -115,6 +121,9 @@ class TeacherArtworksController extends StateNotifier<TeacherArtworksState> {
       page: page?.current,
       total: page?.total,
       hasMore: page?.hasMore,
+      listFailed: listCurrent
+          ? (!list.isSuccess && state.items.isEmpty)
+          : null,
       errorMessage: failed?.errorOr('作品加载失败，请稍后重试') ?? '',
     );
   }
@@ -184,6 +193,7 @@ class TeacherArtworksController extends StateNotifier<TeacherArtworksState> {
       state = state.copyWith(
         loadingList: false,
         loadingMore: false,
+        listFailed: reset && state.items.isEmpty,
         errorMessage: response.errorOr('作品加载失败，请稍后重试'),
       );
       return;
@@ -193,6 +203,7 @@ class TeacherArtworksController extends StateNotifier<TeacherArtworksState> {
     state = state.copyWith(
       loadingList: false,
       loadingMore: false,
+      listFailed: false,
       items: <ArtworkSummary>[
         if (!reset) ...state.items,
         ...result.records.where((e) => known.add(e.id)),

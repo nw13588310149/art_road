@@ -39,7 +39,9 @@ class CircleController extends StateNotifier<CircleState> {
     }
     state = state.copyWith(
       mode: mode,
-      commentPanelOpen: mode == CircleMode.list ? false : state.commentPanelOpen,
+      commentPanelOpen: mode == CircleMode.list
+          ? false
+          : state.commentPanelOpen,
     );
   }
 
@@ -49,10 +51,7 @@ class CircleController extends StateNotifier<CircleState> {
     stopMediaPlayback();
     await MpvPlayerRelease.awaitPending();
     if (!mounted || state.mode != CircleMode.immersive) return;
-    state = state.copyWith(
-      mode: CircleMode.list,
-      commentPanelOpen: false,
-    );
+    state = state.copyWith(mode: CircleMode.list, commentPanelOpen: false);
   }
 
   /// 退出校圈或路由 pop 前调用，让沉浸播放器在页面动画结束前立刻静音并释放。
@@ -95,10 +94,7 @@ class CircleController extends StateNotifier<CircleState> {
   /// 切换内容类型过滤；传 `null` 表示不限。
   void setTypeFilter(CirclePostType? type) {
     if (state.typeFilter == type) return;
-    state = state.copyWith(
-      typeFilter: type,
-      clearTypeFilter: type == null,
-    );
+    state = state.copyWith(typeFilter: type, clearTypeFilter: type == null);
     refreshPosts();
   }
 
@@ -127,10 +123,7 @@ class CircleController extends StateNotifier<CircleState> {
         return;
       }
       final parsed = mapPostsListData(resp.data);
-      state = state.copyWith(
-        posts: parsed,
-        listLoading: false,
-      );
+      state = state.copyWith(posts: parsed, listLoading: false);
       final list = state.visiblePosts;
       final next = list.isEmpty
           ? 0
@@ -238,18 +231,12 @@ class CircleController extends StateNotifier<CircleState> {
 
   // ── 评论面板 ──────────────────────────────────────────────────────
   Future<void> openCommentPanel(String postId) async {
-    state = state.copyWith(
-      commentPanelOpen: true,
-      commentTargetPostId: postId,
-    );
+    state = state.copyWith(commentPanelOpen: true, commentTargetPostId: postId);
     await loadCommentsForPost(postId);
   }
 
   void closeCommentPanel() {
-    state = state.copyWith(
-      commentPanelOpen: false,
-      clearCommentsLoading: true,
-    );
+    state = state.copyWith(commentPanelOpen: false, clearCommentsLoading: true);
   }
 
   Future<void> loadCommentsForPost(String postId) async {
@@ -271,10 +258,7 @@ class CircleController extends StateNotifier<CircleState> {
           : (post?.commentCount ?? 0);
       state = state.copyWith(
         posts: _mapPosts(postId, (p) {
-          return p.copyWith(
-            comments: comments,
-            commentCount: count,
-          );
+          return p.copyWith(comments: comments, commentCount: count);
         }),
         clearCommentsLoading: true,
       );
@@ -333,7 +317,11 @@ class CircleController extends StateNotifier<CircleState> {
     return resp.displayMsg;
   }
 
-  Future<String?> addComment(String postId, String text, {String replyId = '0'}) async {
+  Future<String?> addComment(
+    String postId,
+    String text, {
+    String replyId = '0',
+  }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return '';
     final resp = await _repo.postsCommentSave(
@@ -359,7 +347,27 @@ class CircleController extends StateNotifier<CircleState> {
   Future<String?> deletePost(String postId) async {
     final resp = await _repo.postsDelete(postsId: postId);
     if (!resp.isSuccess) return resp.displayMsg;
+    removePostLocally(postId);
+    return null;
+  }
 
+  /// 举报别人的动态；成功返回 `null`，失败返回接口 [msg]。
+  Future<String?> reportPost(
+    String postId, {
+    required String reason,
+    String remark = '',
+  }) async {
+    final resp = await _repo.postsReport(
+      postsId: postId,
+      reason: reason,
+      remark: remark,
+    );
+    return resp.isSuccess ? null : resp.displayMsg;
+  }
+
+  /// 动态已在服务端删除（自己删除或治理删除）后，从列表 / 沉浸里移除并修正索引。
+  void removePostLocally(String postId) {
+    if (_findPost(postId) == null) return;
     final oldVisible = state.visiblePosts;
     final delVisIndex = oldVisible.indexWhere((p) => p.id == postId);
     var newImmersive = state.immersiveIndex;
@@ -367,9 +375,15 @@ class CircleController extends StateNotifier<CircleState> {
       newImmersive -= 1;
     }
 
-    final newPosts = [for (final p in state.posts) if (p.id != postId) p];
+    final newPosts = [
+      for (final p in state.posts)
+        if (p.id != postId) p,
+    ];
 
-    final newVisible = [for (final p in newPosts) if (_matchesSearch(p)) p];
+    final newVisible = [
+      for (final p in newPosts)
+        if (_matchesSearch(p)) p,
+    ];
     if (newVisible.isEmpty) {
       newImmersive = 0;
     } else {
@@ -385,7 +399,6 @@ class CircleController extends StateNotifier<CircleState> {
       commentTargetPostId: closePanel ? '' : state.commentTargetPostId,
       clearCommentsLoading: closePanel,
     );
-    return null;
   }
 
   bool _matchesSearch(CirclePost p) {

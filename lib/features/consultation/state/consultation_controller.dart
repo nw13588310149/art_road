@@ -74,11 +74,7 @@ class ConsultationController extends StateNotifier<ConsultationState> {
           final schoolItems = _parseItems(schoolResponse.data);
           if (schoolItems.isNotEmpty) {
             _useSchoolList = true;
-            _applyPageResult(
-              reset: true,
-              page: page,
-              pageItems: schoolItems,
-            );
+            _applyPageResult(reset: true, page: page, pageItems: schoolItems);
             return;
           }
         }
@@ -103,9 +99,7 @@ class ConsultationController extends StateNotifier<ConsultationState> {
           loadingMore: false,
           items: reset ? const <ConsultationItem>[] : state.items,
           hasMore: reset ? true : state.hasMore,
-          errorMessage: reset
-              ? (response.displayMsg)
-              : state.errorMessage,
+          errorMessage: reset ? (response.displayMsg) : state.errorMessage,
         );
         return;
       }

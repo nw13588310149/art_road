@@ -1,7 +1,10 @@
+import 'package:flutter/material.dart' show IconData, Icons;
+
 import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/storage/app_storage.dart';
 
+/// 侧栏导航项。图标用单色线性图片（[icon]，按选中态统一着色）或 [iconData]。
 class ShellNavItem {
   const ShellNavItem({
     required this.label,
@@ -12,6 +15,7 @@ class ShellNavItem {
     this.badgeColor = 0xFFE61F62,
     /// 导航 icon 边长（设计稿逻辑 px）；未指定时默认 24。
     this.iconSize,
+    this.iconData,
   });
 
   final String label;
@@ -19,8 +23,13 @@ class ShellNavItem {
   final String icon;
   final String activeIcon;
   final int badge;
+
+  /// 旧字段：角标统一用 AppBadge（红色），不再读取。
   final int badgeColor;
   final double? iconSize;
+
+  /// 设置后优先于 [icon] 图片。
+  final IconData? iconData;
 
   ShellNavItem copyWith({int? badge}) {
     return ShellNavItem(
@@ -31,22 +40,42 @@ class ShellNavItem {
       badge: badge ?? this.badge,
       badgeColor: badgeColor,
       iconSize: iconSize,
+      iconData: iconData,
     );
   }
 }
 
+/// 顶栏铃铛里的一条消息。[targetType] + [targetId] 决定点开后去哪一页，
+/// 映射见 `navigation/shell_notice_routes.dart`。
 class ShellNoticeItem {
   const ShellNoticeItem({
     required this.id,
     required this.targetType,
     required this.content,
     required this.createTime,
+    this.targetId = '',
+    this.read = false,
   });
 
   final int id;
   final int targetType;
   final String content;
   final String createTime;
+
+  /// 目标对象 id（考试 / 作品 / 书刊 id、工具 key）；为空时只打开对应模块。
+  final String targetId;
+  final bool read;
+
+  ShellNoticeItem copyWith({bool? read}) {
+    return ShellNoticeItem(
+      id: id,
+      targetType: targetType,
+      content: content,
+      createTime: createTime,
+      targetId: targetId,
+      read: read ?? this.read,
+    );
+  }
 }
 
 class ShellUser {
@@ -88,10 +117,10 @@ class ShellUser {
   /// `myInfo.user.gender`，如「男 / 女」。
   final String gender;
 
-  /// `myInfo.user.primary` 专业主项。
+  /// `myInfo.user.primary` 专业方向。
   final String primary;
 
-  /// `myInfo.user.secondary` 专业副项。
+  /// `myInfo.user.secondary` 擅长科目。
   final String secondary;
 
   /// `myInfo.user.school` 就读学校。
@@ -237,10 +266,14 @@ bool isStaffRole(String role) {
   return value.isNotEmpty && value != 'student';
 }
 
+/// 侧栏导航项（按显示顺序）。[role] 为 dormManager（宿管）时不显示「班级学情」
+/// 「作品点评」：宿管不查看学生成绩与作品。条目数不固定，新增导航项直接插入列表。
 List<ShellNavItem> buildDefaultNavItems({
   required bool schoolCoursewareEnabled,
   bool isStaff = false,
+  String role = '',
 }) {
+  final academic = role.trim() != 'dormManager';
   final base = <ShellNavItem>[
     const ShellNavItem(
       label: '首页',
@@ -253,19 +286,23 @@ List<ShellNavItem> buildDefaultNavItems({
       route: RoutePaths.personalAi,
       icon: AppAssets.leftNavAi,
       activeIcon: AppAssets.leftNavAi,
+      // 旧图片里写着「AI」，改用对话气泡图标。
+      iconData: Icons.chat_bubble_outline_rounded,
     ),
-    ShellNavItem(
-      label: isStaff ? '班级学情' : '我的学情',
-      route: RoutePaths.studyCenter,
-      icon: AppAssets.leftNavXueqing,
-      activeIcon: AppAssets.leftNavXueqing,
-    ),
-    ShellNavItem(
-      label: isStaff ? '作品点评' : '作品档案',
-      route: RoutePaths.artworks,
-      icon: AppAssets.leftNavZuopin,
-      activeIcon: AppAssets.leftNavZuopin,
-    ),
+    if (academic) ...[
+      ShellNavItem(
+        label: isStaff ? '班级学情' : '我的学情',
+        route: RoutePaths.studyCenter,
+        icon: AppAssets.leftNavXueqing,
+        activeIcon: AppAssets.leftNavXueqing,
+      ),
+      ShellNavItem(
+        label: isStaff ? '作品点评' : '作品档案',
+        route: RoutePaths.artworks,
+        icon: AppAssets.leftNavZuopin,
+        activeIcon: AppAssets.leftNavZuopin,
+      ),
+    ],
     const ShellNavItem(
       label: '范画库',
       route: RoutePaths.gallery,
@@ -335,7 +372,7 @@ List<ShellNavItem> buildDefaultNavItems({
   return [...base, if (schoolCoursewareEnabled) school, ...tail];
 }
 
-/// 侧栏底部固定的「需求反馈」入口（弱样式，见 ShellLeftNav._FooterFeedbackLink）。
+/// 侧栏底部固定的「意见反馈」入口（弱样式，见 ShellLeftNav._FooterFeedbackLink）。
 ShellNavItem buildFeedbackFooterNavItem() {
   return const ShellNavItem(
     label: '意见反馈',

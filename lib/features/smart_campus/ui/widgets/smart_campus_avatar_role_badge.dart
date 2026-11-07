@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
@@ -43,22 +44,21 @@ class SmartCampusAvatarRoleBadge extends StatelessWidget {
         decoration: BoxDecoration(
           color: tag.bg,
           borderRadius: BorderRadius.circular(ui(10)),
-          border: Border.all(color: Colors.white, width: 1),
+          border: Border.all(color: AppColors.surface, width: 1),
         ),
         child: Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           strutStyle: StrutStyle(
-            fontSize: ui(11),
+            fontSize: ui(12),
             height: 1.1,
             forceStrutHeight: true,
           ),
           style: TextStyle(
-            fontSize: ui(11),
+            fontSize: ui(12),
             height: 1.1,
             color: tag.fg,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
           ),
         ),

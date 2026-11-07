@@ -65,6 +65,7 @@ class StudyProfile {
     this.avatarUrl = '',
     this.organizationName = '',
     this.schoolName = '',
+    this.studentNo = '',
   });
 
   final String archiveId;
@@ -74,6 +75,9 @@ class StudyProfile {
   final String avatarUrl;
   final String organizationName;
   final String schoolName;
+
+  /// 画室学号（与学生名册一致）；准考证号每场考试不同，只在考试卡上显示。
+  final String studentNo;
 
   factory StudyProfile.fromJson(Object? raw) {
     final json = _map(raw);
@@ -85,6 +89,7 @@ class StudyProfile {
       avatarUrl: _str(json['avatarUrl']),
       organizationName: _str(json['organizationName']),
       schoolName: _str(json['schoolName']),
+      studentNo: _str(json['studentNo']),
     );
   }
 }
@@ -300,13 +305,6 @@ class StudyOverview {
           : null,
       exams: _mapList(json['exams']).map(StudyExamRecord.fromJson).toList(),
     );
-  }
-
-  String get latestAdmissionNo {
-    for (final exam in exams) {
-      if (exam.admissionNo.isNotEmpty) return exam.admissionNo;
-    }
-    return recentStage?.exam.admissionNo ?? '';
   }
 }
 

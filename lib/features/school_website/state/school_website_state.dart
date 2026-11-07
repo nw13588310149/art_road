@@ -3,21 +3,27 @@ class SchoolWebsiteState {
     this.loading = true,
     this.htmlContent = '',
     this.errorMessage = '',
+    this.title = '',
   });
 
   final bool loading;
   final String htmlContent;
   final String errorMessage;
 
+  /// 接口返回的官网名称（如「示范画室官网」），为空时页面用默认标题。
+  final String title;
+
   SchoolWebsiteState copyWith({
     bool? loading,
     String? htmlContent,
     String? errorMessage,
+    String? title,
   }) {
     return SchoolWebsiteState(
       loading: loading ?? this.loading,
       htmlContent: htmlContent ?? this.htmlContent,
       errorMessage: errorMessage ?? this.errorMessage,
+      title: title ?? this.title,
     );
   }
 }

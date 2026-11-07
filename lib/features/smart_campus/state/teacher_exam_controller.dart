@@ -43,8 +43,7 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
     final labels = <String>[];
     final ids = <String, String>{};
     for (final row in parseTeacherExamListRows(response.data)) {
-      final id =
-          row['id']?.toString() ?? row['classId']?.toString() ?? '';
+      final id = row['id']?.toString() ?? row['classId']?.toString() ?? '';
       final name = row['name']?.toString() ?? '';
       if (id.isEmpty || name.isEmpty || ids.containsKey(name)) continue;
       labels.add(name);
@@ -78,9 +77,7 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
     }
 
     final stats = <TeacherExamOverviewStats>[];
-    await Future.wait([
-      for (final exam in exams) _loadStatOnly(exam, stats),
-    ]);
+    await Future.wait([for (final exam in exams) _loadStatOnly(exam, stats)]);
 
     state = state.copyWith(
       loading: false,
@@ -109,6 +106,7 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
     final response = await _repository.examStudentStat(
       examId: exam.id,
       subjectId: exam.subjectId,
+      classId: _activeClassId,
     );
     if (response.isSuccess) {
       sink.add(TeacherExamOverviewStats.fromApi(response.data));
@@ -118,19 +116,14 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
   Future<void> selectClass(String label) async {
     if (!state.classIdByLabel.containsKey(label)) return;
     state = state.copyWith(classFilter: label, activeIdx: 0);
-    await loadExamList(
-      classId: state.classIdByLabel[label],
-      silent: true,
-    );
+    await loadExamList(classId: state.classIdByLabel[label], silent: true);
   }
 
   void selectStatusTab(int index) {
     state = state.copyWith(statusTab: index, activeIdx: 0);
     final active = state.activeExam;
     if (active != null && !active.detailLoaded) {
-      unawaited(
-        loadExamDetail(active.id, active.subjectId, silent: true),
-      );
+      unawaited(loadExamDetail(active.id, active.subjectId, silent: true));
     }
   }
 
@@ -161,10 +154,12 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
     final listResponse = await _repository.examStudentList(
       examId: examId,
       subjectId: subjectId,
+      classId: _activeClassId,
     );
     final statResponse = await _repository.examStudentStat(
       examId: examId,
       subjectId: subjectId,
+      classId: _activeClassId,
     );
     final subjectName = state.exams
         .firstWhere(

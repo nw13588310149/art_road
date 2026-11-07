@@ -104,11 +104,11 @@ class SchoolBindingController extends StateNotifier<SchoolBindingState> {
     }
     final code = state.schoolIdInput.trim();
     if (code.isEmpty) {
-      state = state.copyWith(errorMessage: '请输入学校编码');
+      state = state.copyWith(errorMessage: '请输入画室编码');
       return false;
     }
     if (code.length != 6 || !RegExp(r'^\d{6}$').hasMatch(code)) {
-      state = state.copyWith(errorMessage: '请输入6位数字编码');
+      state = state.copyWith(errorMessage: '画室编码应为 6 位数字');
       return false;
     }
 
@@ -228,7 +228,7 @@ class SchoolBindingController extends StateNotifier<SchoolBindingState> {
       // 后端没返原因时，按设计稿兜底文案。
       return _JoinParseResult(
         SchoolBindingStage.rejected,
-        raw.isEmpty ? '学校编码填写错误' : raw,
+        raw.isEmpty ? '画室编码填写错误' : raw,
       );
     }
     return const _JoinParseResult(SchoolBindingStage.initial, '');

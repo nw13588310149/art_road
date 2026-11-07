@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/art/art_subject.dart';
 import '../../../../core/art/art_tokens.dart';
-import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/app_loading_indicator.dart';
-import '../../../../core/widgets/app_toast.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 import '../../state/study_growth_controller.dart';
@@ -43,10 +39,14 @@ class StudyGrowthView extends ConsumerWidget {
     final controller = ref.read(provider.notifier);
     ref.listen<StudyGrowthState>(provider, (previous, next) {
       final message = next.errorMessage;
-      if (message.isEmpty || message == previous?.errorMessage) return;
+      if (message.isEmpty || message == previous?.errorMessage) {
+        return;
+      }
       AppToast.showError(context, message);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (controller.mounted) controller.clearError();
+        if (controller.mounted) {
+          controller.clearError();
+        }
       });
     });
 
@@ -56,31 +56,37 @@ class StudyGrowthView extends ConsumerWidget {
         : result.tabs;
     String labelOf(String subjectName) {
       for (final tab in tabs) {
-        if (tab.subjectName == subjectName) return tab.label;
+        if (tab.subjectName == subjectName) {
+          return tab.label;
+        }
       }
       return subjectName.isEmpty ? '总分' : subjectName;
     }
 
-    final header = ArtPageHeader(
+    final header = AppPageHeader(
       title: title,
       subtitle: subtitle,
       onBack: onBack,
       bottom: Wrap(
-        spacing: 12,
-        runSpacing: 10,
+        spacing: AppSpace.s12,
+        runSpacing: AppSpace.s8,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          ArtSegmentTabs<String>(
-            items: [for (final tab in tabs) tab.subjectName],
+          AppSegmented<String>(
+            segments: [
+              for (final tab in tabs)
+                AppSegment(value: tab.subjectName, label: tab.label),
+            ],
             value: state.subjectName,
             onChanged: controller.selectSubject,
-            labelOf: labelOf,
           ),
-          ArtSegmentTabs<GrowthMetric>(
-            items: GrowthMetric.values,
+          AppSegmented<GrowthMetric>(
+            segments: [
+              for (final metric in GrowthMetric.values)
+                AppSegment(value: metric, label: metric.label),
+            ],
             value: state.metric,
             onChanged: controller.selectMetric,
-            labelOf: (metric) => metric.label,
           ),
         ],
       ),
@@ -89,58 +95,56 @@ class StudyGrowthView extends ConsumerWidget {
     final Widget body;
     if (result == null) {
       body = state.failed
-          ? StudyErrorView(
-              message: state.errorMessage.isEmpty
-                  ? '成长曲线加载失败'
+          ? AppErrorState(
+              title: '成长曲线加载失败',
+              description: state.errorMessage.isEmpty
+                  ? '请检查网络后重试'
                   : state.errorMessage,
               onRetry: controller.load,
             )
-          : const SizedBox.shrink();
+          : ListView(
+              padding: studyBodyPadding,
+              physics: const NeverScrollableScrollPhysics(),
+              children: const [
+                AppSkeleton(height: 360, radius: AppRadius.card),
+                SizedBox(height: AppSpace.s16),
+                StudyCardSkeleton(lines: 2),
+              ],
+            );
     } else {
       final metric = state.resultMetric;
       final subjectName = state.resultSubjectName;
       final accent = subjectName.isEmpty
-          ? ArtColors.brand
-          : artSubjectColor(subjectName);
+          ? AppColors.brand
+          : studySubjectColor(subjectName);
       body = ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: studyBodyPadding,
         children: [
-          StudyCard(
+          AppCard(
             title:
                 '${labelOf(subjectName)} · ${metric == GrowthMetric.score ? '分数走势' : '排名走势'}',
             subtitle: '近 ${result.points.length} 次已出分测评',
             trailing: metric == GrowthMetric.ranking
-                ? const StudyChip(
-                    label: '名次越靠上越好',
+                ? const AppTag(
+                    label: '越靠上名次越靠前',
                     icon: Icons.info_outline_rounded,
-                    color: ArtColors.brandDeep,
                   )
                 : null,
             child: SizedBox(
               height: 300,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: GrowthLineChart(
-                      points: result.points,
-                      metric: metric,
-                      color: accent,
-                    ),
-                  ),
-                  if (state.loading)
-                    const Positioned.fill(
-                      child: ColoredBox(
-                        color: Color(0x99FFFFFF),
-                        child: Center(child: AppLoadingIndicator(size: 36)),
-                      ),
-                    ),
-                ],
+              child: Opacity(
+                opacity: state.loading ? AppOpacity.disabled : 1,
+                child: GrowthLineChart(
+                  points: result.points,
+                  metric: metric,
+                  color: accent,
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.s16),
           _GrowthStatsCard(statistics: result.statistics, metric: metric),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.s16),
           _GrowthHistoryCard(
             points: result.points,
             metric: metric,
@@ -150,10 +154,7 @@ class StudyGrowthView extends ConsumerWidget {
       );
     }
 
-    return PageInitLoadingShell(
-      loading: state.loading && result == null,
-      child: StudyPageFrame(header: header, body: body),
-    );
+    return StudyPageFrame(header: header, body: body);
   }
 }
 
@@ -165,45 +166,45 @@ class _GrowthStatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unit = metric == GrowthMetric.score ? '分' : '名';
+    final score = metric == GrowthMetric.score;
+    final unit = score ? '分' : '名';
     final change = statistics.recentChange;
     final tiles = [
-      StudyStatTile(
-        label: metric == GrowthMetric.score ? '最佳成绩' : '最佳名次',
+      AppStatTile(
+        label: score ? '最高分' : '最高名次',
         value: formatScore(statistics.bestValue),
         unit: unit,
-        color: ArtColors.brandDeep,
+        boxed: true,
       ),
-      StudyStatTile(
-        label: metric == GrowthMetric.score ? '平均分' : '平均名次',
+      AppStatTile(
+        label: score ? '平均分' : '平均名次',
         value: formatScore(statistics.averageValue),
         unit: unit,
+        boxed: true,
       ),
-      StudyStatTile(
-        label: metric == GrowthMetric.score ? '最新成绩' : '最新名次',
+      AppStatTile(
+        label: score ? '最新成绩' : '最新名次',
         value: formatScore(statistics.latestValue),
         unit: unit,
+        boxed: true,
       ),
-      StudyStatTile(
+      AppStatTile(
         label: '较上次',
-        value: change == null ? '—' : formatScore(change.abs()),
+        value: change == null
+            ? '—'
+            : (score ? formatScoreDelta(change) : '${change.abs().round()}'),
         unit: change == null ? '' : unit,
-        color: change == null || change == 0
-            ? ArtColors.ink3
-            : (change > 0 ? ArtColors.up : ArtColors.down),
-        icon: change == null || change == 0
-            ? null
-            : (change > 0
-                  ? Icons.arrow_upward_rounded
-                  : Icons.arrow_downward_rounded),
+        valueColor: change == null || change == 0
+            ? AppColors.textTertiary
+            : (change > 0 ? AppColors.success : AppColors.danger),
+        boxed: true,
       ),
     ];
-    return StudyCard(
-      padding: const EdgeInsets.all(16),
+    return AppCard(
       child: LayoutBuilder(
         builder: (context, constraints) {
           final columns = constraints.maxWidth >= 600 ? 4 : 2;
-          const gap = 12.0;
+          const gap = AppSpace.s12;
           final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
           return Wrap(
             spacing: gap,
@@ -232,13 +233,17 @@ class _GrowthHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final newestFirst = points.reversed.toList();
-    return StudyCard(
+    return AppCard(
       title: '历次成绩',
       subtitle: '共 ${points.length} 次',
       child: newestFirst.isEmpty
-          ? Text(
-              '暂无已出分的考试',
-              style: ArtText.body(size: 13, color: ArtColors.ink3),
+          ? const SizedBox(
+              height: 140,
+              child: AppEmptyState(
+                icon: Icons.show_chart_rounded,
+                title: '暂无已出分的考试',
+                description: '考试出分后会按时间记录在这里',
+              ),
             )
           : Column(
               children: [
@@ -247,7 +252,7 @@ class _GrowthHistoryCard extends StatelessWidget {
                     const Divider(
                       height: 1,
                       thickness: 1,
-                      color: ArtColors.line,
+                      color: AppColors.lineSoft,
                     ),
                   _HistoryRow(
                     point: newestFirst[i],
@@ -278,18 +283,18 @@ class _HistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 11),
+      padding: const EdgeInsets.symmetric(vertical: AppSpace.s12),
       child: Row(
         children: [
           Container(
-            width: 10,
-            height: 10,
+            width: 8,
+            height: 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: latest ? accent : accent.withValues(alpha: 0.3),
+              color: latest ? accent : AppColors.line,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpace.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,33 +303,33 @@ class _HistoryRow extends StatelessWidget {
                   point.examName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: ArtText.body(size: 14, weight: AppFont.w500),
+                  style: AppText.body14Strong,
                 ),
                 const SizedBox(height: 2),
-                Text(studyDateText(point.examTime), style: ArtText.caption()),
+                Text(studyDateText(point.examTime), style: AppText.caption12),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpace.s12),
           if (metric == GrowthMetric.score)
             StudyNumberText(
               formatScore(point.score),
               unit: ' / ${formatScore(point.maxScore)}',
-              size: 17,
-              color: latest ? accent : ArtColors.ink,
+              size: 16,
             )
           else
             StudyRankText(
               rank: point.ranking,
               total: point.participantCount,
-              size: 17,
-              color: latest ? accent : ArtColors.ink,
+              size: 16,
             ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 76,
+          const SizedBox(width: AppSpace.s12),
+          // 最小宽度对齐各行，变化量更长时标签按内容变宽，不被压缩。
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 96),
             child: Align(
               alignment: Alignment.centerRight,
+              widthFactor: 1,
               child: StudyDeltaTag(
                 value: point.change,
                 unit: metric == GrowthMetric.score ? '分' : '名',

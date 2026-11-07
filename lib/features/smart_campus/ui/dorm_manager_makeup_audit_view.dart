@@ -1,8 +1,8 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/dormitory_check_data.dart';
 import '../state/dormitory_manager_controller.dart';
@@ -10,13 +10,13 @@ import 'widgets/dormitory_detail_dialog.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kRed = Color(0xFFFF323C);
+const Color _kPageBg = AppColors.page;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kRed = AppColors.danger;
 
 class DormManagerMakeupAuditView extends ConsumerStatefulWidget {
   const DormManagerMakeupAuditView({super.key, required this.onBack});
@@ -140,8 +140,7 @@ class _DormManagerMakeupAuditViewState
                     if (constraints.maxWidth < ui(720)) columns = 2;
                     if (constraints.maxWidth < ui(480)) columns = 1;
                     final cardWidth =
-                        (constraints.maxWidth - gap * (columns - 1)) /
-                        columns;
+                        (constraints.maxWidth - gap * (columns - 1)) / columns;
                     return Wrap(
                       spacing: gap,
                       runSpacing: gap,
@@ -154,7 +153,8 @@ class _DormManagerMakeupAuditViewState
                               submitting: state.submittingMakeupIds.contains(
                                 item.id,
                               ),
-                              onDetail: () => unawaited(_showMakeupDetail(item)),
+                              onDetail: () =>
+                                  unawaited(_showMakeupDetail(item)),
                               onApprove: () =>
                                   unawaited(_audit(item, approve: true)),
                               onReject: () =>
@@ -201,7 +201,7 @@ class _MakeupFilters extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(ui(12)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Row(
@@ -277,7 +277,7 @@ class _Banner extends StatelessWidget {
               height: ui(32),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(ui(8)),
                 border: Border.all(color: _kBorderSoft),
               ),
@@ -324,10 +324,10 @@ class _MakeupCard extends StatelessWidget {
       padding: EdgeInsets.all(ui(12)),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFFAF0FF), Colors.white],
+          colors: [Color(0xFFFAF0FF), AppColors.surface],
         ),
         borderRadius: BorderRadius.circular(ui(16)),
-        border: Border.all(color: Colors.white),
+        border: Border.all(color: AppColors.surface),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,7 +365,7 @@ class _MakeupCard extends StatelessWidget {
           if (item.createTime.isNotEmpty)
             Text(
               '申请时间：${item.createTime}',
-              style: TextStyle(fontSize: ui(11), color: _kTextHint),
+              style: TextStyle(fontSize: ui(12), color: _kTextHint),
             ),
           if (item.createTime.isNotEmpty) SizedBox(height: ui(8)),
           Row(

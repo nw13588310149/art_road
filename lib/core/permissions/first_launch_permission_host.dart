@@ -7,23 +7,47 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/shell/ui/shell_layout.dart';
 import '../providers/app_providers.dart';
 import '../storage/app_storage.dart';
-import '../widgets/scaled_dialog.dart';
+import '../ui/ui.dart';
 import 'app_permission_service.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-/// 首次启动时弹出说明并批量申请麦克风 / 相机 / 相册 / 通知等权限。
+/// 首次启动时说明用途并批量申请相机 / 相册 / 麦克风 / 通知权限。
 ///
-/// 挂在 [MaterialApp.builder] 最外层，保证任意登录态下只执行一次（由
-/// [AppStorage.nativePermissionsPrimed] 持久化）。
+/// 挂在 [MaterialApp.builder] 最外层（位于 Navigator 之上），弹窗通过
+/// [navigatorKey] 打开；只执行一次，由 [AppStorage.nativePermissionsPrimed] 持久化。
 class FirstLaunchPermissionHost extends ConsumerStatefulWidget {
-  const FirstLaunchPermissionHost({super.key, required this.child});
+  const FirstLaunchPermissionHost({
+    super.key,
+    required this.child,
+    this.navigatorKey,
+  });
 
   final Widget child;
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
   ConsumerState<FirstLaunchPermissionHost> createState() =>
       _FirstLaunchPermissionHostState();
 }
+
+/// 权限说明：与 [AppPermissionService.essentialPermissions] 一一对应。
+const firstLaunchPermissionItems = <({IconData icon, String name, String use})>[
+  (
+    icon: Icons.photo_camera_outlined,
+    name: '相机',
+    use: '拍摄作品与头像，考勤时进行人脸采集',
+  ),
+  (
+    icon: Icons.photo_library_outlined,
+    name: '相册与文件',
+    use: '上传作品照片、课件与作业附件',
+  ),
+  (icon: Icons.mic_none_rounded, name: '麦克风', use: '仅在班级群聊发送语音消息时使用'),
+  (
+    icon: Icons.notifications_none_rounded,
+    name: '通知',
+    use: '接收成绩发布、作品点评、课程与审批提醒',
+  ),
+];
 
 class _FirstLaunchPermissionHostState
     extends ConsumerState<FirstLaunchPermissionHost> {
@@ -54,9 +78,10 @@ class _FirstLaunchPermissionHostState
     if (kIsWeb) return;
     final storage = ref.read(appStorageProvider);
     if (storage.nativePermissionsPrimed) return;
+    final dialogContext = widget.navigatorKey?.currentContext ?? scopedContext;
     _started = true;
 
-    final proceed = await _showExplainerDialog(scopedContext);
+    final proceed = await showFirstLaunchPermissionDialog(dialogContext);
     if (!mounted) return;
 
     if (proceed) {
@@ -64,100 +89,61 @@ class _FirstLaunchPermissionHostState
     }
     await storage.setNativePermissionsPrimed(true);
   }
-
-  Future<bool> _showExplainerDialog(BuildContext scopedContext) async {
-    final result = await showScaledDialog<bool>(
-      context: scopedContext,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.80),
-      builder: (dialogContext) {
-        final ui = DashboardScaleScope.of(dialogContext).ui;
-        return GradientHeaderDialog(
-          title: '开启必要权限',
-          titlePaddingTop: 40,
-          width: 428,
-          contentPadding: EdgeInsets.fromLTRB(ui(40), ui(40), ui(40), ui(30)),
-          actionBar: AppDialogActionBar(
-            cancelLabel: '稍后再说',
-            confirmLabel: '去开启',
-            onCancel: () => Navigator.of(dialogContext).pop(false),
-            onConfirm: () => Navigator.of(dialogContext).pop(true),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '为保障录音练习、课件上传、人脸采集、消息推送等功能正常使用，'
-                '首次使用需授权以下系统权限：',
-                style: TextStyle(
-                  fontSize: ui(14),
-                  color: const Color(0xFF6D6B75),
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w400,
-                  height: 1.6,
-                ),
-              ),
-              SizedBox(height: ui(16)),
-              _PermissionBullet(
-                ui: ui,
-                icon: Icons.mic_rounded,
-                text: '麦克风：录音、语音消息、调音与跟唱',
-              ),
-              SizedBox(height: ui(10)),
-              _PermissionBullet(
-                ui: ui,
-                icon: Icons.photo_library_rounded,
-                text: '相册：选择图片、课件与作业附件',
-              ),
-              SizedBox(height: ui(10)),
-              _PermissionBullet(
-                ui: ui,
-                icon: Icons.photo_camera_rounded,
-                text: '相机：拍摄人脸与现场照片',
-              ),
-              SizedBox(height: ui(10)),
-              _PermissionBullet(
-                ui: ui,
-                icon: Icons.folder_open_rounded,
-                text: '文件：从本地选择文档与音频上传',
-              ),
-              SizedBox(height: ui(10)),
-              _PermissionBullet(
-                ui: ui,
-                icon: Icons.notifications_active_rounded,
-                text: '通知：接收学校消息与审批提醒',
-              ),
-              SizedBox(height: ui(12)),
-              Text(
-                '点击「去开启」后，系统将依次弹出授权窗口，请按需允许。',
-                style: TextStyle(
-                  fontSize: ui(12),
-                  color: const Color(0xFFB6B5BB),
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w400,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    return result ?? false;
-  }
 }
 
-class _PermissionBullet extends StatelessWidget {
-  const _PermissionBullet({
-    required this.ui,
+/// 权限用途说明弹窗：返回 true 表示继续申请。
+Future<bool> showFirstLaunchPermissionDialog(BuildContext context) async {
+  final result = await showAppDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => AppDialog(
+      title: '权限使用说明',
+      message: '为正常使用以下功能，美术之路需要申请对应的系统权限。拒绝后不影响其他功能，也可以随时在系统设置中修改。',
+      actions: [
+        AppButton(
+          label: '稍后再说',
+          variant: AppButtonVariant.secondary,
+          onTap: () => Navigator.of(dialogContext).pop(false),
+        ),
+        AppButton(
+          label: '去开启',
+          onTap: () => Navigator.of(dialogContext).pop(true),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final item in firstLaunchPermissionItems)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpace.s12),
+              child: _PermissionRow(
+                icon: item.icon,
+                name: item.name,
+                use: item.use,
+              ),
+            ),
+          Text(
+            '点击「去开启」后，系统会依次弹出授权窗口，请按需允许。',
+            style: AppText.caption12,
+          ),
+        ],
+      ),
+    ),
+  );
+  return result ?? false;
+}
+
+class _PermissionRow extends StatelessWidget {
+  const _PermissionRow({
     required this.icon,
-    required this.text,
+    required this.name,
+    required this.use,
   });
 
-  final double Function(double) ui;
   final IconData icon;
-  final String text;
+  final String name;
+  final String use;
 
   @override
   Widget build(BuildContext context) {
@@ -165,29 +151,24 @@ class _PermissionBullet extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: ui(28),
-          height: ui(28),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF4F0FF),
-            borderRadius: BorderRadius.circular(ui(8)),
-          ),
+          width: 32,
+          height: 32,
           alignment: Alignment.center,
-          child: Icon(icon, size: ui(16), color: const Color(0xFF715EFE)),
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceSubtle,
+            borderRadius: AppRadius.br8,
+          ),
+          child: Icon(icon, size: 18, color: AppColors.textSecondary),
         ),
-        SizedBox(width: ui(10)),
+        const SizedBox(width: AppSpace.s12),
         Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(top: ui(4)),
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: ui(13),
-                color: const Color(0xFF0B081A),
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w400,
-                height: 1.45,
-              ),
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(name, style: AppText.body14Strong),
+              Text(use, style: AppText.body13),
+            ],
           ),
         ),
       ],

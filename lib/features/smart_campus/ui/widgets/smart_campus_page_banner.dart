@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_assets.dart';
@@ -9,18 +10,9 @@ BoxDecoration smartCampusPageBannerDecoration(
   double borderRadius = 16,
 }) {
   return BoxDecoration(
+    color: AppColors.surface,
     borderRadius: BorderRadius.circular(ui(borderRadius)),
-    // 底图右缘曾带 1px 深色竖线；先铺渐变再 cover，避免拉伸后右侧露线。
-    gradient: const LinearGradient(
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
-      colors: [Colors.white, Color(0xFFF9EDFF)],
-    ),
-    image: const DecorationImage(
-      image: AssetImage(AppAssets.xiaoquanHeaderBg),
-      fit: BoxFit.cover,
-      alignment: Alignment.centerRight,
-    ),
+    border: Border.all(color: AppColors.lineSoft),
   );
 }
 
@@ -49,17 +41,7 @@ class SmartCampusScheduleTopBar extends StatelessWidget {
           topLeft: Radius.circular(ui(borderRadius)),
           topRight: Radius.circular(ui(borderRadius)),
         ),
-        // 底图 [authBgTop] 顶部圆角带透明像素；先铺渐变再 cover，避免拉伸后右上角露白。
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Colors.white, Color(0xFFF9EDFF)],
-        ),
-        image: const DecorationImage(
-          image: AssetImage(AppAssets.authBgTop),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
+        color: AppColors.surface,
       ),
       child: child,
     );
@@ -82,7 +64,7 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
     super.key,
     required this.header,
     required this.body,
-    this.backgroundColor = const Color(0xFFEFF3FC),
+    this.backgroundColor = AppColors.page,
     this.headerGap = 16,
     this.bodyBorderRadius = 16,
     this.bodyTopClipRadius,
@@ -107,35 +89,38 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
   /// 为 `false` 时由调用方自行提供滚动（如下拉刷新场景）。
   final bool bodyScrollable;
 
+  /// 页头用 [AppPageHeader]（自带左右 20 版心与底部 12 留白），主体与页头左右对齐，
+  /// 卡片直接落在页面底色上；[headerGap]、[bodyBorderRadius]、[bodyTopClipRadius]
+  /// 为旧参数，保留以兼容调用方。
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final topClipRadius = ui(bodyTopClipRadius ?? bodyBorderRadius);
-    final bottomClipRadius = ui(bodyBorderRadius);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         header,
-        SizedBox(height: ui(headerGap)),
+        const SizedBox(height: AppSpace.s4),
         Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(ui(bodyBorderRadius)),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(topClipRadius),
-                topRight: Radius.circular(topClipRadius),
-                bottomLeft: Radius.circular(bottomClipRadius),
-                bottomRight: Radius.circular(bottomClipRadius),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: bodyScrollable
-                  ? SingleChildScrollView(child: body)
-                  : body,
-            ),
+          child: ColoredBox(
+            color: backgroundColor,
+            child: bodyScrollable
+                ? SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpace.page,
+                      0,
+                      AppSpace.page,
+                      AppSpace.page,
+                    ),
+                    child: body,
+                  )
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpace.page,
+                      0,
+                      AppSpace.page,
+                      AppSpace.page,
+                    ),
+                    child: body,
+                  ),
           ),
         ),
       ],
@@ -149,7 +134,7 @@ class SmartCampusSchedulePageShell extends StatelessWidget {
     super.key,
     required this.header,
     required this.body,
-    this.backgroundColor = Colors.white,
+    this.backgroundColor = AppColors.surface,
     this.bodyScrollable = true,
   });
 

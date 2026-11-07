@@ -175,7 +175,7 @@ class _ReferencePreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '共 ${set.assets.length} 张素材，随机出题，张数不够时会重新洗牌',
+            '共 ${set.assets.length} 张素材，随机出题，张数不够时循环使用',
             style: AppText.caption12,
           ),
           const SizedBox(height: AppSpace.s12),

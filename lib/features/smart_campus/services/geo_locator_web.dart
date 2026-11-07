@@ -13,9 +13,7 @@ import 'geo_locator_types.dart';
 ///   可达 10-30m 内。
 /// - `timeout` 默认 10s；过短会经常 `timeout`，过长会卡住"获取定位"按钮，
 ///   10s 是平衡值。
-Future<GeoPosition> getCurrentLocation({
-  Duration? timeout,
-}) {
+Future<GeoPosition> getCurrentLocation({Duration? timeout}) {
   final completer = Completer<GeoPosition>();
   final geolocation = web.window.navigator.geolocation;
 
@@ -56,11 +54,7 @@ Future<GeoPosition> getCurrentLocation({
     geolocation.getCurrentPosition(
       onSuccess.toJS,
       onError.toJS,
-      web.PositionOptions(
-        enableHighAccuracy: true,
-        timeout: t,
-        maximumAge: 0,
-      ),
+      web.PositionOptions(enableHighAccuracy: true, timeout: t, maximumAge: 0),
     );
   } catch (e) {
     completer.completeError(

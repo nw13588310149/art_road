@@ -43,9 +43,7 @@ class SmartCampusEqualHeightGrid extends StatelessWidget {
 
         final rows = <List<int>>[];
         for (var i = 0; i < itemCount; i += cols) {
-          rows.add([
-            for (var j = i; j < i + cols && j < itemCount; j++) j,
-          ]);
+          rows.add([for (var j = i; j < i + cols && j < itemCount; j++) j]);
         }
 
         return Column(

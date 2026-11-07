@@ -3,23 +3,51 @@
 // 新增页面时在对应角色下追加步骤即可。
 
 const nav = (label) => ({ click: label, after: 1800 });
+// 身份第一次进首页会弹新手引导（弹出即记为已看过），截首页本身前先关掉；没弹就跳过这一步。
+const skipGuide = { click: '跳过', optional: true, attempts: 4, after: 800 };
+const homeStep = { id: 'home', route: '/', actions: [skipGuide] };
+const guideStep = {
+  id: 'guide',
+  route: '/help-guide',
+  actions: [{ click: /^新手引导$/, after: 1500 }],
+};
+const noticeStep = {
+  id: 'notices',
+  route: '/',
+  actions: [skipGuide, { click: /^通知/, after: 1500 }],
+};
 const campusAction = (id, label) => ({
   id: `campus-${id}`,
   route: '/smart-campus',
   actions: [{ wait: 1200 }, { click: label, after: 2200 }],
 });
 
+// 第三项是看画分析工具用的示例画作（选图区里的缩略图名称）。
 const toolSteps = [
-  ['tool-value', '明度检查'],
-  ['tool-mirror', '镜像翻转'],
-  ['tool-grid', '构图网格'],
-  ['tool-color', '取色'],
+  ['tool-value', '明度检查', '大卫石膏像'],
+  ['tool-blur', '眯眼模糊', '暖调静物'],
+  ['tool-simplify', '色块简化', '暖调静物'],
+  ['tool-temperature', '冷暖分布', '冷调静物'],
+  ['tool-edges', '轮廓线稿', '素描静物'],
+  ['tool-mirror', '镜像翻转', '大卫石膏像'],
+  ['tool-color', '取色', '花卉静物'],
+  ['tool-measure', '比例测量', '大卫石膏像'],
+  ['tool-grid', '构图网格', '秋日风景'],
+  ['tool-perspective', '透视辅助', '石膏几何体'],
+  ['tool-portrait', '头像比例', '大卫石膏像'],
   ['tool-sketch', '速写计时'],
+  ['tool-figure', '人体比例参考'],
+  ['tool-value-order', '明度排序训练'],
   ['tool-countdown', '考试倒计时'],
-].map(([id, label]) => ({
+  ['tool-score', '综合分计算器'],
+  ['tool-checklist', '考场物品清单'],
+].map(([id, label, sample]) => ({
   id,
   route: '/toolbox',
-  actions: [{ click: label, after: 2000 }],
+  actions: [
+    { click: label, after: 2000 },
+    ...(sample ? [{ click: sample, after: 2500 }] : []),
+  ],
 }));
 
 const sharedContent = [
@@ -61,14 +89,17 @@ export const ROLES = [
       { id: 'login', route: '/login' },
       { id: 'register', route: '/login', actions: [{ click: '立即注册', after: 1800 }] },
       { id: 'forget', route: '/login', actions: [{ click: '忘记密码', after: 1800 }] },
-      { id: 'terms', route: '/login', actions: [{ click: '服务协议与隐私政策', after: 1800 }] },
+      { id: 'terms', route: '/login', actions: [{ click: '用户服务协议', after: 1800 }] },
     ],
   },
   {
     id: 'student',
     chip: '学生 · 林小雨',
     steps: [
-      { id: 'home', route: '/' },
+      homeStep,
+      guideStep,
+      noticeStep,
+      { id: 'demo-tag', route: '/', actions: [skipGuide, { click: '演示版', after: 1200 }] },
       { id: 'study', route: '/study' },
       { id: 'artworks', route: '/artworks' },
       {
@@ -82,6 +113,12 @@ export const ROLES = [
         actions: [{ click: '上传作品', after: 1800 }],
       },
       { id: 'gallery', route: '/gallery' },
+      { id: 'ebooks', route: '/ebooks' },
+      {
+        id: 'ebook-detail',
+        route: '/ebooks',
+        actions: [{ click: /联考素描静物高分解析/, after: 2200 }],
+      },
       { id: 'toolbox', route: '/toolbox' },
       ...toolSteps,
       ...sharedContent,
@@ -102,13 +139,15 @@ export const ROLES = [
     id: 'teacher',
     chip: '任课老师 · 李静',
     steps: [
-      { id: 'home', route: '/' },
+      homeStep,
+      guideStep,
+      noticeStep,
       { id: 'study', route: '/study' },
       { id: 'artworks', route: '/artworks' },
       {
         id: 'artwork-review',
         route: '/artworks',
-        actions: [{ click: /待我点评/, after: 2500 }],
+        actions: [{ click: '开始点评', after: 2500 }],
       },
       {
         id: 'artwork-tags',
@@ -131,12 +170,12 @@ export const ROLES = [
     id: 'headTeacher',
     chip: '班主任 · 赵雪',
     steps: [
-      { id: 'home', route: '/' },
+      homeStep,
+      guideStep,
       { id: 'campus', route: '/smart-campus' },
       campusAction('workbench', '班级工作台'),
       campusAction('leave-approval', '请假审批'),
       campusAction('home-school', '家校沟通'),
-      campusAction('dorm-dynamic', '查寝动态'),
       campusAction('dorm-history', '查寝历史'),
       campusAction('group-chat', '群聊'),
       campusAction('mailbox', '校长信箱'),
@@ -146,12 +185,13 @@ export const ROLES = [
     id: 'dormManager',
     chip: '宿管 · 马红梅',
     steps: [
-      { id: 'home', route: '/' },
+      homeStep,
+      guideStep,
       { id: 'campus', route: '/smart-campus' },
       campusAction('check-by-room', '按宿舍查寝'),
       campusAction('dorm-dynamic', '查寝动态'),
       campusAction('dorm-history', '查寝历史'),
-      campusAction('punch', '打卡管理'),
+      campusAction('punch', '到岗打卡'),
       campusAction('leave', '宿管请假'),
       campusAction('school-circle', '校圈'),
       campusAction('group-chat', '群聊'),
@@ -162,11 +202,12 @@ export const ROLES = [
     id: 'admin',
     chip: '管理员 · 王敏',
     steps: [
-      { id: 'home', route: '/' },
+      homeStep,
+      guideStep,
       { id: 'campus', route: '/smart-campus' },
       campusAction('students', '学生管理'),
       campusAction('teachers', '教师管理'),
-      campusAction('classes', '班级编辑'),
+      campusAction('classes', '班级管理'),
       campusAction('schedule', '排课与课表'),
       campusAction('sign', '签课管理'),
       campusAction('teacher-leave', '教师请'),

@@ -26,10 +26,7 @@ Future<QrSaveResult> saveQrImageBytesImpl({
     await file.writeAsBytes(bytes, flush: true);
     return QrSaveResult(ok: true, path: path);
   } on UnimplementedError {
-    return const QrSaveResult(
-      ok: false,
-      error: '当前平台暂不支持保存到相册，请截屏保存',
-    );
+    return const QrSaveResult(ok: false, error: '当前平台暂不支持保存到相册，请截屏保存');
   } catch (e) {
     return QrSaveResult(ok: false, error: '保存失败：$e');
   }

@@ -1,6 +1,7 @@
 import 'dart:convert' show jsonDecode;
 
 import '../../../core/network/media_url.dart';
+import '../state/circle_governance_state.dart';
 import '../state/circle_state.dart';
 
 List<CirclePost> mapPostsListData(dynamic data) {
@@ -30,41 +31,115 @@ CirclePost? mapSinglePostData(dynamic data) {
   return _mapPost(Map<String, dynamic>.from(data));
 }
 
+/// `manager/postsReportList` 的 records。
+List<CircleReportCase> mapReportCasesData(dynamic data) => [
+  for (final e in _asList(data))
+    if (e is Map) ?_mapReportCase(Map<String, dynamic>.from(e)),
+];
+
+/// `manager/postsReportHandle`、`manager/postsDelete` 返回的单条举报记录。
+CircleReportCase? mapSingleReportCase(dynamic data) {
+  if (data is! Map) return null;
+  return _mapReportCase(Map<String, dynamic>.from(data));
+}
+
+/// 分页接口的 `total`；没有时用 [fallback]。
+int mapPageTotal(dynamic data, int fallback) {
+  if (data is Map && data['total'] != null) return _asInt(data['total']);
+  return fallback;
+}
+
+CircleReportCase? _mapReportCase(Map<String, dynamic> m) {
+  final id = _pickString(m, const ['id']);
+  if (id.isEmpty) return null;
+  final postRaw = m['post'];
+  final reasonsRaw = m['reasons'];
+  final reportsRaw = m['reports'];
+  var latestRemark = '';
+  if (reportsRaw is List) {
+    for (final r in reportsRaw) {
+      if (r is! Map) continue;
+      final remark = r['remark']?.toString().trim() ?? '';
+      if (remark.isNotEmpty) {
+        latestRemark = remark;
+        break;
+      }
+    }
+  }
+  return CircleReportCase(
+    id: id,
+    postId: _pickString(m, const ['postsId', 'postId']),
+    post: postRaw is Map ? _mapPost(Map<String, dynamic>.from(postRaw)) : null,
+    postDeleted: _truthy(m['postDeleted']),
+    pending: _asInt(m['status']) == 0,
+    result: switch (_asInt(m['result'])) {
+      1 => CircleReportResult.kept,
+      2 => CircleReportResult.deleted,
+      _ => CircleReportResult.none,
+    },
+    reportCount: _asInt(m['reportCount']),
+    reasons: [
+      if (reasonsRaw is List)
+        for (final r in reasonsRaw)
+          if (r is Map && (r['reason']?.toString().trim() ?? '').isNotEmpty)
+            CircleReportReasonCount(
+              reason: r['reason'].toString().trim(),
+              count: _asInt(r['count']),
+            ),
+    ],
+    latestRemark: latestRemark,
+    lastReportTime: _friendlyTime(_pickString(m, const ['lastReportTime'])),
+    handleReason: _pickString(m, const ['handleReason']),
+    handleRemark: _pickString(m, const ['handleRemark']),
+    handlerName: _pickString(m, const ['handlerName']),
+    handleTime: _friendlyTime(_pickString(m, const ['handleTime'])),
+  );
+}
+
 CirclePost _mapPost(Map<String, dynamic> m) {
   final id = _pickString(m, const ['id', 'postsId', 'postId']);
 
   // v2 接口把作者放进 `user` 对象；老接口字段平铺在最外层，两套都兼容。
   final userObj = m['user'];
-  final user = userObj is Map ? Map<String, dynamic>.from(userObj) : const <String, dynamic>{};
-  final authorId = _pickString({...user, ...m}, const [
-    'userId',
-    'authorId',
-    'createUserId',
-    'publisherId',
-    'id', // user.id
-  ]);
-  final name = _pickString({...m, ...user}, const [
-    'nickname',
-    'realname',
-    'realName',
-    'userName',
-    'userNickname',
-    'name',
-  ]);
-  final avatarRaw = _pickString({...m, ...user}, const [
-    'headUrl',
-    'avatar',
-    'avatarUrl',
-    'userHeadUrl',
-  ]);
-  final role = _pickString({...m, ...user}, const [
-    'identity',
-    'roleName',
-    'userRole',
-    'role',
-  ]);
+  final user = userObj is Map
+      ? Map<String, dynamic>.from(userObj)
+      : const <String, dynamic>{};
+  final authorId = _pickString(
+    {...user, ...m},
+    const [
+      'userId',
+      'authorId',
+      'createUserId',
+      'publisherId',
+      'id', // user.id
+    ],
+  );
+  final name = _pickString(
+    {...m, ...user},
+    const [
+      'nickname',
+      'realname',
+      'realName',
+      'userName',
+      'userNickname',
+      'name',
+    ],
+  );
+  final avatarRaw = _pickString(
+    {...m, ...user},
+    const ['headUrl', 'avatar', 'avatarUrl', 'userHeadUrl'],
+  );
+  final role = _pickString(
+    {...m, ...user},
+    const ['identity', 'roleName', 'userRole', 'role'],
+  );
 
-  final content = _pickString(m, const ['content', 'text', 'postsContent', 'body']);
+  final content = _pickString(m, const [
+    'content',
+    'text',
+    'postsContent',
+    'body',
+  ]);
   final description = _pickString(m, const ['description', 'desc', 'summary']);
   final composedText = _composePostText(
     content: content,
@@ -140,10 +215,16 @@ CirclePost _mapPost(Map<String, dynamic> m) {
   }
 
   final likeCount = _asInt(m['likeCount'] ?? m['likes'] ?? m['thumbCount']);
-  final commentCount = _asInt(m['commentCount'] ?? m['comments'] ?? m['replyCount']);
-  final favoriteCount = _asInt(m['favoriteCount'] ?? m['collectCount'] ?? m['starCount']);
+  final commentCount = _asInt(
+    m['commentCount'] ?? m['comments'] ?? m['replyCount'],
+  );
+  final favoriteCount = _asInt(
+    m['favoriteCount'] ?? m['collectCount'] ?? m['starCount'],
+  );
   final liked = _truthy(m['isLike'] ?? m['liked'] ?? m['thumbUp']);
-  final favorited = _truthy(m['isFavorite'] ?? m['favorited'] ?? m['collected']);
+  final favorited = _truthy(
+    m['isFavorite'] ?? m['favorited'] ?? m['collected'],
+  );
 
   final embedded = _parseEmbeddedComments(m);
 
@@ -204,32 +285,29 @@ CircleComment _mapComment(Map<String, dynamic> m) {
       : const <String, dynamic>{};
 
   final id = _pickString(m, const ['id', 'commentId']);
-  final authorId = _pickString({...user, ...m}, const [
-    'userId',
-    'createUserId',
-    'authorId',
-    'id',
-  ]);
-  final name = _pickString({...m, ...user}, const [
-    'nickname',
-    'realname',
-    'realName',
-    'userName',
-    'userNickname',
-    'name',
-  ]);
-  final avatarRaw = _pickString({...m, ...user}, const [
-    'headUrl',
-    'avatar',
-    'avatarUrl',
-    'userHeadUrl',
-  ]);
-  final role = _pickString({...m, ...user}, const [
-    'identity',
-    'roleName',
-    'userRole',
-    'role',
-  ]);
+  final authorId = _pickString(
+    {...user, ...m},
+    const ['userId', 'createUserId', 'authorId', 'id'],
+  );
+  final name = _pickString(
+    {...m, ...user},
+    const [
+      'nickname',
+      'realname',
+      'realName',
+      'userName',
+      'userNickname',
+      'name',
+    ],
+  );
+  final avatarRaw = _pickString(
+    {...m, ...user},
+    const ['headUrl', 'avatar', 'avatarUrl', 'userHeadUrl'],
+  );
+  final role = _pickString(
+    {...m, ...user},
+    const ['identity', 'roleName', 'userRole', 'role'],
+  );
   final text = _pickString(m, const ['comment', 'content', 'text', 'body']);
   final likeCount = _asInt(m['likeCount'] ?? m['likes']);
   final liked = _truthy(m['isLike'] ?? m['liked'] ?? m['thumbUp']);
@@ -262,12 +340,16 @@ String _friendlyTime(String raw) {
   if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
   String two(int v) => v.toString().padLeft(2, '0');
   final clock = '${two(time.hour)}:${two(time.minute)}';
-  final days = DateTime(now.year, now.month, now.day)
-      .difference(DateTime(time.year, time.month, time.day))
-      .inDays;
+  final days = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).difference(DateTime(time.year, time.month, time.day)).inDays;
   if (days == 0) return '今天 $clock';
   if (days == 1) return '昨天 $clock';
-  if (time.year == now.year) return '${two(time.month)}-${two(time.day)} $clock';
+  if (time.year == now.year) {
+    return '${two(time.month)}-${two(time.day)} $clock';
+  }
   return '${time.year}-${two(time.month)}-${two(time.day)}';
 }
 

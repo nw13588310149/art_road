@@ -14,20 +14,18 @@
 //      紫底 tag，学籍异动用状态色 tag）；整卡可点 → 右侧「学生档案」抽屉。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/network/snowflake_id.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../data/admin_student_exam_data.dart';
 import '../data/teacher_repository.dart';
@@ -37,18 +35,16 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardBg = Colors.white;
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextPrimary = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextPlaceholder = Color(0xFFD1D1D1);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleSoft = Color(0xFFD7D5FF);
-const Color _kPageBgChip = Color(0xFFF5F6FA);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kPurpleTag = Color(0xFF8E7FFF);
+const Color _kPageBg = AppColors.page;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextPrimary = AppColors.ink;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSoft = AppColors.brandTint;
+const Color _kPageBgChip = AppColors.surfaceSubtle;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kPurpleTag = AppColors.brandSoft;
 
 // ---- 学籍状态 ---------------------------------------------------------------
 
@@ -108,7 +104,7 @@ extension on _StudentStatus {
       case _StudentStatus.transferring:
         return const Color(0xFF1F77E0);
       case _StudentStatus.graduated:
-        return const Color(0xFF6D6B75);
+        return AppColors.textSecondary;
     }
   }
 }
@@ -165,13 +161,15 @@ class _Student {
     final name = nickname.isNotEmpty
         ? nickname
         : (realname.isNotEmpty
-            ? realname
-            : _pickString(json, ['name', 'stuName', 'studentName'], '未命名'));
+              ? realname
+              : _pickString(json, ['name', 'stuName', 'studentName'], '未命名'));
 
-    final headUrlRaw =
-        _pickString(json, ['headUrl', 'avatar', 'avatarUrl'], '');
-    final avatarUrl =
-        headUrlRaw.isNotEmpty ? MediaUrl.resolve(headUrlRaw) : '';
+    final headUrlRaw = _pickString(json, [
+      'headUrl',
+      'avatar',
+      'avatarUrl',
+    ], '');
+    final avatarUrl = headUrlRaw.isNotEmpty ? MediaUrl.resolve(headUrlRaw) : '';
 
     final studentNo = _pickString(json, [
       'no',
@@ -186,11 +184,12 @@ class _Student {
     var className = '';
     final bigClass = json['bigClass'];
     if (bigClass is Map) {
-      className = _pickString(
-        Map<String, dynamic>.from(bigClass),
-        ['name', 'className', 'groupName', 'fullName'],
-        '',
-      );
+      className = _pickString(Map<String, dynamic>.from(bigClass), [
+        'name',
+        'className',
+        'groupName',
+        'fullName',
+      ], '');
     }
     if (className.isEmpty) {
       className = _pickString(json, [
@@ -210,7 +209,8 @@ class _Student {
 
     final bedInfo = _pickString(json, ['bedInfo'], '');
     final bedIdRaw = json['bedId'];
-    final hasBedId = bedIdRaw != null &&
+    final hasBedId =
+        bedIdRaw != null &&
         '$bedIdRaw'.trim().isNotEmpty &&
         '$bedIdRaw' != '0' &&
         bedIdRaw != 0;
@@ -378,7 +378,8 @@ class TeacherStudentRosterView extends ConsumerStatefulWidget {
       _TeacherStudentRosterViewState();
 }
 
-class _TeacherStudentRosterViewState extends ConsumerState<TeacherStudentRosterView> {
+class _TeacherStudentRosterViewState
+    extends ConsumerState<TeacherStudentRosterView> {
   static const int _pageSize = 50;
   String _query = '';
   String _debouncedKeyword = '';
@@ -407,17 +408,24 @@ class _TeacherStudentRosterViewState extends ConsumerState<TeacherStudentRosterV
   }
 
   Future<void> _loadClasses() async {
-    final res = await ref.read(teacherRepositoryProvider).classList(isClassTeacher: 1);
+    final res = await ref
+        .read(teacherRepositoryProvider)
+        .classList(isClassTeacher: 1);
     if (!mounted) return;
     final opts = <_RosterClassOption>[
       const _RosterClassOption(id: '', label: _kAllClassesLabel),
     ];
     if (res.isSuccess) {
       final raw = res.data;
-      final list = raw is Map ? (raw['records'] ?? raw['list'] ?? raw['data']) : raw;
+      final list = raw is Map
+          ? (raw['records'] ?? raw['list'] ?? raw['data'])
+          : raw;
       if (list is List) {
         for (final row in list.whereType<Map>()) {
-          final id = row['id']?.toString().trim() ?? row['classId']?.toString().trim() ?? '';
+          final id =
+              row['id']?.toString().trim() ??
+              row['classId']?.toString().trim() ??
+              '';
           final name = row['name']?.toString().trim() ?? '';
           if (id.isNotEmpty && name.isNotEmpty) {
             opts.add(_RosterClassOption(id: id, label: name));
@@ -434,7 +442,9 @@ class _TeacherStudentRosterViewState extends ConsumerState<TeacherStudentRosterV
   Future<void> _loadStudents() async {
     if (!mounted) return;
     setState(() => _loadingStudents = true);
-    final res = await ref.read(teacherRepositoryProvider).studentList(
+    final res = await ref
+        .read(teacherRepositoryProvider)
+        .studentList(
           classId: _selectedClassId,
           current: 1,
           size: _pageSize,
@@ -495,39 +505,37 @@ class _TeacherStudentRosterViewState extends ConsumerState<TeacherStudentRosterV
 
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
-      header: _RosterBanner(onBack: widget.onBack),
+      header: AppPageHeader(
+        title: '学生名册',
+        subtitle: '任教班级学生的学籍、宿舍与家长联系方式',
+        onBack: widget.onBack,
+        bottom: _FilterRow(
+          classOptions: _classOptions,
+          selectedLabel: _selectedClassLabel,
+          onClassPicked: _onClassPicked,
+          query: _query,
+          onQueryChanged: _onQueryChanged,
+        ),
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _FilterRow(
-            classOptions: _classOptions,
-            selectedLabel: _selectedClassLabel,
-            onClassPicked: _onClassPicked,
-            query: _query,
-            onQueryChanged: _onQueryChanged,
-          ),
-          SizedBox(height: ui(16)),
-          _StatsRow(
-            total: totalForStats,
-            male: maleCount,
-            female: femaleCount,
-          ),
+          _StatsRow(total: totalForStats, male: maleCount, female: femaleCount),
           SizedBox(height: ui(20)),
           if (!_loadingStudents && list.isEmpty)
-            Center(
-              child: Padding(
-                padding: EdgeInsets.only(top: ui(48)),
-                child: Text(
-                  '暂无学生数据',
-                  style: TextStyle(fontSize: ui(14), color: _kTextHint),
-                ),
+            AppCard(
+              child: AppEmptyState(
+                icon: Icons.groups_outlined,
+                title: _debouncedKeyword.isEmpty
+                    ? '这个班级还没有学生'
+                    : '没有找到「$_debouncedKeyword」',
+                description: _debouncedKeyword.isEmpty
+                    ? '学生分班后会出现在这里'
+                    : '可以换个姓名、学号或宿舍号再试',
               ),
             )
           else if (list.isNotEmpty)
-            _StudentCardsGrid(
-              students: list,
-              onTap: _openProfile,
-            ),
+            _StudentCardsGrid(students: list, onTap: _openProfile),
         ],
       ),
     );
@@ -537,70 +545,6 @@ class _TeacherStudentRosterViewState extends ConsumerState<TeacherStudentRosterV
 // =============================================================================
 // 顶部 banner（背景图 xiaoquan/bg.png，居中标题 + 左返回）
 // =============================================================================
-
-class _RosterBanner extends StatelessWidget {
-  const _RosterBanner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: const Color(0xFF1C274C),
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Text(
-                '学生名册',
-                style: TextStyle(
-                  fontSize: ui(16),
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w600,
-                  height: 1.2,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // =============================================================================
 // 筛选行：班级 dropdown + 搜索框
@@ -623,18 +567,31 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
+    final selected = classOptions
+        .where((o) => o.label == selectedLabel)
+        .map((o) => o.id)
+        .firstOrNull;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _ClassFilterButton(
-          value: selectedLabel,
-          options: classOptions,
-          onChanged: onClassPicked,
-        ),
         SizedBox(
-          width: ui(324),
+          width: 200,
+          child: AppSelect<String>(
+            options: [
+              for (final o in classOptions)
+                AppSelectOption(value: o.id, label: o.label),
+            ],
+            value: selected,
+            hint: selectedLabel,
+            onChanged: (id) {
+              for (final o in classOptions) {
+                if (o.id == id) onClassPicked(o);
+              }
+            },
+          ),
+        ),
+        const Spacer(),
+        SizedBox(
+          width: 300,
           child: _RosterSearchField(value: query, onChanged: onQueryChanged),
         ),
       ],
@@ -697,7 +654,8 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
             child: _ClassFilterMenuPanel(
               options: widget.options,
               value: widget.value,
-              onPick: (opt) => Navigator.of(context).pop<_RosterClassOption>(opt),
+              onPick: (opt) =>
+                  Navigator.of(context).pop<_RosterClassOption>(opt),
             ),
           ),
         ),
@@ -721,7 +679,7 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
         height: ui(44),
         padding: EdgeInsets.symmetric(horizontal: ui(16)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -735,7 +693,6 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.4,
                 ),
@@ -773,12 +730,12 @@ class _ClassFilterMenuPanel extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
         border: Border.all(color: _kBorderSoft),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF95A6C8).withValues(alpha: 0.10),
+            color: AppColors.textTertiary.withValues(alpha: 0.10),
             blurRadius: ui(20),
             offset: Offset(0, ui(8)),
           ),
@@ -839,7 +796,6 @@ class _ClassFilterMenuRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: selected ? _kPurple : _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: selected ? AppFont.w500 : AppFont.w400,
                   height: 1.2,
                 ),
@@ -890,55 +846,11 @@ class _RosterSearchFieldState extends State<_RosterSearchField> {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(44),
-      padding: EdgeInsets.symmetric(horizontal: ui(20)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(12)),
-        border: Border.all(color: _kBorderSoft),
-      ),
-      child: Row(
-        children: [
-          AppAssetGraphic(
-            AppAssets.shellV2Search,
-            width: ui(16),
-            height: ui(16),
-            fit: BoxFit.contain,
-          ),
-          SizedBox(width: ui(8)),
-          Expanded(
-            child: AppTextField(
-              controller: _ctrl,
-              onChanged: widget.onChanged,
-              cursorColor: _kPurple,
-              cursorWidth: 1.5,
-              cursorHeight: ui(16),
-              style: TextStyle(
-                fontSize: ui(14),
-                color: _kTextDark,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w400,
-                height: 1.2,
-              ),
-              decoration: InputDecoration(
-                isCollapsed: true,
-                contentPadding: EdgeInsets.zero,
-                border: InputBorder.none,
-                hintText: '搜索姓名、工号、任课方向',
-                hintStyle: TextStyle(
-                  fontSize: ui(14),
-                  color: _kTextPlaceholder,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w400,
-                  height: 1.2,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return AppSearchField(
+      controller: _ctrl,
+      hint: '搜索姓名、学号、宿舍',
+      onChanged: widget.onChanged,
+      onCleared: () => widget.onChanged(''),
     );
   }
 }
@@ -966,24 +878,27 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: SmartCampusStatCard(
             backgroundAsset: AppAssets.teacherStudentRosterStatCard1,
-            label: '当前列表',
+            label: '学生人数',
             value: total,
+            valueSuffix: '人',
           ),
         ),
         SizedBox(width: ui(12)),
         Expanded(
           child: SmartCampusStatCard(
             backgroundAsset: AppAssets.teacherStudentRosterStatCard2,
-            label: '男',
+            label: '男生',
             value: male,
+            valueSuffix: '人',
           ),
         ),
         SizedBox(width: ui(12)),
         Expanded(
           child: SmartCampusStatCard(
             backgroundAsset: AppAssets.teacherStudentRosterStatCard3,
-            label: '女',
+            label: '女生',
             value: female,
+            valueSuffix: '人',
           ),
         ),
       ],
@@ -996,10 +911,7 @@ class _StatsRow extends StatelessWidget {
 // =============================================================================
 
 class _StudentCardsGrid extends StatelessWidget {
-  const _StudentCardsGrid({
-    required this.students,
-    required this.onTap,
-  });
+  const _StudentCardsGrid({required this.students, required this.onTap});
 
   final List<_Student> students;
   final ValueChanged<_Student> onTap;
@@ -1015,8 +927,7 @@ class _StudentCardsGrid extends StatelessWidget {
         final cols = constraints.maxWidth >= 900
             ? 3
             : (constraints.maxWidth >= 600 ? 2 : 1);
-        final cardWidth =
-            (constraints.maxWidth - gap * (cols - 1)) / cols;
+        final cardWidth = (constraints.maxWidth - gap * (cols - 1)) / cols;
         return Wrap(
           spacing: gap,
           runSpacing: gap,
@@ -1042,7 +953,7 @@ class _RosterEmptyState extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: ui(48)),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
         border: Border.all(color: _kBorderSoft),
       ),
@@ -1056,7 +967,6 @@ class _RosterEmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -1106,15 +1016,11 @@ class _StudentCard extends StatelessWidget {
       );
     }
     specs.add(
-      _RosterTagSpec(
-        _isResident ? '住校' : '走读',
-        _kPurpleTag,
-        Colors.white,
-      ),
+      _RosterTagSpec(_isResident ? '住校' : '走读', _kPurpleTag, AppColors.surface),
     );
     for (final tag in student.tags) {
       if (tag.trim().isEmpty) continue;
-      specs.add(_RosterTagSpec(tag, _kPurpleTag, Colors.white));
+      specs.add(_RosterTagSpec(tag, _kPurpleTag, AppColors.surface));
     }
     return specs;
   }
@@ -1122,108 +1028,96 @@ class _StudentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: _kCardBg,
-          borderRadius: BorderRadius.circular(ui(12)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        padding: EdgeInsets.fromLTRB(ui(12), ui(8), ui(12), ui(8)),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Avatar(name: student.name, avatarUrl: student.avatarUrl),
-            SizedBox(width: ui(8)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                student.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: ui(14),
-                                  height: 1.2,
-                                  fontWeight: AppFont.w500,
-                                  color: _kTextPrimary,
-                                  fontFamily: 'PingFang SC',
-                                ),
+      padding: EdgeInsets.fromLTRB(ui(12), ui(12), ui(12), ui(12)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppAvatar(name: student.name, url: student.avatarUrl, size: 40),
+          SizedBox(width: ui(8)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              student.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: ui(14),
+                                height: 1.2,
+                                fontWeight: AppFont.w500,
+                                color: _kTextPrimary,
                               ),
                             ),
-                            SizedBox(width: ui(4)),
-                            Image.asset(
-                              student.isMale
-                                  ? AppAssets.iconGenderMale
-                                  : AppAssets.iconGenderFemale,
-                              width: ui(14),
-                              height: ui(14),
-                              fit: BoxFit.contain,
-                            ),
-                          ],
-                        ),
+                          ),
+                          SizedBox(width: ui(4)),
+                          Image.asset(
+                            student.isMale
+                                ? AppAssets.iconGenderMale
+                                : AppAssets.iconGenderFemale,
+                            width: ui(14),
+                            height: ui(14),
+                            fit: BoxFit.contain,
+                          ),
+                        ],
                       ),
-                      SizedBox(width: ui(8)),
-                      Text(
-                        '详情',
-                        style: TextStyle(
-                          fontSize: ui(14),
-                          height: 1.2,
-                          fontWeight: AppFont.w400,
-                          color: _kPurple,
-                          fontFamily: 'PingFang SC',
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: ui(16),
+                    ),
+                    SizedBox(width: ui(8)),
+                    Text(
+                      '详情',
+                      style: TextStyle(
+                        fontSize: ui(14),
+                        height: 1.2,
+                        fontWeight: AppFont.w400,
                         color: _kPurple,
                       ),
-                    ],
-                  ),
-                  SizedBox(height: ui(8)),
-                  Text(
-                    _dormLine,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      height: 1.2,
-                      color: _kTextPrimary,
-                      fontFamily: 'PingFang SC',
                     ),
-                  ),
-                  SizedBox(height: ui(6)),
-                  Text(
-                    student.studentId.isEmpty ? '—' : student.studentId,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      height: 1.2,
-                      color: _kTextHint,
-                      fontFamily: 'PingFang SC',
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: ui(16),
+                      color: _kPurple,
                     ),
+                  ],
+                ),
+                SizedBox(height: ui(8)),
+                Text(
+                  _dormLine,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: ui(12),
+                    height: 1.2,
+                    color: _kTextPrimary,
                   ),
-                  SizedBox(height: ui(6)),
-                  _RosterTagRow(tags: _buildTags()),
-                ],
-              ),
+                ),
+                SizedBox(height: ui(6)),
+                Text(
+                  student.studentId.isEmpty ? '—' : student.studentId,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: ui(12),
+                    height: 1.2,
+                    color: _kTextHint,
+                  ),
+                ),
+                SizedBox(height: ui(8)),
+                _RosterTagRow(tags: _buildTags()),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1246,20 +1140,12 @@ class _RosterTagRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    if (tags.isEmpty) return SizedBox(height: ui(16));
-    final children = <Widget>[];
-    for (var i = 0; i < tags.length; i++) {
-      if (i > 0) children.add(SizedBox(width: ui(4)));
-      children.add(_RosterTag(spec: tags[i]));
-    }
-    return SizedBox(
-      height: ui(16),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const NeverScrollableScrollPhysics(),
-        child: Row(mainAxisSize: MainAxisSize.min, children: children),
-      ),
+    if (tags.isEmpty) return const SizedBox.shrink();
+    // 标签换行排列，任何宽度下都不截断（AppTag 从不截断）。
+    return Wrap(
+      spacing: AppSpace.s4,
+      runSpacing: AppSpace.s4,
+      children: [for (final tag in tags) _RosterTag(spec: tag)],
     );
   }
 }
@@ -1269,41 +1155,13 @@ class _RosterTag extends StatelessWidget {
 
   final _RosterTagSpec spec;
 
+  /// 学籍异动（非在籍）用警示色，其余信息标签一律中性浅底。
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(16),
-      padding: EdgeInsets.symmetric(horizontal: ui(4)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: spec.bg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        spec.label,
-        maxLines: 1,
-        textHeightBehavior: const TextHeightBehavior(
-          applyHeightToFirstAscent: false,
-          applyHeightToLastDescent: false,
-        ),
-        strutStyle: StrutStyle(
-          fontSize: ui(11),
-          height: 1,
-          forceStrutHeight: true,
-          leadingDistribution: TextLeadingDistribution.even,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-        ),
-        style: TextStyle(
-          fontSize: ui(11),
-          height: 1.0,
-          color: spec.fg,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          leadingDistribution: TextLeadingDistribution.even,
-        ),
-      ),
+    final neutral = spec.bg == _kPageBgChip || spec.bg == _kPurpleTag;
+    return AppTag(
+      label: spec.label,
+      tone: neutral ? AppTone.neutral : AppTone.warning,
     );
   }
 }
@@ -1333,7 +1191,6 @@ class _Avatar extends StatelessWidget {
           fontSize: ui(size * 0.4),
           fontWeight: AppFont.w500,
           color: _kPurple,
-          fontFamily: 'PingFang SC',
         ),
       ),
     );
@@ -1379,7 +1236,7 @@ void _openStudentDetailDrawer(BuildContext context, _Student data) {
     context: context,
     barrierDismissible: true,
     barrierLabel: '关闭学生档案',
-    barrierColor: Colors.black.withValues(alpha: 0.32),
+    barrierColor: AppColors.ink.withValues(alpha: 0.32),
     transitionDuration: const Duration(milliseconds: 240),
     pageBuilder: (ctx, anim, sec) {
       return Align(
@@ -1451,19 +1308,16 @@ class _StudentDetailDrawerState extends ConsumerState<_StudentDetailDrawer> {
       _subjectIdx = 0;
     });
     if (!res.isSuccess) {
-      AppToast.show(
-        context,
-        res.msg.isNotEmpty ? res.msg : '加载学生详情失败',
-      );
+      AppToast.show(context, res.msg.isNotEmpty ? res.msg : '加载学生详情失败');
     }
   }
 
   /// 接口返回的科目分数序列；无数据时返回空序列。
   _StudentScoreSeries get _scoreSeries => _StudentScoreSeries(
-        subjects: _scoreSubjects,
-        scores: _scoresBySubject,
-        periods: _periodsBySubject,
-      );
+    subjects: _scoreSubjects,
+    scores: _scoresBySubject,
+    periods: _periodsBySubject,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1476,7 +1330,7 @@ class _StudentDetailDrawerState extends ConsumerState<_StudentDetailDrawer> {
         width: ui(600),
         height: double.infinity,
         child: Container(
-          color: Colors.white,
+          color: AppColors.surface,
           child: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1523,8 +1377,10 @@ class _StudentDetailDrawerState extends ConsumerState<_StudentDetailDrawer> {
                                       subjectIdx: idx,
                                       onSubjectChanged: (i) =>
                                           setState(() => _subjectIdx = i),
-                                      values: series.scores[subject] ?? const [],
-                                      periods: series.periods[subject] ?? const [],
+                                      values:
+                                          series.scores[subject] ?? const [],
+                                      periods:
+                                          series.periods[subject] ?? const [],
                                     );
                                   },
                                 ),
@@ -1579,7 +1435,6 @@ class _DrawerTitleBar extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w600,
               height: 1,
             ),
@@ -1600,13 +1455,16 @@ class _ProfileBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final d = detail;
-    final displayName = _nonEmptyStr(d?['realname']) ??
+    final displayName =
+        _nonEmptyStr(d?['realname']) ??
         _nonEmptyStr(d?['nickname']) ??
         data.name;
-    final idLine = _nonEmptyStr(d?['studentNo']) ??
+    final idLine =
+        _nonEmptyStr(d?['studentNo']) ??
         _nonEmptyStr(d?['code']) ??
         data.studentId;
-    final subtitle = _nonEmptyStr(d?['major']) ??
+    final subtitle =
+        _nonEmptyStr(d?['major']) ??
         _nonEmptyStr(d?['introduce']) ??
         (data.direction != '—' ? data.direction : null);
     final head = _resolveHeadUrl(data, d);
@@ -1627,8 +1485,7 @@ class _ProfileBlock extends StatelessWidget {
                     displayName,
                     style: TextStyle(
                       fontSize: ui(16),
-                      color: Colors.black,
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.ink,
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -1639,7 +1496,6 @@ class _ProfileBlock extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -1652,7 +1508,6 @@ class _ProfileBlock extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextSecondary,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -1679,11 +1534,7 @@ class _InfoList extends StatelessWidget {
   }
 
   String _dormLine() {
-    final v = _detailPick(
-      detail,
-      const ['dormitory', 'dorm'],
-      data.dorm,
-    );
+    final v = _detailPick(detail, const ['dormitory', 'dorm'], data.dorm);
     return v.trim().isEmpty ? '—' : v;
   }
 
@@ -1691,8 +1542,7 @@ class _InfoList extends StatelessWidget {
     final d = detail;
     final cn = _nonEmptyStr(d?['className']);
     if (cn != null) {
-      final role =
-          _nonEmptyStr(d?['classRole']) ?? _nonEmptyStr(d?['role']);
+      final role = _nonEmptyStr(d?['classRole']) ?? _nonEmptyStr(d?['role']);
       return role != null ? <String>[cn, role] : <String>[cn];
     }
     if (data.classInfo.isNotEmpty && data.classInfo != '—') {
@@ -1717,16 +1567,12 @@ class _InfoList extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final d = detail;
-    final mobile = _detailPick(
-      d,
-      const ['mobile', 'phone'],
-      data.phone,
-    );
-    final parentPhone = _detailPick(
-      d,
-      const ['parentMobile', 'guardianMobile', 'parentPhone'],
-      data.parentPhone,
-    );
+    final mobile = _detailPick(d, const ['mobile', 'phone'], data.phone);
+    final parentPhone = _detailPick(d, const [
+      'parentMobile',
+      'guardianMobile',
+      'parentPhone',
+    ], data.parentPhone);
     final classTags = _classTags();
     final badges = _badgeTags();
     return Column(
@@ -1770,7 +1616,6 @@ class _InfoRow extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(14),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),
@@ -1783,7 +1628,6 @@ class _InfoRow extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -1824,7 +1668,6 @@ class _InfoTagRow extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(14),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),
@@ -1875,14 +1718,12 @@ class _DrawerTagPill extends StatelessWidget {
           height: 1,
           forceStrutHeight: true,
           leadingDistribution: TextLeadingDistribution.even,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
         ),
         style: TextStyle(
           fontSize: ui(12),
           height: 1.0,
-          color: isAccent ? Colors.white : _kTextSecondary,
-          fontFamily: 'PingFang SC',
+          color: isAccent ? AppColors.surface : _kTextSecondary,
           fontWeight: AppFont.w400,
           leadingDistribution: TextLeadingDistribution.even,
         ),
@@ -1916,7 +1757,6 @@ class _TeacherRemarksBlock extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w600,
               height: 1.2,
             ),
@@ -1927,7 +1767,6 @@ class _TeacherRemarksBlock extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -1958,8 +1797,7 @@ _StudentScoreSeries _parseStudentScoreSeries(dynamic raw) {
   final records = parseAdminStudentExamRecords(raw);
   if (records.isEmpty) return const _StudentScoreSeries();
 
-  final sorted = [...records]
-    ..sort((a, b) => a.examDate.compareTo(b.examDate));
+  final sorted = [...records]..sort((a, b) => a.examDate.compareTo(b.examDate));
 
   final scores = <String, List<double>>{};
   final periods = <String, List<String>>{};
@@ -1972,9 +1810,9 @@ _StudentScoreSeries _parseStudentScoreSeries(dynamic raw) {
       final score = item.score;
       if (subject.isEmpty || score == null) continue;
       scores.putIfAbsent(subject, () => <double>[]).add(score.toDouble());
-      periods.putIfAbsent(subject, () => <String>[]).add(
-            period.isNotEmpty ? period : '考试${scores[subject]!.length}',
-          );
+      periods
+          .putIfAbsent(subject, () => <String>[])
+          .add(period.isNotEmpty ? period : '考试${scores[subject]!.length}');
     }
   }
 
@@ -2010,7 +1848,6 @@ class _ScoreChartEmptyBlock extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w600,
               height: 1.2,
             ),
@@ -2024,7 +1861,6 @@ class _ScoreChartEmptyBlock extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -2079,7 +1915,6 @@ class _ScoreChartBlock extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(16),
                         color: _kTextDark,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w600,
                         height: 1.2,
                       ),
@@ -2090,7 +1925,6 @@ class _ScoreChartBlock extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextSecondary,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.2,
                       ),
@@ -2134,7 +1968,7 @@ class _SubjectToggle extends StatelessWidget {
       height: ui(44),
       padding: EdgeInsets.all(ui(4)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
         border: Border.all(color: _kBorderSoft),
       ),
@@ -2157,8 +1991,7 @@ class _SubjectToggle extends StatelessWidget {
                   subjects[i],
                   style: TextStyle(
                     fontSize: ui(14),
-                    color: i == activeIdx ? Colors.white : _kTextSecondary,
-                    fontFamily: 'PingFang SC',
+                    color: i == activeIdx ? AppColors.surface : _kTextSecondary,
                     fontWeight: AppFont.w500,
                     height: 1,
                   ),
@@ -2203,7 +2036,6 @@ class _ScoreLineChart extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1,
                     ),
@@ -2239,7 +2071,6 @@ class _ScoreLineChart extends StatelessWidget {
                             style: TextStyle(
                               fontSize: ui(12),
                               color: _kTextSecondary,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w400,
                               height: 1,
                             ),
@@ -2311,7 +2142,7 @@ class _ScoreLinePainter extends CustomPainter {
     final innerLeft = size.width * 0.04;
     final innerRight = size.width * 0.96;
     final gridPaint = Paint()
-      ..color = const Color(0xFFE6E9F1)
+      ..color = AppColors.line
       ..strokeWidth = 1;
 
     for (final tick in kYTicks) {
@@ -2364,8 +2195,8 @@ class _ScoreLinePainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            const Color(0xFFE3DFFF),
-            const Color(0xFFE3DFFF).withValues(alpha: 0),
+            AppColors.brandTint,
+            AppColors.brandTint.withValues(alpha: 0),
           ],
         ).createShader(Rect.fromLTWH(0, plotTop, size.width, plotHeight));
       canvas.drawPath(fillPath, fillPaint);
@@ -2383,7 +2214,7 @@ class _ScoreLinePainter extends CustomPainter {
       canvas.drawPath(linePath, linePaint);
     }
 
-    final dotFill = Paint()..color = Colors.white;
+    final dotFill = Paint()..color = AppColors.surface;
     final dotBorder = Paint()
       ..color = _kPurple
       ..strokeWidth = ui(1)
@@ -2403,7 +2234,6 @@ class _ScoreLinePainter extends CustomPainter {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w500,
             height: 1,
           ),
@@ -2443,21 +2273,20 @@ class _ContactParentButton extends StatelessWidget {
             // Figma：270° 渐变（从右到左）；Flutter 用 centerRight→centerLeft。
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+            colors: [AppColors.brandSoft, AppColors.brand],
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.phone_rounded, size: ui(16), color: Colors.white),
+            Icon(Icons.phone_rounded, size: ui(16), color: AppColors.surface),
             SizedBox(width: ui(8)),
             Text(
               '联系家长',
               style: TextStyle(
                 fontSize: ui(14),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
+                color: AppColors.surface,
                 fontWeight: AppFont.w500,
                 height: 1.2,
               ),
@@ -2484,33 +2313,34 @@ void _showParentContactDialog(
   Map<String, dynamic>? detail,
 }) {
   final d = detail;
-  final pickedName = _detailPick(
-    d,
-    const ['guardianName', 'parentName', 'contactName'],
-    '',
-  ).trim();
+  final pickedName = _detailPick(d, const [
+    'guardianName',
+    'parentName',
+    'contactName',
+  ], '').trim();
   final parentName = pickedName.isNotEmpty
       ? pickedName
       : () {
-          final parentSurname =
-              data.name.isEmpty ? '家' : data.name.characters.first;
+          final parentSurname = data.name.isEmpty
+              ? '家'
+              : data.name.characters.first;
           return '$parentSurname家长';
         }();
-  final parentRelation = _detailPick(
-    d,
-    const ['guardianRelation', 'parentRelation', 'relation'],
-    '家长',
-  );
-  final parentPhone = _detailPick(
-    d,
-    const ['parentMobile', 'guardianMobile', 'parentPhone'],
-    data.parentPhone,
-  );
+  final parentRelation = _detailPick(d, const [
+    'guardianRelation',
+    'parentRelation',
+    'relation',
+  ], '家长');
+  final parentPhone = _detailPick(d, const [
+    'parentMobile',
+    'guardianMobile',
+    'parentPhone',
+  ], data.parentPhone);
   // 弹窗使用 root navigator + showScaledDialog，自动堆叠在右抽屉之上，
   // 关闭时不会连带关掉抽屉。
   showScaledDialog<void>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.32),
+    barrierColor: AppColors.ink.withValues(alpha: 0.32),
     builder: (ctx) {
       final ui = DashboardScaleScope.of(ctx).ui;
       return GradientHeaderDialog(
@@ -2537,7 +2367,6 @@ void _showParentContactDialog(
                         style: TextStyle(
                           fontSize: ui(16),
                           color: _kTextDark,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w600,
                           height: 1.2,
                         ),
@@ -2548,7 +2377,6 @@ void _showParentContactDialog(
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kTextHint,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                           height: 1.2,
                         ),
@@ -2596,9 +2424,8 @@ void _showParentContactDialog(
                             Text(
                               parentName,
                               style: TextStyle(
-                                fontSize: ui(15),
+                                fontSize: ui(16),
                                 color: _kTextDark,
-                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w500,
                                 height: 1.2,
                               ),
@@ -2609,7 +2436,6 @@ void _showParentContactDialog(
                               style: TextStyle(
                                 fontSize: ui(12),
                                 color: _kTextHint,
-                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w400,
                                 height: 1.2,
                               ),
@@ -2627,7 +2453,7 @@ void _showParentContactDialog(
                       vertical: ui(10),
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(ui(10)),
                       border: Border.all(color: _kBorderSoft),
                     ),

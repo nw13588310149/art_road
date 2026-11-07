@@ -44,6 +44,7 @@
 //   6. 「查看通知」详情弹窗：用 GradientHeaderDialog，列出全部字段。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -53,7 +54,6 @@ import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/state/shell_controller.dart';
@@ -65,28 +65,27 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kInnerGray = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kHairline = Color(0xFFF3F2F3);
-const Color _kHeaderBg = Color(0xFFF9FAFB);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextMuted = Color(0xFF71717A);
-const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kBlue = Color(0xFF325BFF);
-const Color _kRed = Color(0xFFFF323C);
-const Color _kOrange = Color(0xFFFF6A00);
+const Color _kPageBg = AppColors.page;
+const Color _kInnerGray = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kHairline = AppColors.lineSoft;
+const Color _kHeaderBg = AppColors.surfaceSubtle;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextMuted = AppColors.textSecondary;
+const Color _kTextDivider = AppColors.textTertiary;
+const Color _kPurple = AppColors.brand;
+const Color _kRed = AppColors.danger;
+const Color _kOrange = AppColors.warning;
 
 // 状态徽标颜色
-const Color _kPassedBg = Color(0xFFE4FFED);
-const Color _kPassedFg = Color(0xFF12CE51);
-const Color _kPendingBg = Color(0xFFFFEDD3);
+const Color _kPassedBg = AppColors.successSoft;
+const Color _kPassedFg = AppColors.success;
+const Color _kPendingBg = AppColors.warningSoft;
 const Color _kPendingFg = _kOrange;
-const Color _kRejectedBg = Color(0xFFFFE5E5);
-const Color _kRejectedFg = Color(0xFFE83A3A);
+const Color _kRejectedBg = AppColors.dangerSoft;
+const Color _kRejectedFg = AppColors.danger;
 
 // =============================================================================
 // 数据模型 —— 优先级 / 状态 / 类型
@@ -101,8 +100,8 @@ extension _NPriorityX on _NPriority {
     _NPriority.urgent => '紧急',
   };
   Color get color => switch (this) {
-    _NPriority.normal => _kTextDark,
-    _NPriority.important => _kBlue,
+    _NPriority.normal => AppColors.textSecondary,
+    _NPriority.important => _kOrange,
     _NPriority.urgent => _kRed,
   };
 
@@ -119,10 +118,7 @@ extension _NPriorityX on _NPriority {
 
 /// 优先级信号条（列表 / 表单 / 详情共用，保证尺寸一致）。
 class _PrioritySignalBars extends StatelessWidget {
-  const _PrioritySignalBars({
-    required this.bars,
-    required this.activeColor,
-  });
+  const _PrioritySignalBars({required this.bars, required this.activeColor});
 
   final List<bool> bars;
   final Color activeColor;
@@ -162,7 +158,7 @@ enum _NStatus { published, scheduled, withdrawn }
 
 extension _NStatusX on _NStatus {
   String get label => switch (this) {
-    _NStatus.published => '已通过',
+    _NStatus.published => '已发布',
     _NStatus.scheduled => '定时中',
     _NStatus.withdrawn => '已撤回',
   };
@@ -231,14 +227,14 @@ class _NotificationRecord {
   /// 推送范围展示文案。
   ///
   /// 「全选」（包含全部角色，或显式包含「全校师生」，或为空表示默认全员）
-  /// 统一展示为「全校师生及访客端」；否则按角色顿号拼接。
+  /// 统一展示为「全校师生及访客」；否则按角色顿号拼接。
   String get scopeLabel {
     final roleLabels = kAdminNoticeScopeLabelToApi.keys;
     final isAll =
         scopes.isEmpty ||
         scopes.contains('全校师生') ||
         roleLabels.every(scopes.contains);
-    return isAll ? '全校师生及访客端' : scopes.join('、');
+    return isAll ? '全校师生及访客' : scopes.join('、');
   }
 }
 
@@ -423,7 +419,7 @@ class _AdminNotificationManagementViewState
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭新建通知',
-      barrierColor: Colors.black.withValues(alpha: 0.32),
+      barrierColor: AppColors.ink.withValues(alpha: 0.32),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, anim, sec) => Align(
         alignment: Alignment.centerRight,
@@ -515,7 +511,19 @@ class _AdminNotificationManagementViewState
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
-      header: _Banner(onBack: widget.onBack, onCreate: _openCreateDrawer),
+      header: AppPageHeader(
+        title: '通知管理',
+        subtitle: '发布、定时与撤回校级通知',
+        onBack: widget.onBack,
+        actions: [
+          AppButton(
+            label: '发布通知',
+            icon: Icons.add_rounded,
+            size: AppButtonSize.sm,
+            onTap: _openCreateDrawer,
+          ),
+        ],
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -553,143 +561,6 @@ class _AdminNotificationManagementViewState
 // =============================================================================
 // banner —— 返回 + 标题 + 副标题 + 新建通知按钮
 // =============================================================================
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack, required this.onCreate});
-
-  final VoidCallback onBack;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: const DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft, width: 1),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: const Color(0xFF1C274C),
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(160)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '通知管理',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: ui(2)),
-                  Text(
-                    '按类型维护校级通知，支持定时与即时发布，并配置推送范围（学生 / 教师 / 宿管等）',
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 1.4,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: ui(14),
-            child: _CreateButton(onTap: onCreate),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CreateButton extends StatelessWidget {
-  const _CreateButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: ui(34),
-        padding: EdgeInsets.symmetric(horizontal: ui(10)),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: const Color(0xFFF3F2F3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Image.asset(
-              AppAssets.adminNotificationCreateNoticeIcon,
-              width: ui(18),
-              height: ui(18),
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: ui(4)),
-            Text(
-              '新建通知',
-              style: TextStyle(
-                color: const Color(0xFF0B081A),
-                fontSize: ui(12),
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // =============================================================================
 // 4 张统计卡 —— 已发布 / 定时中 / 已撤回 / 全部
@@ -797,7 +668,7 @@ class _ControlBar extends StatelessWidget {
           width: ui(324),
           height: ui(44),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(12)),
           ),
           padding: EdgeInsets.symmetric(horizontal: ui(16)),
@@ -821,7 +692,6 @@ class _ControlBar extends StatelessWidget {
                     fontSize: ui(14),
                     height: 1.2,
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                   ),
                   decoration: InputDecoration(
                     isCollapsed: true,
@@ -829,8 +699,7 @@ class _ControlBar extends StatelessWidget {
                     hintText: '搜索标题、内容、作者',
                     hintStyle: TextStyle(
                       fontSize: ui(14),
-                      color: const Color(0xFFD1D1D1),
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.textPlaceholder,
                     ),
                   ),
                 ),
@@ -892,7 +761,7 @@ class _NotificationFilterFieldState extends State<_NotificationFilterField> {
         width: widget.width,
         height: ui(44),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft, width: 1),
         ),
@@ -908,7 +777,6 @@ class _NotificationFilterFieldState extends State<_NotificationFilterField> {
                   fontSize: ui(14),
                   height: 1.2,
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                 ),
               ),
             ),
@@ -952,7 +820,7 @@ class _NotificationTable extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(ui(12)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -968,7 +836,6 @@ class _NotificationTable extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.5,
                 ),
@@ -1034,7 +901,6 @@ class _HeaderCell extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(13),
         color: _kTextMuted,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 20 / 13,
       ),
@@ -1086,7 +952,12 @@ class _TableRow extends StatelessWidget {
               child: _TitleCell(title: record.title, author: record.author),
             ),
             const _HeaderGap(),
-            Expanded(child: _TextCell(text: record.type)),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: AppTag(label: record.type),
+              ),
+            ),
             const _HeaderGap(),
             Expanded(child: _PriorityCell(priority: record.priority)),
             const _HeaderGap(),
@@ -1138,7 +1009,6 @@ class _TitleCell extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(13),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w500,
             height: 20 / 13,
           ),
@@ -1148,9 +1018,8 @@ class _TitleCell extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: ui(11),
+            fontSize: ui(12),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 20 / 11,
           ),
@@ -1176,7 +1045,6 @@ class _TextCell extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(13),
         color: _kTextDark,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 20 / 13,
       ),
@@ -1206,7 +1074,6 @@ class _PriorityCell extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: priority.color,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 20 / 13,
             ),
@@ -1224,25 +1091,15 @@ class _StatusCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return Align(
       alignment: Alignment.centerLeft,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-        decoration: BoxDecoration(
-          color: status.bg,
-          borderRadius: BorderRadius.circular(ui(4)),
-        ),
-        child: Text(
-          status.label,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: status.fg,
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w400,
-            height: 15.24 / 12,
-          ),
-        ),
+      child: AppStatusTag(
+        label: status.label,
+        tone: switch (status) {
+          _NStatus.published => AppTone.success,
+          _NStatus.scheduled => AppTone.warning,
+          _NStatus.withdrawn => AppTone.neutral,
+        },
       ),
     );
   }
@@ -1263,52 +1120,30 @@ class _ActionCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     // 已撤回：仅「查看」；已发布：「查看 + 删除」；定时中：「编辑 + 删除」。
-    if (status == _NStatus.withdrawn) {
-      return Row(
-        children: [
-          _actionText(text: '查看', color: _kBlue, onTap: onView, ui: ui),
-        ],
-      );
-    }
-    if (status == _NStatus.published) {
-      return Row(
-        children: [
-          _actionText(text: '查看', color: _kBlue, onTap: onView, ui: ui),
-          SizedBox(width: ui(12)),
-          _actionText(text: '删除', color: _kRed, onTap: onDelete, ui: ui),
-        ],
-      );
-    }
+    Widget action(String label, VoidCallback onTap) => AppButton(
+      label: label,
+      variant: AppButtonVariant.text,
+      size: AppButtonSize.sm,
+      onTap: onTap,
+    );
+    final delete = AppButton(
+      label: '删除',
+      variant: AppButtonVariant.danger,
+      size: AppButtonSize.sm,
+      onTap: onDelete,
+    );
     return Row(
       children: [
-        _actionText(text: '编辑', color: _kPurple, onTap: onEdit, ui: ui),
-        SizedBox(width: ui(12)),
-        _actionText(text: '删除', color: _kRed, onTap: onDelete, ui: ui),
+        if (status == _NStatus.scheduled)
+          action('编辑', onEdit)
+        else
+          action('查看', onView),
+        if (status != _NStatus.withdrawn) ...[
+          const SizedBox(width: AppSpace.s4),
+          delete,
+        ],
       ],
-    );
-  }
-
-  Widget _actionText({
-    required String text,
-    required Color color,
-    required VoidCallback onTap,
-    required double Function(num) ui,
-  }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: ui(13),
-          color: color,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 20 / 13,
-        ),
-      ),
     );
   }
 }
@@ -1332,9 +1167,8 @@ class _NotificationDetailBody extends StatelessWidget {
         Text(
           record.title,
           style: TextStyle(
-            fontSize: ui(15),
+            fontSize: ui(16),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w600,
             height: 1.5,
           ),
@@ -1353,7 +1187,6 @@ class _NotificationDetailBody extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: record.status.fg,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -1365,7 +1198,6 @@ class _NotificationDetailBody extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextSecondary,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),
@@ -1383,7 +1215,6 @@ class _NotificationDetailBody extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(13),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.4,
           ),
@@ -1401,7 +1232,6 @@ class _NotificationDetailBody extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 22 / 13,
             ),
@@ -1436,7 +1266,6 @@ class _DetailPriorityRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(13),
                 color: _kTextSecondary,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 20 / 13,
               ),
@@ -1457,7 +1286,6 @@ class _DetailPriorityRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: priority.color,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 20 / 13,
                   ),
@@ -1502,7 +1330,6 @@ class _DetailRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(13),
                 color: _kTextSecondary,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 20 / 13,
               ),
@@ -1514,7 +1341,6 @@ class _DetailRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(13),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 20 / 13,
               ),
@@ -1718,7 +1544,7 @@ class _NotificationFormDrawerState extends State<_NotificationFormDrawer> {
         width: ui(600),
         height: double.infinity,
         child: Container(
-          color: Colors.white,
+          color: AppColors.surface,
           child: Column(
             children: [
               _DrawerHeader(
@@ -1856,7 +1682,6 @@ class _DrawerHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w600,
               height: 1.2,
             ),
@@ -1899,7 +1724,6 @@ class _SectionLabel extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kRed,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -1910,7 +1734,6 @@ class _SectionLabel extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(14),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w500,
             height: 20 / 14,
           ),
@@ -1939,7 +1762,7 @@ class _TextField extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: ui(14), vertical: ui(10)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(10)),
         border: Border.all(color: _kInnerGray, width: 1),
       ),
@@ -1953,7 +1776,6 @@ class _TextField extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(14),
           color: _kTextDark,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 22 / 14,
         ),
@@ -1965,7 +1787,6 @@ class _TextField extends StatelessWidget {
           hintStyle: TextStyle(
             fontSize: ui(14),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 22 / 14,
           ),
@@ -2014,7 +1835,6 @@ class _PrioritySegment extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(13),
                         color: value == p ? p.color : _kTextSecondary,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w500,
                         height: 20 / 13,
                       ),
@@ -2079,7 +1899,6 @@ class _ScopeChips extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(13),
                       color: selected.contains(s) ? _kPurple : _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: selected.contains(s)
                           ? AppFont.w600
                           : AppFont.w400,
@@ -2129,7 +1948,6 @@ class _PublishModeSegment extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: value == m ? _kPurple : _kTextSecondary,
-                    fontFamily: 'PingFang SC',
                     fontWeight: value == m ? AppFont.w600 : AppFont.w400,
                     height: 1.2,
                   ),
@@ -2161,7 +1979,7 @@ class _ScheduledPickerField extends StatelessWidget {
         height: ui(48),
         padding: EdgeInsets.symmetric(horizontal: ui(14)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(10)),
           border: Border.all(color: _kInnerGray, width: 1),
         ),
@@ -2175,7 +1993,6 @@ class _ScheduledPickerField extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: hasValue ? _kTextDark : _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 22 / 14,
                 ),
@@ -2208,7 +2025,7 @@ class _PrimaryButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
+            colors: <Color>[AppColors.brandSoft, AppColors.brand],
           ),
           borderRadius: BorderRadius.circular(ui(12)),
         ),
@@ -2217,9 +2034,8 @@ class _PrimaryButton extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: ui(15),
-              color: Colors.white,
-              fontFamily: 'PingFang SC',
+              fontSize: ui(16),
+              color: AppColors.surface,
               fontWeight: AppFont.w500,
               height: 1,
             ),
@@ -2246,7 +2062,7 @@ class _SecondaryButton extends StatelessWidget {
         height: ui(48),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft, width: 1),
         ),
@@ -2255,9 +2071,8 @@ class _SecondaryButton extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: ui(15),
+              fontSize: ui(16),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1,
             ),

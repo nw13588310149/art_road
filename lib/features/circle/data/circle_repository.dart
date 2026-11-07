@@ -164,4 +164,81 @@ class CircleRepository {
       data: <String, dynamic>{'postsId': postsId},
     );
   }
+
+  /// 举报动态 `POST /app/school/v2/posts/postsReport`。
+  ///
+  /// ```json
+  /// { "postsId": "1", "reason": "广告营销", "remark": "选填" }
+  /// ```
+  Future<ApiResponse> postsReport({
+    required String postsId,
+    required String reason,
+    String remark = '',
+  }) {
+    return client.post(
+      '$_base/postsReport',
+      data: <String, dynamic>{
+        'postsId': postsId,
+        'reason': reason,
+        'remark': remark,
+      },
+    );
+  }
+
+  static const _managerBase = '/app/school/v2/manager';
+
+  /// 校圈举报列表（管理员）`POST /app/school/v2/manager/postsReportList`。
+  ///
+  /// [status]：0-待处理 / 1-已处理；`null` 为全部。同一条动态的多次举报合并为一条。
+  Future<ApiResponse> postsReportList({
+    int? status,
+    int current = 1,
+    int size = 50,
+  }) {
+    return client.post(
+      '$_managerBase/postsReportList',
+      data: <String, dynamic>{
+        'current': current,
+        'size': size,
+        'status': ?status,
+      },
+    );
+  }
+
+  /// 处理举报（管理员）`POST /app/school/v2/manager/postsReportHandle`。
+  ///
+  /// [result]：1-保留（举报不成立）/ 2-删除动态（[reason] 必填）。
+  Future<ApiResponse> postsReportHandle({
+    required String id,
+    required int result,
+    String reason = '',
+    String remark = '',
+  }) {
+    return client.post(
+      '$_managerBase/postsReportHandle',
+      data: <String, dynamic>{
+        'id': id,
+        'result': result,
+        'reason': reason,
+        'remark': remark,
+      },
+    );
+  }
+
+  /// 管理员删除任意动态 `POST /app/school/v2/manager/postsDelete`：
+  /// [reason] 必填，删除记录进入「已处理」。
+  Future<ApiResponse> managerPostsDelete({
+    required String postsId,
+    required String reason,
+    String remark = '',
+  }) {
+    return client.post(
+      '$_managerBase/postsDelete',
+      data: <String, dynamic>{
+        'id': postsId,
+        'reason': reason,
+        'remark': remark,
+      },
+    );
+  }
 }

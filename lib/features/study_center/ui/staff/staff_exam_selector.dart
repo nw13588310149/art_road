@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/art/art_tokens.dart';
-import '../../../../core/theme/app_font.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
-import '../widgets/study_common.dart';
 
-/// 考试选择条（新 → 旧），阅卷中的考试不可选。
+/// 考试选择：最近 3 场直接点选，其余收进「更多考试」下拉；阅卷中的考试不可选。
 class StaffExamSelector extends StatelessWidget {
   const StaffExamSelector({
     required this.exams,
@@ -15,27 +13,54 @@ class StaffExamSelector extends StatelessWidget {
     super.key,
   });
 
+  /// 新 → 旧。
   final List<TeacherExam> exams;
   final String selectedId;
   final ValueChanged<String> onSelected;
 
+  static const _inlineCount = 3;
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 58,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: exams.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final exam = exams[index];
-          return _ExamChip(
+    final inline = exams.take(_inlineCount).toList();
+    final rest = exams.skip(_inlineCount).toList();
+    final restSelected = rest.any((exam) => exam.examId == selectedId);
+    return Wrap(
+      spacing: AppSpace.s8,
+      runSpacing: AppSpace.s8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final exam in inline)
+          _ExamChip(
             exam: exam,
             selected: exam.examId == selectedId,
-            onTap: exam.isPublished ? () => onSelected(exam.examId) : null,
-          );
-        },
-      ),
+            onTap: exam.isPublished
+                ? () => onSelected(exam.examId)
+                : () => AppToast.showInfo(
+                    context,
+                    '${exam.examName}阅卷中，出分后可查看班级学情',
+                  ),
+          ),
+        if (rest.isNotEmpty)
+          SizedBox(
+            width: 184,
+            child: AppSelect<String>(
+              options: [
+                for (final exam in rest)
+                  AppSelectOption<String>(
+                    value: exam.examId,
+                    label: exam.isPublished
+                        ? exam.examName
+                        : '${exam.examName}（阅卷中）',
+                    enabled: exam.isPublished,
+                  ),
+              ],
+              value: restSelected ? selectedId : null,
+              hint: '更多考试（${rest.length} 场）',
+              onChanged: onSelected,
+            ),
+          ),
+      ],
     );
   }
 }
@@ -49,60 +74,49 @@ class _ExamChip extends StatelessWidget {
 
   final TeacherExam exam;
   final bool selected;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    final titleColor = selected
-        ? Colors.white
-        : (enabled ? ArtColors.ink : ArtColors.ink3);
-    final detail = enabled
-        ? '${studyDateText(exam.examTime)} · ${exam.participantCount} 人'
-        : '${studyDateText(exam.examTime)} · 出分后可查看';
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    final published = exam.isPublished;
+    return AppPressable(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      selected: selected,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 132),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s12,
+          vertical: AppSpace.s8,
+        ),
         decoration: BoxDecoration(
-          gradient: selected ? ArtColors.brandGradient : null,
-          color: selected ? null : ArtColors.subtle,
-          borderRadius: BorderRadius.circular(12),
-          border: selected ? null : Border.all(color: ArtColors.line),
+          color: selected ? AppColors.brandWash : AppColors.surface,
+          borderRadius: AppRadius.br8,
+          border: Border.all(
+            color: selected ? AppColors.brand : AppColors.line,
+          ),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  exam.examName,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.25,
-                    color: titleColor,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: selected ? AppFont.w600 : AppFont.w500,
-                  ),
-                ),
-                if (!enabled) ...[
-                  const SizedBox(width: 6),
-                  const StudyChip(label: '阅卷中', color: ArtColors.warn),
-                ],
-              ],
-            ),
-            const SizedBox(height: 3),
             Text(
-              detail,
-              style: ArtText.caption(
-                size: 11,
-                color: selected ? Colors.white70 : ArtColors.ink3,
+              exam.examName,
+              maxLines: 1,
+              style: AppText.body14Strong.copyWith(
+                color: selected
+                    ? AppColors.brandDeep
+                    : (published ? AppColors.ink : AppColors.textSecondary),
               ),
             ),
+            const SizedBox(height: 2),
+            if (published)
+              Text(
+                '${studyDateText(exam.examTime)} · ${exam.participantCount} 人参考',
+                maxLines: 1,
+                style: AppText.caption12,
+              )
+            else
+              const AppStatusTag(label: '阅卷中', tone: AppTone.warning),
           ],
         ),
       ),

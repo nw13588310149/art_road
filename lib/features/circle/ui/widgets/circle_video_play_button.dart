@@ -16,11 +16,7 @@ class CircleVideoPlayButton extends StatelessWidget {
         color: Colors.black.withValues(alpha: 0.55),
         shape: BoxShape.circle,
       ),
-      child: Icon(
-        Icons.play_arrow_rounded,
-        color: Colors.white,
-        size: ui(28),
-      ),
+      child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: ui(28)),
     );
   }
 }

@@ -1,48 +1,76 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/demo/demo_accounts.dart';
 import '../../../core/demo/demo_config.dart';
-import '../../../core/theme/app_font.dart';
-import '../../../core/ui/app_button.dart';
-import '../../../core/ui/app_spacing.dart';
-import '../../../core/widgets/scaled_dialog.dart';
-import '../../shell/ui/shell_layout.dart';
+import '../../../core/providers/app_providers.dart';
+import '../../../core/ui/ui.dart';
+import '../../shell/state/shell_controller.dart';
+import '../data/role_guide_store.dart';
 import '../state/help_guide_controller.dart';
 import '../state/help_guide_state.dart';
+import 'role_guide_dialog.dart';
 
-const _textPrimary = Color(0xFF0B081A);
-const _textSecondary = Color(0xFF8E8D95);
-const _softBorder = Color(0xFFF3F2F3);
+class HelpGuidePage extends ConsumerStatefulWidget {
+  const HelpGuidePage({super.key, this.demoMode = kDemoMode});
 
-class HelpGuidePage extends ConsumerWidget {
-  const HelpGuidePage({super.key});
+  /// 演示版在页头下方提供「跳过 / 恢复新手引导」（演示与截图走查用）。
+  final bool demoMode;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(helpGuideControllerProvider);
-    final controller = ref.read(helpGuideControllerProvider.notifier);
-    final ui = DashboardScaleScope.of(context).ui;
+  ConsumerState<HelpGuidePage> createState() => _HelpGuidePageState();
+}
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _GuideHeader(onBack: () => _backToHome(context)),
-        SizedBox(height: ui(14)),
-        _CategoryBar(
-          categories: state.categories,
-          selectedCategoryId: state.selectedCategoryId,
-          onSelected: controller.selectCategory,
-        ),
-        SizedBox(height: ui(12)),
-        Expanded(child: _GuideGrid(items: state.visibleItems)),
-      ],
+class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
+  static const _guideStore = RoleGuideStore();
+
+  final _search = TextEditingController();
+  String _query = '';
+
+  /// 全部身份是否都已看过新手引导；读取完成前为 null。
+  bool? _guidesSkipped;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.demoMode) {
+      _guideStore.allSeen().then((value) {
+        if (mounted) setState(() => _guidesSkipped = value);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// 当前身份：`/myInfo` 回包前按登录 token 还原（演示账号）。
+  String _currentRole() {
+    final role = ref.read(shellControllerProvider).user.role.trim();
+    if (role.isNotEmpty) return role;
+    return DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
+  }
+
+  Future<void> _toggleGuides() async {
+    final skipped = _guidesSkipped ?? false;
+    if (skipped) {
+      await _guideStore.resetAll();
+      RoleGuideLauncher.forgetSession();
+    } else {
+      await _guideStore.markAllSeen();
+    }
+    if (!mounted) return;
+    setState(() => _guidesSkipped = !skipped);
+    AppToast.showSuccess(
+      context,
+      skipped ? '已恢复，下次进入首页会显示新手引导' : '已跳过各身份的新手引导',
     );
   }
 
-  void _backToHome(BuildContext context) {
+  void _back() {
     final navigator = Navigator.of(context);
     if (navigator.canPop()) {
       navigator.pop();
@@ -50,82 +78,58 @@ class HelpGuidePage extends ConsumerWidget {
     }
     navigator.pushReplacementNamed(RoutePaths.home);
   }
-}
 
-class _GuideHeader extends StatelessWidget {
-  const _GuideHeader({required this.onBack});
+  void _clearSearch() {
+    _search.clear();
+    setState(() => _query = '');
+  }
 
-  final VoidCallback onBack;
+  bool _matches(HelpGuideItem item) {
+    final q = _query.trim();
+    if (q.isEmpty) {
+      return true;
+    }
+    return item.title.contains(q) ||
+        item.summary.contains(q) ||
+        item.steps.any((step) => step.contains(q));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return ShellPageSurface(
-      height: ui(54),
-      borderRadius: BorderRadius.circular(ui(14)),
-      gradient: const LinearGradient(
-        colors: <Color>[Color(0xFFFFFFFF), Color(0xFFFFF9FF)],
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            left: ui(12),
-            child: Material(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: InkWell(
-                onTap: onBack,
-                borderRadius: BorderRadius.circular(ui(8)),
-                child: Container(
-                  width: ui(28),
-                  height: ui(28),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(ui(8)),
-                    border: Border.all(color: _softBorder),
-                  ),
-                  child: Icon(
-                    Icons.chevron_left_rounded,
-                    size: ui(20),
-                    color: _textPrimary,
-                  ),
-                ),
+    final state = ref.watch(helpGuideControllerProvider);
+    final controller = ref.read(helpGuideControllerProvider.notifier);
+    final items = state.visibleItems.where(_matches).toList(growable: false);
+
+    int countOf(String categoryId) => categoryId == HelpGuideState.allCategoryId
+        ? state.items.length
+        : state.items.where((item) => item.categoryId == categoryId).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: '操作指南',
+          subtitle: '各功能的操作说明',
+          onBack: _back,
+          actions: [
+            SizedBox(
+              width: 220,
+              child: AppSearchField(
+                controller: _search,
+                hint: '搜索指南',
+                onChanged: (value) => setState(() => _query = value),
+                onCleared: _clearSearch,
               ),
             ),
-          ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '操作指南',
-                style: TextStyle(
-                  color: _textPrimary,
-                  fontFamily: 'PingFang SC',
-                  fontSize: ui(16),
-                  height: 1.1,
-                  fontWeight: AppFont.w600,
-                ),
-              ),
-              SizedBox(height: ui(3)),
-              Text(
-                '美术之路APP操作指南',
-                style: TextStyle(
-                  color: const Color(0xFFC2C1C5),
-                  fontFamily: 'PingFang SC',
-                  fontSize: ui(10),
-                  height: 1.1,
-                  fontWeight: AppFont.w400,
-                ),
-              ),
-            ],
-          ),
-          if (kDemoMode)
-            Positioned(
-              right: ui(12),
-              child: AppButton(
+            AppButton(
+              label: '新手引导',
+              icon: Icons.explore_outlined,
+              variant: AppButtonVariant.quiet,
+              size: AppButtonSize.sm,
+              onTap: () => showRoleGuide(context, role: _currentRole()),
+            ),
+            if (widget.demoMode)
+              AppButton(
                 label: '组件库（演示）',
                 icon: Icons.widgets_outlined,
                 variant: AppButtonVariant.quiet,
@@ -133,72 +137,55 @@ class _GuideHeader extends StatelessWidget {
                 onTap: () =>
                     Navigator.of(context).pushNamed(RoutePaths.designSystem),
               ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryBar extends StatelessWidget {
-  const _CategoryBar({
-    required this.categories,
-    required this.selectedCategoryId,
-    required this.onSelected,
-  });
-
-  final List<HelpGuideCategory> categories;
-  final String selectedCategoryId;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(38),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(7)),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: categories
-              .map((category) {
-                final selected = category.id == selectedCategoryId;
-                return Padding(
-                  padding: EdgeInsets.only(left: ui(3)),
-                  child: Material(
-                    color: selected ? _textPrimary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(ui(6)),
-                    child: InkWell(
-                      onTap: () => onSelected(category.id),
-                      borderRadius: BorderRadius.circular(ui(6)),
-                      child: Container(
-                        height: ui(32),
-                        padding: EdgeInsets.symmetric(horizontal: ui(14)),
-                        alignment: Alignment.center,
-                        child: Text(
-                          category.label,
-                          maxLines: 1,
-                          style: TextStyle(
-                            color: selected
-                                ? Colors.white
-                                : const Color(0xFF57545F),
-                            fontFamily: 'PingFang SC',
-                            fontSize: ui(12),
-                            height: 1,
-                            fontWeight: selected ? AppFont.w500 : AppFont.w400,
-                          ),
-                        ),
-                      ),
-                    ),
+          ],
+          bottom: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: AppTabs<String>(
+              tabs: [
+                for (final category in state.categories)
+                  AppTab(
+                    value: category.id,
+                    label: category.label,
+                    count: countOf(category.id),
                   ),
-                );
-              })
-              .toList(growable: false),
+              ],
+              value: state.selectedCategoryId,
+              onChanged: controller.selectCategory,
+            ),
+          ),
         ),
-      ),
+        if (widget.demoMode)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s4,
+              AppSpace.page,
+              AppSpace.s12,
+            ),
+            child: AppNotice(
+              message: _guidesSkipped == true
+                  ? '演示版：新手引导已跳过，各身份进入首页时不再弹出。'
+                  : '演示版：各身份第一次进入首页时会弹出新手引导。',
+              action: AppButton(
+                label: _guidesSkipped == true ? '恢复新手引导' : '跳过新手引导',
+                variant: AppButtonVariant.text,
+                size: AppButtonSize.sm,
+                onTap: _guidesSkipped == null ? null : _toggleGuides,
+              ),
+            ),
+          ),
+        Expanded(
+          child: items.isEmpty
+              ? AppEmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: '没有找到相关指南',
+                  description: '换个关键词试试，或切换到「全部」分类',
+                  actionLabel: '清除搜索',
+                  onAction: _clearSearch,
+                )
+              : _GuideGrid(items: items),
+        ),
+      ],
     );
   }
 }
@@ -210,28 +197,60 @@ class _GuideGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= ui(760)
-            ? 3
-            : constraints.maxWidth >= ui(500)
-            ? 2
-            : 1;
-        return GridView.builder(
-          padding: EdgeInsets.only(bottom: ui(16)),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            crossAxisSpacing: ui(10),
-            mainAxisSpacing: ui(12),
-            mainAxisExtent: ui(204),
+        final width = constraints.maxWidth - AppSpace.page * 2;
+        final columns = width >= 760 ? 3 : (width >= 500 ? 2 : 1);
+        final rows = <List<HelpGuideItem>>[
+          for (var i = 0; i < items.length; i += columns)
+            items.sublist(i, (i + columns).clamp(0, items.length)),
+        ];
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.page,
+            AppSpace.s4,
+            AppSpace.page,
+            AppSpace.s24,
           ),
-          itemCount: items.length,
-          itemBuilder: (context, index) => _GuideCard(item: items[index]),
+          itemCount: rows.length,
+          separatorBuilder: (_, _) => const SizedBox(height: AppSpace.s16),
+          itemBuilder: (context, index) {
+            final row = rows[index];
+            return IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < columns; i++) ...[
+                    if (i > 0) const SizedBox(width: AppSpace.s16),
+                    Expanded(
+                      child: i < row.length
+                          ? _GuideCard(item: row[i])
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
         );
       },
     );
   }
+}
+
+IconData _iconOf(String categoryId) {
+  return switch (categoryId) {
+    'start' => Icons.rocket_launch_outlined,
+    'study' => Icons.insights_outlined,
+    'artworks' => Icons.photo_library_outlined,
+    'gallery' => Icons.collections_outlined,
+    'toolbox' => Icons.handyman_outlined,
+    'video' => Icons.play_circle_outline_rounded,
+    'campus' => Icons.apartment_outlined,
+    'ai' => Icons.chat_bubble_outline_rounded,
+    'notes' => Icons.edit_note_rounded,
+    _ => Icons.help_outline_rounded,
+  };
 }
 
 class _GuideCard extends StatelessWidget {
@@ -241,76 +260,91 @@ class _GuideCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(ui(12)),
-        onTap: () => _showGuideDetail(context, item),
-        child: Padding(
-          padding: EdgeInsets.all(ui(10)),
-          child: _buildContent(ui),
-        ),
+    return AppCard(
+      onTap: () => _showGuideDetail(context, item),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: AppColors.surfaceSubtle,
+                  borderRadius: AppRadius.br8,
+                ),
+                child: Icon(
+                  _iconOf(item.categoryId),
+                  size: 22,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(width: AppSpace.s12),
+              Expanded(
+                child: Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.title16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpace.s8),
+          Text(
+            item.summary,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.body13,
+          ),
+          const Spacer(),
+          const SizedBox(height: AppSpace.s12),
+          Row(
+            children: [
+              AppTag(label: item.subtitle),
+              const SizedBox(width: AppSpace.s8),
+              Text('${item.steps.length} 个步骤', style: AppText.caption12),
+              const Spacer(),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppColors.textPlaceholder,
+              ),
+            ],
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildContent(double Function(num) ui) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          item.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: _textPrimary,
-            fontFamily: 'PingFang SC',
-            fontSize: ui(13),
-            height: 1.2,
-            fontWeight: AppFont.w500,
-          ),
-        ),
-        SizedBox(height: ui(4)),
-        Text(
-          item.subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: _textSecondary,
-            fontFamily: 'PingFang SC',
-            fontSize: ui(10),
-            height: 1.1,
-            fontWeight: AppFont.w400,
-          ),
-        ),
-        SizedBox(height: ui(8)),
-        Expanded(child: _GuideCover(subject: item.title)),
-      ],
     );
   }
 }
 
 Future<void> _showGuideDetail(BuildContext context, HelpGuideItem item) {
   final route = item.route;
-  return showScaledDialog<void>(
+  return showAppDialog<void>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.6),
-    builder: (dialogContext) => GradientHeaderDialog(
+    builder: (dialogContext) => AppDialog(
       title: item.title,
-      width: 460,
-      actionBar: AppDialogActionBar(
-        cancelLabel: '关闭',
-        confirmLabel: route == null ? '我知道了' : '去看看',
-        onCancel: () => Navigator.of(dialogContext).pop(),
-        onConfirm: () {
-          Navigator.of(dialogContext).pop();
-          if (route != null && context.mounted) {
-            Navigator.of(context).pushNamed(route);
-          }
-        },
-      ),
+      message: item.summary,
+      width: AppSize.dialogWide,
+      actions: [
+        AppButton(
+          label: '关闭',
+          variant: AppButtonVariant.secondary,
+          onTap: () => Navigator.of(dialogContext).pop(),
+        ),
+        if (route != null)
+          AppButton(
+            label: '去看看',
+            onTap: () {
+              Navigator.of(dialogContext).pop();
+              if (context.mounted) {
+                Navigator.of(context).pushNamed(route);
+              }
+            },
+          ),
+      ],
       child: _GuideDetailBody(item: item),
     ),
   );
@@ -323,260 +357,50 @@ class _GuideDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final bodyStyle = TextStyle(
-      color: _textPrimary,
-      fontFamily: 'PingFang SC',
-      fontSize: ui(14),
-      height: 1.6,
-      fontWeight: AppFont.w400,
-    );
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          item.summary,
-          style: bodyStyle.copyWith(color: const Color(0xFF6D6B75)),
-        ),
-        SizedBox(height: ui(14)),
         for (var i = 0; i < item.steps.length; i++)
           Padding(
-            padding: EdgeInsets.only(bottom: ui(10)),
+            padding: const EdgeInsets.only(bottom: AppSpace.s12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: ui(20),
-                  height: ui(20),
-                  margin: EdgeInsets.only(top: ui(2), right: ui(10)),
+                  width: 22,
+                  height: 22,
+                  margin: const EdgeInsets.only(right: AppSpace.s12),
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF715EFE),
+                    color: AppColors.brandWash,
                     shape: BoxShape.circle,
                   ),
                   child: Text(
                     '${i + 1}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Barlow',
-                      fontSize: ui(12),
-                      height: 1,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppText.number(size: 12, color: AppColors.brandDeep),
                   ),
                 ),
-                Expanded(child: Text(item.steps[i], style: bodyStyle)),
+                Expanded(child: Text(item.steps[i], style: AppText.body14)),
               ],
             ),
           ),
         if (item.tip.isNotEmpty)
           Container(
-            width: double.infinity,
-            margin: EdgeInsets.only(top: ui(4)),
-            padding: EdgeInsets.symmetric(
-              horizontal: ui(12),
-              vertical: ui(10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpace.s12,
+              vertical: AppSpace.s8,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFFF4F4FF),
-              borderRadius: BorderRadius.circular(ui(10)),
+              color: AppTone.info.background,
+              borderRadius: AppRadius.br8,
             ),
             child: Text(
               item.tip,
-              style: bodyStyle.copyWith(
-                color: const Color(0xFF715EFE),
-                fontSize: ui(13),
-              ),
+              style: AppText.body13.copyWith(color: AppTone.info.foreground),
             ),
           ),
       ],
     );
   }
-}
-
-class _GuideCover extends StatelessWidget {
-  const _GuideCover({required this.subject});
-
-  final String subject;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ui(10)),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: <Color>[
-                  Color(0xFFF5F1FF),
-                  Color(0xFF8A77FF),
-                  Color(0xFF6847F4),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: <double>[0, 0.48, 1],
-              ),
-            ),
-          ),
-          CustomPaint(painter: _GuideWavePainter()),
-          Positioned(
-            top: ui(8),
-            left: ui(9),
-            child: Row(
-              children: [
-                Container(
-                  width: ui(20),
-                  height: ui(20),
-                  padding: EdgeInsets.all(ui(3)),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8C58FF),
-                    borderRadius: BorderRadius.circular(ui(5)),
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome_rounded,
-                    size: ui(13),
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(width: ui(3)),
-                Container(
-                  height: ui(16),
-                  padding: EdgeInsets.symmetric(horizontal: ui(4)),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.88),
-                    borderRadius: BorderRadius.circular(ui(4)),
-                  ),
-                  child: Text(
-                    '2.0',
-                    style: TextStyle(
-                      color: const Color(0xFF6B41E8),
-                      fontFamily: 'Manrope',
-                      fontSize: ui(8),
-                      height: 1,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Align(
-            alignment: const Alignment(0, -0.05),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '美术之路 功能指南',
-                  style: TextStyle(
-                    color: const Color(0xFF7540FF),
-                    fontFamily: 'PingFang SC',
-                    fontSize: ui(22),
-                    height: 1.05,
-                    fontWeight: AppFont.w600,
-                    shadows: const <Shadow>[
-                      Shadow(color: Colors.white, blurRadius: 6),
-                    ],
-                  ),
-                ),
-                SizedBox(height: ui(5)),
-                Container(
-                  constraints: BoxConstraints(maxWidth: ui(190)),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ui(14),
-                    vertical: ui(4),
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4E20D3),
-                    borderRadius: BorderRadius.circular(ui(18)),
-                  ),
-                  child: Text(
-                    subject,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'PingFang SC',
-                      fontSize: ui(14),
-                      height: 1,
-                      fontWeight: AppFont.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: ui(8),
-            child: Text(
-              '学美术就用美术之路 APP',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.82),
-                fontFamily: 'PingFang SC',
-                fontSize: ui(6),
-                height: 1,
-                fontWeight: AppFont.w400,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GuideWavePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final glow = Paint()
-      ..shader = const LinearGradient(
-        colors: <Color>[
-          Color(0x00FFFFFF),
-          Color(0xA8FFFFFF),
-          Color(0x00FFFFFF),
-        ],
-      ).createShader(Offset.zero & size)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final purple = Paint()
-      ..color = const Color(0x4D4423D4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.7;
-
-    for (var i = 0; i < 24; i++) {
-      final y = size.height * (0.13 + i * 0.034);
-      final amplitude = 4.0 + i * 0.45;
-      final path = Path()..moveTo(-8, y);
-      for (double x = -8; x <= size.width + 8; x += 4) {
-        final wave = math.sin((x / size.width * math.pi * 3.2) + i * 0.22);
-        path.lineTo(x, y + wave * amplitude);
-      }
-      canvas.drawPath(path, i.isEven ? glow : purple);
-    }
-
-    final flare = Paint()
-      ..shader =
-          RadialGradient(
-            colors: <Color>[
-              Colors.white.withValues(alpha: 0.78),
-              Colors.white.withValues(alpha: 0),
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.52, size.height * 0.08),
-              radius: size.width * 0.52,
-            ),
-          );
-    canvas.drawRect(Offset.zero & size, flare);
-  }
-
-  @override
-  bool shouldRepaint(covariant _GuideWavePainter oldDelegate) => false;
 }

@@ -1,16 +1,19 @@
 import 'package:flutter/foundation.dart';
 
+/// 会员套餐。正式价格未定，界面不展示金额，开通方式与价格以正式页面为准。
 @immutable
 class VipPackageRow {
   const VipPackageRow({
     required this.name,
     required this.description,
-    required this.price,
+    this.days,
+    this.benefits = const <String>[],
   });
 
   final String name;
   final String description;
-  final String price;
+  final int? days;
+  final List<String> benefits;
 }
 
 @immutable

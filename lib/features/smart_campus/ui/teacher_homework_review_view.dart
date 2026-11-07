@@ -21,7 +21,7 @@
 //        显示截止时间 / 班级 / 科目 tag / 标题。点击切换 active。
 //      · 右 615 白卡：当前作业详情：
 //          - 标题 + 截止时间（spaceBetween）
-//          - 灰底卡：【建议提交：音频】+ 描述说明 12/24 行高
+//          - 灰底卡：建议提交（AppTag）+ 描述说明
 //          - 4 项数据指示（126×32 灰底胶囊：标签 + 数字 + 28×28 紫色渐变图标）
 //          - 学生表格：表头 + N 行（32×32 头像 + 姓名 + 状态 tag + 科目 + 介质
 //            + 上传时间 + 80×40 黑底操作按钮）
@@ -43,16 +43,15 @@
 // 字体：PingFang SC（10/11/12/13/14/16/600）+ Barlow（28 数值 + 16 分母）
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/network/api_response.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/network/upload_result.dart';
@@ -63,10 +62,10 @@ import 'widgets/homework_asset_icon.dart';
 import 'widgets/homework_voice_comment.dart';
 import 'student_homework_submission_preview.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../school/data/school_repository.dart';
+import '../data/campus_format.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import '../data/teacher_repository.dart';
@@ -93,18 +92,9 @@ String _formatYmdHms(DateTime d) {
       '${d.second.toString().padLeft(2, '0')}';
 }
 
-/// 格式：`17:11:00`（作业详情学生提交时间列）
-String _formatHms(DateTime d) {
-  return '${d.hour.toString().padLeft(2, '0')}:'
-      '${d.minute.toString().padLeft(2, '0')}:'
-      '${d.second.toString().padLeft(2, '0')}';
-}
-
 /// `expectedExt` → 展示用中文。
 String _expectedExtDisplay(String raw) {
   switch (raw.trim().toLowerCase()) {
-    case 'audio':
-      return '音频';
     case 'video':
       return '视频';
     case 'doc':
@@ -226,27 +216,21 @@ Map<dynamic, dynamic> _flattenHomeworkPayload(Map<dynamic, dynamic> m) {
 }
 
 // ---- 配色 -------------------------------------------------------------------
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardBg = Colors.white;
-const Color _kPageGrey = Color(0xFFF5F6FA);
-const Color _kPickGrey = Color(0xFFF4F4FF);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextBlack = Color(0xFF1A1A1A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextMuted = Color(0xFF71717A);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleEnd = Color(0xFF9585FF);
-const Color _kPurpleStart = Color(0xFF715EFE);
-const Color _kRecordRed = Color(0xFFFF323C);
-const Color _kRecordRedLight = Color(0xFFFF7A7A);
-const Color _kOrange = Color(0xFFFF6A00);
-const Color _kOrangeBg = Color(0xFFFFEDD3);
-const Color _kGreen = Color(0xFF12CE51);
-const Color _kGreenBg = Color(0xFFE4FFED);
-const Color _kSubjectBg = Colors.white;
-const Color _kPillIconColor = Color(0xFF1C274C);
+const Color _kPageBg = AppColors.page;
+const Color _kCardBg = AppColors.surface;
+const Color _kPageGrey = AppColors.surfaceSubtle;
+const Color _kPickGrey = AppColors.brandWash;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextBlack = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextMuted = AppColors.textSecondary;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleEnd = AppColors.brandSoft;
+const Color _kPurpleStart = AppColors.brand;
+const Color _kRecordRed = AppColors.danger;
+const Color _kRecordRedLight = AppColors.danger;
 
 /// 页面各板块之间的固定间距。
 const double _kSectionGap = 14;
@@ -301,7 +285,9 @@ class _Submission {
     String fromTop(String k) => m[k]?.toString().trim() ?? '';
 
     final statusRaw = m['status'] ?? m['submitStatus'] ?? 0;
-    final statusInt = statusRaw is int ? statusRaw : int.tryParse(statusRaw.toString()) ?? 0;
+    final statusInt = statusRaw is int
+        ? statusRaw
+        : int.tryParse(statusRaw.toString()) ?? 0;
     final submitRaw = m['submitTime']?.toString().trim() ?? '';
     final hasSubmitTime = submitRaw.isNotEmpty;
 
@@ -318,9 +304,14 @@ class _Submission {
       action = '催交/详情';
     }
 
-    final real = fromSi('realname').isNotEmpty ? fromSi('realname') : fromTop('realname');
-    final nick = fromSi('nickname').isNotEmpty ? fromSi('nickname') : fromTop('nickname');
-    final name = (real.isNotEmpty ? real : null) ??
+    final real = fromSi('realname').isNotEmpty
+        ? fromSi('realname')
+        : fromTop('realname');
+    final nick = fromSi('nickname').isNotEmpty
+        ? fromSi('nickname')
+        : fromTop('nickname');
+    final name =
+        (real.isNotEmpty ? real : null) ??
         (nick.isNotEmpty ? nick : null) ??
         (fromTop('studentName').isNotEmpty ? fromTop('studentName') : null) ??
         '—';
@@ -330,16 +321,21 @@ class _Submission {
         : (m['createTime']?.toString() ?? '');
     final parsed = _tryParseFlexibleDateTime(raw);
     final uploadAt = parsed != null
-        ? _formatHms(parsed)
+        ? campusListTime(parsed)
         : (raw.isNotEmpty ? raw : '—');
 
-    final extForMedium = fromTop('expectedExt').isNotEmpty ? fromTop('expectedExt') : expectedExt;
+    final extForMedium = fromTop('expectedExt').isNotEmpty
+        ? fromTop('expectedExt')
+        : expectedExt;
     final mediumLabel = _expectedExtDisplay(extForMedium);
-    final subj =
-        fromTop('subjectName').isNotEmpty ? fromTop('subjectName') : fromTop('subject');
+    final subj = fromTop('subjectName').isNotEmpty
+        ? fromTop('subjectName')
+        : fromTop('subject');
     final subject = subj.isNotEmpty ? subj : subjectFallback;
 
-    final headRaw = fromSi('headUrl').isNotEmpty ? fromSi('headUrl') : fromTop('headUrl');
+    final headRaw = fromSi('headUrl').isNotEmpty
+        ? fromSi('headUrl')
+        : fromTop('headUrl');
 
     return _Submission(
       id: m['id']?.toString().trim() ?? '',
@@ -351,11 +347,14 @@ class _Submission {
       uploadAt: uploadAt,
       action: action,
       avatarUrl: headRaw.isNotEmpty ? headRaw : null,
-      fileUrl: m['fileUrl']?.toString() ??
+      fileUrl:
+          m['fileUrl']?.toString() ??
           m['attachUrl']?.toString() ??
           m['studentParam1']?.toString(),
       fileName:
-          m['fileName']?.toString() ?? m['attachName']?.toString() ?? m['studentParam2']?.toString(),
+          m['fileName']?.toString() ??
+          m['attachName']?.toString() ??
+          m['studentParam2']?.toString(),
       score: int.tryParse(m['score']?.toString() ?? ''),
       feedback: m['feedback']?.toString() ?? m['teacherFeedback']?.toString(),
     );
@@ -445,48 +444,70 @@ class _HomeworkItem {
       totalPeople = unsubmitted + pendingReview + reviewed;
       submitted = pendingReview + reviewed;
     } else {
-      pendingReview = int.tryParse(
-            src['pendingCount']?.toString() ?? src['pendingReview']?.toString() ?? '',
+      pendingReview =
+          int.tryParse(
+            src['pendingCount']?.toString() ??
+                src['pendingReview']?.toString() ??
+                '',
           ) ??
           0;
       reviewed =
-          int.tryParse(src['reviewedCount']?.toString() ?? src['reviewed']?.toString() ?? '') ?? 0;
+          int.tryParse(
+            src['reviewedCount']?.toString() ??
+                src['reviewed']?.toString() ??
+                '',
+          ) ??
+          0;
       totalPeople =
-          int.tryParse(src['totalCount']?.toString() ?? src['totalPeople']?.toString() ?? '') ?? 0;
+          int.tryParse(
+            src['totalCount']?.toString() ??
+                src['totalPeople']?.toString() ??
+                '',
+          ) ??
+          0;
       submitted =
-          int.tryParse(src['submitCount']?.toString() ?? src['submitted']?.toString() ?? '') ?? 0;
+          int.tryParse(
+            src['submitCount']?.toString() ??
+                src['submitted']?.toString() ??
+                '',
+          ) ??
+          0;
       unsubmitted = (totalPeople - submitted).clamp(0, 1 << 30);
     }
 
     final kind = hwStatus == 1 ? _CornerKind.closed : _CornerKind.pending;
     late final String cornerLabel;
     if (hwStatus == 1) {
-      cornerLabel = '已完成';
+      cornerLabel = '已截止';
     } else if (pendingReview > 0) {
-      cornerLabel = '待评($pendingReview)';
+      cornerLabel = '待批改 $pendingReview';
     } else {
       cornerLabel = '进行中';
     }
 
-    final endRaw = src['endTime']?.toString() ?? src['deadline']?.toString() ?? '';
+    final endRaw =
+        src['endTime']?.toString() ?? src['deadline']?.toString() ?? '';
     final parsedEnd = _tryParseFlexibleDateTime(endRaw);
-    final deadline = parsedEnd != null ? _formatYmdHms(parsedEnd) : endRaw;
+    final deadline = parsedEnd != null ? campusListTime(parsedEnd) : endRaw;
 
     final rawExt = src['expectedExt']?.toString() ?? '';
     final subjectLabel = _homeworkSubjectLabel(src);
     final studentListRaw =
-        src['studentList'] ?? src['submissions'] ?? src['homeworkStudentList'] ?? src['list'];
+        src['studentList'] ??
+        src['submissions'] ??
+        src['homeworkStudentList'] ??
+        src['list'];
     final List<_Submission> submissions = (studentListRaw is List)
         ? studentListRaw
-            .whereType<Map>()
-            .map(
-              (row) => _Submission.fromMap(
-                row,
-                expectedExt: rawExt,
-                subjectFallback: subjectLabel,
-              ),
-            )
-            .toList()
+              .whereType<Map>()
+              .map(
+                (row) => _Submission.fromMap(
+                  row,
+                  expectedExt: rawExt,
+                  subjectFallback: subjectLabel,
+                ),
+              )
+              .toList()
         : <_Submission>[];
 
     final cid = src['classId']?.toString().trim() ?? '';
@@ -525,7 +546,10 @@ class _HomeworkItem {
       pendingReview: pendingReview,
       reviewed: reviewed,
       submissions: submissions,
-      publishedRatio: (submitted: submitted, total: totalPeople > 0 ? totalPeople : 1),
+      publishedRatio: (
+        submitted: submitted,
+        total: totalPeople > 0 ? totalPeople : 1,
+      ),
       subjectId: int.tryParse(src['subjectId']?.toString() ?? ''),
       classIds: classIds,
       expectedExtRaw: rawExt,
@@ -574,7 +598,11 @@ class _HomeworkStats {
     }
 
     return _HomeworkStats(
-      pendingCount: pickInt(['status1Count', 'pendingCount', 'waitReviewCount']),
+      pendingCount: pickInt([
+        'status1Count',
+        'pendingCount',
+        'waitReviewCount',
+      ]),
       publishCount: pickInt(['homeworkCount', 'publishCount', 'totalCount']),
       reviewedCount: pickInt(['status2Count']),
       avgScore: pickNum(['avgScore', 'averageScore', 'scoreAvg']),
@@ -586,7 +614,7 @@ class _HomeworkStats {
 
 enum _CornerKind { closed, pending }
 
-const List<String> _kStatusTabs = ['全部', '待我批改', '进行中', '已截止/已收尾'];
+const List<String> _kStatusTabs = ['全部', '待我批改', '进行中', '已截止'];
 const List<String> _kRangeTabs = ['累计', '本学期', '本月'];
 
 // ---- 入口 view --------------------------------------------------------------
@@ -629,14 +657,13 @@ class _TeacherHomeworkReviewViewState
 
   Future<void> _init() async {
     await _loadClassList();
-    await Future.wait([
-      _loadHomeworkList(),
-      _loadStats(),
-    ]);
+    await Future.wait([_loadHomeworkList(), _loadStats()]);
   }
 
   Future<void> _loadClassList() async {
-    final res = await ref.read(teacherRepositoryProvider).classList(isClassTeacher: 1);
+    final res = await ref
+        .read(teacherRepositoryProvider)
+        .classList(isClassTeacher: 1);
     if (!mounted) return;
     if (res.isSuccess && res.data is List) {
       final list = (res.data as List).whereType<Map>().toList();
@@ -645,9 +672,7 @@ class _TeacherHomeworkReviewViewState
         setState(() {
           _classList = list;
           _classId =
-              first['id']?.toString() ??
-              first['classId']?.toString() ??
-              '0';
+              first['id']?.toString() ?? first['classId']?.toString() ?? '0';
           _classFilter = first['name']?.toString() ?? '全部班级';
         });
       }
@@ -657,7 +682,9 @@ class _TeacherHomeworkReviewViewState
   Future<void> _loadSubjectNameCatalog(String rawClassId) async {
     final cid = rawClassId.trim();
     if (cid.isEmpty || cid == '0') return;
-    final resp = await ref.read(schoolRepositoryProvider).subjectList(classId: cid);
+    final resp = await ref
+        .read(schoolRepositoryProvider)
+        .subjectList(classId: cid);
     if (!mounted || !resp.isSuccess) return;
     final list = _parseHomeworkSubjectList(resp);
     if (list.isEmpty) return;
@@ -678,10 +705,9 @@ class _TeacherHomeworkReviewViewState
       3 => 1,
       _ => '',
     };
-    final res = await ref.read(teacherRepositoryProvider).teacherHomeworkList(
-      classId: _classId,
-      status: statusParam,
-    );
+    final res = await ref
+        .read(teacherRepositoryProvider)
+        .teacherHomeworkList(classId: _classId, status: statusParam);
     if (!mounted) return;
     if (res.isSuccess) {
       final raw = res.data;
@@ -717,8 +743,9 @@ class _TeacherHomeworkReviewViewState
       if (ci is Map) {
         nestedClassId = ci['id']?.toString().trim();
       }
-      final detailClassId =
-          topClass.isNotEmpty ? topClass : (nestedClassId ?? '');
+      final detailClassId = topClass.isNotEmpty
+          ? topClass
+          : (nestedClassId ?? '');
       if (detailClassId.isNotEmpty && detailClassId != _classId) {
         await _loadSubjectNameCatalog(detailClassId);
       }
@@ -747,11 +774,13 @@ class _TeacherHomeworkReviewViewState
       default: // 累计 (2 years)
         begin = now.subtract(const Duration(days: 730));
     }
-    final res = await ref.read(teacherRepositoryProvider).teacherHomeworkSum(
-      classId: _classId,
-      beginDate: _fmtDate(begin),
-      endDate: _fmtDate(now),
-    );
+    final res = await ref
+        .read(teacherRepositoryProvider)
+        .teacherHomeworkSum(
+          classId: _classId,
+          beginDate: _fmtDate(begin),
+          endDate: _fmtDate(now),
+        );
     if (!mounted) return;
     if (res.isSuccess && res.data is Map) {
       setState(() {
@@ -780,10 +809,7 @@ class _TeacherHomeworkReviewViewState
       await _loadHomeworkList();
       await _loadStats();
     } else {
-      AppToast.show(
-        context,
-        res.msg.isNotEmpty ? res.msg : '删除失败，请重试',
-      );
+      AppToast.show(context, res.msg.isNotEmpty ? res.msg : '删除失败，请重试');
     }
   }
 
@@ -804,10 +830,25 @@ class _TeacherHomeworkReviewViewState
       backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       bodyScrollable: false,
-      header: _ReviewBanner(
+      header: AppPageHeader(
+        title: '作业批改',
+        subtitle: '布置作业、查看提交情况并逐份批改',
         onBack: widget.onBack,
-        onOpenHistory: () => _openHistoryDrawer(),
-        onOpenPublish: () => _openPublishDrawer(),
+        actions: [
+          AppButton(
+            label: '历史作业',
+            icon: Icons.history_rounded,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: _openHistoryDrawer,
+          ),
+          AppButton(
+            label: '发布作业',
+            icon: Icons.add_rounded,
+            size: AppButtonSize.sm,
+            onTap: _openPublishDrawer,
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -853,13 +894,11 @@ class _TeacherHomeworkReviewViewState
           SizedBox(height: ui(_kSectionGap)),
           Expanded(
             child: _all.isEmpty
-                ? Center(
-                    child: Text(
-                      '暂无作业数据',
-                      style: TextStyle(
-                        color: _kTextHint,
-                        fontSize: ui(14),
-                      ),
+                ? const AppCard(
+                    child: AppEmptyState(
+                      icon: Icons.assignment_outlined,
+                      title: '还没有作业',
+                      description: '点右上角「发布作业」给学生布置第一份作业',
                     ),
                   )
                 : _BodyRow(
@@ -891,7 +930,7 @@ class _TeacherHomeworkReviewViewState
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭历史发布记录',
-      barrierColor: Colors.black.withValues(alpha: 0.20),
+      barrierColor: AppColors.ink.withValues(alpha: 0.20),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, anim, sec) {
         return Align(
@@ -920,7 +959,7 @@ class _TeacherHomeworkReviewViewState
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭发布作业',
-      barrierColor: Colors.black.withValues(alpha: 0.20),
+      barrierColor: AppColors.ink.withValues(alpha: 0.20),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, anim, sec) {
         return Align(
@@ -955,7 +994,7 @@ class _TeacherHomeworkReviewViewState
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭作业点评',
-      barrierColor: Colors.black.withValues(alpha: 0.20),
+      barrierColor: AppColors.ink.withValues(alpha: 0.20),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, anim, sec) {
         return Align(
@@ -965,11 +1004,14 @@ class _TeacherHomeworkReviewViewState
             child: _ReviewDrawer(
               item: item,
               submission: submission,
-              homeworkSubjectDisplay:
-                  item.resolveSubjectDisplay(_subjectNameById),
+              homeworkSubjectDisplay: item.resolveSubjectDisplay(
+                _subjectNameById,
+              ),
               onReviewed: () {
                 Navigator.of(ctx).maybePop();
-                if (_all.isNotEmpty) _loadHomeworkDetail(_all[_activeHomeworkIdx].id);
+                if (_all.isNotEmpty) {
+                  _loadHomeworkDetail(_all[_activeHomeworkIdx].id);
+                }
                 _loadStats();
               },
             ),
@@ -993,146 +1035,6 @@ class _TeacherHomeworkReviewViewState
 // 顶部 banner（白→#F9EDFF 渐变；左返回 + 居中标题 + 右两按钮）
 // =============================================================================
 
-class _ReviewBanner extends StatelessWidget {
-  const _ReviewBanner({
-    required this.onBack,
-    required this.onOpenHistory,
-    required this.onOpenPublish,
-  });
-
-  final VoidCallback onBack;
-  final VoidCallback onOpenHistory;
-  final VoidCallback onOpenPublish;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: const DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: _kPillIconColor,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Text(
-                '作业与批改',
-                style: TextStyle(
-                  fontSize: ui(16),
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w600,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: ui(15),
-            child: Row(
-              children: [
-                _BannerActionButton(
-                  assetIcon: AppAssets.teacherHomeworkHistoryIcon,
-                  label: '历史作业',
-                  onTap: onOpenHistory,
-                ),
-                SizedBox(width: ui(8)),
-                _BannerActionButton(
-                  assetIcon: AppAssets.teacherHomeworkPublishIcon,
-                  label: '发布作业',
-                  onTap: onOpenPublish,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BannerActionButton extends StatelessWidget {
-  const _BannerActionButton({
-    required this.assetIcon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final String assetIcon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        height: ui(33),
-        padding: EdgeInsets.symmetric(horizontal: ui(12)),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppAssetGraphic(
-              assetIcon,
-              width: ui(16),
-              height: ui(16),
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: ui(4)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kTextDark,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w600,
-                height: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // =============================================================================
 // 状态 tabs（4 项；命中黑底白字 6 圆角）
 // =============================================================================
@@ -1150,27 +1052,12 @@ class _StatusTabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(44),
-      padding: EdgeInsets.all(ui(4)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < tabs.length; i++) ...[
-            if (i > 0) SizedBox(width: ui(4)),
-            _SegmentChip(
-              label: tabs[i],
-              active: i == activeIdx,
-              onTap: () => onTap(i),
-            ),
-          ],
-        ],
-      ),
+    return AppTabs<int>(
+      tabs: [
+        for (var i = 0; i < tabs.length; i++) AppTab(value: i, label: tabs[i]),
+      ],
+      value: activeIdx,
+      onChanged: onTap,
     );
   }
 }
@@ -1208,8 +1095,7 @@ class _SegmentChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: active ? Colors.white : _kTextSecondary,
-            fontFamily: 'PingFang SC',
+            color: active ? AppColors.surface : _kTextSecondary,
             fontWeight: AppFont.w500,
             height: 1,
           ),
@@ -1261,9 +1147,7 @@ class _StatsPanel extends StatelessWidget {
                 height: ui(42),
                 child: PopupSelectorField<String>(
                   value: classFilter,
-                  items: classOptions.isEmpty
-                      ? [classFilter]
-                      : classOptions,
+                  items: classOptions.isEmpty ? [classFilter] : classOptions,
                   itemLabel: (sv) => sv,
                   onChanged: onClassChanged,
                   fieldHeight: 42,
@@ -1274,7 +1158,7 @@ class _StatsPanel extends StatelessWidget {
                 height: ui(44),
                 padding: EdgeInsets.all(ui(4)),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(12)),
                   border: Border.all(color: _kBorderSoft),
                 ),
@@ -1304,43 +1188,43 @@ class _StatsPanel extends StatelessWidget {
                   label: '待批改人次',
                 ),
               ),
-                _StatGap(),
-                Expanded(
-                  child: _StatCell(
-                    value: '${s?.publishCount ?? 0}',
-                    label: '发布作业数',
-                  ),
+              _StatGap(),
+              Expanded(
+                child: _StatCell(
+                  value: '${s?.publishCount ?? 0}',
+                  label: '发布作业数',
                 ),
-                _StatGap(),
-                Expanded(
-                  child: _StatCell(
-                    value: '${s?.reviewedCount ?? 0}',
-                    label: '已评阅人次',
-                  ),
+              ),
+              _StatGap(),
+              Expanded(
+                child: _StatCell(
+                  value: '${s?.reviewedCount ?? 0}',
+                  label: '已评阅人次',
                 ),
-                _StatGap(),
-                Expanded(
-                  child: _StatCell(
-                    value: s != null ? s.avgScore.toStringAsFixed(1) : '—',
-                    label: '已评均分',
-                  ),
+              ),
+              _StatGap(),
+              Expanded(
+                child: _StatCell(
+                  value: s != null ? s.avgScore.toStringAsFixed(1) : '—',
+                  label: '已评均分',
                 ),
-                _StatGap(),
-                Expanded(
-                  child: _StatCell(
-                    value: s != null ? '${s.maxScore.toInt()}' : '—',
-                    label: '最高分',
-                  ),
+              ),
+              _StatGap(),
+              Expanded(
+                child: _StatCell(
+                  value: s != null ? '${s.maxScore.toInt()}' : '—',
+                  label: '最高分',
                 ),
-                _StatGap(),
-                Expanded(
-                  child: _StatCell(
-                    value: s != null ? '${s.minScore.toInt()}' : '—',
-                    label: '最低分',
-                  ),
+              ),
+              _StatGap(),
+              Expanded(
+                child: _StatCell(
+                  value: s != null ? '${s.minScore.toInt()}' : '—',
+                  label: '最低分',
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1388,7 +1272,6 @@ class _StatCell extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -1498,7 +1381,6 @@ class _HomeworkListPanel extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(16),
                 color: _kTextBlack,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1.2,
               ),
@@ -1560,8 +1442,10 @@ class _HomeworkListCard extends StatelessWidget {
             Container(
               width: double.infinity,
               constraints: BoxConstraints(minHeight: ui(104)),
-              padding:
-                  EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(10)),
+              padding: EdgeInsets.symmetric(
+                horizontal: ui(12),
+                vertical: ui(10),
+              ),
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.circular(ui(12)),
@@ -1573,9 +1457,8 @@ class _HomeworkListCard extends StatelessWidget {
                   Text(
                     '截止 ${item.deadline}',
                     style: TextStyle(
-                      fontSize: ui(10),
+                      fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -1586,20 +1469,12 @@ class _HomeworkListCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
                   ),
                   SizedBox(height: ui(6)),
-                  Row(
-                    children: [
-                      _SubjectTag(label: subjectDisplay),
-                      SizedBox(width: ui(4)),
-                      if (item.pendingReview > 0)
-                        _PendingReviewTag(count: item.pendingReview),
-                    ],
-                  ),
+                  Row(children: [_SubjectTag(label: subjectDisplay)]),
                   SizedBox(height: ui(8)),
                   Text(
                     item.title,
@@ -1608,7 +1483,6 @@ class _HomeworkListCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextBlack,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                       height: 1.2,
                     ),
@@ -1619,7 +1493,10 @@ class _HomeworkListCard extends StatelessWidget {
             Positioned(
               right: 0,
               top: 0,
-              child: _CornerLabel(label: item.cornerLabel, kind: item.cornerKind),
+              child: _CornerLabel(
+                label: item.cornerLabel,
+                kind: item.cornerKind,
+              ),
             ),
           ],
         ),
@@ -1644,52 +1521,7 @@ class _SubjectTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: _kSubjectBg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: _kTextHint,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _PendingReviewTag extends StatelessWidget {
-  const _PendingReviewTag({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: _kOrangeBg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        '待评($count)',
-        style: TextStyle(
-          fontSize: ui(12),
-          color: _kOrange,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-      ),
-    );
+    return AppTag.subject(label);
   }
 }
 
@@ -1701,32 +1533,12 @@ class _CornerLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final bg = kind == _CornerKind.closed
-        ? const Color(0xFFE6E9F1)
-        : _kOrangeBg;
-    final fg = kind == _CornerKind.closed ? _kTextHint : _kOrange;
-    return Container(
-      width: ui(68),
-      height: ui(22),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(ui(12)),
-          bottomLeft: Radius.circular(ui(12)),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: fg,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 1,
-        ),
-      ),
+    final tone = kind == _CornerKind.closed
+        ? AppTone.neutral
+        : (label.startsWith('待批改') ? AppTone.warning : AppTone.brand);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 10, 12, 0),
+      child: AppStatusTag(label: label, tone: tone),
     );
   }
 }
@@ -1770,7 +1582,6 @@ class _HomeworkDetailPanel extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(16),
                             color: _kTextBlack,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w500,
                             height: 1.2,
                           ),
@@ -1782,7 +1593,6 @@ class _HomeworkDetailPanel extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kTextSecondary,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                           height: 1,
                         ),
@@ -1832,15 +1642,17 @@ class _SuggestedBlock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '【建议提交：$suggested】',
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextDark,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w500,
-              height: 1.6,
-            ),
+          Row(
+            children: [
+              Text(
+                '建议提交',
+                style: AppText.caption12.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              SizedBox(width: ui(6)),
+              AppTag(label: suggested),
+            ],
           ),
           SizedBox(height: ui(2)),
           Text(
@@ -1848,7 +1660,6 @@ class _SuggestedBlock extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.6,
             ),
@@ -1939,7 +1750,6 @@ class _ProgressMetricCell extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1,
                     ),
@@ -1951,7 +1761,6 @@ class _ProgressMetricCell extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1,
                   ),
@@ -2003,7 +1812,7 @@ class _SubmissionsTable extends StatelessWidget {
           height: ui(40),
           padding: EdgeInsets.symmetric(horizontal: ui(8)),
           decoration: BoxDecoration(
-            color: const Color(0xFFF9FAFB),
+            color: AppColors.surfaceSubtle,
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           child: Row(
@@ -2011,7 +1820,6 @@ class _SubmissionsTable extends StatelessWidget {
               SizedBox(width: 90 + 4, child: _ColHeader('学生')),
               Expanded(child: _ColHeader('状态')),
               Expanded(child: _ColHeader('科目')),
-              Expanded(child: _ColHeader('介质')),
               Expanded(child: _ColHeader('上传时间')),
               SizedBox(width: 80, child: _ColHeader('操作')),
             ],
@@ -2020,7 +1828,9 @@ class _SubmissionsTable extends StatelessWidget {
         for (final s in submissions)
           _SubmissionRow(
             item: s,
-            subjectCell: s.subject.trim().isNotEmpty ? s.subject : homeworkSubjectDisplay,
+            subjectCell: s.subject.trim().isNotEmpty
+                ? s.subject
+                : homeworkSubjectDisplay,
             onOpenReview: () => onOpenReview(s),
           ),
       ],
@@ -2041,7 +1851,6 @@ class _ColHeader extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(13),
         color: _kTextMuted,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 1.4,
       ),
@@ -2089,7 +1898,6 @@ class _SubmissionRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(13),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                       height: 1.4,
                     ),
@@ -2101,32 +1909,18 @@ class _SubmissionRow extends StatelessWidget {
           SizedBox(width: ui(12)),
           Expanded(child: _StatusPill(state: item.state)),
           Expanded(child: _CellText(subjectCell)),
-          Expanded(child: _CellText(item.medium)),
           Expanded(child: _CellText(item.uploadAt)),
           SizedBox(
             width: ui(90),
             child: item.state == _SubmissionState.missing
                 ? const SizedBox.shrink()
-                : InkWell(
-                    onTap: onOpenReview,
-                    borderRadius: BorderRadius.circular(ui(8)),
-                    child: Container(
-                      height: ui(32),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: _kTextDark,
-                        borderRadius: BorderRadius.circular(ui(8)),
-                      ),
-                      child: Text(
-                        item.action,
-                        style: TextStyle(
-                          fontSize: ui(13),
-                          color: Colors.white,
-                          fontFamily: 'PingFang SC',
-                          fontWeight: AppFont.w400,
-                          height: 1.4,
-                        ),
-                      ),
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: AppButton(
+                      label: item.action,
+                      variant: AppButtonVariant.quiet,
+                      size: AppButtonSize.sm,
+                      onTap: onOpenReview,
                     ),
                   ),
           ),
@@ -2151,7 +1945,6 @@ class _CellText extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(13),
         color: _kTextDark,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 1.4,
       ),
@@ -2166,36 +1959,26 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final ({Color bg, Color fg, String text}) tone = switch (state) {
-      _SubmissionState.passed => (bg: _kGreenBg, fg: _kGreen, text: '已通过'),
-      _SubmissionState.pending => (bg: _kOrangeBg, fg: _kOrange, text: '待评'),
-      _SubmissionState.missing => (
-        bg: const Color(0xFFFFE5E5),
-        fg: const Color(0xFFE54848),
-        text: '未交',
-      ),
-      _SubmissionState.reviewed => (bg: _kGreenBg, fg: _kGreen, text: '已批改'),
-    };
     return Align(
       alignment: Alignment.centerLeft,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-        decoration: BoxDecoration(
-          color: tone.bg,
-          borderRadius: BorderRadius.circular(ui(4)),
+      child: switch (state) {
+        _SubmissionState.passed => const AppStatusTag(
+          label: '已通过',
+          tone: AppTone.success,
         ),
-        child: Text(
-          tone.text,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: tone.fg,
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w400,
-            height: 1.2,
-          ),
+        _SubmissionState.pending => const AppStatusTag(
+          label: '待批改',
+          tone: AppTone.warning,
         ),
-      ),
+        _SubmissionState.missing => const AppStatusTag(
+          label: '未交',
+          tone: AppTone.danger,
+        ),
+        _SubmissionState.reviewed => const AppStatusTag(
+          label: '已批改',
+          tone: AppTone.success,
+        ),
+      },
     );
   }
 }
@@ -2216,69 +1999,10 @@ class _AvatarCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final resolved = _resolveMediaUrl(imageUrl);
-    final palettes = const [
-      [Color(0xFF9585FF), Color(0xFF715EFE)],
-      [Color(0xFFFFB68E), Color(0xFFFF8741)],
-      [Color(0xFF8EE0FF), Color(0xFF418EFF)],
-    ];
-    final palette = palettes[seed.abs() % palettes.length];
-    final initial = name.isNotEmpty ? name.characters.first : '?';
-    if (resolved != null) {
-      return ClipOval(
-        child: Image.network(
-          resolved,
-          width: ui(size),
-          height: ui(size),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            width: ui(size),
-            height: ui(size),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: palette,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: TextStyle(
-                fontSize: ui(13),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    return Container(
-      width: ui(size),
-      height: ui(size),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: palette,
-        ),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: ui(13),
-          color: Colors.white,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w500,
-          height: 1,
-        ),
-      ),
+    return AppAvatar(
+      name: name,
+      url: _resolveMediaUrl(imageUrl) ?? '',
+      size: ui(size),
     );
   }
 }
@@ -2297,8 +2021,8 @@ class _PublishDrawer extends ConsumerStatefulWidget {
 }
 
 class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
-  static const _mediumOptions = ['文档', '音频', '视频', '图片'];
-  static const _mediumExtMap = {'文档': 'doc', '音频': 'audio', '视频': 'video', '图片': 'image'};
+  static const _mediumOptions = ['图片', '视频', '文档'];
+  static const _mediumExtMap = {'图片': 'image', '视频': 'video', '文档': 'doc'};
 
   /// 来自 `/app/school/v2/user/subjectList`（按当前勾选班级之一拉取）。
   List<({int id, String name})> _subjects = [];
@@ -2328,7 +2052,9 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
   }
 
   Future<void> _loadClasses() async {
-    final res = await ref.read(teacherRepositoryProvider).classList(isClassTeacher: 1);
+    final res = await ref
+        .read(teacherRepositoryProvider)
+        .classList(isClassTeacher: 1);
     if (!mounted) return;
     if (res.isSuccess && res.data is List) {
       final list = (res.data as List).whereType<Map>().toList();
@@ -2357,9 +2083,9 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
     if (!mounted) return;
     setState(() => _loadingSubjects = true);
     final cid = _subjectListClassIdString();
-    final resp = await ref.read(schoolRepositoryProvider).subjectList(
-          classId: cid,
-        );
+    final resp = await ref
+        .read(schoolRepositoryProvider)
+        .subjectList(classId: cid);
     if (!mounted) return;
     final parsed = _parseHomeworkSubjectList(resp);
     setState(() {
@@ -2389,7 +2115,8 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
     final classIds = <String>[];
     for (final i in _selectedClassIndices) {
       if (i < 0 || i >= _classList.length) continue;
-      final raw = _classList[i]['id']?.toString().trim() ??
+      final raw =
+          _classList[i]['id']?.toString().trim() ??
           _classList[i]['classId']?.toString().trim() ??
           '';
       if (raw.isNotEmpty) classIds.add(raw);
@@ -2404,14 +2131,16 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
       return;
     }
     setState(() => _publishing = true);
-    final res = await ref.read(teacherRepositoryProvider).teacherHomeworkSave(
-      classIds: classIds,
-      title: title,
-      description: _descCtrl.text.trim(),
-      endTime: _formatYmdHms(_deadlineDate!),
-      subjectId: sid,
-      expectedExt: _mediumExtMap[_medium] ?? '',
-    );
+    final res = await ref
+        .read(teacherRepositoryProvider)
+        .teacherHomeworkSave(
+          classIds: classIds,
+          title: title,
+          description: _descCtrl.text.trim(),
+          endTime: _formatYmdHms(_deadlineDate!),
+          subjectId: sid,
+          expectedExt: _mediumExtMap[_medium] ?? '',
+        );
     if (!mounted) return;
     setState(() => _publishing = false);
     if (res.isSuccess) {
@@ -2439,7 +2168,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       child: SizedBox(
         width: ui(600),
         height: double.infinity,
@@ -2457,10 +2186,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                     SizedBox(height: ui(20)),
                     _FieldLabel('作业标题'),
                     SizedBox(height: ui(12)),
-                    _PlainInputField(
-                      hint: '请输入作业标题',
-                      controller: _titleCtrl,
-                    ),
+                    _PlainInputField(hint: '请输入作业标题', controller: _titleCtrl),
                     SizedBox(height: ui(20)),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2474,9 +2200,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                               if (_loadingSubjects)
                                 SizedBox(
                                   height: ui(48),
-                                  child: Center(
-                                    child: AppLoadingIndicator(),
-                                  ),
+                                  child: Center(child: AppLoadingIndicator()),
                                 )
                               else if (_subjects.isEmpty)
                                 SizedBox(
@@ -2490,7 +2214,6 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                                       style: TextStyle(
                                         fontSize: ui(13),
                                         color: _kTextHint,
-                                        fontFamily: 'PingFang SC',
                                         fontWeight: AppFont.w400,
                                       ),
                                     ),
@@ -2573,9 +2296,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                     _FieldLabel('发布对象'),
                     SizedBox(height: ui(12)),
                     if (_loadingClasses)
-                      Center(
-                        child: AppLoadingIndicator(),
-                      )
+                      Center(child: AppLoadingIndicator())
                     else
                       for (var i = 0; i < _classList.length; i++) ...[
                         if (i > 0) SizedBox(height: ui(8)),
@@ -2584,8 +2305,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                           kind: _classList[i]['type']?.toString() == '1'
                               ? '小班'
                               : '行政班',
-                          people:
-                              '${_classList[i]['studentCount'] ?? ''}人',
+                          people: '${_classList[i]['studentCount'] ?? ''}人',
                           tag: _classList[i]['type']?.toString() == '1'
                               ? '小课'
                               : '大课',
@@ -2654,7 +2374,7 @@ class _ClassCheckRow extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(14)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kPageGrey),
         ),
@@ -2671,7 +2391,6 @@ class _ClassCheckRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(14),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.4,
                     ),
@@ -2683,7 +2402,7 @@ class _ClassCheckRow extends StatelessWidget {
                     vertical: ui(2),
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(ui(4)),
                     border: Border.all(color: _kBorderSoft, width: 1.4),
                   ),
@@ -2694,7 +2413,7 @@ class _ClassCheckRow extends StatelessWidget {
                         width: ui(6),
                         height: ui(6),
                         decoration: const BoxDecoration(
-                          color: Color(0xFF8E7FFF),
+                          color: AppColors.brandSoft,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -2704,7 +2423,6 @@ class _ClassCheckRow extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kTextDark,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                           height: 1.2,
                         ),
@@ -2724,7 +2442,6 @@ class _ClassCheckRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -2735,7 +2452,6 @@ class _ClassCheckRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -2762,13 +2478,13 @@ class _CheckBox extends StatelessWidget {
       width: ui(14),
       height: ui(14),
       decoration: BoxDecoration(
-        color: checked ? _kPurple : Colors.white,
+        color: checked ? _kPurple : AppColors.surface,
         borderRadius: BorderRadius.circular(ui(4)),
         border: Border.all(color: _kPurple),
       ),
       alignment: Alignment.center,
       child: checked
-          ? Icon(Icons.check, size: ui(10), color: Colors.white)
+          ? Icon(Icons.check, size: ui(10), color: AppColors.surface)
           : null,
     );
   }
@@ -2801,16 +2517,12 @@ class _DeadlinePicker extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.4,
                 ),
               ),
             ),
-            HomeworkAssetIcon(
-              AppAssets.homeworkDeadlineIcon,
-              size: ui(16),
-            ),
+            HomeworkAssetIcon(AppAssets.homeworkDeadlineIcon, size: ui(16)),
           ],
         ),
       ),
@@ -2845,7 +2557,9 @@ class _HistoryDrawerState extends ConsumerState<_HistoryDrawer> {
   Future<void> _load() async {
     final cid = widget.classId.trim();
     if (cid.isNotEmpty && cid != '0') {
-      final sr = await ref.read(schoolRepositoryProvider).subjectList(classId: cid);
+      final sr = await ref
+          .read(schoolRepositoryProvider)
+          .subjectList(classId: cid);
       if (!mounted) return;
       final parsed = _parseHomeworkSubjectList(sr);
       setState(() {
@@ -2874,7 +2588,7 @@ class _HistoryDrawerState extends ConsumerState<_HistoryDrawer> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       child: SizedBox(
         width: ui(344),
         height: double.infinity,
@@ -2900,7 +2614,6 @@ class _HistoryDrawerState extends ConsumerState<_HistoryDrawer> {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1,
                     ),
@@ -2913,7 +2626,6 @@ class _HistoryDrawerState extends ConsumerState<_HistoryDrawer> {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -2937,10 +2649,7 @@ class _HistoryDrawerState extends ConsumerState<_HistoryDrawer> {
                     padding: EdgeInsets.only(top: ui(40)),
                     child: Text(
                       '暂无历史记录',
-                      style: TextStyle(
-                        fontSize: ui(14),
-                        color: _kTextHint,
-                      ),
+                      style: TextStyle(fontSize: ui(14), color: _kTextHint),
                     ),
                   ),
                 )
@@ -2951,8 +2660,9 @@ class _HistoryDrawerState extends ConsumerState<_HistoryDrawer> {
                     separatorBuilder: (_, idx) => SizedBox(height: ui(12)),
                     itemBuilder: (ctx, i) => _HistoryCard(
                       item: _items[i],
-                      subjectDisplay:
-                          _items[i].resolveSubjectDisplay(_subjectNames),
+                      subjectDisplay: _items[i].resolveSubjectDisplay(
+                        _subjectNames,
+                      ),
                     ),
                   ),
                 ),
@@ -2991,7 +2701,7 @@ class _HistoryCard extends StatelessWidget {
               Text(
                 '${item.publishedRatio.submitted}',
                 style: TextStyle(
-                  fontSize: ui(28),
+                  fontSize: ui(24),
                   color: _kTextDark,
                   fontFamily: 'Barlow',
                   fontWeight: FontWeight.w600,
@@ -3018,9 +2728,8 @@ class _HistoryCard extends StatelessWidget {
           Text(
             '截止 ${item.deadline}',
             style: TextStyle(
-              fontSize: ui(10),
+              fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -3031,7 +2740,6 @@ class _HistoryCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -3044,7 +2752,6 @@ class _HistoryCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextBlack,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1.2,
             ),
@@ -3168,7 +2875,8 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
   }
 
   String get _fileName {
-    final f = _detailExtra['submitAttachmentName']?.toString() ??
+    final f =
+        _detailExtra['submitAttachmentName']?.toString() ??
         _detailExtra['studentParam2']?.toString() ??
         _detailExtra['fileName']?.toString() ??
         _detailExtra['attachName']?.toString() ??
@@ -3223,8 +2931,10 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
   }
 
   String get _fileSize {
-    final s = _detailExtra['fileSize']?.toString() ??
-        _detailExtra['size']?.toString() ?? '';
+    final s =
+        _detailExtra['fileSize']?.toString() ??
+        _detailExtra['size']?.toString() ??
+        '';
     if (s.isEmpty) return '';
     final bytes = int.tryParse(s);
     if (bytes == null) return s;
@@ -3251,7 +2961,7 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
     final bottomPad = _isReviewed ? ui(20) : ui(80);
 
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       child: SizedBox(
         width: ui(600),
         height: double.infinity,
@@ -3291,7 +3001,6 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
                                 style: TextStyle(
                                   fontSize: ui(12),
                                   color: _kTextMuted,
-                                  fontFamily: 'PingFang SC',
                                   fontWeight: AppFont.w400,
                                 ),
                               ),
@@ -3301,7 +3010,6 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
                                 style: TextStyle(
                                   fontSize: ui(13),
                                   color: _kTextDark,
-                                  fontFamily: 'PingFang SC',
                                   fontWeight: AppFont.w400,
                                   height: 1.45,
                                 ),
@@ -3346,7 +3054,6 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
                           style: TextStyle(
                             fontSize: ui(16),
                             color: _kTextDark,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w600,
                             height: 1,
                           ),
@@ -3360,10 +3067,7 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
                     SizedBox(height: ui(16)),
                     _FieldLabel('分数/100'),
                     SizedBox(height: ui(8)),
-                    _ScoreInput(
-                      controller: _scoreCtrl,
-                      readOnly: _isReviewed,
-                    ),
+                    _ScoreInput(controller: _scoreCtrl, readOnly: _isReviewed),
                     SizedBox(height: ui(16)),
                     _FieldLabel('点评'),
                     SizedBox(height: ui(8)),
@@ -3431,10 +3135,8 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
 // 已有语音（teacherParam1/2）回显为可播放气泡，可重录 / 删除。
 // =============================================================================
 
-typedef _VoiceUploader = Future<String?> Function(
-  Uint8List bytes,
-  String filename,
-);
+typedef _VoiceUploader =
+    Future<String?> Function(Uint8List bytes, String filename);
 
 enum _VoicePhase { idle, recording, uploading, ready }
 
@@ -3664,7 +3366,6 @@ class _VoiceCommentFieldState extends State<_VoiceCommentField> {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
             ),
           ),
@@ -3736,11 +3437,7 @@ class _VoiceCommentFieldState extends State<_VoiceCommentField> {
                   SizedBox(width: ui(10)),
                   Text(
                     '语音上传中…',
-                    style: TextStyle(
-                      fontSize: ui(13),
-                      color: _kTextMuted,
-                      fontFamily: 'PingFang SC',
-                    ),
+                    style: TextStyle(fontSize: ui(13), color: _kTextMuted),
                   ),
                 ],
               ),
@@ -3825,7 +3522,7 @@ class _HomeworkVoiceHoldBar extends StatelessWidget {
       iconChild = HomeworkAssetIcon(
         AppAssets.homeworkReviewVoiceIcon,
         size: ui(_kButtonSize),
-        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+        colorFilter: const ColorFilter.mode(AppColors.surface, BlendMode.srcIn),
       );
       decoration = BoxDecoration(
         gradient: const LinearGradient(
@@ -3892,7 +3589,7 @@ class _HomeworkRecordingHintCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: ui(12)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(10)),
         border: Border.all(color: _kBorderSoft),
       ),
@@ -3912,7 +3609,6 @@ class _HomeworkRecordingHintCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -3979,10 +3675,7 @@ class _HomeworkLiveBigWaveform extends StatelessWidget {
 }
 
 class _VoiceMiniAction extends StatelessWidget {
-  const _VoiceMiniAction({
-    required this.assetIcon,
-    required this.onTap,
-  });
+  const _VoiceMiniAction({required this.assetIcon, required this.onTap});
 
   final String assetIcon;
   final VoidCallback onTap;
@@ -4022,7 +3715,7 @@ class _ReviewProfileRow extends StatelessWidget {
           width: ui(40),
           height: ui(40),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           child: _AvatarCircle(
@@ -4047,8 +3740,7 @@ class _ReviewProfileRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: ui(16),
-                        color: Colors.black,
-                        fontFamily: 'PingFang SC',
+                        color: AppColors.ink,
                         fontWeight: AppFont.w600,
                         height: 1.2,
                       ),
@@ -4069,7 +3761,6 @@ class _ReviewProfileRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextSecondary,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.2,
                       ),
@@ -4081,7 +3772,6 @@ class _ReviewProfileRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -4129,7 +3819,7 @@ class _AttachmentCard extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFFD7E2FF), Color(0xFFF9FBFF)],
+                colors: [Color(0xFFD7E2FF), AppColors.surfaceSubtle],
               ),
               borderRadius: BorderRadius.circular(ui(8)),
               border: Border.all(color: const Color(0xFFE5EFFF)),
@@ -4138,15 +3828,14 @@ class _AttachmentCard extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
               decoration: BoxDecoration(
-                color: const Color(0xFFFF5040),
+                color: AppColors.danger,
                 borderRadius: BorderRadius.circular(ui(2)),
               ),
               child: Text(
                 badgeLabel,
                 style: TextStyle(
-                  fontSize: ui(8),
-                  color: Colors.white,
-                  fontFamily: 'PingFang SC',
+                  fontSize: ui(12),
+                  color: AppColors.surface,
                   fontWeight: FontWeight.w700,
                   height: 1,
                   letterSpacing: 0.4,
@@ -4167,7 +3856,6 @@ class _AttachmentCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.4,
                   ),
@@ -4176,9 +3864,8 @@ class _AttachmentCard extends StatelessWidget {
                 Text(
                   size,
                   style: TextStyle(
-                    fontSize: ui(11),
+                    fontSize: ui(12),
                     color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -4225,7 +3912,7 @@ class _GhostButton extends StatelessWidget {
         height: ui(33),
         padding: EdgeInsets.symmetric(horizontal: ui(12)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -4239,7 +3926,6 @@ class _GhostButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -4252,10 +3938,7 @@ class _GhostButton extends StatelessWidget {
 }
 
 class _ScoreInput extends StatelessWidget {
-  const _ScoreInput({
-    required this.controller,
-    this.readOnly = false,
-  });
+  const _ScoreInput({required this.controller, this.readOnly = false});
 
   final TextEditingController controller;
   final bool readOnly;
@@ -4286,16 +3969,11 @@ class _ScoreInput extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 border: InputBorder.none,
                 hintText: '请输入分数',
-                hintStyle: TextStyle(
-                  fontSize: ui(14),
-                  color: _kTextHint,
-                  fontFamily: 'PingFang SC',
-                ),
+                hintStyle: TextStyle(fontSize: ui(14), color: _kTextHint),
               ),
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),
@@ -4306,7 +3984,6 @@ class _ScoreInput extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -4346,7 +4023,6 @@ class _DrawerTitleBar extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(16),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w600,
             height: 1,
           ),
@@ -4368,8 +4044,7 @@ class _FieldLabel extends StatelessWidget {
       text,
       style: TextStyle(
         fontSize: ui(14),
-        color: Colors.black,
-        fontFamily: 'PingFang SC',
+        color: AppColors.ink,
         fontWeight: AppFont.w500,
         height: 1.4,
       ),
@@ -4418,16 +4093,11 @@ class _PlainInputFieldState extends State<_PlainInputField> {
             contentPadding: EdgeInsets.zero,
             border: InputBorder.none,
             hintText: widget.hint,
-            hintStyle: TextStyle(
-              fontSize: ui(14),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-            ),
+            hintStyle: TextStyle(fontSize: ui(14), color: _kTextHint),
           ),
           style: TextStyle(
             fontSize: ui(14),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.4,
           ),
@@ -4491,16 +4161,11 @@ class _PlainTextAreaState extends State<_PlainTextArea> {
           contentPadding: EdgeInsets.zero,
           border: InputBorder.none,
           hintText: widget.hint,
-          hintStyle: TextStyle(
-            fontSize: ui(14),
-            color: _kTextHint,
-            fontFamily: 'PingFang SC',
-          ),
+          hintStyle: TextStyle(fontSize: ui(14), color: _kTextHint),
         ),
         style: TextStyle(
           fontSize: ui(14),
           color: _kTextDark,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1.4,
         ),
@@ -4539,14 +4204,13 @@ class _PrimaryGradientButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: ui(16), color: Colors.white),
+            Icon(icon, size: ui(16), color: AppColors.surface),
             SizedBox(width: ui(8)),
             Text(
               label,
               style: TextStyle(
                 fontSize: ui(14),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
+                color: AppColors.surface,
                 fontWeight: AppFont.w500,
                 height: 1.6,
               ),
@@ -4581,10 +4245,8 @@ List<({int id, String name})> _parseHomeworkSubjectList(ApiResponse resp) {
   for (final item in raw) {
     if (item is! Map) continue;
     final m = item;
-    final idStr =
-        m['id']?.toString() ?? m['subjectId']?.toString() ?? '';
-    final name =
-        m['name']?.toString() ?? m['subjectName']?.toString() ?? '';
+    final idStr = m['id']?.toString() ?? m['subjectId']?.toString() ?? '';
+    final name = m['name']?.toString() ?? m['subjectName']?.toString() ?? '';
     if (idStr.isEmpty || name.isEmpty) continue;
     final id = int.tryParse(idStr);
     if (id == null || id <= 0) continue;

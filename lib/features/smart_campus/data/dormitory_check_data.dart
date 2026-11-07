@@ -1,6 +1,7 @@
 /// 宿管端「按宿舍查寝」API 数据模型与 JSON 解析。
 library;
 
+import 'campus_format.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/network/snowflake_id.dart';
 import '../../school/data/school_config_data.dart';
@@ -213,11 +214,11 @@ List<DormitoryRoomStudent> _parseUserList(dynamic raw) {
         m['studentId']?.toString() ??
         '';
     if (userId.isEmpty) continue;
-    final rawAvatar = _pickString(
-      m,
-      ['studentHeadUrl', 'headUrl', 'avatar'],
-      '',
-    );
+    final rawAvatar = _pickString(m, [
+      'studentHeadUrl',
+      'headUrl',
+      'avatar',
+    ], '');
     parsed.add(
       DormitoryRoomStudent(
         userId: userId,
@@ -303,6 +304,7 @@ class DormitoryIndexOverview {
     this.managedAreas = const [],
     this.currentTask,
     this.todayDutyTasks = const [],
+    this.batchLabel = '',
   });
 
   final int managedBuildingCount;
@@ -315,6 +317,9 @@ class DormitoryIndexOverview {
   final List<String> managedAreas;
   final DormitoryDutyTask? currentTask;
   final List<DormitoryDutyTask> todayDutyTasks;
+
+  /// 指标统计的查寝批次，如「11-07 晨查寝」；接口未给出时为空。
+  final String batchLabel;
 
   static const zero = DormitoryIndexOverview();
 
@@ -329,6 +334,7 @@ class DormitoryIndexOverview {
     List<String>? managedAreas,
     DormitoryDutyTask? currentTask,
     List<DormitoryDutyTask>? todayDutyTasks,
+    String? batchLabel,
   }) {
     return DormitoryIndexOverview(
       managedBuildingCount: managedBuildingCount ?? this.managedBuildingCount,
@@ -342,6 +348,7 @@ class DormitoryIndexOverview {
       managedAreas: managedAreas ?? this.managedAreas,
       currentTask: currentTask ?? this.currentTask,
       todayDutyTasks: todayDutyTasks ?? this.todayDutyTasks,
+      batchLabel: batchLabel ?? this.batchLabel,
     );
   }
 }
@@ -448,11 +455,7 @@ class DormitoryCheckHistoryItem {
       bedName: bedName,
       checkDate: _pickString(map, ['checkDate', 'date']),
       checkType: _pickString(map, ['checkType', 'scene']),
-      deadline: _pickString(map, [
-        'checkDeadline',
-        'deadline',
-        'requiredTime',
-      ]),
+      deadline: _pickString(map, ['checkDeadline', 'deadline', 'requiredTime']),
       checkTime: _historyClock(_pickString(map, ['checkTime', 'stampTime'])),
       status: DormitoryStudentCheckStatus.fromApi(statusLabel),
       statusLabel: statusLabel,
@@ -572,7 +575,15 @@ DormitoryIndexOverview parseDormitoryIndexOverview(dynamic raw) {
     managedAreas: areas.where((v) => v.trim().isNotEmpty).toList(),
     currentTask: currentTask,
     todayDutyTasks: dutyTasks,
+    batchLabel: _batchLabel(map),
   );
+}
+
+String _batchLabel(Map<String, dynamic> map) {
+  final type = map['checkType']?.toString().trim() ?? '';
+  final day = campusParseTime(map['checkDate']);
+  if (type.isEmpty) return '';
+  return day == null ? type : '${campusMonthDay(day)} $type';
 }
 
 List<DormitoryCheckHistoryItem> parseDormitoryCheckHistoryList(dynamic raw) {
@@ -663,20 +674,14 @@ String _historyStudentName(Map<String, dynamic> map, {String bedName = ''}) {
   return '未登记学生';
 }
 
-String _historyStudentNo(
-  Map<String, dynamic> map,
-  Map<String, dynamic> user,
-) {
+String _historyStudentNo(Map<String, dynamic> map, Map<String, dynamic> user) {
   final no = _pickString(map, ['studentNo', 'userNo']);
   if (no.isNotEmpty) return no;
   final fromUser = _pickString(user, ['studentNo', 'no', 'userNo']);
   return fromUser.isNotEmpty ? fromUser : '—';
 }
 
-String _historyAvatarUrl(
-  Map<String, dynamic> map,
-  Map<String, dynamic> user,
-) {
+String _historyAvatarUrl(Map<String, dynamic> map, Map<String, dynamic> user) {
   final raw = _pickString(map, ['studentHeadUrl', 'headUrl', 'avatar']);
   if (raw.isEmpty) {
     final fromUser = _pickString(user, ['headUrl', 'avatar', 'avatarUrl']);
@@ -794,32 +799,17 @@ List<DormitoryDetailField> buildDormitoryCheckDetailFieldsFromHistoryItem(
     if (item.studentNo.isNotEmpty && item.studentNo != '—')
       DormitoryDetailField('学生学号', item.studentNo),
     if (item.mobile.isNotEmpty) DormitoryDetailField('手机号', item.mobile),
-    DormitoryDetailField(
-      '查寝日期',
-      item.checkDate.isEmpty ? '—' : item.checkDate,
-    ),
-    DormitoryDetailField(
-      '我的宿舍',
-      item.dormName.isEmpty ? '—' : item.dormName,
-    ),
-    DormitoryDetailField(
-      '我的床位',
-      item.bedName.isEmpty ? '—' : item.bedLabel,
-    ),
-    DormitoryDetailField(
-      '打卡时间',
-      item.checkTime.isEmpty ? '—' : item.checkTime,
-    ),
+    DormitoryDetailField('查寝日期', item.checkDate.isEmpty ? '—' : item.checkDate),
+    DormitoryDetailField('我的宿舍', item.dormName.isEmpty ? '—' : item.dormName),
+    DormitoryDetailField('我的床位', item.bedName.isEmpty ? '—' : item.bedLabel),
+    DormitoryDetailField('打卡时间', item.checkTime.isEmpty ? '—' : item.checkTime),
     DormitoryDetailField(
       '查寝状态',
       item.statusLabel.isEmpty ? '—' : item.statusLabel,
     ),
     if (item.remark.isNotEmpty) DormitoryDetailField('查寝备注', item.remark),
     if (item.handleStatus > 0)
-      DormitoryDetailField(
-        '处理状态',
-        item.handleStatus == 1 ? '已处理' : '待处理',
-      ),
+      DormitoryDetailField('处理状态', item.handleStatus == 1 ? '已处理' : '待处理'),
   ];
 }
 
@@ -840,10 +830,7 @@ List<DormitoryDetailField> parseDormitoryCheckDetailFields(dynamic raw) {
   final mobile = _pickString(user, ['mobile', 'phone']);
   return [
     DormitoryDetailField('学生姓名', studentDisplay),
-    DormitoryDetailField(
-      '学生学号',
-      studentNo != '—' ? studentNo : '—',
-    ),
+    DormitoryDetailField('学生学号', studentNo != '—' ? studentNo : '—'),
     if (studentNo == '—' && mobile.isNotEmpty)
       DormitoryDetailField('手机号', mobile),
     DormitoryDetailField('查寝日期', _pickString(map, ['checkDate', 'date'])),

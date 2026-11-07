@@ -56,7 +56,8 @@ class TeacherAttendanceSummary {
   factory TeacherAttendanceSummary.fromJson(dynamic raw) {
     final map = _unwrapMap(raw);
     if (map == null) return const TeacherAttendanceSummary();
-    final rateRaw = map['attendanceRate'] ??
+    final rateRaw =
+        map['attendanceRate'] ??
         map['onTimeRate'] ??
         map['punctualityRate'] ??
         map['rate'];
@@ -146,8 +147,7 @@ class TeacherSignHistoryItem {
 
   String get signStatusLabel => CourseSignFlowStatus.labelFor(signStatus);
 
-  String get signInClock =>
-      signInTime.trim().isEmpty ? '' : _clock(signInTime);
+  String get signInClock => signInTime.trim().isEmpty ? '' : _clock(signInTime);
 
   String get signOutClock =>
       signOutTime.trim().isEmpty ? '' : _clock(signOutTime);
@@ -237,7 +237,8 @@ class TeacherSignHistoryItem {
       signOutTime: signOutRaw,
       canMakeup: flat['canMakeup'] == true,
       makeupStatus: makeupStatus,
-      teacherId: pickFirstSnowflakeId(flat, [
+      teacherId:
+          pickFirstSnowflakeId(flat, [
             'teacherId',
             'teacherUserId',
             'userId',
@@ -270,7 +271,7 @@ class TeacherSignHistoryItem {
         'method',
         'signMethod',
         'signTypeName',
-      ], fallback: type == 0 ? '教师一键签到' : '教师上下课签'),
+      ], fallback: type == 0 ? '教师一键签到' : '教师上下课签到'),
     );
   }
 }

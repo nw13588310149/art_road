@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/art/art_tokens.dart';
 import '../../../../core/network/media_url.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/image_gallery_viewer.dart';
 import '../../data/study_models.dart';
 import 'study_common.dart';
@@ -25,9 +25,10 @@ class GradeBandTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (bands.isEmpty) {
-      return Text(
-        '暂未配置档位标准',
-        style: ArtText.body(size: 13, color: ArtColors.ink3),
+      return const AppEmptyState(
+        icon: Icons.rule_rounded,
+        title: '暂未配置档位标准',
+        description: '阅卷系统配置打分规则后会显示在这里',
       );
     }
     final images = [
@@ -38,7 +39,7 @@ class GradeBandTable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (var i = 0; i < bands.length; i++) ...[
-          if (i > 0) const SizedBox(height: 8),
+          if (i > 0) const SizedBox(height: AppSpace.s8),
           _BandRow(
             band: bands[i],
             highlighted: bands[i].grade == highlightGrade,
@@ -78,90 +79,64 @@ class _BandRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final mine = score;
     final preview = onPreview;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.all(12),
+    return Container(
+      padding: const EdgeInsets.all(AppSpace.s12),
       decoration: BoxDecoration(
-        color: highlighted ? ArtColors.brandWash : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: highlighted ? AppColors.brandWash : AppColors.surface,
+        borderRadius: AppRadius.br12,
         border: Border.all(
-          color: highlighted ? ArtColors.brandLight : ArtColors.line,
+          color: highlighted ? AppColors.brand : AppColors.lineSoft,
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ArtGradeBadge(grade: band.grade, size: 30),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
+                  spacing: AppSpace.s8,
+                  runSpacing: AppSpace.s4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
+                    StudyGradeTag(grade: band.grade),
                     StudyNumberText(
                       '${formatScore(band.min)}–${formatScore(band.max)}',
                       unit: ' 分',
-                      size: 15,
+                      size: 16,
                     ),
                     if (highlighted && mine != null)
-                      StudyChip(
+                      AppTag(
                         label: '本次 ${formatScore(mine)} 分',
-                        color: Colors.white,
-                        background: ArtColors.brand,
+                        tone: AppTone.brand,
                       ),
                   ],
                 ),
                 if (band.description.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    band.description,
-                    style: ArtText.body(size: 13, color: ArtColors.ink2),
-                  ),
+                  const SizedBox(height: AppSpace.s4),
+                  Text(band.description, style: AppText.body13),
                 ],
               ],
             ),
           ),
           if (preview != null) ...[
-            const SizedBox(width: 12),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
+            const SizedBox(width: AppSpace.s12),
+            AppPressable(
               onTap: preview,
+              semanticLabel: '查看 ${band.grade} 档样图',
               child: Column(
                 children: [
-                  Stack(
-                    children: [
-                      ArtNetworkImage(
-                        band.imageUrl,
-                        width: 68,
-                        height: 68,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      Positioned(
-                        right: 4,
-                        bottom: 4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Color(0x73000000),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.zoom_in_rounded,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
+                  AppImage(
+                    src: band.imageUrl,
+                    width: 68,
+                    height: 68,
+                    borderRadius: AppRadius.br8,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpace.s4),
                   Text(
-                    '样图',
-                    style: ArtText.caption(size: 11, color: ArtColors.brand),
+                    '查看样图',
+                    style: AppText.caption12.copyWith(color: AppColors.brand),
                   ),
                 ],
               ),
@@ -191,8 +166,8 @@ class GradeBandLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: AppSpace.s8,
+      runSpacing: AppSpace.s8,
       children: [
         for (final band in bands)
           _LegendChip(
@@ -223,30 +198,34 @@ class _LegendChip extends StatelessWidget {
     final Color text;
     if (dark) {
       background = highlighted
-          ? ArtColors.brand.withValues(alpha: 0.32)
-          : Colors.white.withValues(alpha: 0.06);
-      border = highlighted ? ArtColors.brandSoft : Colors.transparent;
-      text = highlighted ? Colors.white : Colors.white70;
+          ? AppColors.brand
+          : AppColors.onBrand.withValues(alpha: 0.08);
+      border = AppColors.onBrand.withValues(alpha: 0);
+      text = AppColors.onBrand.withValues(alpha: highlighted ? 1 : 0.72);
     } else {
-      background = highlighted ? ArtColors.brandWash : ArtColors.subtle;
-      border = highlighted ? ArtColors.brandLight : Colors.transparent;
-      text = highlighted ? ArtColors.brandDeep : ArtColors.ink2;
+      background = highlighted ? AppColors.brandWash : AppColors.surfaceSubtle;
+      border = highlighted ? AppColors.brand : AppColors.surfaceSubtle;
+      text = highlighted ? AppColors.brandDeep : AppColors.textSecondary;
     }
     return Container(
-      padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
+      height: 28,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadius.brPill,
         border: Border.all(color: border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ArtGradeBadge(grade: band.grade, size: 20),
-          const SizedBox(width: 6),
+          Text(
+            '${band.grade} 档',
+            style: AppText.caption12Strong.copyWith(color: text),
+          ),
+          const SizedBox(width: AppSpace.s4),
           Text(
             '${formatScore(band.min)}–${formatScore(band.max)}',
-            style: ArtText.number(size: 12, color: text),
+            style: AppText.number(size: 12, color: text),
           ),
         ],
       ),

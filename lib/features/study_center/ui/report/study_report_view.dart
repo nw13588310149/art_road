@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/art/art_tokens.dart';
-import '../../../../core/widgets/app_loading_indicator.dart';
-import '../../../../core/widgets/app_toast.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 import '../../state/study_center_args.dart';
@@ -58,10 +55,14 @@ class _StudyReportViewState extends ConsumerState<StudyReportView> {
     }
     _initialActionScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       widget.onInitialActionHandled?.call();
       final subjects = exam.subjects;
-      if (subjects.isEmpty) return;
+      if (subjects.isEmpty) {
+        return;
+      }
       final requested = exam.subjectById(widget.initialSubjectId);
       if (action == StudyCenterInitialView.paper) {
         final target =
@@ -127,10 +128,14 @@ class _StudyReportViewState extends ConsumerState<StudyReportView> {
     final controller = ref.read(provider.notifier);
     ref.listen<StudyReportState>(provider, (previous, next) {
       final message = next.errorMessage;
-      if (message.isEmpty || message == previous?.errorMessage) return;
+      if (message.isEmpty || message == previous?.errorMessage) {
+        return;
+      }
       AppToast.showError(context, message);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (controller.mounted) controller.clearError();
+        if (controller.mounted) {
+          controller.clearError();
+        }
       });
     });
 
@@ -143,7 +148,7 @@ class _StudyReportViewState extends ConsumerState<StudyReportView> {
 
     final staff = widget.reportKey.isStaff;
     final openTrend = widget.onOpenTrend;
-    final header = ArtPageHeader(
+    final header = AppPageHeader(
       title: exam == null
           ? '成绩报告'
           : (staff && widget.studentName.isNotEmpty
@@ -159,11 +164,11 @@ class _StudyReportViewState extends ConsumerState<StudyReportView> {
       onBack: widget.onBack,
       actions: [
         if (openTrend != null)
-          ArtButton(
+          AppButton(
             label: staff ? '成绩曲线' : '成长曲线',
             icon: Icons.show_chart_rounded,
-            primary: false,
-            height: 36,
+            variant: AppButtonVariant.quiet,
+            size: AppButtonSize.sm,
             onTap: openTrend,
           ),
       ],
@@ -172,53 +177,60 @@ class _StudyReportViewState extends ConsumerState<StudyReportView> {
     final Widget body;
     if (report == null || exam == null) {
       body = state.failed
-          ? StudyErrorView(
-              message: state.errorMessage.isEmpty
-                  ? '成绩报告加载失败'
+          ? AppErrorState(
+              title: '成绩报告加载失败',
+              description: state.errorMessage.isEmpty
+                  ? '请检查网络后重试'
                   : state.errorMessage,
               onRetry: controller.load,
             )
-          : const SizedBox.shrink();
+          : ListView(
+              padding: studyBodyPadding,
+              physics: const NeverScrollableScrollPhysics(),
+              children: const [
+                StudyCardSkeleton(lines: 4),
+                SizedBox(height: AppSpace.s16),
+                StudyCardSkeleton(lines: 3),
+              ],
+            );
     } else {
       final scored = exam.isPublished && exam.hasScore;
       body = ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: studyBodyPadding,
         children: [
           if (!scored) ...[
-            StudyNotice(
-              text: exam.isPublished
+            AppNotice(
+              tone: AppTone.warning,
+              message: exam.isPublished
                   ? '这场考试暂无成绩，可能缺考或成绩未录入'
-                  : '这场考试仍在阅卷中，出分后会第一时间提醒',
+                  : '这场考试仍在阅卷中，出分后会通知你',
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpace.s16),
           ],
           StudyHeroCard(
             exam: exam,
             scoreChange: report.scoreChange,
             rankingChange: report.rankingChange,
-            surpassedPercent:
-                report.surpassedPercent ??
-                surpassedPercentOf(exam.totalRanking, exam.participantCount),
+            surpassedPercent: report.surpassedPercent,
           ),
-          const SizedBox(height: 12),
-          StudySubjectTable(subjects: exam.subjects, actions: _actions(exam)),
+          const SizedBox(height: AppSpace.s16),
+          StudySubjectTable(
+            subjects: exam.subjects,
+            actions: _actions(exam),
+            participantCount: exam.participantCount,
+            organizationParticipantCount: exam.organizationParticipantCount,
+          ),
           if (report.interpretations.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpace.s16),
             StudyInterpretationsCard(items: report.interpretations),
           ],
-          const SizedBox(height: 16),
-          Text(
+          StudyFootnote(
             staff ? '成绩以阅卷系统最终结果为准，仅供机构内部查阅' : '成绩以阅卷系统最终结果为准，仅供本人查阅',
-            textAlign: TextAlign.center,
-            style: ArtText.caption(),
           ),
         ],
       );
     }
 
-    return PageInitLoadingShell(
-      loading: state.loading && report == null,
-      child: StudyPageFrame(header: header, body: body),
-    );
+    return StudyPageFrame(header: header, body: body);
   }
 }

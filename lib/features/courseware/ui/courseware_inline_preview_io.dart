@@ -124,26 +124,6 @@ class _CoursewarePdfPreview extends StatelessWidget {
                       fontFamily: 'PingFang SC',
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    url,
-                    style: const TextStyle(
-                      color: Color(0xFF715EFE),
-                      fontSize: 11,
-                      fontFamily: 'Manrope',
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    error.toString(),
-                    style: const TextStyle(
-                      color: Color(0xFFB6B5BB),
-                      fontSize: 11,
-                      fontFamily: 'Manrope',
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
                 ],
               ),
             ),
@@ -171,9 +151,8 @@ class _CoursewareImagePreview extends StatelessWidget {
             fit: BoxFit.contain,
             width: constraints.maxWidth,
             height: constraints.maxHeight,
-            placeholder: (context, _) => const Center(
-              child: AppLoadingIndicator(),
-            ),
+            placeholder: (context, _) =>
+                const Center(child: AppLoadingIndicator()),
             errorWidget: (context, _, _) => const Center(
               child: Icon(
                 Icons.broken_image_outlined,
@@ -267,9 +246,7 @@ class _CoursewareVideoPreviewState extends State<_CoursewareVideoPreview> {
 }
 
 class _UnsupportedPreview extends StatelessWidget {
-  const _UnsupportedPreview({
-    this.message = '当前平台暂不支持预览此文件类型，请在浏览器中查看或下载。',
-  });
+  const _UnsupportedPreview({this.message = '暂不支持在应用内预览这类文件'});
 
   final String message;
 

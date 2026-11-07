@@ -1,3 +1,5 @@
+import '../../ebooks/data/ebook_collection.dart';
+
 class CollectionTabItem {
   const CollectionTabItem({required this.type, required this.label});
 
@@ -6,18 +8,24 @@ class CollectionTabItem {
 }
 
 /// 收藏类型（与 `favoriteList` / `favoriteSave` 的 type 一致，0 表示全部）。
+///
+/// 新增类型：在这里加常量并在 [kCollectionDefaultTabs] 追加一项；页签、类型标签、
+/// 空状态文案都读这张表，打开方式登记在 `my_collection_page.dart` 的 `_openers`。
 abstract final class CollectionType {
   static const all = 0;
   static const video = 6;
   static const news = 9;
   static const artwork = 11;
+  static const ebook = EbookCollection.type;
 
-  static String labelOf(int type) => switch (type) {
-    video => '视频',
-    news => '资讯',
-    artwork => '范画',
-    _ => '收藏',
-  };
+  static String labelOf(int type) {
+    for (final tab in kCollectionDefaultTabs) {
+      if (tab.type == type && type != all) {
+        return tab.label;
+      }
+    }
+    return '收藏';
+  }
 }
 
 class CollectionEntry {
@@ -51,6 +59,7 @@ class CollectionEntry {
   bool get isVideo => type == CollectionType.video;
   bool get isNews => type == CollectionType.news;
   bool get isArtwork => type == CollectionType.artwork;
+  bool get isEbook => type == CollectionType.ebook;
 }
 
 class CollectionShareClass {
@@ -132,17 +141,16 @@ class MyCollectionState {
   }
 }
 
-/// 我的收藏 Tab 顺序：全部 → 范画 → 视频 → 资讯。
+/// 我的收藏 Tab 顺序：全部 → 范画 → 视频 → 资讯 → 书刊。
 const List<CollectionTabItem> kCollectionDefaultTabs = <CollectionTabItem>[
   CollectionTabItem(type: CollectionType.all, label: '全部'),
   CollectionTabItem(type: CollectionType.artwork, label: '范画'),
   CollectionTabItem(type: CollectionType.video, label: '视频'),
   CollectionTabItem(type: CollectionType.news, label: '资讯'),
+  CollectionTabItem(type: CollectionType.ebook, label: EbookCollection.label),
 ];
 
-const Map<String, int> kCollectionTypeByLabel = <String, int>{
-  '全部': CollectionType.all,
-  '范画': CollectionType.artwork,
-  '视频': CollectionType.video,
-  '资讯': CollectionType.news,
+/// 接口分类名 → 类型，由 [kCollectionDefaultTabs] 生成。
+final Map<String, int> kCollectionTypeByLabel = <String, int>{
+  for (final tab in kCollectionDefaultTabs) tab.label: tab.type,
 };

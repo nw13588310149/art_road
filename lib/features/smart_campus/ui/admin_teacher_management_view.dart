@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,6 @@ import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/admin_repository.dart';
-import '../data/smart_campus_role_theme.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
@@ -20,15 +20,14 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 // 颜色常量
 // ============================================================================
 
-const Color _kBg = Color(0xFFEFF3FC);
-const Color _kCardBg = Colors.white;
-const Color _kTextPrimary = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextSub = Color(0xFF6D6B75);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kGreen = Color(0xFF0CAC40);
-const Color _kBorder = Color(0xFFF3F2F3);
-const Color _kPurpleSoft = Color(0xFFD7D5FF);
+const Color _kBg = AppColors.page;
+const Color _kCardBg = AppColors.surface;
+const Color _kTextPrimary = AppColors.ink;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextSub = AppColors.textSecondary;
+const Color _kPurple = AppColors.brand;
+const Color _kBorder = AppColors.lineSoft;
+const Color _kPurpleSoft = AppColors.brandTint;
 
 /// 与人脸库录入截取同比例（11:14），档案弹窗内略放大。
 const double _kFaceImgPreviewWidth = 104;
@@ -49,28 +48,6 @@ extension on _TeacherStatus {
         return '请假';
       case _TeacherStatus.maternity:
         return '产假';
-    }
-  }
-
-  /// 右上角徽章背景：在岗用浅绿，其它两类共用浅灰。
-  Color get tagBg {
-    switch (this) {
-      case _TeacherStatus.onDuty:
-        return const Color(0xFFDFFCF0);
-      case _TeacherStatus.leave:
-      case _TeacherStatus.maternity:
-        return const Color(0xFFF3F2F3);
-    }
-  }
-
-  /// 圆点 / 文字色。
-  Color get tagFg {
-    switch (this) {
-      case _TeacherStatus.onDuty:
-        return _kGreen;
-      case _TeacherStatus.leave:
-      case _TeacherStatus.maternity:
-        return _kTextHint;
     }
   }
 }
@@ -182,8 +159,7 @@ class _Teacher {
         summaryBuf.write(campusName);
       }
     }
-    final summaryInfo =
-        summaryBuf.isEmpty ? '—' : summaryBuf.toString().trim();
+    final summaryInfo = summaryBuf.isEmpty ? '—' : summaryBuf.toString().trim();
 
     final userId = readSnowflakeId(json['id'] ?? json['userId']) ?? '';
 
@@ -328,10 +304,6 @@ List<String> _parseTeacherRoles(dynamic raw) {
   return labels;
 }
 
-/// 教师身份标签配色（五身份主题色）。
-({Color bg, Color fg}) _teacherRoleColors(String label) =>
-    smartCampusRoleTagColors(label);
-
 Map<String, dynamic> _pickNestedMap(
   Map<String, dynamic> json,
   List<String> keys,
@@ -390,7 +362,8 @@ List<_ClassFilterOption> _buildClassFilterOptions(List<dynamic> list) {
   for (final item in list) {
     if (item is! Map) continue;
     final m = Map<String, dynamic>.from(item);
-    final id = pickFirstSnowflakeId(m, ['id', 'classId', 'cId']) ??
+    final id =
+        pickFirstSnowflakeId(m, ['id', 'classId', 'cId']) ??
         _pickString(m, ['id', 'classId', 'cId'], '');
     if (id.isEmpty || id == '0') continue;
     final label = _classListItemLabel(m);
@@ -565,40 +538,43 @@ class _AdminTeacherManagementViewState
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kBg,
       bodyTopClipRadius: 8,
-      header: _Banner(onBack: widget.onBack),
+      header: AppPageHeader(
+        title: '教师管理',
+        subtitle: '管理教师档案、任课班级与角色',
+        onBack: widget.onBack,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _StatsRow(
-              onDuty: onDuty,
-              onLeave: onLeave,
-              headTeachers: headTeachers,
-              total: total,
+            onDuty: onDuty,
+            onLeave: onLeave,
+            headTeachers: headTeachers,
+            total: total,
+          ),
+          SizedBox(height: ui(16)),
+          _FilterRow(
+            selectedClassId: _selectedClassId,
+            classOptions: _classOptions,
+            onClassChanged: (id) {
+              setState(() => _selectedClassId = id);
+              _loadTeachers();
+            },
+            onSearchChanged: (kw) {
+              setState(() => _searchKw = kw);
+              _loadTeachers();
+            },
+          ),
+          SizedBox(height: ui(10)),
+          Text(
+            '当前结果 ${list.length}人',
+            style: TextStyle(
+              fontSize: ui(12),
+              height: 1.2,
+              color: _kTextPrimary,
             ),
-            SizedBox(height: ui(16)),
-            _FilterRow(
-              selectedClassId: _selectedClassId,
-              classOptions: _classOptions,
-              onClassChanged: (id) {
-                setState(() => _selectedClassId = id);
-                _loadTeachers();
-              },
-              onSearchChanged: (kw) {
-                setState(() => _searchKw = kw);
-                _loadTeachers();
-              },
-            ),
-            SizedBox(height: ui(10)),
-            Text(
-              '当前结果 ${list.length}人',
-              style: TextStyle(
-                fontSize: ui(12),
-                height: 1.2,
-                color: _kTextPrimary,
-                fontFamily: 'PingFang SC',
-              ),
-            ),
-            SizedBox(height: ui(12)),
+          ),
+          SizedBox(height: ui(12)),
           _TeacherGrid(teachers: list, onTap: _openProfile),
         ],
       ),
@@ -609,84 +585,6 @@ class _AdminTeacherManagementViewState
 // ============================================================================
 // Banner
 // ============================================================================
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(62),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onBack,
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorder, width: 1),
-                ),
-                child: Icon(
-                  Icons.chevron_left,
-                  size: ui(20),
-                  color: _kTextPrimary,
-                ),
-              ),
-            ),
-          ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '教师管理',
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    height: 1.2,
-                    fontWeight: AppFont.w600,
-                    color: _kTextPrimary,
-                    fontFamily: 'PingFang SC',
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                Text(
-                  '人事档案、部门归属、任课与角色；与教师端登录权限、班主任带班关系对齐',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    height: 1.2,
-                    color: _kTextHint,
-                    fontFamily: 'PingFang SC',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ============================================================================
 // 5 列统计
@@ -801,7 +699,7 @@ class _ClassFilterFieldState extends State<_ClassFilterField> {
         width: ui(220),
         height: ui(44),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorder),
         ),
@@ -817,7 +715,6 @@ class _ClassFilterFieldState extends State<_ClassFilterField> {
                   fontSize: ui(14),
                   height: 1.2,
                   color: _kTextPrimary,
-                  fontFamily: 'PingFang SC',
                 ),
               ),
             ),
@@ -827,7 +724,7 @@ class _ClassFilterFieldState extends State<_ClassFilterField> {
               child: Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: ui(22),
-                color: const Color(0xFFC6C6C6),
+                color: AppColors.textPlaceholder,
               ),
             ),
           ],
@@ -880,7 +777,7 @@ class _FilterRowState extends State<_FilterRow> {
           width: ui(324),
           height: ui(44),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(12)),
           ),
           padding: EdgeInsets.symmetric(horizontal: ui(16)),
@@ -904,7 +801,6 @@ class _FilterRowState extends State<_FilterRow> {
                     fontSize: ui(14),
                     height: 1.2,
                     color: _kTextPrimary,
-                    fontFamily: 'PingFang SC',
                   ),
                   decoration: InputDecoration(
                     isCollapsed: true,
@@ -912,8 +808,7 @@ class _FilterRowState extends State<_FilterRow> {
                     hintText: '搜索姓名、工号',
                     hintStyle: TextStyle(
                       fontSize: ui(14),
-                      color: const Color(0xFFD1D1D1),
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.textPlaceholder,
                     ),
                   ),
                 ),
@@ -944,16 +839,12 @@ class _TeacherGrid extends StatelessWidget {
         height: ui(120),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
         ),
         child: Text(
           '暂无符合条件的教师',
-          style: TextStyle(
-            fontSize: ui(14),
-            color: _kTextHint,
-            fontFamily: 'PingFang SC',
-          ),
+          style: TextStyle(fontSize: ui(14), color: _kTextHint),
         ),
       );
     }
@@ -1033,15 +924,14 @@ class _TeacherCard extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                       textHeightBehavior:
                                           const TextHeightBehavior(
-                                        applyHeightToFirstAscent: false,
-                                        applyHeightToLastDescent: false,
-                                      ),
+                                            applyHeightToFirstAscent: false,
+                                            applyHeightToLastDescent: false,
+                                          ),
                                       style: TextStyle(
                                         fontSize: ui(14),
                                         height: 1.0,
                                         fontWeight: AppFont.w500,
                                         color: _kTextPrimary,
-                                        fontFamily: 'PingFang SC',
                                       ),
                                     ),
                                   ),
@@ -1053,7 +943,6 @@ class _TeacherCard extends StatelessWidget {
                                         fontSize: ui(12),
                                         height: 1.2,
                                         color: _kTextHint,
-                                        fontFamily: 'PingFang SC',
                                       ),
                                     ),
                                   ],
@@ -1062,13 +951,12 @@ class _TeacherCard extends StatelessWidget {
                               SizedBox(height: ui(6)),
                               Text(
                                 teacher.summaryInfo,
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: ui(12),
                                   height: 1.2,
                                   color: _kTextPrimary,
-                                  fontFamily: 'PingFang SC',
                                 ),
                               ),
                             ],
@@ -1082,9 +970,11 @@ class _TeacherCard extends StatelessWidget {
                             physics: const BouncingScrollPhysics(),
                             child: Row(
                               children: [
-                                for (var i = 0;
-                                    i < teacher.roleLabels.length;
-                                    i++) ...[
+                                for (
+                                  var i = 0;
+                                  i < teacher.roleLabels.length;
+                                  i++
+                                ) ...[
                                   if (i > 0) SizedBox(width: ui(4)),
                                   _RoleTagChip(label: teacher.roleLabels[i]),
                                 ],
@@ -1098,45 +988,15 @@ class _TeacherCard extends StatelessWidget {
                 ],
               ),
             ),
-            // 右上状态徽章
+            // 右上状态：在岗 success，其余 warning。
             Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                height: ui(22),
-                padding: EdgeInsets.symmetric(horizontal: ui(8)),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: teacher.status.tagBg,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(ui(12)),
-                    bottomLeft: Radius.circular(ui(12)),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: ui(6),
-                      height: ui(6),
-                      decoration: BoxDecoration(
-                        color: teacher.status.tagFg,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    SizedBox(width: ui(4)),
-                    Text(
-                      teacher.status.label,
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        height: 1.0,
-                        color: teacher.status.tagFg,
-                        fontFamily: 'PingFang SC',
-                      ),
-                    ),
-                  ],
-                ),
+              right: ui(12),
+              top: ui(10),
+              child: AppStatusTag(
+                label: teacher.status.label,
+                tone: teacher.status.label == '在岗'
+                    ? AppTone.success
+                    : AppTone.warning,
               ),
             ),
           ],
@@ -1153,29 +1013,7 @@ class _RoleTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final colors = _teacherRoleColors(label);
-    return Container(
-      height: ui(17),
-      padding: EdgeInsets.symmetric(horizontal: ui(6)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: colors.bg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: ui(12),
-          height: 15.24 / 12,
-          color: colors.fg,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-        ),
-      ),
-    );
+    return AppTag(label: label);
   }
 }
 
@@ -1193,40 +1031,7 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final initial = name.isEmpty ? '·' : name.characters.first;
-    final placeholder = Container(
-      width: ui(size),
-      height: ui(size),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFD7D5FF),
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: ui(size * 0.4),
-          height: 1.0,
-          fontWeight: AppFont.w600,
-          color: _kPurple,
-          fontFamily: 'PingFang SC',
-        ),
-      ),
-    );
-    if (avatarUrl.isEmpty) {
-      return placeholder;
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Image.network(
-        avatarUrl,
-        width: ui(size),
-        height: ui(size),
-        fit: BoxFit.cover,
-        // 404 / CORS / 离线时退回首字母占位，避免出现"问号 / 黑块"。
-        errorBuilder: (_, _, _) => placeholder,
-      ),
-    );
+    return AppAvatar(name: name, url: avatarUrl, size: ui(size));
   }
 }
 
@@ -1301,11 +1106,7 @@ class _TeacherProfileDialogState extends ConsumerState<_TeacherProfileDialog> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        _Avatar(
-                          name: t.name,
-                          avatarUrl: t.avatarUrl,
-                          size: 56,
-                        ),
+                        _Avatar(name: t.name, avatarUrl: t.avatarUrl, size: 56),
                         SizedBox(width: ui(12)),
                         Expanded(
                           child: Column(
@@ -1321,8 +1122,7 @@ class _TeacherProfileDialogState extends ConsumerState<_TeacherProfileDialog> {
                                         fontSize: ui(16),
                                         height: 1.2,
                                         fontWeight: AppFont.w600,
-                                        color: Colors.black,
-                                        fontFamily: 'PingFang SC',
+                                        color: AppColors.ink,
                                       ),
                                     ),
                                   ),
@@ -1332,7 +1132,6 @@ class _TeacherProfileDialogState extends ConsumerState<_TeacherProfileDialog> {
                                       style: TextStyle(
                                         fontSize: ui(12),
                                         color: _kTextHint,
-                                        fontFamily: 'PingFang SC',
                                       ),
                                     ),
                                 ],
@@ -1348,7 +1147,6 @@ class _TeacherProfileDialogState extends ConsumerState<_TeacherProfileDialog> {
                                   fontSize: ui(12),
                                   height: 1.2,
                                   color: _kTextSub,
-                                  fontFamily: 'PingFang SC',
                                 ),
                               ),
                               SizedBox(height: ui(2)),
@@ -1358,7 +1156,6 @@ class _TeacherProfileDialogState extends ConsumerState<_TeacherProfileDialog> {
                                   fontSize: ui(12),
                                   height: 1.2,
                                   color: _kTextHint,
-                                  fontFamily: 'PingFang SC',
                                 ),
                               ),
                             ],
@@ -1439,12 +1236,7 @@ class _TeacherFaceImgPreview extends StatelessWidget {
           SizedBox(height: ui(6)),
           Text(
             '暂未录入',
-            style: TextStyle(
-              fontSize: ui(10),
-              height: 1.2,
-              color: _kTextSub,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(12), height: 1.2, color: _kTextSub),
           ),
         ],
       );
@@ -1463,7 +1255,7 @@ class _TeacherFaceImgPreview extends StatelessWidget {
         height: ui(_kFaceImgPreviewHeight),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: const Color(0xFFEDE6FF),
+          color: AppColors.brandTint,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kPurpleSoft, width: 1),
         ),
@@ -1485,14 +1277,13 @@ class _TeacherFaceImgPreview extends StatelessWidget {
                 bottom: 0,
                 child: Container(
                   padding: EdgeInsets.symmetric(vertical: ui(4)),
-                  color: Colors.black.withValues(alpha: 0.35),
+                  color: AppColors.ink.withValues(alpha: 0.35),
                   alignment: Alignment.center,
                   child: Text(
                     '点击放大',
                     style: TextStyle(
-                      fontSize: ui(10),
-                      color: Colors.white,
-                      fontFamily: 'PingFang SC',
+                      fontSize: ui(12),
+                      color: AppColors.surface,
                       fontWeight: AppFont.w400,
                       height: 1.0,
                     ),
@@ -1519,23 +1310,13 @@ class _TeacherRolesSection extends StatelessWidget {
       children: [
         Text(
           '教师身份',
-          style: TextStyle(
-            fontSize: ui(14),
-            height: 1.4,
-            color: _kTextHint,
-            fontFamily: 'PingFang SC',
-          ),
+          style: TextStyle(fontSize: ui(14), height: 1.4, color: _kTextHint),
         ),
         SizedBox(height: ui(8)),
         if (roleLabels.isEmpty)
           Text(
             '暂无身份标签',
-            style: TextStyle(
-              fontSize: ui(14),
-              height: 1.4,
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-            ),
+            style: TextStyle(fontSize: ui(14), height: 1.4, color: _kTextHint),
           )
         else
           SingleChildScrollView(
@@ -1584,7 +1365,6 @@ class _ProfileRow extends StatelessWidget {
                 fontSize: ui(14),
                 height: 1.4,
                 color: _kTextHint,
-                fontFamily: 'PingFang SC',
               ),
             ),
           ),
@@ -1595,7 +1375,6 @@ class _ProfileRow extends StatelessWidget {
                 fontSize: ui(14),
                 height: 1.4,
                 color: _kTextPrimary,
-                fontFamily: 'PingFang SC',
               ),
             ),
           ),

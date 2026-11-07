@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/network/media_url.dart';
@@ -6,17 +7,17 @@ import '../../data/course_sign_data.dart';
 import '../../../shell/ui/shell_layout.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPageBg = Color(0xFFF5F6FA);
-const Color _kGreen = Color(0xFF0CAC40);
-const Color _kGreenBg = Color(0xFFDFFCF0);
-const Color _kOrange = Color(0xFFF59E0B);
+const Color _kTextDark = AppColors.ink;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPageBg = AppColors.surfaceSubtle;
+const Color _kGreen = AppColors.success;
+const Color _kGreenBg = AppColors.successSoft;
+const Color _kOrange = AppColors.warning;
 const Color _kOrangeBg = Color(0xFFFFF7E6);
-const Color _kRed = Color(0xFFFF323C);
+const Color _kRed = AppColors.danger;
 const Color _kRedBg = Color(0xFFFFEEEF);
 const Color _kGrayBg = Color(0xFFF0F0F0);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kBorderSoft = AppColors.lineSoft;
 
 /// 管理员 / 任课老师签课：统一「修改签到状态」弹窗（与 [showTextInputDialog] 同款壳）。
 Future<CourseSignStatus?> showCourseSignStatusPicker(
@@ -28,7 +29,7 @@ Future<CourseSignStatus?> showCourseSignStatusPicker(
 }) {
   return showScaledDialog<CourseSignStatus>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.18),
+    barrierColor: AppColors.ink.withValues(alpha: 0.18),
     builder: (dialogContext) {
       CourseSignStatus? selected = current ?? CourseSignStatus.present;
 
@@ -81,7 +82,6 @@ Future<CourseSignStatus?> showCourseSignStatusPicker(
                               style: TextStyle(
                                 fontSize: ui(16),
                                 color: _kTextDark,
-                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w600,
                                 height: 1.2,
                               ),
@@ -96,7 +96,6 @@ Future<CourseSignStatus?> showCourseSignStatusPicker(
                               style: TextStyle(
                                 fontSize: ui(12),
                                 color: _kTextHint,
-                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w400,
                                 height: 1.2,
                               ),
@@ -110,7 +109,6 @@ Future<CourseSignStatus?> showCourseSignStatusPicker(
                                   style: TextStyle(
                                     fontSize: ui(12),
                                     color: _kTextHint,
-                                    fontFamily: 'PingFang SC',
                                     fontWeight: AppFont.w400,
                                     height: 1,
                                   ),
@@ -130,7 +128,6 @@ Future<CourseSignStatus?> showCourseSignStatusPicker(
                                     style: TextStyle(
                                       fontSize: ui(12),
                                       color: courseSignStatusFg(current),
-                                      fontFamily: 'PingFang SC',
                                       fontWeight: AppFont.w500,
                                       height: 1,
                                     ),
@@ -188,7 +185,7 @@ class _SignStatusListTile extends StatelessWidget {
           height: ui(48),
           padding: EdgeInsets.symmetric(horizontal: ui(14)),
           decoration: BoxDecoration(
-            color: isSelected ? bg : Colors.white,
+            color: isSelected ? bg : AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(
               color: isSelected ? fg : _kBorderSoft,
@@ -209,7 +206,6 @@ class _SignStatusListTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: isSelected ? fg : _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: isSelected ? AppFont.w600 : AppFont.w400,
                     height: 1.2,
                   ),
@@ -241,16 +237,15 @@ class _StudentInfoAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: const BoxDecoration(
-        color: Color(0xFFB98FFF),
+        color: AppColors.brandSoft,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
       child: Text(
         initial,
         style: TextStyle(
-          color: Colors.white,
+          color: AppColors.surface,
           fontSize: size * 0.38,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -288,7 +283,7 @@ class _StudentInfoAvatar extends StatelessWidget {
     case CourseSignStatus.late:
       return (_kOrange, _kOrangeBg);
     case CourseSignStatus.leave:
-      return (const Color(0xFF6D6B75), _kGrayBg);
+      return (AppColors.textSecondary, _kGrayBg);
   }
 }
 
@@ -298,7 +293,7 @@ Color courseSignStatusFg(CourseSignStatus? status) {
 }
 
 Color courseSignStatusBg(CourseSignStatus? status) {
-  if (status == null) return const Color(0xFFF5F6FA);
+  if (status == null) return AppColors.surfaceSubtle;
   return _statusColors(status).$2;
 }
 

@@ -5,9 +5,7 @@ import 'package:photo_view/photo_view.dart';
 import '../../../app/router/route_paths.dart';
 import '../../../core/art/art_tokens.dart';
 import '../../../core/network/media_url.dart';
-import '../../../core/theme/app_font.dart';
-import '../../../core/widgets/app_loading_indicator.dart';
-import '../../../core/widgets/art_widgets.dart';
+import '../../../core/ui/ui.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../data/gallery_models.dart';
 import 'gallery_compare_page.dart';
@@ -43,16 +41,15 @@ class GalleryDetailView extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ArtPageHeader(title: '范画详情', onBack: onBack),
+          AppPageHeader(title: '范画详情', onBack: onBack),
           Expanded(
             child: error.isNotEmpty && !loading
-                ? ArtEmptyState(
-                    icon: Icons.broken_image_outlined,
-                    message: error,
-                    actionLabel: '重新加载',
-                    onAction: onRetry,
+                ? AppErrorState(
+                    title: '范画加载失败',
+                    description: error,
+                    onRetry: onRetry,
                   )
-                : const Center(child: AppLoadingIndicator()),
+                : const Center(child: AppLoadingIndicator(size: 36)),
           ),
         ],
       );
@@ -60,14 +57,15 @@ class GalleryDetailView extends StatelessWidget {
     final work = detail.work;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final header = ArtPageHeader(
+        final header = AppPageHeader(
           title: work.title,
           subtitle: _subtitleOf(work),
           onBack: onBack,
           actions: [
-            _HeaderIconButton(
+            AppIconButton(
               icon: Icons.fullscreen_rounded,
-              tooltip: '全屏查看',
+              semanticLabel: '全屏查看',
+              size: AppButtonSize.sm,
               onTap: () => showImageGallery(
                 context,
                 images: [MediaUrl.resolve(work.imageUrl)],
@@ -106,12 +104,17 @@ class GalleryDetailView extends StatelessWidget {
               header,
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.page,
+                    AppSpace.s4,
+                    AppSpace.page,
+                    AppSpace.s20,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(child: _ArtworkStage(work: work)),
-                      const SizedBox(width: 20),
+                      const SizedBox(width: AppSpace.s16),
                       SizedBox(
                         width: panelWidth,
                         child: SingleChildScrollView(child: info),
@@ -129,12 +132,17 @@ class GalleryDetailView extends StatelessWidget {
             header,
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.page,
+                  AppSpace.s4,
+                  AppSpace.page,
+                  AppSpace.s24,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _ArtworkPreview(work: work),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: AppSpace.s16),
                     info,
                   ],
                 ),
@@ -156,9 +164,7 @@ class GalleryDetailView extends StatelessWidget {
   }
 }
 
-const _stageColor = Color(0xFFF2F1F6);
-
-/// 宽屏：可缩放的大图（双指 / 双击缩放）。
+/// 宽屏：可缩放的大图（双指 / 双击缩放），舞台底色与作品点评一致。
 class _ArtworkStage extends StatelessWidget {
   const _ArtworkStage({required this.work});
 
@@ -168,17 +174,17 @@ class _ArtworkStage extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = MediaUrl.resolve(work.imageUrl);
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.br12,
       child: Stack(
         children: [
           Positioned.fill(
             child: url.isEmpty
-                ? const ColoredBox(color: _stageColor)
+                ? const ColoredBox(color: AppColors.surfaceSubtle)
                 : PhotoView(
                     key: ValueKey(url),
                     imageProvider: CachedNetworkImageProvider(url),
                     backgroundDecoration: const BoxDecoration(
-                      color: _stageColor,
+                      color: AppColors.surfaceSubtle,
                     ),
                     minScale: PhotoViewComputedScale.contained,
                     initialScale: PhotoViewComputedScale.contained,
@@ -189,15 +195,15 @@ class _ArtworkStage extends StatelessWidget {
                     errorBuilder: (context, error, stackTrace) => const Center(
                       child: Icon(
                         Icons.broken_image_outlined,
-                        color: ArtColors.ink4,
+                        color: AppColors.textPlaceholder,
                         size: 36,
                       ),
                     ),
                   ),
           ),
           const Positioned(
-            left: 12,
-            bottom: 12,
+            left: AppSpace.s12,
+            bottom: AppSpace.s12,
             child: IgnorePointer(child: _StageHint(text: '双指缩放 · 双击放大')),
           ),
         ],
@@ -215,18 +221,17 @@ class _ArtworkPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = MediaUrl.resolve(work.imageUrl);
-    return GestureDetector(
+    return AppPressable(
       onTap: () => showImageGallery(
         context,
         images: [url],
         heroTagPrefix: 'gallery_${work.id}',
       ),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: _stageColor,
-          borderRadius: BorderRadius.circular(16),
-        ),
+      semanticLabel: '查看大图',
+      child: AppCard(
+        color: AppColors.surfaceSubtle,
+        bordered: false,
+        padding: const EdgeInsets.all(AppSpace.s12),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 420),
@@ -235,14 +240,14 @@ class _ArtworkPreview extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  ArtNetworkImage(
-                    url,
+                  AppImage(
+                    src: work.imageUrl,
                     fit: BoxFit.contain,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: AppRadius.br8,
                   ),
                   const Positioned(
-                    right: 8,
-                    bottom: 8,
+                    right: AppSpace.s8,
+                    bottom: AppSpace.s8,
                     child: _StageHint(text: '点击查看大图'),
                   ),
                 ],
@@ -263,43 +268,17 @@ class _StageHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s8,
+        vertical: AppSpace.s4,
       ),
-      child: Text(text, style: ArtText.caption(size: 11, color: Colors.white)),
-    );
-  }
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: ArtColors.subtle,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 20, color: ArtColors.ink2),
-        ),
+      decoration: BoxDecoration(
+        color: AppColors.ink.withValues(alpha: 0.56),
+        borderRadius: AppRadius.brPill,
+      ),
+      child: Text(
+        text,
+        style: AppText.caption12.copyWith(color: AppColors.onBrand),
       ),
     );
   }
@@ -329,67 +308,73 @@ class _DetailInfo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _AuthorCard(work: work),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpace.s12),
         Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: AppSpace.s8,
+          runSpacing: AppSpace.s8,
           children: [
-            ArtButton(
+            AppButton(
               label: work.favorite ? '已收藏' : '收藏',
               icon: work.favorite
                   ? Icons.favorite_rounded
                   : Icons.favorite_border_rounded,
-              primary: false,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
               onTap: onToggleFavorite,
             ),
-            ArtButton(
+            AppButton(
               label: '临摹网格',
               icon: Icons.grid_on_rounded,
-              primary: false,
+              variant: AppButtonVariant.quiet,
+              size: AppButtonSize.sm,
               onTap: onOpenGrid,
             ),
-            ArtButton(
+            AppButton(
               label: '对比我的原卷',
               icon: Icons.compare_rounded,
+              size: AppButtonSize.sm,
               onTap: onCompare,
             ),
           ],
         ),
         if (work.points.isNotEmpty) ...[
-          const _SectionTitle('点评要点'),
+          const _Section(title: '点评要点'),
           for (var i = 0; i < work.points.length; i++)
             _PointRow(index: i + 1, text: work.points[i]),
         ],
         if (work.tags.isNotEmpty) ...[
-          const _SectionTitle('标签'),
+          const _Section(title: '标签', subtitle: '点击标签查看同类范画'),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpace.s8,
+            runSpacing: AppSpace.s8,
             children: [
               for (final tag in work.tags)
-                _TagChip(label: tag, onTap: () => onTagSelected(tag)),
+                AppChip(
+                  label: tag,
+                  icon: Icons.tag_rounded,
+                  selected: false,
+                  onTap: () => onTagSelected(tag),
+                ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text('点击标签查看更多同类范画', style: ArtText.caption(size: 11)),
         ],
         if (detail.description.isNotEmpty) ...[
-          const _SectionTitle('作品说明'),
+          const _Section(title: '作品说明'),
           Text(
             detail.description,
-            style: ArtText.body(color: ArtColors.ink2, height: 1.65),
+            style: AppText.body14.copyWith(color: AppColors.textSecondary),
           ),
         ],
         if (detail.related.isNotEmpty) ...[
-          const _SectionTitle('相关作品'),
+          const _Section(title: '相关作品'),
           _RelatedGrid(works: detail.related, onOpen: onOpenWork),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpace.s16),
         Text(
           '${formatViewCount(work.views)} 次浏览 · 发布于 ${work.publishDate}',
-          style: ArtText.caption(size: 11, color: ArtColors.ink4),
+          style: AppText.caption12,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpace.s8),
       ],
     );
   }
@@ -408,16 +393,12 @@ class _AuthorCard extends StatelessWidget {
             work.examName,
           ].where((s) => s.isNotEmpty).join(' · ')
         : (work.authorTitle.isEmpty ? work.source : work.authorTitle);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: work.isExamPaper ? ArtColors.brandWash : ArtColors.subtle,
-        borderRadius: BorderRadius.circular(14),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s12),
       child: Row(
         children: [
-          ArtAvatar(name: work.author, size: 40),
-          const SizedBox(width: 12),
+          AppAvatar(name: work.author.isEmpty ? '佚名' : work.author, size: 40),
+          const SizedBox(width: AppSpace.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,65 +407,56 @@ class _AuthorCard extends StatelessWidget {
                   work.author.isEmpty ? '佚名' : work.author,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: ArtText.body(size: 15, weight: AppFont.w500),
+                  style: AppText.body14Strong,
                 ),
-                const SizedBox(height: 2),
                 Text(
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: ArtText.caption(),
+                  style: AppText.caption12,
                 ),
               ],
             ),
           ),
+          const SizedBox(width: AppSpace.s8),
           if (work.isExamPaper && work.score != null) ...[
-            const SizedBox(width: 8),
-            ArtGradeBadge(grade: work.grade, size: 28),
-            const SizedBox(width: 8),
-            Text(
-              formatScore(work.score),
-              style: ArtText.number(size: 26, color: ArtColors.brandDeep),
-            ),
-            const SizedBox(width: 2),
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text('分', style: ArtText.caption()),
+            if (work.grade.isNotEmpty) ...[
+              AppTag(
+                label: '${work.grade} 档',
+                tone: work.grade == 'A' ? AppTone.brand : AppTone.neutral,
+              ),
+              const SizedBox(width: AppSpace.s8),
+            ],
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: formatScore(work.score),
+                    style: AppText.number(size: 24, color: AppColors.brand),
+                  ),
+                  TextSpan(text: ' 分', style: AppText.caption12),
+                ],
+              ),
             ),
           ] else
-            GallerySourceBadge(
-              label: work.source == GallerySource.student ? '优秀作品' : '名师范画',
-              examTop: work.source != GallerySource.student,
-            ),
+            GallerySourceTag(source: work.source),
         ],
       ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
+class _Section extends StatelessWidget {
+  const _Section({required this.title, this.subtitle});
 
   final String title;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 22, bottom: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 3,
-            height: 14,
-            decoration: BoxDecoration(
-              color: ArtColors.brand,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(title, style: ArtText.title(size: 15)),
-        ],
-      ),
+      padding: const EdgeInsets.only(top: AppSpace.s20, bottom: AppSpace.s12),
+      child: AppSectionHeader(title: title, subtitle: subtitle),
     );
   }
 }
@@ -498,7 +470,7 @@ class _PointRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: AppSpace.s8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -508,44 +480,17 @@ class _PointRow extends StatelessWidget {
             margin: const EdgeInsets.only(top: 1),
             alignment: Alignment.center,
             decoration: const BoxDecoration(
-              color: ArtColors.brandTint,
+              color: AppColors.surfaceSubtle,
               shape: BoxShape.circle,
             ),
             child: Text(
               '$index',
-              style: ArtText.number(size: 11, color: ArtColors.brandDeep),
+              style: AppText.number(size: 12, color: AppColors.textSecondary),
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text, style: ArtText.body(height: 1.5))),
+          const SizedBox(width: AppSpace.s8),
+          Expanded(child: Text(text, style: AppText.body14)),
         ],
-      ),
-    );
-  }
-}
-
-class _TagChip extends StatelessWidget {
-  const _TagChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: ArtColors.brandLight),
-        ),
-        child: Text(
-          '# $label',
-          style: ArtText.caption(size: 12, color: ArtColors.brandDeep),
-        ),
       ),
     );
   }
@@ -561,7 +506,7 @@ class _RelatedGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const gap = 12.0;
+        const gap = AppSpace.s12;
         final columns = constraints.maxWidth >= 520 ? 4 : 2;
         final itemWidth =
             (constraints.maxWidth - gap * (columns - 1)) / columns;
@@ -572,25 +517,25 @@ class _RelatedGrid extends StatelessWidget {
             for (final work in works)
               SizedBox(
                 width: itemWidth,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                child: AppPressable(
                   onTap: () => onOpen(work.id),
+                  semanticLabel: work.title,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       AspectRatio(
                         aspectRatio: 1,
-                        child: ArtNetworkImage(
-                          work.imageUrl,
-                          borderRadius: BorderRadius.circular(10),
+                        child: AppImage(
+                          src: work.imageUrl,
+                          borderRadius: AppRadius.br8,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: AppSpace.s4),
                       Text(
                         work.title,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: ArtText.body(size: 13, weight: AppFont.w500),
+                        style: AppText.body13.copyWith(color: AppColors.ink),
                       ),
                       Text(
                         work.isExamPaper && work.score != null
@@ -598,7 +543,7 @@ class _RelatedGrid extends StatelessWidget {
                             : work.author,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: ArtText.caption(size: 11),
+                        style: AppText.caption12,
                       ),
                     ],
                   ),

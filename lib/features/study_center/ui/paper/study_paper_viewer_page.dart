@@ -7,9 +7,7 @@ import 'package:photo_view/photo_view.dart';
 
 import '../../../../core/art/art_tokens.dart';
 import '../../../../core/network/media_url.dart';
-import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/app_loading_indicator.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 import '../../state/study_detail_providers.dart';
@@ -18,8 +16,9 @@ import '../widgets/grade_band_table.dart';
 import '../widgets/study_common.dart';
 import 'study_paper_watermark.dart';
 
-const _viewerBackground = Color(0xFF15131D);
-const _viewerPanel = Color(0xFF1E1B29);
+/// 深色看图页上的次级文字与分隔线。
+final _onDarkMuted = AppColors.onBrand.withValues(alpha: 0.64);
+final _onDarkLine = AppColors.onBrand.withValues(alpha: 0.12);
 
 /// 全屏查看原卷：科目切换、缩放、水印、A 档样图对照。
 Future<void> openStudyPaperViewer(
@@ -109,7 +108,7 @@ class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
     }
 
     return Scaffold(
-      backgroundColor: _viewerBackground,
+      backgroundColor: AppColors.ink,
       body: SafeArea(
         child: Column(
           children: [
@@ -118,7 +117,7 @@ class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
               subjectId: _subjectId,
               compare: _compare,
               onSubjectChanged: (id) => setState(() => _subjectId = id),
-              onToggleCompare: () => setState(() => _compare = !_compare),
+              onCompareChanged: (value) => setState(() => _compare = value),
               onOpenStandard: subject == null
                   ? null
                   : () => showStudyGradeStandard(
@@ -143,7 +142,7 @@ class _ViewerTopBar extends StatelessWidget {
     required this.subjectId,
     required this.compare,
     required this.onSubjectChanged,
-    required this.onToggleCompare,
+    required this.onCompareChanged,
     required this.onOpenStandard,
   });
 
@@ -151,19 +150,22 @@ class _ViewerTopBar extends StatelessWidget {
   final String subjectId;
   final bool compare;
   final ValueChanged<String> onSubjectChanged;
-  final VoidCallback onToggleCompare;
+  final ValueChanged<bool> onCompareChanged;
   final VoidCallback? onOpenStandard;
 
   @override
   Widget build(BuildContext context) {
     final title = Row(
       children: [
-        _RoundIconButton(
+        AppIconButton(
           icon: Icons.close_rounded,
-          tooltip: '关闭',
+          semanticLabel: '关闭',
+          size: AppButtonSize.sm,
+          filled: false,
+          color: AppColors.onBrand,
           onTap: () => Navigator.of(context).maybePop(),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpace.s8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,53 +175,66 @@ class _ViewerTopBar extends StatelessWidget {
                 exam.examName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: ArtText.title(size: 16, color: Colors.white),
+                style: AppText.title16.copyWith(color: AppColors.onBrand),
               ),
-              const SizedBox(height: 2),
               Text(
                 '原卷查看 · 仅供本人学习，请勿外传',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: ArtText.caption(color: Colors.white54),
+                style: AppText.caption12.copyWith(color: _onDarkMuted),
               ),
             ],
           ),
         ),
       ],
     );
-    final tabs = _DarkSegment(
-      subjects: exam.subjects,
-      selectedId: subjectId,
+    final subjects = AppSegmented<String>(
+      size: AppControlSize.sm,
+      segments: [
+        for (final subject in exam.subjects)
+          AppSegment(value: subject.subjectId, label: subject.subjectName),
+      ],
+      value: subjectId,
       onChanged: onSubjectChanged,
     );
     final actions = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _DarkButton(
-          label: '对照样图',
-          icon: Icons.compare_rounded,
-          active: compare,
-          onTap: onToggleCompare,
+        AppSegmented<bool>(
+          size: AppControlSize.sm,
+          segments: const [
+            AppSegment(value: false, label: '原卷'),
+            AppSegment(value: true, label: '对照样图'),
+          ],
+          value: compare,
+          onChanged: onCompareChanged,
         ),
-        const SizedBox(width: 8),
-        _DarkButton(
+        const SizedBox(width: AppSpace.s8),
+        AppButton(
           label: '评分标准',
           icon: Icons.rule_rounded,
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.sm,
           onTap: onOpenStandard,
         ),
       ],
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s12,
+        AppSpace.s8,
+        AppSpace.s16,
+        AppSpace.s8,
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth >= 880) {
             return Row(
               children: [
                 Expanded(child: title),
-                const SizedBox(width: 16),
-                tabs,
-                const SizedBox(width: 16),
+                const SizedBox(width: AppSpace.s16),
+                subjects,
+                const SizedBox(width: AppSpace.s16),
                 actions,
               ],
             );
@@ -230,176 +245,21 @@ class _ViewerTopBar extends StatelessWidget {
               Row(
                 children: [
                   Expanded(child: title),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpace.s12),
                   actions,
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpace.s8),
               Align(
                 alignment: Alignment.centerLeft,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: tabs,
+                  child: subjects,
                 ),
               ),
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-class _DarkSegment extends StatelessWidget {
-  const _DarkSegment({
-    required this.subjects,
-    required this.selectedId,
-    required this.onChanged,
-  });
-
-  final List<StudySubjectRecord> subjects;
-  final String selectedId;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final subject in subjects)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onChanged(subject.subjectId),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: subject.subjectId == selectedId
-                      ? Colors.white
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      StudySubjectIcon.iconOf(subject.subjectName),
-                      size: 14,
-                      color: subject.subjectId == selectedId
-                          ? ArtColors.brandDeep
-                          : Colors.white60,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      subject.subjectName,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.2,
-                        fontFamily: 'PingFang SC',
-                        fontWeight: subject.subjectId == selectedId
-                            ? AppFont.w600
-                            : AppFont.w400,
-                        color: subject.subjectId == selectedId
-                            ? ArtColors.brandDeep
-                            : Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DarkButton extends StatelessWidget {
-  const _DarkButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    this.active = false,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return Opacity(
-      opacity: enabled ? 1 : 0.4,
-      child: Material(
-        color: active ? ArtColors.brand : Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 16, color: Colors.white),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.2,
-                    color: Colors.white,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.white.withValues(alpha: 0.1),
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: SizedBox(
-            width: 36,
-            height: 36,
-            child: Icon(icon, size: 20, color: Colors.white),
-          ),
-        ),
       ),
     );
   }
@@ -418,7 +278,7 @@ class _SingleView extends StatelessWidget {
       error: (error, _) => _ViewerMessage(
         icon: Icons.cloud_off_rounded,
         text: studyErrorText(error, '原卷加载失败'),
-        actionLabel: '重新加载',
+        actionLabel: '重试',
         onAction: onRetry,
       ),
       data: (value) {
@@ -437,7 +297,7 @@ class _SingleView extends StatelessWidget {
                 MediaUrl.resolve(value.imageUrl),
               ),
               backgroundDecoration: const BoxDecoration(
-                color: Colors.transparent,
+                color: AppColors.ink,
               ),
               minScale: PhotoViewComputedScale.contained,
               maxScale: PhotoViewComputedScale.covered * 4,
@@ -456,9 +316,9 @@ class _SingleView extends StatelessWidget {
               child: StudyPaperWatermark(text: value.watermarkText),
             ),
             const Positioned(
-              left: 16,
-              bottom: 14,
-              child: _HintChip(text: '双指缩放 · 双击放大'),
+              left: AppSpace.s16,
+              bottom: AppSpace.s12,
+              child: _HintLabel(text: '双指缩放 · 双击放大'),
             ),
           ],
         );
@@ -494,7 +354,7 @@ class _CompareView extends StatelessWidget {
       error: (error, _) => _ViewerMessage(
         icon: Icons.cloud_off_rounded,
         text: studyErrorText(error, '原卷加载失败'),
-        actionLabel: '重新加载',
+        actionLabel: '重试',
         onAction: onRetryPaper,
       ),
       data: (value) => value.viewable
@@ -517,7 +377,7 @@ class _CompareView extends StatelessWidget {
       error: (error, _) => _ViewerMessage(
         icon: Icons.cloud_off_rounded,
         text: studyErrorText(error, '样图加载失败'),
-        actionLabel: '重新加载',
+        actionLabel: '重试',
         onAction: onRetryStandard,
       ),
       data: (value) {
@@ -581,9 +441,9 @@ class _ComparePane extends StatelessWidget {
         children: [
           child,
           Positioned(
-            left: 12,
-            top: 12,
-            child: IgnorePointer(child: _HintChip(text: label, strong: true)),
+            left: AppSpace.s12,
+            top: AppSpace.s12,
+            child: IgnorePointer(child: _HintLabel(text: label, strong: true)),
           ),
         ],
       ),
@@ -599,27 +459,21 @@ class _DividerHandle extends StatelessWidget {
     return Stack(
       alignment: Alignment.center,
       children: [
-        Container(width: 2, color: Colors.white.withValues(alpha: 0.24)),
+        Container(width: 2, color: _onDarkLine),
         Container(
           width: 24,
           height: 52,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x40000000),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadius.br12,
+            boxShadow: AppShadow.thumb,
           ),
           child: const RotatedBox(
             quarterTurns: 1,
             child: Icon(
               Icons.unfold_more_rounded,
               size: 18,
-              color: ArtColors.ink2,
+              color: AppColors.textSecondary,
             ),
           ),
         ),
@@ -670,24 +524,37 @@ class _BandLegendBar extends StatelessWidget {
         ? subject.grade
         : bandForScore(bands, subject.score)?.grade ?? '';
     return Container(
-      color: _viewerPanel,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s20,
+        AppSpace.s12,
+        AppSpace.s20,
+        AppSpace.s12,
+      ),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: _onDarkLine)),
+      ),
       child: Row(
         children: [
-          Text('我的档位', style: ArtText.caption(color: Colors.white54)),
-          const SizedBox(width: 10),
+          Text(
+            '我的档位',
+            style: AppText.caption12.copyWith(color: _onDarkMuted),
+          ),
+          const SizedBox(width: AppSpace.s12),
           if (subject.hasScore) ...[
-            ArtGradeBadge(grade: grade, size: 24),
-            const SizedBox(width: 8),
+            StudyGradeTag(grade: grade),
+            const SizedBox(width: AppSpace.s8),
             StudyNumberText(
               formatScore(subject.score),
               unit: ' / ${formatScore(subject.maxScore)} 分',
-              color: Colors.white,
-              unitColor: Colors.white54,
+              color: AppColors.onBrand,
+              unitColor: _onDarkMuted,
             ),
           ] else
-            Text('待出分', style: ArtText.body(size: 13, color: Colors.white70)),
-          const SizedBox(width: 20),
+            Text(
+              '待出分',
+              style: AppText.body13.copyWith(color: _onDarkMuted),
+            ),
+          const SizedBox(width: AppSpace.s20),
           Expanded(
             child: bands.isEmpty
                 ? const SizedBox.shrink()
@@ -707,8 +574,8 @@ class _BandLegendBar extends StatelessWidget {
   }
 }
 
-class _HintChip extends StatelessWidget {
-  const _HintChip({required this.text, this.strong = false});
+class _HintLabel extends StatelessWidget {
+  const _HintLabel({required this.text, this.strong = false});
 
   final String text;
   final bool strong;
@@ -716,19 +583,18 @@ class _HintChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s8,
+        vertical: AppSpace.s4,
+      ),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: strong ? 0.6 : 0.4),
-        borderRadius: BorderRadius.circular(999),
+        color: AppColors.ink.withValues(alpha: strong ? 0.72 : 0.56),
+        borderRadius: AppRadius.brPill,
       ),
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 12,
-          height: 1.3,
-          color: strong ? Colors.white : Colors.white70,
-          fontFamily: 'PingFang SC',
-          fontWeight: strong ? AppFont.w500 : AppFont.w400,
+        style: (strong ? AppText.caption12Strong : AppText.caption12).copyWith(
+          color: AppColors.onBrand,
         ),
       ),
     );
@@ -754,20 +620,26 @@ class _ViewerMessage extends StatelessWidget {
     final action = onAction;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpace.s24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: Colors.white38),
-            const SizedBox(height: 12),
+            Icon(icon, size: 40, color: _onDarkMuted),
+            const SizedBox(height: AppSpace.s12),
             Text(
               text,
               textAlign: TextAlign.center,
-              style: ArtText.body(size: 14, color: Colors.white70),
+              style: AppText.body14.copyWith(color: AppColors.onBrand),
             ),
             if (label != null && action != null) ...[
-              const SizedBox(height: 14),
-              ArtButton(label: label, onTap: action, height: 34),
+              const SizedBox(height: AppSpace.s16),
+              AppButton(
+                label: label,
+                icon: Icons.refresh_rounded,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.sm,
+                onTap: action,
+              ),
             ],
           ],
         ),

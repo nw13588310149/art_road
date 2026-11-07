@@ -35,6 +35,8 @@ pickAiChatAttachmentFileImpl() async {
     return null;
   }
 
-  final filename = file.name.trim().isNotEmpty ? file.name.trim() : 'attachment';
+  final filename = file.name.trim().isNotEmpty
+      ? file.name.trim()
+      : 'attachment';
   return (bytes: bytes, filename: filename, size: bytes.length);
 }

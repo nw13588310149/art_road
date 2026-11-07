@@ -50,7 +50,8 @@ bool isBigClassBulkSignCompleted({
   if (courseSignStatus >= CourseSignFlowStatus.studentStart.code) {
     return true;
   }
-  if (students.isNotEmpty && students.every((student) => student.status != null)) {
+  if (students.isNotEmpty &&
+      students.every((student) => student.status != null)) {
     return true;
   }
   return false;
@@ -441,7 +442,10 @@ class CourseSignSession {
     final students = _parseStudentList(studentsRaw);
 
     final signStatusRaw =
-        json['signStatus'] ?? json['signStep'] ?? json['step'] ?? json['flowStep'];
+        json['signStatus'] ??
+        json['signStep'] ??
+        json['step'] ??
+        json['flowStep'];
     final signStatus = int.tryParse(signStatusRaw?.toString() ?? '') ?? 0;
     final step = int.tryParse(signStatusRaw?.toString() ?? '');
 
@@ -634,11 +638,18 @@ List<CourseLineTimeConfig> parseCourseLineTimeConfigs(dynamic raw) {
         ? lineNumRaw
         : (int.tryParse(lineNumRaw?.toString() ?? '') ?? 0);
     if (lineNum < 1) continue;
-    final start = pickCourseClock(
-          _pickString(row, ['timeBegin', 'startTime', 'beginTime', 'start'], ''),
+    final start =
+        pickCourseClock(
+          _pickString(row, [
+            'timeBegin',
+            'startTime',
+            'beginTime',
+            'start',
+          ], ''),
         ) ??
         '';
-    final end = pickCourseClock(
+    final end =
+        pickCourseClock(
           _pickString(row, ['timeEnd', 'endTime', 'finishTime', 'end'], ''),
         ) ??
         '';
@@ -729,10 +740,14 @@ int _courseSessionSortKey(CourseSignSession session) {
   return 0;
 }
 
-List<CourseSignSession> sortCourseSignSessions(List<CourseSignSession> sessions) {
+List<CourseSignSession> sortCourseSignSessions(
+  List<CourseSignSession> sessions,
+) {
   final sorted = [...sessions]
     ..sort((a, b) {
-      final byStart = _courseSessionSortKey(a).compareTo(_courseSessionSortKey(b));
+      final byStart = _courseSessionSortKey(
+        a,
+      ).compareTo(_courseSessionSortKey(b));
       if (byStart != 0) return byStart;
       return a.lineNum.compareTo(b.lineNum);
     });
@@ -770,8 +785,9 @@ String? pickDefaultCourseSignSessionId(
 List<CourseSignSession> _parseCourseSessionRows(List<dynamic> raw) {
   return raw
       .map(
-        (e) =>
-            CourseSignSession.fromJson(_flattenCourseSessionRow(_asMap(e) ?? {})),
+        (e) => CourseSignSession.fromJson(
+          _flattenCourseSessionRow(_asMap(e) ?? {}),
+        ),
       )
       .where((s) => s.courseId.isNotEmpty || s.courseName.isNotEmpty)
       .toList(growable: false);

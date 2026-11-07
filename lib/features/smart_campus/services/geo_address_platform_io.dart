@@ -10,11 +10,13 @@ Future<String?> platformReverseGeocode({
     if (marks.isEmpty) return null;
     final p = marks.first;
     final parts = <String>[
-      if (p.administrativeArea?.trim().isNotEmpty == true) p.administrativeArea!.trim(),
+      if (p.administrativeArea?.trim().isNotEmpty == true)
+        p.administrativeArea!.trim(),
       if (p.locality?.trim().isNotEmpty == true) p.locality!.trim(),
       if (p.subLocality?.trim().isNotEmpty == true) p.subLocality!.trim(),
       if (p.thoroughfare?.trim().isNotEmpty == true) p.thoroughfare!.trim(),
-      if (p.subThoroughfare?.trim().isNotEmpty == true) p.subThoroughfare!.trim(),
+      if (p.subThoroughfare?.trim().isNotEmpty == true)
+        p.subThoroughfare!.trim(),
     ];
     final text = parts.join('');
     return text.isNotEmpty ? text : p.name?.trim();

@@ -4,8 +4,8 @@ import '../demo_backend.dart';
 import '../demo_store.dart';
 import '../media/demo_media.dart';
 
-/// 范画库演示接口（阅卷客户端）：名师范画与学生优秀作品取自演示画作，
-/// 联考高分卷取自阅卷演示数据中 8、9 月月考各科最高分。
+/// 范画库演示接口（阅卷客户端）：名师范画（作者均为画室在册老师）与学生优秀作品取自演示画作，
+/// 联考高分卷取自阅卷演示数据中最近一场已出分月考（9 月）的各科最高分，与学情中心同源。
 void registerMarkingGalleryFixtures(DemoRouter marking) {
   marking.get('/app/gallery/categories', (req) {
     final subject = _normalizeSubject(req.str('subject'));
@@ -129,13 +129,13 @@ const _examKey = 'exam-top';
 
 const _categories = <_Category>[
   _Category(_allKey, '全部', null),
-  _Category('sketch-cast', '素描·石膏', '素描'),
-  _Category('sketch-still', '素描·静物', '素描'),
-  _Category('sketch-head', '素描·头像', '素描'),
-  _Category('color-still', '色彩·静物', '色彩'),
-  _Category('color-landscape', '色彩·风景', '色彩'),
-  _Category('speed-single', '速写·单人', '速写'),
-  _Category('speed-group', '速写·组合场景', '速写'),
+  _Category('sketch-cast', '素描 · 石膏', '素描'),
+  _Category('sketch-still', '素描 · 静物', '素描'),
+  _Category('sketch-head', '素描 · 头像', '素描'),
+  _Category('color-still', '色彩 · 静物', '色彩'),
+  _Category('color-landscape', '色彩 · 风景', '色彩'),
+  _Category('speed-single', '速写 · 单人', '速写'),
+  _Category('speed-group', '速写 · 组合场景', '速写'),
   _Category(_examKey, '联考高分卷', null),
 ];
 
@@ -308,7 +308,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/sketch-geometry-1.jpg',
     title: '石膏几何体组合',
     category: 'sketch-cast',
-    author: '王海波',
+    author: '张明远',
     tags: ['透视', '结构', '明暗', '构图', '几何体'],
     points: [
       '立方体、圆柱的透视统一，近大远小准确',
@@ -324,7 +324,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/sketch-bust-3.jpg',
     title: '维纳斯石膏像 · 线性起稿',
     category: 'sketch-cast',
-    author: '赵雪',
+    author: '李静',
     tags: ['结构', '线条', '构图', '起稿'],
     points: [
       '三庭五眼比例准确，中轴线清晰',
@@ -340,7 +340,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/sketch-portrait-1.jpg',
     title: '女青年头像 · 四分之三侧面',
     category: 'sketch-head',
-    author: '王海波',
+    author: '张明远',
     tags: ['结构', '明暗', '虚实', '头像'],
     points: [
       '头部转向与颈部动势协调，重心稳定',
@@ -356,7 +356,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/detail-sketch.jpg',
     title: '五官局部 · 眼睛深入刻画',
     category: 'sketch-head',
-    author: '陈立',
+    author: '李静',
     tags: ['结构', '线条', '明暗', '五官', '局部'],
     points: [
       '眼球体积感强，高光位置与光源一致',
@@ -386,7 +386,7 @@ const _seeds = <_Seed>[
   _Seed(
     id: '7107',
     image: 'assets/demo/art/sketch-still-2.jpg',
-    title: '酒瓶·陶碗·洋葱 · 重调子',
+    title: '酒瓶、陶碗与洋葱 · 重调子',
     category: 'sketch-still',
     author: '张明远',
     tags: ['色调', '明暗', '质感', '透视', '静物'],
@@ -402,7 +402,7 @@ const _seeds = <_Seed>[
   _Seed(
     id: '7108',
     image: 'assets/demo/art/sketch-still-3.jpg',
-    title: '陶罐·玻璃瓶·苹果',
+    title: '陶罐、玻璃瓶与苹果',
     category: 'sketch-still',
     studentIndex: 6,
     tags: ['透视', '构图', '明暗', '质感'],
@@ -413,7 +413,7 @@ const _seeds = <_Seed>[
       '整体灰调统一，可再加强前后虚实',
     ],
     intro: '学生课堂作业（3 小时），整体关系完整，被评为本月素描优秀作业。',
-    date: '2026-10-30',
+    date: '2026-10-14',
   ),
   _Seed(
     id: '7111',
@@ -429,14 +429,14 @@ const _seeds = <_Seed>[
       '白布亮部提得足，暗部有冷暖变化',
     ],
     intro: '深暖背景配蓝白衬布的经典色调组合，示范如何用冷暖对比组织画面。',
-    date: '2026-10-26',
+    date: '2026-09-11',
   ),
   _Seed(
     id: '7112',
     image: 'assets/demo/art/color-still-2.jpg',
     title: '暖黄调静物 · 陶罐与果盘',
     category: 'color-still',
-    author: '周强',
+    author: '王海波',
     tags: ['色调', '冷暖', '构图', '静物'],
     points: [
       '暖黄背景统一画面色调',
@@ -479,7 +479,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/color-flower-1.jpg',
     title: '菊花与橙子 · 花卉静物',
     category: 'color-still',
-    author: '郑可',
+    author: '王海波',
     tags: ['构图', '冷暖', '色调', '花卉'],
     points: [
       '花头疏密聚散有致，构图生动',
@@ -506,7 +506,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/detail-color.jpg',
     title: '橙子局部 · 笔触塑造',
     category: 'color-still',
-    author: '吴雨桐',
+    author: '刘芳',
     tags: ['笔触', '冷暖', '局部', '色彩关系'],
     points: [
       '笔触随球体结构排列，体积感强',
@@ -522,7 +522,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/color-landscape-1.jpg',
     title: '秋日村落 · 白杨与远山',
     category: 'color-landscape',
-    author: '孙磊',
+    author: '王海波',
     tags: ['色调', '冷暖', '空间', '构图', '透视', '风景'],
     points: [
       '近景土墙暖黄、远山蓝紫，色彩推远空间',
@@ -549,7 +549,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/speed-figure-1.jpg',
     title: '插兜站立 · 男青年',
     category: 'speed-single',
-    author: '何佳',
+    author: '赵雪',
     tags: ['动态', '线条', '比例', '衣纹'],
     points: [
       '重心落在支撑腿上，站姿自然放松',
@@ -565,7 +565,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/speed-figure-5.jpg',
     title: '蹲姿系鞋带',
     category: 'speed-single',
-    author: '高峰',
+    author: '周强',
     tags: ['动态', '透视', '线条', '明暗'],
     points: ['强烈的透视缩短处理到位', '肩背弧线与手部动作连贯', '重色压住鞋与暗部，节奏感强', '线条奔放但结构不乱'],
     intro: '蹲姿是速写考试中的难点动态，示范如何处理肢体的透视缩短。',
@@ -576,7 +576,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/speed-figure-3.jpg',
     title: '街头相遇 · 双人组合',
     category: 'speed-group',
-    author: '罗敏',
+    author: '赵雪',
     tags: ['动态', '构图', '透视', '组合'],
     points: ['两人呼应关系明确，画面有情节', '行走动态步伐交错，节奏自然', '背景线条简化，主次分明', '地面透视线统一画面空间'],
     intro: '双人组合速写示范，用人物间的呼应与地面透视组织画面。',
@@ -587,7 +587,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/speed-figure-4.jpg',
     title: '集市买卖 · 三人组合',
     category: 'speed-group',
-    author: '马骏',
+    author: '周强',
     tags: ['构图', '透视', '动态', '组合'],
     points: ['人物高低错落，组合关系紧凑', '箩筐、货箱透视准确', '人物与道具的前后遮挡清楚', '手部动作与情节呼应'],
     intro: '三人组合加道具的命题速写示范，适合练习情节性画面的组织。',
@@ -598,7 +598,7 @@ const _seeds = <_Seed>[
     image: 'assets/demo/art/speed-group-1.jpg',
     title: '课间 · 教室三人场景',
     category: 'speed-group',
-    author: '朱琳',
+    author: '赵雪',
     tags: ['构图', '透视', '比例', '场景'],
     points: ['三人姿态各异，避免雷同', '课桌椅透视统一，空间合理', '人物与环境比例协调', '线条疏密对比突出主体'],
     intro: '校园生活场景速写示范，联考常见「课间」类命题。',
@@ -658,12 +658,19 @@ String _maskName(String name) {
   return '${chars.first}${'*' * (chars.length - 2)}${chars.last}';
 }
 
-int _baseViewsOf(String id) {
-  var hash = 0;
+/// 演示浏览量：按来源给出不同量级（高分卷 > 名师范画 > 学生作品），同来源内按 id 打散。
+int _baseViewsOf(String id, String source) {
+  var hash = 0x811C9DC5;
   for (final unit in id.codeUnits) {
-    hash = (hash * 31 + unit) & 0x7fffffff;
+    hash = ((hash ^ unit) * 0x01000193) & 0xFFFFFFFF;
   }
-  return 180 + hash % 2400;
+  final spread = (hash % 1000) / 1000;
+  final (low, high) = switch (source) {
+    _sourceExam => (3200, 12800),
+    _sourceStudent => (180, 1600),
+    _ => (860, 7200),
+  };
+  return low + ((high - low) * spread * spread).round();
 }
 
 String _two(int value) => value.toString().padLeft(2, '0');
@@ -674,10 +681,16 @@ String _scoreText(double score) => score == score.roundToDouble()
 
 List<_Work>? _cache;
 
-List<_Work> _galleryWorks() => _cache ??= [
-  for (final seed in _seeds) _workFromSeed(seed),
-  ..._examTopWorks(),
-];
+/// 高分卷用的是学生原卷图；与之重复的范画不再同时出现，同一页不会有两张一样的图。
+List<_Work> _galleryWorks() => _cache ??= () {
+  final examTop = _examTopWorks();
+  final used = {for (final work in examTop) work.image};
+  return [
+    for (final seed in _seeds)
+      if (!used.contains(seed.image)) _workFromSeed(seed),
+    ...examTop,
+  ];
+}();
 
 _Work _workFromSeed(_Seed seed) {
   final subject = _subjectOfCategory(seed.category);
@@ -686,20 +699,23 @@ _Work _workFromSeed(_Seed seed) {
       ? null
       : DemoMarkingData.instance.person(studentIndex);
   final hour = 8 + int.parse(seed.id) % 10;
+  final source = student == null ? _sourceMaster : _sourceStudent;
   return _Work(
     id: seed.id,
     title: seed.title,
     subject: subject,
     category: seed.category,
-    source: student == null ? _sourceMaster : _sourceStudent,
+    source: source,
     author: student == null ? seed.author : _maskName(student.name),
-    authorTitle: student == null ? '$subject主讲教师' : student.organizationName,
+    authorTitle: student == null
+        ? '${DemoMarkingData.schoolName} · $subject'
+        : student.organizationName,
     image: seed.image,
     tags: seed.tags,
     points: seed.points,
     intro: seed.intro,
     createTime: '${seed.date} ${_two(hour)}:30:00',
-    baseViews: _baseViewsOf(seed.id),
+    baseViews: _baseViewsOf(seed.id, source),
   );
 }
 
@@ -709,13 +725,13 @@ const _examTags = <String, List<String>>{
   '速写': ['动态', '线条', '比例', '高分卷'],
 };
 
-/// 8、9 月月考每科最高分各一份。
+/// 最近一场已出分月考（9 月）每科最高分各一份。
 List<_Work> _examTopWorks() {
   final data = DemoMarkingData.instance;
   final works = <_Work>[];
-  for (final examId in const ['26', '25']) {
+  for (final examId in const ['26']) {
     final exam = data.exam(examId);
-    if (exam == null) {
+    if (exam == null || !exam.reviewed) {
       continue;
     }
     final scored = data.entriesOfExam(examId).where((e) => e.scored).toList();
@@ -757,7 +773,7 @@ List<_Work> _examTopWorks() {
       works.add(
         _Work(
           id: '73$examId${k + 1}',
-          title: '${exam.examName} $subject高分卷',
+          title: '${exam.examName} · $subject高分卷',
           subject: subject,
           category: _examKey,
           source: _sourceExam,
@@ -770,10 +786,10 @@ List<_Work> _examTopWorks() {
             ...comments,
           ],
           intro:
-              '${exam.examName}$subject科目全校最高分（${_scoreText(score)} 分，$grade 档），来自${person.organizationName}。',
+              '${exam.examName}$subject全画室最高分（${_scoreText(score)} 分，$grade 档），来自${person.organizationName}。',
           createTime:
               '${published.year}-${_two(published.month)}-${_two(published.day)} 18:00:00',
-          baseViews: 800 + _baseViewsOf('73$examId${k + 1}'),
+          baseViews: _baseViewsOf('73$examId${k + 1}', _sourceExam),
           score: score,
           grade: grade,
           examName: exam.examName,

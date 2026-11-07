@@ -68,6 +68,7 @@ class GalleryState {
     required this.loading,
     required this.loadingMore,
     required this.errorMessage,
+    this.loadFailed = false,
     required this.detailStack,
     required this.details,
     required this.detailLoading,
@@ -112,6 +113,9 @@ class GalleryState {
   final bool loadingMore;
   final String errorMessage;
 
+  /// 列表首屏加载失败且没有可展示的作品，页面显示错误状态。
+  final bool loadFailed;
+
   /// 详情页栈：从相关作品继续打开时逐层返回。
   final List<String> detailStack;
   final Map<String, GalleryWorkDetail> details;
@@ -155,6 +159,7 @@ class GalleryState {
     bool? loading,
     bool? loadingMore,
     String? errorMessage,
+    bool? loadFailed,
     List<String>? detailStack,
     Map<String, GalleryWorkDetail>? details,
     Set<String>? detailLoading,
@@ -173,6 +178,7 @@ class GalleryState {
       loading: loading ?? this.loading,
       loadingMore: loadingMore ?? this.loadingMore,
       errorMessage: errorMessage ?? this.errorMessage,
+      loadFailed: loadFailed ?? this.loadFailed,
       detailStack: detailStack ?? this.detailStack,
       details: details ?? this.details,
       detailLoading: detailLoading ?? this.detailLoading,

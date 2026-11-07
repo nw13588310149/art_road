@@ -7,9 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/router/route_paths.dart';
 import '../../../core/network/app_network_monitor.dart';
 import '../../../core/network/network_page_refresh.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../core/widgets/scaled_dialog.dart';
+import '../../../core/ui/ui.dart';
+import '../../help_guide/ui/role_guide_dialog.dart';
 import '../../home/state/home_dashboard_controller.dart';
+import '../navigation/shell_notice_routes.dart';
 import '../state/school_binding_controller.dart';
 import '../state/school_binding_state.dart';
 import '../state/shell_controller.dart';
@@ -42,6 +43,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
   bool _vipRedirectScheduled = false;
   bool _offlineDialogOpen = false;
   bool _offlineDialogScheduled = false;
+  bool _roleGuideChecked = false;
 
   @override
   void initState() {
@@ -108,11 +110,11 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
 
     _offlineDialogScheduled = true;
     _offlineDialogOpen = true;
-    final exitApp = await showConfirmDialog(
+    final exitApp = await showAppConfirm(
       context: context,
       barrierDismissible: false,
       title: '网络不可用',
-      content: '当前设备未连接网络。您可以选择无网使用基础功能，或退出应用。',
+      message: '当前设备未连接网络。你可以继续使用已加载的内容，或退出应用。',
       cancelLabel: '无网使用',
       confirmLabel: '退出应用',
     );
@@ -164,6 +166,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
     // 等绑定完成、遮罩消失，下一帧 build 会按需触发 VIP 跳转。
     if (!bindingState.shouldShowOverlay) {
       _maybeScheduleVipRedirect(state);
+      _maybeShowRoleGuide(state);
     }
 
     return DashboardScaffold(
@@ -177,9 +180,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
       sidebar: RepaintBoundary(
         child: ShellLeftNav(
           state: state,
-          currentRoute: widget.currentRoute == RoutePaths.helpGuide
-              ? RoutePaths.smartCampus
-              : widget.currentRoute,
+          currentRoute: widget.currentRoute,
           onToggleCollapse: controller.toggleCollapse,
           onNavigate: (route) => _navigate(context, ref, route),
         ),
@@ -191,6 +192,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         onMarkAllRead: controller.markAllNoticeRead,
         onLoadProvinces: controller.loadProvinces,
         onUpdateProvince: controller.updateProvince,
+        onOpenNotice: (item) => openShellNotice(context, ref, item),
       ),
       child: RepaintBoundary(child: widget.child),
     );
@@ -220,6 +222,34 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
       }
       AppToast.show(context, '请先开通会员');
       Navigator.of(context).pushReplacementNamed(RoutePaths.personalCenter);
+    });
+  }
+
+  /// 身份第一次进入首页时弹出新手引导：等 `/myInfo` 回包拿到真实身份，
+  /// 会员失效（将被带去个人中心）或断网提示弹出时不打扰。
+  void _maybeShowRoleGuide(ShellState state) {
+    if (_roleGuideChecked || widget.currentRoute != RoutePaths.home) {
+      return;
+    }
+    final user = state.user;
+    final role = user.role.trim();
+    if (!user.isMyInfoReady ||
+        role.isEmpty ||
+        !user.isVipActive ||
+        _offlineDialogOpen) {
+      return;
+    }
+    _roleGuideChecked = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      // 首次启动的权限说明等弹窗还开着时先不弹，等外壳下次刷新再判断。
+      if (ModalRoute.of(context)?.isCurrent == false) {
+        _roleGuideChecked = false;
+        return;
+      }
+      unawaited(RoleGuideLauncher.maybeShow(context, role: role));
     });
   }
 

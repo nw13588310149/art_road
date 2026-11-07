@@ -119,16 +119,10 @@ class ChatRepository {
 
   /// 同步消息（不要轮询）：登录 / 重连 / 切回前台时调用一次，把
   /// 服务端缓存的离线消息批量拉下来。`offsetMsgId` 传 `0` 表示首次同步。
-  Future<ApiResponse> syncMsg({
-    String offsetMsgId = '0',
-    int size = 20,
-  }) {
+  Future<ApiResponse> syncMsg({String offsetMsgId = '0', int size = 20}) {
     return client.post(
       '$_base/syncMsg',
-      data: <String, dynamic>{
-        'offsetMsgId': offsetMsgId,
-        'size': size,
-      },
+      data: <String, dynamic>{'offsetMsgId': offsetMsgId, 'size': size},
     );
   }
 
@@ -177,10 +171,7 @@ class ChatRepository {
   }) {
     return client.post(
       '$_base/updateAnnouncement',
-      data: <String, dynamic>{
-        'classId': classId,
-        'announcement': announcement,
-      },
+      data: <String, dynamic>{'classId': classId, 'announcement': announcement},
     );
   }
 
@@ -191,10 +182,7 @@ class ChatRepository {
   }) {
     return client.post(
       '$_base/updateDoNotDisturb',
-      data: <String, dynamic>{
-        'classId': classId,
-        'doNotDisturb': doNotDisturb,
-      },
+      data: <String, dynamic>{'classId': classId, 'doNotDisturb': doNotDisturb},
     );
   }
 
@@ -205,10 +193,7 @@ class ChatRepository {
   }) {
     return client.post(
       '$_base/pinnedClass',
-      data: <String, dynamic>{
-        'classId': classId,
-        'isPinned': isPinned,
-      },
+      data: <String, dynamic>{'classId': classId, 'isPinned': isPinned},
     );
   }
 

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/art/art_tokens.dart';
-import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/art_widgets.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
 import '../../state/student_study_controller.dart';
 import '../widgets/study_common.dart';
+import '../widgets/study_hero_card.dart';
 
 /// 考试记录：全部 / 已出分 / 阅卷中，已出分的考试可进入成绩报告。
 class StudentExamListCard extends StatelessWidget {
@@ -28,13 +28,17 @@ class StudentExamListCard extends StatelessWidget {
     final exams = state.exams;
     final Widget body;
     if (state.examsLoading && exams.isEmpty) {
-      body = const StudyLoadingBlock(height: 180);
+      body = const _ExamListSkeleton();
     } else if (exams.isEmpty) {
-      body = ArtEmptyState(
-        message: state.filter == StudyExamFilter.marking
-            ? '没有阅卷中的考试'
-            : '暂无考试记录',
-        icon: Icons.event_note_outlined,
+      body = SizedBox(
+        height: 180,
+        child: AppEmptyState(
+          icon: Icons.event_note_outlined,
+          title: state.filter == StudyExamFilter.marking
+              ? '没有阅卷中的考试'
+              : '暂无考试记录',
+          description: '画室组织的月考、阶段考出分后会出现在这里',
+        ),
       );
     } else {
       body = Column(
@@ -42,7 +46,7 @@ class StudentExamListCard extends StatelessWidget {
         children: [
           LayoutBuilder(
             builder: (context, constraints) {
-              const gap = 12.0;
+              const gap = AppSpace.s12;
               final columns = constraints.maxWidth >= 760 ? 2 : 1;
               final width =
                   (constraints.maxWidth - gap * (columns - 1)) / columns;
@@ -60,12 +64,12 @@ class StudentExamListCard extends StatelessWidget {
             },
           ),
           if (state.examsHasMore) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpace.s16),
             Center(
-              child: ArtButton(
+              child: AppButton(
                 label: '加载更多',
-                primary: false,
-                height: 34,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.sm,
                 loading: state.examsLoadingMore,
                 onTap: onLoadMore,
               ),
@@ -74,14 +78,17 @@ class StudentExamListCard extends StatelessWidget {
         ],
       );
     }
-    return StudyCard(
+    return AppCard(
       title: '考试记录',
       subtitle: state.examsTotal > 0 ? '共 ${state.examsTotal} 场' : null,
-      trailing: ArtSegmentTabs<StudyExamFilter>(
-        items: StudyExamFilter.values,
+      trailing: AppSegmented<StudyExamFilter>(
+        size: AppControlSize.sm,
+        segments: [
+          for (final filter in StudyExamFilter.values)
+            AppSegment(value: filter, label: filter.label),
+        ],
         value: state.filter,
         onChanged: onFilterChanged,
-        labelOf: (filter) => filter.label,
       ),
       child: body,
     );
@@ -97,100 +104,75 @@ class _ExamTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scored = exam.isPublished && exam.hasScore;
-    final status = scored
-        ? const StudyChip(label: '已出分', color: ArtColors.success)
-        : exam.isPublished
-        ? const StudyChip(label: '无成绩', color: ArtColors.ink3)
-        : const StudyChip(
-            label: '阅卷中',
-            color: ArtColors.warn,
-            icon: Icons.hourglass_top_rounded,
-          );
     final String detail;
     if (scored) {
       final rank = exam.totalRanking;
       final total = exam.participantCount;
       detail = [
-        if (exam.admissionNo.isNotEmpty) '准考证号 ${exam.admissionNo}',
-        if (rank != null) total == null ? '第 $rank 名' : '第 $rank / $total 名',
+        studyDateText(exam.examTime),
+        if (rank != null)
+          total == null ? '第 $rank 名' : '第 $rank 名 / $total 人',
       ].join(' · ');
     } else {
-      detail = exam.isPublished ? '本场考试暂无你的成绩' : '阅卷中，出分后提醒';
+      detail = exam.isPublished ? '本场考试暂无你的成绩' : '阅卷中，出分后会通知你';
     }
-    return Material(
-      color: ArtColors.subtle,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: scored ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              _DateBadge(time: exam.examTime, active: scored),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      color: AppColors.surfaceSubtle,
+      bordered: false,
+      padding: const EdgeInsets.all(AppSpace.s12),
+      onTap: scored ? onTap : null,
+      child: Row(
+        children: [
+          _DateBadge(time: exam.examTime, active: scored),
+          const SizedBox(width: AppSpace.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            exam.examName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: ArtText.body(size: 15, weight: AppFont.w500),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        status,
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      detail,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: ArtText.caption(
-                        color: scored ? ArtColors.ink3 : ArtColors.warn,
+                    Flexible(
+                      child: Text(
+                        exam.examName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body14Strong,
                       ),
                     ),
+                    const SizedBox(width: AppSpace.s8),
+                    StudyExamStatusTag(exam: exam),
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              if (scored) ...[
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    StudyNumberText(
-                      formatScore(exam.totalScore),
-                      unit: ' 分',
-                      size: 20,
-                      color: ArtColors.brandDeep,
-                    ),
-                    Text(
-                      '满分 ${formatScore(exam.maxScore)}',
-                      style: ArtText.caption(size: 11),
-                    ),
-                  ],
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption12,
                 ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: ArtColors.ink4,
-                  size: 22,
-                ),
-              ] else
-                const Icon(
-                  Icons.notifications_active_outlined,
-                  color: ArtColors.warn,
-                  size: 20,
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: AppSpace.s12),
+          if (scored) ...[
+            StudyNumberText(
+              formatScore(exam.totalScore),
+              unit: ' / ${formatScore(exam.maxScore)}',
+              size: 20,
+            ),
+            const SizedBox(width: AppSpace.s4),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textPlaceholder,
+              size: 20,
+            ),
+          ] else
+            const Icon(
+              Icons.hourglass_top_rounded,
+              color: AppColors.textTertiary,
+              size: 18,
+            ),
+        ],
       ),
     );
   }
@@ -209,33 +191,41 @@ class _DateBadge extends StatelessWidget {
       width: 52,
       height: 52,
       decoration: BoxDecoration(
-        color: active ? ArtColors.brandWash : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: active ? ArtColors.brandTint : ArtColors.line,
-        ),
+        color: AppColors.surface,
+        borderRadius: AppRadius.br8,
+        border: Border.all(color: AppColors.lineSoft),
       ),
       child: monthDay == null
-          ? const Icon(Icons.event_outlined, color: ArtColors.ink3)
+          ? const Icon(Icons.event_outlined, color: AppColors.textTertiary)
           : Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  '${monthDay.$1}月',
-                  style: ArtText.caption(
-                    size: 11,
-                    color: active ? ArtColors.brand : ArtColors.ink3,
-                  ),
-                ),
+                Text('${monthDay.$1} 月', style: AppText.caption12),
                 Text(
                   monthDay.$2.toString().padLeft(2, '0'),
-                  style: ArtText.number(
-                    size: 19,
-                    color: active ? ArtColors.brandDeep : ArtColors.ink2,
+                  style: AppText.number(
+                    size: 20,
+                    color: active ? AppColors.ink : AppColors.textTertiary,
                   ),
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _ExamListSkeleton extends StatelessWidget {
+  const _ExamListSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < 2; i++) ...[
+          if (i > 0) const SizedBox(height: AppSpace.s12),
+          const AppSkeleton(height: 76, radius: AppRadius.card),
+        ],
+      ],
     );
   }
 }

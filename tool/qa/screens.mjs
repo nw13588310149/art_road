@@ -11,6 +11,9 @@
 //   --only=id1,id2                 只跑这些步骤 id（前缀匹配）
 //   --scale=1                      截图像素比
 //
+// 步骤动作见 pages.mjs：click 支持 role / nth / attempts（重试次数），optional 为 true 时
+// 找不到元素不算失败。
+//
 // Playwright 取自机构端工程的依赖（不给本工程新增依赖），可用环境变量
 // PLAYWRIGHT_FROM 指向任一装有 @playwright/test 的 package.json。
 import { createRequire } from 'node:module';
@@ -68,10 +71,10 @@ function nameMatcher(name) {
   return new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 }
 
-async function clickByName(page, name, { role = 'button', nth = 0 } = {}) {
+async function clickByName(page, name, { role = 'button', nth = 0, attempts = 12 } = {}) {
   const matcher = nameMatcher(name);
   const roles = role === 'any' ? ['button', 'link', 'tab', 'checkbox', 'radio', 'textbox'] : [role];
-  for (let attempt = 0; attempt < 12; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     for (const r of roles) {
       const loc = page.getByRole(r, { name: matcher });
       const count = await loc.count();
@@ -94,7 +97,12 @@ async function runAction(page, action) {
   if (typeof action === 'string' || action instanceof RegExp) {
     await clickByName(page, action);
   } else if (action.click) {
-    await clickByName(page, action.click, action);
+    try {
+      await clickByName(page, action.click, action);
+    } catch (e) {
+      if (!action.optional) throw e;
+      return;
+    }
   } else if (action.tap) {
     await page.mouse.click(action.tap[0], action.tap[1]);
   } else if (action.type) {

@@ -1,9 +1,14 @@
 import '../../data/demo_campus_data.dart';
+import '../../demo_clock.dart';
 import 'campus_a_common.dart';
+import 'campus_b_common.dart';
+import 'campus_b_courses.dart';
 
 enum CampusCoursePhase { upcoming, inProgress, ended }
 
-/// 一节课（大课按班级课表模板生成，小课为学生个人课程）。
+/// 学生视角的一节课。课程与老师端、管理端同源（[cbCoursesOn]：各班周课表、
+/// 小班课、个人改画小课、管理员排课与已通过的小课申请），这里只换成学生端
+/// 接口需要的字段。
 class CampusCourse {
   const CampusCourse({
     required this.id,
@@ -16,13 +21,16 @@ class CampusCourse {
     required this.teacher,
     required this.schoolClass,
     required this.room,
+    this.className = '',
+    this.studentCount = 0,
+    this.color = '',
     this.autoComplete = true,
   });
 
   final String id;
   final DateTime day;
 
-  /// 节次（对应 `schoolTimeConfigList`）；今日临时小课为 0，按 [start] / [end] 展示。
+  /// 节次（对应 `schoolTimeConfigList`：1 上午 / 2 下午 / 3 晚上）。
   final int lineNum;
 
   /// 0 大课 / 1 小课。
@@ -31,8 +39,15 @@ class CampusCourse {
   final String end;
   final String subjectName;
   final DemoCampusStaff teacher;
+
+  /// 学生所在的行政班（围栏、补签记录用）。
   final DemoCampusClass schoolClass;
   final String room;
+
+  /// 上课班级名：小班课为小班名，个人小课为「行政班 · 小课」。
+  final String className;
+  final int studentCount;
+  final String color;
 
   /// 课程结束且学生未操作时，是否按「已完成签到」生成记录（否则记缺勤）。
   final bool autoComplete;
@@ -76,25 +91,33 @@ class CampusCourse {
       'teacherName': teacher.name,
       'teacherHeadUrl': '',
       'classId': schoolClass.id,
-      'className': isSmall ? '${schoolClass.name} · 小课' : schoolClass.name,
+      'className': className.isNotEmpty
+          ? className
+          : (isSmall ? '${schoolClass.name} · 小课' : schoolClass.name),
       'classroomName': room,
-      'color': CampusACourses.colorOf(subjectName, isSmall: isSmall),
+      'color': color.isNotEmpty
+          ? color
+          : CampusACourses.colorOf(subjectName, isSmall: isSmall),
       'logo': '',
-      'totalCount': isSmall ? 1 : schoolClass.students.length,
+      'totalCount': studentCount,
     };
   }
 }
 
 abstract final class CampusACourses {
-  /// 画室作息：上午 / 下午 / 晚间三段大课 + 晚间小课。
-  static const slots = <({int lineNum, String start, String end, String name})>[
-    (lineNum: 1, start: '08:00', end: '11:30', name: '上午'),
-    (lineNum: 2, start: '14:00', end: '17:30', name: '下午'),
-    (lineNum: 3, start: '19:00', end: '21:00', name: '晚间'),
-    (lineNum: 4, start: '21:10', end: '22:00', name: '晚间小课'),
+  /// 画室作息：上午 / 下午 / 晚上三个固定时段（[DemoClock.daySlots]）。
+  static final slots = <({int lineNum, String start, String end, String name})>[
+    for (var i = 0; i < DemoClock.daySlots.length; i++)
+      (
+        lineNum: i + 1,
+        start: DemoClock.daySlots[i].$1,
+        end: DemoClock.daySlots[i].$2,
+        name: cbLineNames[i],
+      ),
   ];
 
   static int subjectIdOf(String name) {
+    if (name.contains('模拟')) return 43;
     if (name.contains('素描')) return 38;
     if (name.contains('色彩')) return 39;
     if (name.contains('速写')) return 40;
@@ -103,121 +126,42 @@ abstract final class CampusACourses {
     return 43;
   }
 
-  static String colorOf(String name, {bool isSmall = false}) {
-    if (isSmall) return '#A49AF4';
-    if (name.contains('模拟')) return '#FE96EB';
-    if (name.contains('写生')) return '#C5E53E';
-    if (name.contains('素描')) return '#8C63FF';
-    if (name.contains('色彩')) return '#F99C5D';
-    if (name.contains('速写')) return '#71D4D0';
-    if (name.contains('常识')) return '#A8C3FE';
-    return '#FEEA98';
+  static String colorOf(String name, {bool isSmall = false}) =>
+      cbCourseColor(name, small: isSmall);
+
+  /// 学生是否上这节课：大课看行政班，小课看参与名单（没有名单时看小班成员）。
+  static bool _attends(CbCourse c, String studentId, String homeClassId) {
+    if (!c.isSmall) {
+      return c.classId == homeClassId;
+    }
+    if (c.studentIds.isNotEmpty) {
+      return c.studentIds.contains(studentId);
+    }
+    return cbClassStudentIds(c.classId).contains(studentId);
   }
 
-  static DemoCampusStaff _teacherFor(DemoCampusClass c, DemoTimetableSlot slot) {
-    final template = CampusA.staff(slot.teacherId);
-    if (template.classIds.contains(c.id)) {
-      return template;
-    }
-    for (final s in DemoCampusData.staff) {
-      if (s.subject == template.subject && s.classIds.contains(c.id)) {
-        return s;
-      }
-    }
-    return template;
-  }
-
-  /// 班级某天的大课（周日休息）。
-  static List<CampusCourse> bigCourses(DemoCampusClass c, DateTime day) {
-    final template = [
-      for (final s in DemoCampusData.timetableTemplate)
-        if (s.weekday == day.weekday) s,
-    ]..sort((a, b) => a.start.compareTo(b.start));
-    return [
-      for (var i = 0; i < template.length; i++)
-        CampusCourse(
-          id: '7${CampusA.compact(day)}${c.id}${i + 1}',
-          day: day,
-          lineNum: i + 1,
-          type: 0,
-          start: template[i].start,
-          end: template[i].end,
-          subjectName: template[i].courseName,
-          teacher: _teacherFor(c, template[i]),
-          schoolClass: c,
-          room: '${c.organizationName} · ${template[i].room}',
-        ),
-    ];
-  }
-
-  static String _clock(int minutes) =>
-      '${CampusA.two(minutes ~/ 60)}:${CampusA.two(minutes % 60)}';
-
-  /// 学生个人小课：周二 / 周四晚间固定改画课；当天另有围绕「现在」安排的
-  /// 一对一课程（已结束 / 进行中 / 即将开始各一节），保证任意时刻都能演示签到。
-  static List<CampusCourse> smallCourses(
-    int personIndex,
-    DateTime day,
-    DateTime now,
-  ) {
-    final c = CampusA.classOf(personIndex);
-    final compact = CampusA.compact(day);
-    final list = <CampusCourse>[];
-    final weekly = switch (day.weekday) {
-      DateTime.tuesday => ('素描改画小课', 't-1'),
-      DateTime.thursday => ('色彩改画小课', 't-3'),
-      _ => null,
-    };
-    if (weekly != null) {
-      list.add(
-        CampusCourse(
-          id: '8${compact}4',
-          day: day,
-          lineNum: 4,
-          type: 1,
-          start: '21:10',
-          end: '22:00',
-          subjectName: weekly.$1,
-          teacher: CampusA.staff(weekly.$2),
-          schoolClass: c,
-          room: '${c.organizationName} · 小课教室 2',
-        ),
-      );
-    }
-    if (CampusA.dayOf(now) != day) {
-      return list;
-    }
-    final minutes = now.hour * 60 + now.minute;
-    final base = minutes - minutes % 10;
-    const lastMinute = 23 * 60 + 59;
-    final specs = <({int seq, int start, int length, String name, String teacher, String room, bool auto})>[
-      (seq: 1, start: base - 180, length: 50, name: '速写一对一改画', teacher: 't-4', room: '小课教室 1', auto: true),
-      (seq: 2, start: base - 10 < 0 ? 0 : base - 10, length: 60, name: '素描头像精讲（一对一）', teacher: 't-1', room: '小课教室 3', auto: false),
-      (seq: 3, start: base + 100, length: 50, name: '色彩静物小组课', teacher: 't-3', room: '色彩教室 B', auto: false),
-    ];
-    for (final s in specs) {
-      final end = s.start + s.length;
-      final clampedEnd = s.seq == 2 && end > lastMinute ? lastMinute : end;
-      if (s.start < 0 || clampedEnd > lastMinute) {
-        continue;
-      }
-      list.add(
-        CampusCourse(
-          id: '8$compact${s.seq}',
-          day: day,
-          lineNum: 0,
-          type: 1,
-          start: _clock(s.start),
-          end: _clock(clampedEnd),
-          subjectName: s.name,
-          teacher: CampusA.staff(s.teacher),
-          schoolClass: c,
-          room: '${c.organizationName} · ${s.room}',
-          autoComplete: s.auto,
-        ),
-      );
-    }
-    return list;
+  static CampusCourse _fromCb(CbCourse c, DemoCampusClass home) {
+    final cls = cbClass(c.classId);
+    final className = cls == null
+        ? home.name
+        : c.isSmall && !cbIsSmallClass(cls)
+        ? '${cbStr(cls['name'])} · 小课'
+        : cbStr(cls['name']);
+    return CampusCourse(
+      id: c.id,
+      day: c.day,
+      lineNum: c.lineNum,
+      type: c.type,
+      start: c.start,
+      end: c.end,
+      subjectName: c.subjectName,
+      teacher: cbStaff(c.teacherUserId) ?? DemoCampusData.staff.first,
+      schoolClass: home,
+      room: cbClassroomName(c.classroomId),
+      className: className,
+      studentCount: cbCourseStudents(c).length,
+      color: c.color,
+    );
   }
 
   /// 学生某天的全部课程（按开始时间排序）。
@@ -226,25 +170,14 @@ abstract final class CampusACourses {
     DateTime day,
     DateTime now,
   ) {
-    final list = [
-      ...bigCourses(CampusA.classOf(personIndex), day),
-      ...smallCourses(personIndex, day, now),
+    final person = CampusA.person(personIndex);
+    final homeRow = cbHomeClassOf(person);
+    final home = CampusA.classOf(personIndex);
+    final homeId = homeRow == null ? home.id : cbStr(homeRow['id']);
+    return [
+      for (final c in cbCoursesOn(day))
+        if (_attends(c, person.archiveId, homeId)) _fromCb(c, home),
     ]..sort((a, b) => a.start.compareTo(b.start));
-    return list;
-  }
-
-  /// 课程 id 中编码了日期（`7yyyyMMdd…` 大课 / `8yyyyMMdd…` 小课）。
-  static DateTime? dayOfId(String courseId) {
-    if (courseId.length < 10) {
-      return null;
-    }
-    final y = int.tryParse(courseId.substring(1, 5));
-    final m = int.tryParse(courseId.substring(5, 7));
-    final d = int.tryParse(courseId.substring(7, 9));
-    if (y == null || m == null || d == null) {
-      return null;
-    }
-    return DateTime(y, m, d);
   }
 
   static CampusCourse? findForStudent(
@@ -252,27 +185,15 @@ abstract final class CampusACourses {
     int personIndex,
     DateTime now,
   ) {
-    final day = dayOfId(courseId);
-    if (day == null) {
+    final course = cbCourseById(courseId);
+    if (course == null) {
       return null;
     }
-    for (final course in forStudent(personIndex, day, now)) {
-      if (course.id == courseId) {
-        return course;
+    for (final c in forStudent(personIndex, course.day, now)) {
+      if (c.id == courseId) {
+        return c;
       }
     }
     return null;
   }
-
-  /// 不晚于 [day] 的最近一个工作日（周一至周五）。
-  static DateTime weekdayOnOrBefore(DateTime day) {
-    var d = day;
-    while (d.weekday == DateTime.saturday || d.weekday == DateTime.sunday) {
-      d = d.subtract(const Duration(days: 1));
-    }
-    return d;
-  }
-
-  static String courseIdFor(DemoCampusClass c, DateTime day, int lineNum) =>
-      '7${CampusA.compact(day)}${c.id}$lineNum';
 }

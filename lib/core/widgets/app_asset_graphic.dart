@@ -22,7 +22,7 @@ class AppAssetGraphic extends StatelessWidget {
   }
 
   Widget _buildRaster({required bool allowSvgFallback}) {
-    return Image.asset(
+    final image = Image.asset(
       asset,
       width: width,
       height: height,
@@ -32,6 +32,8 @@ class AppAssetGraphic extends StatelessWidget {
                 _buildVector(allowRasterFallback: false)
           : (context, error, stackTrace) => _buildMissing(),
     );
+    final filter = colorFilter;
+    return filter == null ? image : ColorFiltered(colorFilter: filter, child: image);
   }
 
   Widget _buildVector({required bool allowRasterFallback}) {

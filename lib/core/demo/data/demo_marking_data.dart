@@ -99,8 +99,11 @@ class DemoPerson {
   final String organizationName;
   final List<DemoRegistration> registrations;
 
-  /// 学生档案 id（字符串承载）。
+  /// 学生档案 id（字符串承载），只在接口里用，不给老师和学生看。
   String get archiveId => '${900000 + index}';
+
+  /// 画室学号，与智慧校园学生名册一致（2027 届 + 三位序号）。
+  String get studentNo => '2027${index.toString().padLeft(3, '0')}';
 
   String get idCardMasked => idCard.length == 18
       ? '${idCard.substring(0, 6)}********${idCard.substring(14)}'
@@ -494,9 +497,9 @@ class DemoMarkingData {
     return pool.isEmpty ? '评委 ${i + 1}' : pool[(personIndex + i) % pool.length];
   }
 
+  /// 原卷轮换用的写生作品（示意线稿 `papers/*.jpg` 不当作考卷，避免高分卷是一张示意图）。
   static const _papers = <String, List<String>>{
     '素描': [
-      'asset:assets/demo/papers/sketch.jpg',
       'asset:assets/demo/art/sketch-bust-1.jpg',
       'asset:assets/demo/art/sketch-bust-3.jpg',
       'asset:assets/demo/art/sketch-still-1.jpg',
@@ -504,14 +507,12 @@ class DemoMarkingData {
       'asset:assets/demo/art/sketch-geometry-1.jpg',
     ],
     '色彩': [
-      'asset:assets/demo/papers/color.jpg',
       'asset:assets/demo/art/color-still-2.jpg',
       'asset:assets/demo/art/color-still-3.jpg',
       'asset:assets/demo/art/color-still-4.jpg',
       'asset:assets/demo/art/color-still-5.jpg',
     ],
     '速写': [
-      'asset:assets/demo/papers/speed.jpg',
       'asset:assets/demo/art/speed-figure-3.jpg',
       'asset:assets/demo/art/speed-figure-4.jpg',
       'asset:assets/demo/art/speed-figure-5.jpg',

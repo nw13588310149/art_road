@@ -33,25 +33,33 @@ class HeadTeacherFeedItem {
     required this.title,
     required this.desc,
     required this.tag,
+    this.time = '',
   });
 
+  /// 状态（待我审批 / 待家长确认 / 待审核）；近期动态为空。
   final String title;
   final String desc;
   final String tag;
+
+  /// 「今天 09:40」「11-05 08:10」。
+  final String time;
 
   factory HeadTeacherFeedItem.fromJson(Map<String, dynamic> json) {
     return HeadTeacherFeedItem(
       title: _pickString(json, ['title'], ''),
       desc: _pickString(json, ['desc', 'description', 'subtitle'], ''),
       tag: _pickString(json, ['tag'], ''),
+      time: _pickString(json, ['time'], ''),
     );
   }
 
   HeadTeacherBoardItem toBoardItem() {
+    final hasTime = time.isNotEmpty;
     return HeadTeacherBoardItem(
-      time: title,
+      time: hasTime ? time : title,
       title: desc,
       tag: tag,
+      status: hasTime ? title : '',
     );
   }
 }
@@ -102,26 +110,14 @@ class HeadTeacherIndexRes {
 
 List<SmartCampusStatCardData> buildHeadTeacherStats(HeadTeacherIndexRes res) {
   return [
-    SmartCampusStatCardData(
-      label: '在籍学生',
-      value: '${res.totalStudentCount}',
-    ),
-    SmartCampusStatCardData(
-      label: '待批请假',
-      value: '${res.pendingLeaveCount}',
-    ),
+    SmartCampusStatCardData(label: '在籍学生', value: '${res.totalStudentCount}'),
+    SmartCampusStatCardData(label: '待我审批', value: '${res.pendingLeaveCount}'),
     SmartCampusStatCardData(
       label: '查寝异常',
       value: '${res.todayAbnormalDormCount}',
     ),
-    SmartCampusStatCardData(
-      label: '家校未读',
-      value: '${res.chatUnreadCount}',
-    ),
-    SmartCampusStatCardData(
-      label: '待回复',
-      value: '${res.chatWaitingCount}',
-    ),
+    SmartCampusStatCardData(label: '家校未读', value: '${res.chatUnreadCount}'),
+    SmartCampusStatCardData(label: '待回复', value: '${res.chatWaitingCount}'),
     SmartCampusStatCardData(
       label: '待办',
       value: '${res.pendingTodoCount}',
@@ -135,11 +131,19 @@ class HeadTeacherBoardItem {
     required this.time,
     required this.title,
     required this.tag,
+    this.status = '',
   });
 
   final String time;
+
+  /// 正文（主标题，最多两行）。
   final String title;
+
+  /// 类别（请假 / 补卡 / 查寝 / 家校 / 班级）。
   final String tag;
+
+  /// 待处理状态（待我审批 / 待家长确认 / 待审核），近期动态为空。
+  final String status;
 }
 
 List<HeadTeacherBoardItem> buildHeadTeacherTodoBoardItems(
@@ -153,27 +157,30 @@ List<HeadTeacherBoardItem> buildHeadTeacherTodoBoardItems(
   if (res.pendingLeaveCount > 0) {
     items.add(
       HeadTeacherBoardItem(
-        time: '待审批 ${res.pendingLeaveCount}',
-        title: '学生请假申请待处理',
+        time: '',
+        title: '${res.pendingLeaveCount} 条学生请假申请待处理',
         tag: '请假',
+        status: '待审批',
       ),
     );
   }
   if (res.pendingMakeupCount > 0) {
     items.add(
       HeadTeacherBoardItem(
-        time: '待审核 ${res.pendingMakeupCount}',
-        title: '学生补卡申请待处理',
+        time: '',
+        title: '${res.pendingMakeupCount} 条查寝补卡申请待处理',
         tag: '补卡',
+        status: '待审核',
       ),
     );
   }
   if (res.todayAbnormalDormCount > 0) {
     items.add(
       HeadTeacherBoardItem(
-        time: '待确认 ${res.todayAbnormalDormCount}',
-        title: '查寝异常记录待跟进',
+        time: '',
+        title: '${res.todayAbnormalDormCount} 条查寝异常待跟进',
         tag: '查寝',
+        status: '需处理',
       ),
     );
   }
@@ -191,8 +198,8 @@ List<HeadTeacherBoardItem> buildHeadTeacherRecentBoardItems(
   if (res.chatWaitingCount > 0) {
     items.add(
       HeadTeacherBoardItem(
-        time: '待回复 ${res.chatWaitingCount}',
-        title: '家长留言待处理',
+        time: '',
+        title: '${res.chatWaitingCount} 位家长的留言待回复',
         tag: '家校',
       ),
     );
@@ -200,8 +207,8 @@ List<HeadTeacherBoardItem> buildHeadTeacherRecentBoardItems(
   if (res.chatUnreadCount > 0) {
     items.add(
       HeadTeacherBoardItem(
-        time: '未读 ${res.chatUnreadCount}',
-        title: '家校沟通有新消息',
+        time: '',
+        title: '家校沟通有 ${res.chatUnreadCount} 条未读消息',
         tag: '家校',
       ),
     );
@@ -209,8 +216,8 @@ List<HeadTeacherBoardItem> buildHeadTeacherRecentBoardItems(
   if (res.classList.isNotEmpty) {
     items.add(
       HeadTeacherBoardItem(
-        time: '我管理的班级',
-        title: res.classNamesLabel,
+        time: '',
+        title: '所带班级：${res.classNamesLabel}',
         tag: '班级',
       ),
     );
@@ -225,7 +232,7 @@ Map<String, int> buildHeadTeacherActionBadges(
   return <String, int>{
     '请假审批': res.pendingLeaveCount,
     '我的请假': myLeavePendingCount,
-    '家校沟通': res.chatUnreadCount + res.chatWaitingCount,
+    '家校沟通': res.chatUnreadCount,
   };
 }
 
@@ -240,7 +247,10 @@ HeadTeacherIndexRes parseHeadTeacherIndexRes(dynamic raw) {
   final classes = classRaw is List
       ? classRaw
             .whereType<Map>()
-            .map((e) => HeadTeacherClassItem.fromJson(Map<String, dynamic>.from(e)))
+            .map(
+              (e) =>
+                  HeadTeacherClassItem.fromJson(Map<String, dynamic>.from(e)),
+            )
             .toList()
       : const <HeadTeacherClassItem>[];
 

@@ -244,12 +244,12 @@ class QuizSessionState {
   final List<QuizQuestion> questions;
   final int currentIndex;
 
-  /// 自动刷题：答完自动跳下一题。
+  /// 自动下一题：答完自动跳到下一题。
   final bool autoNext;
 
   final String errorMessage;
 
-  /// 完成时弹窗用的最新 summary（4 类全量），用于"切换到考前密卷/随机练习"。
+  /// 完成时弹窗用的最新 summary（4 类全量），用于「切换到高频考点 / 随机练习」。
   final List<QuizPracticeSummary> summaryAfter;
 
   final bool completionDialogVisible;

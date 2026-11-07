@@ -4,15 +4,24 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/art/art_subject.dart';
 import '../../../../core/art/art_tokens.dart';
 import '../../../../core/network/media_url.dart';
+import '../../../../core/ui/ui.dart';
 import '../../data/artwork_models.dart';
 
 /// 批注线宽的基准图宽：在不同尺寸下显示时按比例缩放，保持与作品的相对粗细。
 const double kAnnotationReferenceWidth = 600;
 
-/// 批注笔：红 / 蓝 / 黑。
-const kAnnotationPenColors = <String>['#D64A62', '#4A74D6', '#0B081A'];
+String _hexOf(Color color) =>
+    '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+
+/// 批注笔（以 `#HEX` 保存到接口）：红 / 蓝 / 黑，取自色板与素描科目色。
+final kAnnotationPenColors = <String>[
+  _hexOf(AppColors.danger),
+  _hexOf(ArtSubject.sketch.accent),
+  _hexOf(AppColors.ink),
+];
 
 /// 批注线宽：细 / 中 / 粗。
 const kAnnotationPenWidths = <double>[2, 4, 7];
@@ -197,9 +206,10 @@ class _ArtworkAnnotatedImageState extends State<ArtworkAnnotatedImage> {
                     onPanCancel: _finishStroke,
                   )
                 else if (widget.onTap != null)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                  AppPressable(
                     onTap: widget.onTap,
+                    semanticLabel: '查看大图',
+                    child: const SizedBox.expand(),
                   ),
               ],
             ),
@@ -233,16 +243,9 @@ class _Placeholder extends StatelessWidget {
           ? const Icon(
               Icons.broken_image_outlined,
               size: 36,
-              color: ArtColors.ink4,
+              color: AppColors.textPlaceholder,
             )
-          : const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: ArtColors.brandSoft,
-              ),
-            ),
+          : const AppLoadingIndicator(size: 28),
     );
   }
 }
@@ -289,7 +292,7 @@ class _AnnotationPainter extends CustomPainter {
         canvas,
         size,
         stroke.points,
-        ArtColors.fromHex(stroke.color, fallback: ArtColors.down),
+        ArtColors.fromHex(stroke.color, fallback: AppColors.danger),
         stroke.width * scale,
       );
     }
@@ -299,7 +302,7 @@ class _AnnotationPainter extends CustomPainter {
         canvas,
         size,
         active.points,
-        ArtColors.fromHex(current.color, fallback: ArtColors.down),
+        ArtColors.fromHex(current.color, fallback: AppColors.danger),
         current.width * scale,
       );
     }

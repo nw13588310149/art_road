@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 首页「刷题」入口固定 schoolId；校园课件刷题传真实 schoolId（String 避免 Web 大整数精度丢失）。
+import '../../../core/ui/app_colors.dart';
+
+/// 首页「题库」入口固定 schoolId；校园课件题库传真实 schoolId（String 避免 Web 大整数精度丢失）。
 const kPublicQuizSchoolId = '0';
 
 /// 1.0 中的 4 类练习：sequence/random/exam/error。
@@ -27,25 +29,29 @@ extension QuizPracticeTypeX on QuizPracticeType {
       case QuizPracticeType.random:
         return '随机练习';
       case QuizPracticeType.exam:
-        return '考前密卷';
+        return '高频考点';
       case QuizPracticeType.error:
-        return '错题集';
+        return '错题本';
     }
   }
 
-  /// 与 1.0 一致的进度环主色（顺序绿/随机粉/考前紫/错题红）。
-  Color get accentColor {
+  String get description {
     switch (this) {
       case QuizPracticeType.sequence:
-        return const Color(0xFF00C9A4);
+        return '按题号依次作答，随时接着上次做';
       case QuizPracticeType.random:
-        return const Color(0xFFFE83A2);
+        return '每轮随机抽题，做完自动换一组';
       case QuizPracticeType.exam:
-        return const Color(0xFF775DFE);
+        return '各分类常考知识点汇总';
       case QuizPracticeType.error:
-        return const Color(0xFFE61F62);
+        return '做错的题自动收进来，答对后移出';
     }
   }
+
+  /// 进度环颜色：练习用品牌紫，错题本用红色。
+  Color get accentColor => this == QuizPracticeType.error
+      ? AppColors.danger
+      : AppColors.brand;
 }
 
 QuizPracticeType? quizPracticeTypeFromKey(String? key) {

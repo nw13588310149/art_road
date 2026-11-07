@@ -29,6 +29,12 @@ class ConsultationDetailController
 
   final ConsultationRepository _repository;
 
+  /// 加载失败后重试。
+  Future<void> reload() {
+    state = state.copyWith(loading: true, clearErrorMessage: true);
+    return _load();
+  }
+
   Future<void> _load() async {
     final id = state.args.id;
     if (id <= 0) {
@@ -38,10 +44,7 @@ class ConsultationDetailController
     final response = await _repository.getDetail(id);
     if (!mounted) return;
     if (!response.isSuccess) {
-      state = state.copyWith(
-        loading: false,
-        errorMessage: response.displayMsg,
-      );
+      state = state.copyWith(loading: false, errorMessage: response.displayMsg);
       return;
     }
     final data = response.data;
@@ -54,10 +57,7 @@ class ConsultationDetailController
     if (sourceOverride != null && sourceOverride.isNotEmpty) {
       detail = detail.copyWith(source: sourceOverride);
     }
-    state = state.copyWith(
-      loading: false,
-      detail: detail,
-    );
+    state = state.copyWith(loading: false, detail: detail);
   }
 
   Future<void> openShareDialog() async {
@@ -112,12 +112,14 @@ class ConsultationDetailController
       return false;
     }
     state = state.copyWith(sending: true, clearErrorMessage: true);
-    final content = jsonEncode(buildNewsShareContent(
-      id: detail.id,
-      title: detail.title,
-      coverUrl: detail.coverUrl,
-      updateTime: detail.updateTime,
-    ));
+    final content = jsonEncode(
+      buildNewsShareContent(
+        id: detail.id,
+        title: detail.title,
+        coverUrl: detail.coverUrl,
+        updateTime: detail.updateTime,
+      ),
+    );
 
     var sentCount = 0;
     for (final cls in selected) {

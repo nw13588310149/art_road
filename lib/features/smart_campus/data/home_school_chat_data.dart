@@ -158,10 +158,10 @@ List<HomeSchoolConversation> parseHomeSchoolConversationList(dynamic raw) {
     final tags = tagsRaw.isEmpty
         ? const <String>[]
         : tagsRaw
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
     final senderType = _pickString(m, ['lastSenderType'], '');
     final studentNoRaw = _pickString(m, ['studentNo'], '');
     final studentName = _pickString(m, ['studentName'], '');
@@ -185,7 +185,8 @@ List<HomeSchoolConversation> parseHomeSchoolConversationList(dynamic raw) {
         lastMessage: _pickString(m, ['lastMessage'], ''),
         timeText: _formatDisplayTime(m['lastMessageTime']),
         unreadCount: _asInt(m['unreadCount']) ?? 0,
-        replyPending: m['waitingReply'] == true ||
+        replyPending:
+            m['waitingReply'] == true ||
             m['waitingReply']?.toString() == 'true' ||
             m['waitingReply'] == 1,
       ),
@@ -220,15 +221,14 @@ List<HomeSchoolChatMessage> parseHomeSchoolChatMessageList(dynamic raw) {
 }
 
 ({HomeSchoolMessageKind kind, String text, String? imageUrl})
-    _parseHomeSchoolMessageImage(
-  Map<String, dynamic> json,
-  String content,
-) {
+_parseHomeSchoolMessageImage(Map<String, dynamic> json, String content) {
   final messageTypeRaw = json['messageType'] ?? json['msgType'] ?? json['type'];
   final messageType = _asInt(messageTypeRaw);
   final messageTypeText = messageTypeRaw?.toString().trim().toLowerCase() ?? '';
-  final contentType =
-      _pickString(json, ['contentType', 'msgContentType'], '').toLowerCase();
+  final contentType = _pickString(json, [
+    'contentType',
+    'msgContentType',
+  ], '').toLowerCase();
   final fileUrlRaw = _readRawFileUrl(json);
   final declaredImage = _isDeclaredImageMessage(
     messageType: messageType,
@@ -246,11 +246,7 @@ List<HomeSchoolChatMessage> parseHomeSchoolChatMessageList(dynamic raw) {
           fileUrlRaw.isNotEmpty ||
           _looksLikeImageUrl(content) ||
           _extractEmbeddedImageUrl(content) != null)) {
-    return (
-      kind: HomeSchoolMessageKind.image,
-      text: '',
-      imageUrl: resolvedUrl,
-    );
+    return (kind: HomeSchoolMessageKind.image, text: '', imageUrl: resolvedUrl);
   }
 
   if (declaredImage || _isImagePreviewLabel(content)) {
@@ -261,11 +257,7 @@ List<HomeSchoolChatMessage> parseHomeSchoolChatMessageList(dynamic raw) {
     );
   }
 
-  return (
-    kind: HomeSchoolMessageKind.text,
-    text: content,
-    imageUrl: null,
-  );
+  return (kind: HomeSchoolMessageKind.text, text: content, imageUrl: null);
 }
 
 bool _isDeclaredImageMessage({
@@ -285,42 +277,40 @@ bool _isDeclaredImageMessage({
 }
 
 String _readRawFileUrl(Map<String, dynamic> json) {
-  final direct = _pickString(
-    json,
-    [
-      'fileUrl',
-      'fileURL',
-      'file_url',
-      'imageUrl',
-      'imgUrl',
-      'mediaUrl',
-      'picUrl',
-      'url',
-      'path',
-      'contentUrl',
-    ],
-    '',
-  );
+  final direct = _pickString(json, [
+    'fileUrl',
+    'fileURL',
+    'file_url',
+    'imageUrl',
+    'imgUrl',
+    'mediaUrl',
+    'picUrl',
+    'url',
+    'path',
+    'contentUrl',
+  ], '');
   if (direct.isNotEmpty) return direct;
 
   final file = json['file'];
   if (file is Map) {
-    final nested = _pickString(
-      Map<String, dynamic>.from(file),
-      ['fileUrl', 'url', 'path', 'imageUrl'],
-      '',
-    );
+    final nested = _pickString(Map<String, dynamic>.from(file), [
+      'fileUrl',
+      'url',
+      'path',
+      'imageUrl',
+    ], '');
     if (nested.isNotEmpty) return nested;
   }
 
   for (final key in ['fileUrl', 'url', 'path']) {
     final raw = json[key];
     if (raw is Map) {
-      final nested = _pickString(
-        Map<String, dynamic>.from(raw),
-        ['fileUrl', 'url', 'path', 'imageUrl'],
-        '',
-      );
+      final nested = _pickString(Map<String, dynamic>.from(raw), [
+        'fileUrl',
+        'url',
+        'path',
+        'imageUrl',
+      ], '');
       if (nested.isNotEmpty) return nested;
     }
     final text = raw?.toString().trim() ?? '';
@@ -341,11 +331,15 @@ String? _resolveHomeSchoolImageUrl({
 }) {
   for (final raw in <String>[
     fileUrlRaw,
-    _pickString(
-      json,
-      ['imageUrl', 'imgUrl', 'mediaUrl', 'url', 'contentUrl', 'picUrl', 'path'],
-      '',
-    ),
+    _pickString(json, [
+      'imageUrl',
+      'imgUrl',
+      'mediaUrl',
+      'url',
+      'contentUrl',
+      'picUrl',
+      'path',
+    ], ''),
     if (_looksLikeImageUrl(content)) content,
   ]) {
     if (raw.trim().isEmpty) continue;
@@ -373,11 +367,14 @@ String? _extractEmbeddedImageUrl(String raw) {
       final decoded = jsonDecode(value);
       if (decoded is Map) {
         final map = decoded.cast<String, dynamic>();
-        final candidate = _pickString(
-          map,
-          ['fileUrl', 'url', 'imageUrl', 'imgUrl', 'mediaUrl', 'picUrl'],
-          '',
-        );
+        final candidate = _pickString(map, [
+          'fileUrl',
+          'url',
+          'imageUrl',
+          'imgUrl',
+          'mediaUrl',
+          'picUrl',
+        ], '');
         return _resolveOptionalUrl(candidate);
       }
     } catch (_) {}

@@ -5,7 +5,9 @@ import '../data/school_repository.dart';
 
 final schoolDormitoryCheckConfigProvider =
     FutureProvider<SchoolDormitoryCheckConfig>((ref) async {
-      final response = await ref.watch(schoolRepositoryProvider).schoolConfigList();
+      final response = await ref
+          .watch(schoolRepositoryProvider)
+          .schoolConfigList();
       if (!response.isSuccess) {
         return SchoolDormitoryCheckConfig.empty;
       }

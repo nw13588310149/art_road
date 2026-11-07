@@ -35,20 +35,20 @@
 // 字体：PingFang SC（10/11/12/13/14/16/600）+ Barlow（28 数值 + 16 分母）
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/network/media_url.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../courseware/ui/courseware_url_opener.dart';
 import '../data/teacher_exam_data.dart';
 import '../data/teacher_repository.dart';
 import '../state/teacher_exam_controller.dart';
+import '../data/campus_format.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'student_homework_submission_preview.dart';
@@ -57,24 +57,24 @@ import 'widgets/smart_campus_empty_state.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardBg = Colors.white;
-const Color _kPageGrey = Color(0xFFF5F6FA);
-const Color _kPickGrey = Color(0xFFF4F4FF);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextBlack = Color(0xFF1A1A1A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextMuted = Color(0xFF71717A);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleEnd = Color(0xFF9585FF);
-const Color _kPurpleStart = Color(0xFF715EFE);
-const Color _kOrange = Color(0xFFFF6A00);
-const Color _kOrangeBg = Color(0xFFFFEDD3);
-const Color _kGreen = Color(0xFF12CE51);
-const Color _kGreenBg = Color(0xFFE4FFED);
-const Color _kPillIconColor = Color(0xFF1C274C);
+const Color _kPageBg = AppColors.page;
+const Color _kCardBg = AppColors.surface;
+const Color _kPageGrey = AppColors.surfaceSubtle;
+const Color _kPickGrey = AppColors.brandWash;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextBlack = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextMuted = AppColors.textSecondary;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleEnd = AppColors.brandSoft;
+const Color _kPurpleStart = AppColors.brand;
+const Color _kOrange = AppColors.warning;
+const Color _kOrangeBg = AppColors.warningSoft;
+const Color _kGreen = AppColors.success;
+const Color _kGreenBg = AppColors.successSoft;
+const Color _kPillIconColor = AppColors.ink;
 
 /// 页面各板块之间的固定间距。
 const double _kSectionGap = 14;
@@ -155,9 +155,19 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
       backgroundColor: _kPageBg,
       bodyScrollable: false,
       bodyBorderRadius: 8,
-      header: _ExamBanner(
+      header: AppPageHeader(
+        title: '考评管理',
+        subtitle: '给任教科目的月考提交评分和点评，评分同步到艺考网阅卷系统，复核后在「班级学情」发布',
         onBack: widget.onBack,
-        onOpenHistory: _openHistoryDrawer,
+        actions: [
+          AppButton(
+            label: '历史月考',
+            icon: Icons.history_rounded,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: _openHistoryDrawer,
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,16 +191,17 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
           SizedBox(height: ui(_kSectionGap)),
           Expanded(
             child: active == null
-                ? Center(
-                    child: Text(
-                      examState.error.isNotEmpty
-                          ? examState.error
-                          : '暂无考试数据',
-                      style: TextStyle(
-                        color: _kTextHint,
-                        fontSize: ui(14),
-                      ),
-                    ),
+                ? AppCard(
+                    child: examState.error.isNotEmpty
+                        ? AppErrorState(
+                            title: '考试列表加载失败',
+                            description: examState.error,
+                          )
+                        : const AppEmptyState(
+                            icon: Icons.fact_check_outlined,
+                            title: '暂时没有需要评阅的考试',
+                            description: '教务安排考试后会出现在这里',
+                          ),
                   )
                 : _BodyRow(
                     items: visibleItems,
@@ -221,7 +232,7 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭历史月考',
-      barrierColor: Colors.black.withValues(alpha: 0.20),
+      barrierColor: AppColors.ink.withValues(alpha: 0.20),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, anim, sec) {
         return Align(
@@ -252,7 +263,7 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭考场安排',
-      barrierColor: Colors.black.withValues(alpha: 0.20),
+      barrierColor: AppColors.ink.withValues(alpha: 0.20),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, anim, sec) {
         return Align(
@@ -298,7 +309,7 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭评分',
-      barrierColor: Colors.black.withValues(alpha: 0.20),
+      barrierColor: AppColors.ink.withValues(alpha: 0.20),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, anim, sec) {
         return Align(
@@ -332,89 +343,6 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
 // 顶部 banner（白→#F9EDFF 渐变；左返回 + 居中标题/副标题 + 右"历史月考"按钮）
 // =============================================================================
 
-class _ExamBanner extends StatelessWidget {
-  const _ExamBanner({required this.onBack, required this.onOpenHistory});
-
-  final VoidCallback onBack;
-  final VoidCallback onOpenHistory;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: smartCampusPageBannerDecoration(ui),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: _kPillIconColor,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '考评管理',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: ui(2)),
-                  Text(
-                    '列表展示已关联到您任教的月考科目；教师仅可查看学生提交并进行评分与点评，不可新建考试。',
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: ui(15),
-            child: _BannerActionButton(
-              assetIcon: AppAssets.teacherExamHistoryIcon,
-              label: '历史月考',
-              onTap: onOpenHistory,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _BannerActionButton extends StatelessWidget {
   const _BannerActionButton({
     this.icon,
@@ -438,7 +366,7 @@ class _BannerActionButton extends StatelessWidget {
         height: ui(33),
         padding: EdgeInsets.symmetric(horizontal: ui(12)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -460,7 +388,6 @@ class _BannerActionButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w600,
                 height: 1.2,
               ),
@@ -494,7 +421,7 @@ class _StatusTabsRow extends StatelessWidget {
       height: ui(44),
       padding: EdgeInsets.all(ui(4)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
         border: Border.all(color: _kBorderSoft, width: 1),
       ),
@@ -544,8 +471,7 @@ class _StatusTabPill extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(14),
             height: 1,
-            color: active ? Colors.white : _kTextSecondary,
-            fontFamily: 'PingFang SC',
+            color: active ? AppColors.surface : _kTextSecondary,
             fontWeight: AppFont.w500,
           ),
         ),
@@ -674,7 +600,6 @@ class _StatCell extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -776,7 +701,6 @@ class _ExamListPanel extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(16),
                 color: _kTextBlack,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1.2,
               ),
@@ -838,80 +762,41 @@ class _ExamListCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${item.publishedRatio.submitted}',
-                      style: TextStyle(
-                        fontSize: ui(28),
-                        color: _kTextDark,
-                        fontFamily: 'Barlow',
-                        fontWeight: FontWeight.w600,
-                        height: 1,
-                      ),
-                    ),
-                    SizedBox(width: ui(2)),
-                    Padding(
-                      padding: EdgeInsets.only(bottom: ui(4)),
-                      child: Text(
-                        '/${item.publishedRatio.total}',
-                        style: TextStyle(
-                          fontSize: ui(16),
-                          color: _kTextHint,
-                          fontFamily: 'Barlow',
-                          fontWeight: FontWeight.w400,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: ui(2)),
-                Text(
-                  '截止 ${item.deadline}',
-                  style: TextStyle(
-                    fontSize: ui(10),
-                    color: _kTextHint,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 1.4,
+                Padding(
+                  padding: EdgeInsets.only(right: ui(72)),
+                  child: Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title16.copyWith(color: _kTextBlack),
                   ),
                 ),
-                SizedBox(height: ui(2)),
+                SizedBox(height: ui(4)),
                 Text(
-                  item.classLabel,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 1.2,
-                  ),
-                ),
-                SizedBox(height: ui(6)),
-                Row(
-                  children: [
-                    _SubjectTag(label: item.examLabel),
-                    SizedBox(width: ui(4)),
-                    _SubjectTag(label: item.subject),
-                    SizedBox(width: ui(4)),
-                    if (item.pendingReview > 0)
-                      _PendingReviewTag(count: item.pendingReview),
-                  ],
-                ),
-                SizedBox(height: ui(6)),
-                Text(
-                  item.title,
+                  [
+                    if (item.classLabel.isNotEmpty) item.classLabel,
+                    if (item.deadline.isNotEmpty)
+                      '截止 ${campusListTimeOf(item.deadline, fallback: item.deadline)}',
+                  ].join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    color: _kTextBlack,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w500,
-                    height: 1.2,
+                  style: AppText.caption12.copyWith(
+                    color: AppColors.textTertiary,
                   ),
+                ),
+                SizedBox(height: ui(8)),
+                Row(
+                  children: [
+                    _SubjectTag(label: item.subject),
+                    const Spacer(),
+                    if (item.publishedRatio.total > 0)
+                      Text(
+                        '已提交 ${item.publishedRatio.submitted}/${item.publishedRatio.total} 人',
+                        style: AppText.caption12.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -934,52 +819,7 @@ class _SubjectTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(11),
-          color: _kTextHint,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _PendingReviewTag extends StatelessWidget {
-  const _PendingReviewTag({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: _kOrangeBg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        '待评($count)',
-        style: TextStyle(
-          fontSize: ui(11),
-          color: _kOrange,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-      ),
-    );
+    return AppTag.subject(label);
   }
 }
 
@@ -991,31 +831,13 @@ class _CornerLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final bg = kind == TeacherExamCornerKind.published
-        ? const Color(0xFFE6E9F1)
-        : _kOrangeBg;
-    final fg = kind == TeacherExamCornerKind.published ? _kTextHint : _kOrange;
-    return Container(
-      height: ui(22),
-      padding: EdgeInsets.symmetric(horizontal: ui(10)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(ui(12)),
-          bottomLeft: Radius.circular(ui(12)),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: fg,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 10, 12, 0),
+      child: AppStatusTag(
+        label: label,
+        tone: kind == TeacherExamCornerKind.published
+            ? AppTone.success
+            : AppTone.brand,
       ),
     );
   }
@@ -1060,7 +882,6 @@ class _ExamDetailPanel extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(16),
                             color: _kTextBlack,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w500,
                             height: 1.2,
                           ),
@@ -1074,11 +895,10 @@ class _ExamDetailPanel extends StatelessWidget {
                       ),
                       SizedBox(width: ui(12)),
                       Text(
-                        '截止 ${item.deadline}',
+                        '截止 ${campusListTimeOf(item.deadline, fallback: item.deadline)}',
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kTextSecondary,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                           height: 1,
                         ),
@@ -1090,8 +910,7 @@ class _ExamDetailPanel extends StatelessWidget {
                     item.syncNote,
                     style: TextStyle(
                       fontSize: ui(12),
-                      color: _kPurple,
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.textTertiary,
                       fontWeight: AppFont.w400,
                       height: 1.4,
                     ),
@@ -1143,7 +962,6 @@ class _OfficialBlock extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1.6,
             ),
@@ -1154,7 +972,6 @@ class _OfficialBlock extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.6,
             ),
@@ -1245,7 +1062,6 @@ class _ProgressMetricCell extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -1257,7 +1073,6 @@ class _ProgressMetricCell extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.2,
                   ),
@@ -1295,7 +1110,7 @@ class _ScoreSummaryStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    String fmt(double? v) => v == null ? '—' : v.toStringAsFixed(1);
+    String fmt(double? v) => campusScore(v);
     final cells = <({String label, String value, Color color})>[
       (label: '均分', value: fmt(item.avgScore), color: _kPurple),
       (label: '最高', value: fmt(item.maxScore), color: _kGreen),
@@ -1345,9 +1160,8 @@ class _ScoreSummaryStrip extends StatelessWidget {
                   Text(
                     cells[i].label,
                     style: TextStyle(
-                      fontSize: ui(11),
+                      fontSize: ui(12),
                       color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1,
                     ),
@@ -1442,7 +1256,7 @@ class _SeatPlanDrawerState extends ConsumerState<_SeatPlanDrawer> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       child: SizedBox(
         width: ui(420),
         height: double.infinity,
@@ -1460,7 +1274,6 @@ class _SeatPlanDrawerState extends ConsumerState<_SeatPlanDrawer> {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kTextSecondary,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -1541,7 +1354,6 @@ class _SeatRoomGroup extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                     height: 1.2,
                   ),
@@ -1552,7 +1364,6 @@ class _SeatRoomGroup extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -1581,7 +1392,7 @@ class _SeatStudentRow extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: ui(10), vertical: ui(8)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Row(
@@ -1604,7 +1415,6 @@ class _SeatStudentRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.2,
                   ),
@@ -1620,9 +1430,8 @@ class _SeatStudentRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: ui(11),
+                      fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -1635,9 +1444,8 @@ class _SeatStudentRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: ui(11),
+                      fontSize: ui(12),
                       color: _kPurple,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -1669,9 +1477,8 @@ class _SeatStudentRow extends StatelessWidget {
             Text(
               '待编排',
               style: TextStyle(
-                fontSize: ui(11),
+                fontSize: ui(12),
                 color: _kTextHint,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -1704,7 +1511,7 @@ class _SubmissionsTable extends StatelessWidget {
           height: ui(40),
           padding: EdgeInsets.symmetric(horizontal: ui(8)),
           decoration: BoxDecoration(
-            color: const Color(0xFFF9FAFB),
+            color: AppColors.surfaceSubtle,
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           child: Row(
@@ -1738,7 +1545,6 @@ class _ColHeader extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(13),
         color: _kTextMuted,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 1.4,
       ),
@@ -1785,7 +1591,6 @@ class _SubmissionRow extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: ui(13),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                       height: 1.4,
                     ),
@@ -1801,29 +1606,13 @@ class _SubmissionRow extends ConsumerWidget {
           Expanded(child: _CellText(item.uploadAt)),
           SizedBox(
             width: ui(90),
-            child: InkWell(
-              onTap: isReminding ? null : onOpenScore,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                height: ui(32),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: isMissing ? _kOrangeBg : _kTextDark,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: isMissing
-                      ? Border.all(color: _kOrange.withValues(alpha: 0.35))
-                      : null,
-                ),
-                child: Text(
-                  isMissing && isReminding ? '发送中…' : item.action,
-                  style: TextStyle(
-                    fontSize: ui(13),
-                    color: isMissing ? _kOrange : Colors.white,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 1.4,
-                  ),
-                ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: AppButton(
+                label: isMissing && isReminding ? '发送中…' : item.action,
+                variant: AppButtonVariant.quiet,
+                size: AppButtonSize.sm,
+                onTap: isReminding ? null : onOpenScore,
               ),
             ),
           ),
@@ -1848,7 +1637,6 @@ class _CellText extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(13),
         color: _kTextDark,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 1.4,
       ),
@@ -1868,8 +1656,8 @@ class _StatusPill extends StatelessWidget {
       _SubmissionState.passed => (bg: _kGreenBg, fg: _kGreen, text: '已通过'),
       _SubmissionState.pending => (bg: _kOrangeBg, fg: _kOrange, text: '待评'),
       _SubmissionState.missing => (
-        bg: const Color(0xFFFFE5E5),
-        fg: const Color(0xFFE54848),
+        bg: AppColors.dangerSoft,
+        fg: AppColors.danger,
         text: '未交',
       ),
       _SubmissionState.reviewed => (bg: _kGreenBg, fg: _kGreen, text: '已批改'),
@@ -1887,7 +1675,6 @@ class _StatusPill extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: tone.fg,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),
@@ -1915,8 +1702,8 @@ class _AvatarCircle extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final resolved = _resolveMediaUrl(imageUrl);
     final palettes = const [
-      [Color(0xFF9585FF), Color(0xFF715EFE)],
-      [Color(0xFFFFB68E), Color(0xFFFF8741)],
+      [AppColors.brandSoft, AppColors.brand],
+      [Color(0xFFFFB68E), AppColors.warning],
       [Color(0xFF8EE0FF), Color(0xFF418EFF)],
     ];
     final palette = palettes[seed.abs() % palettes.length];
@@ -1944,8 +1731,7 @@ class _AvatarCircle extends StatelessWidget {
               initial,
               style: TextStyle(
                 fontSize: ui(13),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
+                color: AppColors.surface,
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -1970,8 +1756,7 @@ class _AvatarCircle extends StatelessWidget {
         initial,
         style: TextStyle(
           fontSize: ui(13),
-          color: Colors.white,
-          fontFamily: 'PingFang SC',
+          color: AppColors.surface,
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -1993,7 +1778,7 @@ class _HistoryDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       child: SizedBox(
         width: ui(344),
         height: double.infinity,
@@ -2019,7 +1804,6 @@ class _HistoryDrawer extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -2032,7 +1816,6 @@ class _HistoryDrawer extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.2,
                       ),
@@ -2091,7 +1874,7 @@ class _HistoryCard extends StatelessWidget {
               Text(
                 '${item.publishedRatio.submitted}',
                 style: TextStyle(
-                  fontSize: ui(28),
+                  fontSize: ui(24),
                   color: _kTextDark,
                   fontFamily: 'Barlow',
                   fontWeight: FontWeight.w600,
@@ -2118,9 +1901,8 @@ class _HistoryCard extends StatelessWidget {
           Text(
             '截止 ${item.deadline}',
             style: TextStyle(
-              fontSize: ui(10),
+              fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -2131,7 +1913,6 @@ class _HistoryCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -2150,7 +1931,6 @@ class _HistoryCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextBlack,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1.2,
             ),
@@ -2211,7 +1991,7 @@ class _ScoreDrawerState extends ConsumerState<_ScoreDrawer> {
               : const <String>[]);
     final hasAttachment = files.isNotEmpty;
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       child: SizedBox(
         width: ui(600),
         height: double.infinity,
@@ -2253,7 +2033,6 @@ class _ScoreDrawerState extends ConsumerState<_ScoreDrawer> {
                           style: TextStyle(
                             fontSize: ui(13),
                             color: _kTextSecondary,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.4,
                           ),
@@ -2268,7 +2047,6 @@ class _ScoreDrawerState extends ConsumerState<_ScoreDrawer> {
                           style: TextStyle(
                             fontSize: ui(16),
                             color: _kTextDark,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w600,
                             height: 1.2,
                           ),
@@ -2427,8 +2205,7 @@ class _ScoreProfileRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: ui(16),
-                        color: Colors.black,
-                        fontFamily: 'PingFang SC',
+                        color: AppColors.ink,
                         fontWeight: AppFont.w600,
                         height: 1.2,
                       ),
@@ -2451,7 +2228,6 @@ class _ScoreProfileRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextSecondary,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.2,
                       ),
@@ -2463,7 +2239,6 @@ class _ScoreProfileRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -2498,13 +2273,13 @@ class _AttachmentCard extends StatelessWidget {
       '音频' => const [Color(0xFFFFE3D7), Color(0xFFFFF8F4)],
       '视频' => const [Color(0xFFD7FFE9), Color(0xFFF4FFF8)],
       '图片' => const [Color(0xFFFFF1D7), Color(0xFFFFFCF4)],
-      _ => const [Color(0xFFD7E2FF), Color(0xFFF9FBFF)],
+      _ => const [Color(0xFFD7E2FF), AppColors.surfaceSubtle],
     };
     final tagColor = switch (medium) {
-      '音频' => const Color(0xFFFF8741),
-      '视频' => const Color(0xFF12CE51),
+      '音频' => AppColors.warning,
+      '视频' => AppColors.success,
       '图片' => const Color(0xFFE68D10),
-      _ => const Color(0xFFFF5040),
+      _ => AppColors.danger,
     };
     final tagText = switch (medium) {
       '音频' => 'MP3',
@@ -2542,9 +2317,8 @@ class _AttachmentCard extends StatelessWidget {
               child: Text(
                 tagText,
                 style: TextStyle(
-                  fontSize: ui(8),
-                  color: Colors.white,
-                  fontFamily: 'PingFang SC',
+                  fontSize: ui(12),
+                  color: AppColors.surface,
                   fontWeight: FontWeight.w700,
                   height: 1.2,
                   letterSpacing: 0.4,
@@ -2565,7 +2339,6 @@ class _AttachmentCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.4,
                   ),
@@ -2617,7 +2390,7 @@ class _GhostButton extends StatelessWidget {
           height: ui(33),
           padding: EdgeInsets.symmetric(horizontal: ui(12)),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorderSoft),
           ),
@@ -2631,7 +2404,6 @@ class _GhostButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -2675,16 +2447,11 @@ class _ScoreInput extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 border: InputBorder.none,
                 hintText: '请输入分数',
-                hintStyle: TextStyle(
-                  fontSize: ui(14),
-                  color: _kTextHint,
-                  fontFamily: 'PingFang SC',
-                ),
+                hintStyle: TextStyle(fontSize: ui(14), color: _kTextHint),
               ),
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),
@@ -2695,7 +2462,6 @@ class _ScoreInput extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -2735,7 +2501,6 @@ class _DrawerTitleBar extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(16),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w600,
             height: 1.2,
           ),
@@ -2757,8 +2522,7 @@ class _FieldLabel extends StatelessWidget {
       text,
       style: TextStyle(
         fontSize: ui(14),
-        color: Colors.black,
-        fontFamily: 'PingFang SC',
+        color: AppColors.ink,
         fontWeight: AppFont.w500,
         height: 1.4,
       ),
@@ -2816,16 +2580,11 @@ class _PlainTextAreaState extends State<_PlainTextArea> {
           contentPadding: EdgeInsets.zero,
           border: InputBorder.none,
           hintText: widget.hint,
-          hintStyle: TextStyle(
-            fontSize: ui(14),
-            color: _kTextHint,
-            fontFamily: 'PingFang SC',
-          ),
+          hintStyle: TextStyle(fontSize: ui(14), color: _kTextHint),
         ),
         style: TextStyle(
           fontSize: ui(14),
           color: _kTextDark,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1.4,
         ),
@@ -2864,14 +2623,13 @@ class _PrimaryGradientButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: ui(16), color: Colors.white),
+            Icon(icon, size: ui(16), color: AppColors.surface),
             SizedBox(width: ui(8)),
             Text(
               label,
               style: TextStyle(
                 fontSize: ui(14),
-                color: Colors.white,
-                fontFamily: 'PingFang SC',
+                color: AppColors.surface,
                 fontWeight: AppFont.w500,
                 height: 1.6,
               ),

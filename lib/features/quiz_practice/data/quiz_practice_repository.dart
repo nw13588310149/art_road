@@ -14,7 +14,7 @@ class QuizPracticeRepository {
 
   final ApiClient client;
 
-  /// 刷题数据汇总：返回顺序练习/随机练习/考前密卷/错题集 4 类的统计数据。
+  /// 题库数据汇总：返回顺序练习 / 随机练习 / 高频考点 / 错题本 4 类的统计数据。
   ///
   /// [schoolId]：首页公开刷题固定传 `0`；校园课件刷题传真实学校 id。
   Future<ApiResponse> getSummary({required String schoolId}) {

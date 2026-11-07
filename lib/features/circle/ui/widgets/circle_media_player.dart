@@ -11,7 +11,7 @@ import '../../data/circle_video_cache.dart';
 import '../../state/circle_state.dart';
 import 'circle_video_play_button.dart';
 
-/// 沉浸媒体 contain 尺寸：在可用区域内等比缩放至最大，与 [_ImmersiveDouyinVideoFrame] 一致。
+/// 沉浸媒体 contain 尺寸：在可用区域内等比缩放并尽量铺满，与 [_ImmersiveDouyinVideoFrame] 一致。
 Size _immersiveContainSize({
   required double maxWidth,
   required double maxHeight,
@@ -88,7 +88,8 @@ class _CircleMediaPlayerState extends State<CircleMediaPlayer> {
       _teardownPlayer();
       return;
     }
-    final postChanged = oldWidget.post.id != widget.post.id ||
+    final postChanged =
+        oldWidget.post.id != widget.post.id ||
         oldWidget.post.primaryMediaUrl != widget.post.primaryMediaUrl ||
         oldWidget.post.mediaKind != widget.post.mediaKind;
     final activeChanged = oldWidget.isActive != widget.isActive;
@@ -295,12 +296,12 @@ class _CircleMediaPlayerState extends State<CircleMediaPlayer> {
   Widget build(BuildContext context) {
     return switch (widget.post.mediaKind) {
       PostMediaKind.image => _ImageBackdrop(
-          url: widget.post.imageUrl,
-          aspectRatioHint: widget.post.hasExplicitAspectRatio
-              ? widget.post.imageAspectRatio
-              : null,
-          adaptOrientation: true,
-        ),
+        url: widget.post.imageUrl,
+        aspectRatioHint: widget.post.hasExplicitAspectRatio
+            ? widget.post.imageAspectRatio
+            : null,
+        adaptOrientation: true,
+      ),
       PostMediaKind.video => _buildVideoBody(),
       PostMediaKind.audio => _buildAudioBody(),
     };
@@ -351,9 +352,7 @@ class _CircleMediaPlayerState extends State<CircleMediaPlayer> {
         else
           const _AudioBackdrop(),
         if (player != null)
-          Positioned.fill(
-            child: _DouyinMediaControls(player: player),
-          ),
+          Positioned.fill(child: _DouyinMediaControls(player: player)),
       ],
     );
   }
@@ -536,25 +535,26 @@ class _DouyinMediaControlsState extends State<_DouyinMediaControls>
           gestures: <Type, GestureRecognizerFactory>{
             TapGestureRecognizer:
                 GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
-              () => TapGestureRecognizer(),
-              (TapGestureRecognizer instance) {
-                instance.onTap = () {
-                  if (!_dragging) widget.player.playOrPause();
-                };
-              },
-            ),
+                  () => TapGestureRecognizer(),
+                  (TapGestureRecognizer instance) {
+                    instance.onTap = () {
+                      if (!_dragging) widget.player.playOrPause();
+                    };
+                  },
+                ),
             HorizontalDragGestureRecognizer:
                 GestureRecognizerFactoryWithHandlers<
-                    HorizontalDragGestureRecognizer>(
-              () => HorizontalDragGestureRecognizer(),
-              (HorizontalDragGestureRecognizer instance) {
-                instance.onStart = (d) => _onDragStart(d.localPosition.dx, width);
-                instance.onUpdate = (d) =>
-                    _onDragUpdate(d.localPosition.dx, width);
-                instance.onEnd = (_) => unawaited(_onDragEnd());
-                instance.onCancel = _onDragCancel;
-              },
-            ),
+                  HorizontalDragGestureRecognizer
+                >(() => HorizontalDragGestureRecognizer(), (
+                  HorizontalDragGestureRecognizer instance,
+                ) {
+                  instance.onStart = (d) =>
+                      _onDragStart(d.localPosition.dx, width);
+                  instance.onUpdate = (d) =>
+                      _onDragUpdate(d.localPosition.dx, width);
+                  instance.onEnd = (_) => unawaited(_onDragEnd());
+                  instance.onCancel = _onDragCancel;
+                }),
           },
           child: Stack(
             fit: StackFit.expand,
@@ -747,19 +747,16 @@ class _ImageBackdropState extends State<_ImageBackdrop> {
     final provider = NetworkImage(widget.url);
     _provider = provider;
     final stream = provider.resolve(const ImageConfiguration());
-    final listener = ImageStreamListener(
-      (info, _) {
-        final w = info.image.width;
-        final h = info.image.height;
-        if (!mounted || w <= 0 || h <= 0) return;
-        final aspect = w / h;
-        if (_resolvedAspectRatio == null ||
-            (_resolvedAspectRatio! - aspect).abs() > 0.001) {
-          setState(() => _resolvedAspectRatio = aspect);
-        }
-      },
-      onError: (_, _) {},
-    );
+    final listener = ImageStreamListener((info, _) {
+      final w = info.image.width;
+      final h = info.image.height;
+      if (!mounted || w <= 0 || h <= 0) return;
+      final aspect = w / h;
+      if (_resolvedAspectRatio == null ||
+          (_resolvedAspectRatio! - aspect).abs() > 0.001) {
+        setState(() => _resolvedAspectRatio = aspect);
+      }
+    }, onError: (_, _) {});
     _stream = stream;
     _listener = listener;
     stream.addListener(listener);

@@ -153,7 +153,9 @@ class TeacherAttendanceController
     final classId = classes.isNotEmpty ? classes.first.id : null;
     if (classId == null || classId.isEmpty) return configs;
 
-    final tcResp = await _schoolRepository.schoolTimeConfigList(classId: classId);
+    final tcResp = await _schoolRepository.schoolTimeConfigList(
+      classId: classId,
+    );
     if (!tcResp.isSuccess) return configs;
 
     final parsed = parseCourseLineTimeConfigs(tcResp.data);
@@ -265,11 +267,7 @@ class TeacherAttendanceController
       remark: student.remark,
     );
     if (response.isSuccess) {
-      _replaceStudent(
-        courseId,
-        studentId,
-        student.copyWith(status: status),
-      );
+      _replaceStudent(courseId, studentId, student.copyWith(status: status));
       await _loadSummary();
     }
     return response;
@@ -420,5 +418,4 @@ class TeacherAttendanceController
       ],
     );
   }
-
 }

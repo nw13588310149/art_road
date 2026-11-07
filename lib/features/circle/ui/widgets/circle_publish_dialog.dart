@@ -2,58 +2,44 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/constants/app_assets.dart';
-import '../../../../core/widgets/app_toast.dart';
-import '../../../../core/widgets/scaled_dialog.dart';
+import '../../../../core/ui/ui.dart';
 import '../../../courseware/state/cloud_drive_controller.dart';
 import '../../../courseware/ui/courseware_file_picker.dart';
-import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_controller.dart';
 import '../../state/circle_state.dart';
 import '../../util/video_cover_frame_extractor.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kBg = Color(0xFFF5F6FA);
-const Color _kBorder = Color(0xFFCECED1);
-const Color _kHint = Color(0xFFB6B5BB);
-const Color _kText = Color(0xFF0B081A);
+/// 可发布的动态类型；历史音频帖仍可浏览，但不再提供音频发布。
+const _publishKinds = <PostMediaKind>[PostMediaKind.image, PostMediaKind.video];
 
-String _publishTabIconAsset(PostMediaKind kind, {required bool selected}) {
+String _kindLabelOf(PostMediaKind kind) {
   switch (kind) {
     case PostMediaKind.image:
-      return selected
-          ? AppAssets.circlePublishTabImageSelected
-          : AppAssets.circlePublishTabImage;
+      return '图片';
     case PostMediaKind.video:
-      return selected
-          ? AppAssets.circlePublishTabVideoSelected
-          : AppAssets.circlePublishTabVideo;
+      return '视频';
     case PostMediaKind.audio:
-      return selected
-          ? AppAssets.circlePublishTabAudioSelected
-          : AppAssets.circlePublishTabAudio;
+      return '音频';
   }
 }
 
-String _publishPickIconAsset(PostMediaKind kind) {
+IconData _kindIconOf(PostMediaKind kind) {
   switch (kind) {
     case PostMediaKind.image:
-      return AppAssets.circlePublishPickImage;
+      return Icons.image_outlined;
     case PostMediaKind.video:
-      return AppAssets.circlePublishPickVideo;
+      return Icons.videocam_outlined;
     case PostMediaKind.audio:
-      return AppAssets.circlePublishPickAudio;
+      return Icons.graphic_eq_rounded;
   }
 }
 
 /// 弹出「发布动态」对话框。返回 `true` 表示发布成功；其它情况返回 false /
 /// null（用户主动取消）。
 Future<bool?> showCirclePublishDialog(BuildContext context) {
-  return showScaledDialog<bool>(
+  return showAppDialog<bool>(
     context: context,
     barrierDismissible: false,
     builder: (_) => const _CirclePublishDialog(),
@@ -84,7 +70,7 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
   String? _uploadError;
   bool _submitting = false;
 
-  // ─── 视频 / 音频帖 可选的封面图（图片帖直接复用主资源当封面，不展示这块）。
+  // ─── 视频帖可选的封面图（图片帖直接复用主资源当封面，不展示这块）。
   String? _coverFileName;
   Uint8List? _coverFileBytes;
   String? _coverFilePath;
@@ -100,20 +86,13 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
     super.dispose();
   }
 
-  /// 文本内容是否非空。
   bool get _hasText => _textCtrl.text.trim().isNotEmpty;
   bool get _hasUploaded => _uploadedPath != null && _uploadedPath!.isNotEmpty;
 
-  /// 视频 / 音频帖才需要展示「封面图」槽位；图片帖封面直接复用主资源。
   bool get _needsCover =>
       _kind == PostMediaKind.video || _kind == PostMediaKind.audio;
 
-  /// 提交按钮可用性：
-  /// - 正文必填
-  /// - 主资源必须上传完成
-  /// - 主资源上传中、封面上传中、提交中 → 全部禁用
-  /// - 封面**本身可选**：用户可以不传，也可以上传完再发布；只是不能在
-  ///   "封面正在上传"的中间态点发布。
+  /// 正文必填、主资源上传完成才能发布；封面可选，但封面上传中不能发布。
   bool get _canSubmit =>
       _hasText &&
       _hasUploaded &&
@@ -125,7 +104,7 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
     if (_kind == k) return;
     setState(() {
       _kind = k;
-      // 切换类型清掉已选文件，避免 "图片"+视频 这种语义错位。
+      // 切换类型清掉已选文件，避免「图片」类型里挂着视频。
       _resetFile();
       _resetCover();
     });
@@ -153,20 +132,10 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
     _coverUploadError = null;
   }
 
-  /// 当前媒体类型是否合法的扩展名集合。
   Set<String> get _allowedExt {
     switch (_kind) {
       case PostMediaKind.image:
-        return const {
-          'jpg',
-          'jpeg',
-          'png',
-          'gif',
-          'webp',
-          'bmp',
-          'heic',
-          'heif',
-        };
+        return _imageExt;
       case PostMediaKind.video:
         return const {'mp4', 'mov', 'm4v', 'webm', 'avi', 'mkv'};
       case PostMediaKind.audio:
@@ -174,16 +143,16 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
     }
   }
 
-  String get _kindLabel {
-    switch (_kind) {
-      case PostMediaKind.image:
-        return '图片';
-      case PostMediaKind.video:
-        return '视频';
-      case PostMediaKind.audio:
-        return '音频';
-    }
-  }
+  static const Set<String> _imageExt = {
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp',
+    'bmp',
+    'heic',
+    'heif',
+  };
 
   String _extOf(String name) {
     final i = name.lastIndexOf('.');
@@ -211,11 +180,10 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
     );
     if (files.isEmpty || !mounted) return;
     final f = files.first;
-    final ext = _extOf(f.name);
-    if (!_allowedExt.contains(ext)) {
-      AppToast.show(
+    if (!_allowedExt.contains(_extOf(f.name))) {
+      AppToast.showInfo(
         context,
-        '当前为「$_kindLabel」类型，请选择 ${_allowedExt.join(' / ')} 格式',
+        '请选择${_kindLabelOf(_kind)}文件（${_allowedExt.join(' / ')}）',
       );
       return;
     }
@@ -267,7 +235,7 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
         setState(() {
           _uploading = false;
           _uploadProgress = 0;
-          _uploadError = '上传失败，请点击重试';
+          _uploadError = '上传失败，请重试';
         });
         return;
       }
@@ -284,7 +252,7 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
       setState(() {
         _uploading = false;
         _uploadProgress = 0;
-        _uploadError = '上传失败，请点击重试';
+        _uploadError = '上传失败，请重试';
       });
     }
   }
@@ -319,34 +287,16 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
     await _startCoverUpload();
   }
 
-  // ─── 封面图：仅图片格式；上传走与主资源相同的 cloudDrive 通道。
-
-  static const Set<String> _coverAllowedExt = {
-    'jpg',
-    'jpeg',
-    'png',
-    'gif',
-    'webp',
-    'bmp',
-    'heic',
-    'heif',
-  };
-
   Future<void> _pickCover() async {
     if (_coverUploading) return;
-    // 校圈封面只允许图片：移动端会直接拉起相册，避免再走文件管理。
     final files = await pickCoursewareFiles(
       allowMultiple: false,
       type: CoursewarePickType.image,
     );
     if (files.isEmpty || !mounted) return;
     final f = files.first;
-    final ext = _extOf(f.name);
-    if (!_coverAllowedExt.contains(ext)) {
-      AppToast.show(
-        context,
-        '封面仅支持 ${_coverAllowedExt.join(' / ')} 等图片格式',
-      );
+    if (!_imageExt.contains(_extOf(f.name))) {
+      AppToast.showInfo(context, '封面请选择 jpg / png / webp 等图片');
       return;
     }
     setState(() {
@@ -378,7 +328,8 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
     }
 
     try {
-      final saved = (_coverFilePath != null && _coverFilePath!.trim().isNotEmpty)
+      final saved =
+          (_coverFilePath != null && _coverFilePath!.trim().isNotEmpty)
           ? await controller.uploadFilePathRaw(
               filePath: _coverFilePath!,
               filename: name,
@@ -394,7 +345,7 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
         setState(() {
           _coverUploading = false;
           _coverUploadProgress = 0;
-          _coverUploadError = '封面上传失败，点击重试';
+          _coverUploadError = '封面上传失败，请重试';
         });
         return;
       }
@@ -408,7 +359,7 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
       setState(() {
         _coverUploading = false;
         _coverUploadProgress = 0;
-        _coverUploadError = '封面上传失败，点击重试';
+        _coverUploadError = '封面上传失败，请重试';
       });
     }
   }
@@ -430,10 +381,10 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
     if (!mounted) return;
     if (message != null && message.isNotEmpty) {
       setState(() => _submitting = false);
-      AppToast.show(context, message);
+      AppToast.showError(context, message);
       return;
     }
-    AppToast.show(context, '动态已发布');
+    AppToast.showSuccess(context, '动态已发布');
     Navigator.of(context).pop(true);
   }
 
@@ -443,28 +394,48 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return GradientHeaderDialog(
+    return AppDialog(
       title: '发布动态',
-      width: 460,
-      actionBar: AppDialogActionBar(
-        cancelLabel: '取消',
-        confirmLabel: _submitting ? '发布中…' : '发布',
-        confirmEnabled: _canSubmit,
-        onCancel: _onCancel,
-        onConfirm: _onSubmit,
-      ),
+      actions: [
+        AppButton(
+          label: '取消',
+          variant: AppButtonVariant.secondary,
+          enabled: !_submitting,
+          onTap: _onCancel,
+        ),
+        AppButton(
+          label: '发布',
+          loading: _submitting,
+          enabled: _canSubmit,
+          onTap: _onSubmit,
+        ),
+      ],
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _KindTabs(current: _kind, onChanged: _onSwitchKind),
-          const SizedBox(height: 16),
-          _TextArea(
+          AppSegmented<PostMediaKind>(
+            segments: [
+              for (final kind in _publishKinds)
+                AppSegment(value: kind, label: _kindLabelOf(kind)),
+            ],
+            value: _kind,
+            onChanged: _onSwitchKind,
+            expand: true,
+          ),
+          const SizedBox(height: AppSpace.s16),
+          AppInputField(
             controller: _textCtrl,
-            hint: '分享作品、写生日记或模考心得...（必填）',
+            label: '内容',
+            hint: '分享作品、写生日记或模考心得',
+            multiline: true,
+            minLines: 4,
+            maxLines: 6,
+            maxLength: 500,
+            required: true,
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpace.s16),
           _MediaArea(
             kind: _kind,
             fileName: _fileName,
@@ -479,7 +450,7 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
             onRetry: _startUpload,
           ),
           if (_needsCover) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpace.s16),
             _CoverArea(
               fileName: _coverFileName,
               fileSize: _coverFileSize,
@@ -499,150 +470,91 @@ class _CirclePublishDialogState extends ConsumerState<_CirclePublishDialog> {
   }
 }
 
-class _KindTabs extends StatelessWidget {
-  const _KindTabs({required this.current, required this.onChanged});
-
-  final PostMediaKind current;
-  final ValueChanged<PostMediaKind> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(40),
-      padding: EdgeInsets.all(ui(4)),
-      decoration: BoxDecoration(
-        color: _kBg,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Row(
-        children: [
-          for (final k in PostMediaKind.values)
-            Expanded(
-              child: _KindTabItem(
-                kind: k,
-                selected: current == k,
-                onTap: () => onChanged(k),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KindTabItem extends StatelessWidget {
-  const _KindTabItem({
+/// 已选文件行：缩略图 + 文件名 + 上传状态 + 操作按钮。
+class _FileRow extends StatelessWidget {
+  const _FileRow({
     required this.kind,
-    required this.selected,
-    required this.onTap,
+    required this.fileName,
+    required this.fileSize,
+    required this.fileBytes,
+    required this.uploading,
+    required this.uploadProgress,
+    required this.uploaded,
+    required this.uploadError,
+    required this.onRemove,
+    required this.onRetry,
+    this.onReplace,
   });
 
   final PostMediaKind kind;
-  final bool selected;
-  final VoidCallback onTap;
+  final String fileName;
+  final int? fileSize;
+  final Uint8List? fileBytes;
+  final bool uploading;
+  final double uploadProgress;
+  final bool uploaded;
+  final String? uploadError;
+  final VoidCallback onRemove;
+  final VoidCallback onRetry;
+  final VoidCallback? onReplace;
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final String label;
-    switch (kind) {
-      case PostMediaKind.image:
-        label = '图片+文字';
-        break;
-      case PostMediaKind.video:
-        label = '视频+文字';
-        break;
-      case PostMediaKind.audio:
-        label = '音频+文字';
-        break;
-    }
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: ui(2)),
-        decoration: BoxDecoration(
-          color: selected ? _kPurple : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              _publishTabIconAsset(kind, selected: selected),
-              width: ui(16),
-              height: ui(16),
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: ui(4)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: selected ? Colors.white : _kHint,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TextArea extends StatelessWidget {
-  const _TextArea({
-    required this.controller,
-    required this.hint,
-    required this.onChanged,
-  });
-
-  final TextEditingController controller;
-  final String hint;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
+    final replace = onReplace;
     return Container(
-      height: ui(110),
+      padding: const EdgeInsets.all(AppSpace.s12),
       decoration: BoxDecoration(
-        color: _kBg,
-        borderRadius: BorderRadius.circular(ui(12)),
+        color: AppColors.surface,
+        borderRadius: AppRadius.br12,
+        border: Border.all(color: AppColors.line),
       ),
-      child: AppTextField(
-        controller: controller,
-        onChanged: onChanged,
-        maxLines: null,
-        expands: true,
-        textAlignVertical: TextAlignVertical.top,
-        cursorColor: const Color(0xFF715EFE),
-        cursorWidth: 1.5,
-        cursorHeight: ui(15),
-        style: TextStyle(
-          fontSize: ui(13),
-          color: _kText,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 20 / 13,
-        ),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            fontSize: ui(13),
-            color: _kHint,
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w400,
-            height: 20 / 13,
+      child: Row(
+        children: [
+          _MediaThumbnail(kind: kind, bytes: fileBytes),
+          const SizedBox(width: AppSpace.s12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body14Strong,
+                ),
+                const SizedBox(height: AppSpace.s4),
+                _UploadStatusLine(
+                  fileSize: fileSize,
+                  uploading: uploading,
+                  uploadProgress: uploadProgress,
+                  uploaded: uploaded,
+                  uploadError: uploadError,
+                  onRetry: onRetry,
+                ),
+              ],
+            ),
           ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.all(ui(14)),
-        ),
+          const SizedBox(width: AppSpace.s8),
+          if (replace != null && uploaded && !uploading)
+            AppIconButton(
+              icon: Icons.swap_horiz_rounded,
+              semanticLabel: '重新选择',
+              size: AppButtonSize.sm,
+              filled: false,
+              color: AppColors.textSecondary,
+              onTap: replace,
+            ),
+          AppIconButton(
+            icon: Icons.close_rounded,
+            semanticLabel: '移除',
+            size: AppButtonSize.sm,
+            filled: false,
+            color: AppColors.textTertiary,
+            enabled: !uploading,
+            onTap: onRemove,
+          ),
+        ],
       ),
     );
   }
@@ -677,156 +589,58 @@ class _MediaArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    if (fileName == null) {
-      return _PickPlaceholder(kind: kind, onTap: onPick);
+    final name = fileName;
+    if (name == null) {
+      final label = _kindLabelOf(kind);
+      return AppPressable(
+        onTap: onPick,
+        semanticLabel: '上传$label',
+        child: Container(
+          height: 132,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceSubtle,
+            borderRadius: AppRadius.br12,
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _kindIconOf(kind),
+                size: 32,
+                color: AppColors.textTertiary,
+              ),
+              const SizedBox(height: AppSpace.s8),
+              Text('点击上传$label', style: AppText.body14Strong),
+              const SizedBox(height: AppSpace.s4),
+              Text(
+                kind == PostMediaKind.video
+                    ? '支持 mp4 / mov / webm 等格式'
+                    : '支持 jpg / png / gif / webp 等格式',
+                style: AppText.caption12,
+              ),
+            ],
+          ),
+        ),
+      );
     }
-    return Container(
-      padding: EdgeInsets.all(ui(12)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(12)),
-        border: Border.all(color: _kBorder),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _MediaThumbnail(
-            kind: kind,
-            bytes: fileBytes,
-            uploaded: uploadedPath != null,
-          ),
-          SizedBox(width: ui(12)),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fileName!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: ui(13),
-                    color: _kText,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w500,
-                    height: 1.3,
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                _UploadStatusLine(
-                  fileSize: fileSize,
-                  uploading: uploading,
-                  uploadProgress: uploadProgress,
-                  uploaded: uploadedPath != null,
-                  uploadError: uploadError,
-                  onRetry: onRetry,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: ui(8)),
-          IconButton(
-            padding: EdgeInsets.zero,
-            constraints: BoxConstraints(
-              minWidth: ui(32),
-              minHeight: ui(32),
-            ),
-            onPressed: uploading ? null : onRemove,
-            icon: Icon(
-              Icons.close_rounded,
-              size: ui(18),
-              color: uploading ? _kHint.withValues(alpha: 0.4) : _kHint,
-            ),
-            tooltip: '移除',
-          ),
-        ],
-      ),
+    return _FileRow(
+      kind: kind,
+      fileName: name,
+      fileSize: fileSize,
+      fileBytes: fileBytes,
+      uploading: uploading,
+      uploadProgress: uploadProgress,
+      uploaded: uploadedPath != null,
+      uploadError: uploadError,
+      onRemove: onRemove,
+      onRetry: onRetry,
     );
   }
 }
 
-class _PickPlaceholder extends StatelessWidget {
-  const _PickPlaceholder({required this.kind, required this.onTap});
-
-  final PostMediaKind kind;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final String label;
-    final String hint;
-    switch (kind) {
-      case PostMediaKind.image:
-        label = '点击上传图片';
-        hint = '支持 jpg / png / gif / webp 等格式';
-        break;
-      case PostMediaKind.video:
-        label = '点击上传视频';
-        hint = '支持 mp4 / mov / webm 等格式';
-        break;
-      case PostMediaKind.audio:
-        label = '点击上传音频';
-        hint = '支持 mp3 / m4a / wav 等格式';
-        break;
-    }
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        height: ui(140),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: _kBg,
-          borderRadius: BorderRadius.circular(ui(12)),
-          border: Border.all(
-            color: _kBorder,
-            style: BorderStyle.solid,
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              _publishPickIconAsset(kind),
-              width: ui(38),
-              height: ui(38),
-              fit: BoxFit.contain,
-            ),
-            SizedBox(height: ui(8)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: ui(14),
-                color: _kText,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1.2,
-              ),
-            ),
-            SizedBox(height: ui(4)),
-            Text(
-              hint,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kHint,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w400,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 视频 / 音频帖的「封面图」槽位（可选）。布局比 `_MediaArea` 更紧凑：
-/// - 未选：一个左 80×80 picker + 右侧文字提示的整行卡片
-/// - 已选：左 80×80 缩略图 + 右侧文件名 / 进度 / 状态 + 关闭按钮
+/// 视频帖的「封面图」槽位（可选）。
 class _CoverArea extends StatelessWidget {
   const _CoverArea({
     required this.fileName,
@@ -854,280 +668,114 @@ class _CoverArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
+    final name = fileName;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
-            Text(
-              '封面图',
-              style: TextStyle(
-                fontSize: ui(13),
-                color: _kText,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1.2,
-              ),
-            ),
-            SizedBox(width: ui(6)),
-            Text(
-              '（可选，仅支持图片）',
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kHint,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w400,
-                height: 1.2,
-              ),
-            ),
+            Text('封面图', style: AppText.body14Strong),
+            const SizedBox(width: AppSpace.s8),
+            Text('可选', style: AppText.caption12),
           ],
         ),
-        SizedBox(height: ui(8)),
-        if (fileName == null)
-          _CoverPickPlaceholder(onTap: onPick)
+        const SizedBox(height: AppSpace.s8),
+        if (name == null)
+          AppPressable(
+            onTap: onPick,
+            semanticLabel: '上传封面',
+            child: Container(
+              padding: const EdgeInsets.all(AppSpace.s12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceSubtle,
+                borderRadius: AppRadius.br12,
+                border: Border.all(color: AppColors.line),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppRadius.br8,
+                    ),
+                    child: const Icon(
+                      Icons.add_photo_alternate_outlined,
+                      size: 24,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpace.s12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('点击上传封面', style: AppText.body14Strong),
+                        const SizedBox(height: AppSpace.s4),
+                        Text(
+                          '建议比例 16:9 或 1:1，支持 jpg / png / webp',
+                          style: AppText.caption12,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
         else
-          _CoverFilledRow(
-            fileName: fileName!,
+          _FileRow(
+            kind: PostMediaKind.image,
+            fileName: name,
             fileSize: fileSize,
             fileBytes: fileBytes,
             uploading: uploading,
             uploadProgress: uploadProgress,
-            uploadedPath: uploadedPath,
+            uploaded: uploadedPath != null,
             uploadError: uploadError,
             onRemove: onRemove,
             onRetry: onRetry,
-            onPick: onPick,
+            onReplace: onPick,
           ),
       ],
     );
   }
 }
 
-class _CoverPickPlaceholder extends StatelessWidget {
-  const _CoverPickPlaceholder({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        padding: EdgeInsets.all(ui(12)),
-        decoration: BoxDecoration(
-          color: _kBg,
-          borderRadius: BorderRadius.circular(ui(12)),
-          border: Border.all(color: _kBorder),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: ui(64),
-              height: ui(64),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFEAFF),
-                borderRadius: BorderRadius.circular(ui(8)),
-              ),
-              child: Image.asset(
-                AppAssets.circlePublishPickImage,
-                width: ui(28),
-                height: ui(28),
-                fit: BoxFit.contain,
-              ),
-            ),
-            SizedBox(width: ui(12)),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '点击上传封面',
-                    style: TextStyle(
-                      fontSize: ui(13),
-                      color: _kText,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w500,
-                      height: 1.3,
-                    ),
-                  ),
-                  SizedBox(height: ui(4)),
-                  Text(
-                    '建议比例 16:9 / 1:1，jpg / png / webp 等',
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kHint,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CoverFilledRow extends StatelessWidget {
-  const _CoverFilledRow({
-    required this.fileName,
-    required this.fileSize,
-    required this.fileBytes,
-    required this.uploading,
-    required this.uploadProgress,
-    required this.uploadedPath,
-    required this.uploadError,
-    required this.onRemove,
-    required this.onRetry,
-    required this.onPick,
-  });
-
-  final String fileName;
-  final int? fileSize;
-  final Uint8List? fileBytes;
-  final bool uploading;
-  final double uploadProgress;
-  final String? uploadedPath;
-  final String? uploadError;
-  final VoidCallback onRemove;
-  final VoidCallback onRetry;
-  final VoidCallback onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.all(ui(12)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(12)),
-        border: Border.all(color: _kBorder),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // 封面是图片，所以总用 PostMediaKind.image 做缩略图。
-          _MediaThumbnail(
-            kind: PostMediaKind.image,
-            bytes: fileBytes,
-            uploaded: uploadedPath != null,
-          ),
-          SizedBox(width: ui(12)),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fileName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: ui(13),
-                    color: _kText,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w500,
-                    height: 1.3,
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                _UploadStatusLine(
-                  fileSize: fileSize,
-                  uploading: uploading,
-                  uploadProgress: uploadProgress,
-                  uploaded: uploadedPath != null,
-                  uploadError: uploadError,
-                  onRetry: onRetry,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: ui(8)),
-          // 已上传完时多给一个「重新选择」入口，方便用户换封面。
-          if (uploadedPath != null && !uploading)
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: BoxConstraints(
-                minWidth: ui(32),
-                minHeight: ui(32),
-              ),
-              onPressed: onPick,
-              icon: Icon(
-                Icons.swap_horiz_rounded,
-                size: ui(18),
-                color: _kPurple,
-              ),
-              tooltip: '重新选择',
-            ),
-          IconButton(
-            padding: EdgeInsets.zero,
-            constraints: BoxConstraints(
-              minWidth: ui(32),
-              minHeight: ui(32),
-            ),
-            onPressed: uploading ? null : onRemove,
-            icon: Icon(
-              Icons.close_rounded,
-              size: ui(18),
-              color: uploading ? _kHint.withValues(alpha: 0.4) : _kHint,
-            ),
-            tooltip: '移除',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _MediaThumbnail extends StatelessWidget {
-  const _MediaThumbnail({
-    required this.kind,
-    required this.bytes,
-    required this.uploaded,
-  });
+  const _MediaThumbnail({required this.kind, required this.bytes});
 
   final PostMediaKind kind;
   final Uint8List? bytes;
-  final bool uploaded;
+
+  static const double _size = 56;
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final size = ui(56);
-    Widget child;
-    if (kind == PostMediaKind.image && bytes != null && bytes!.isNotEmpty) {
+    final data = bytes;
+    final Widget child;
+    if (kind == PostMediaKind.image && data != null && data.isNotEmpty) {
       child = Image.memory(
-        bytes!,
-        width: size,
-        height: size,
+        data,
+        width: _size,
+        height: _size,
         fit: BoxFit.cover,
       );
     } else {
       child = Container(
-        width: size,
-        height: size,
+        width: _size,
+        height: _size,
         alignment: Alignment.center,
-        color: const Color(0xFFEFEAFF),
-        child: Image.asset(
-          _publishPickIconAsset(kind),
-          width: ui(28),
-          height: ui(28),
-          fit: BoxFit.contain,
-        ),
+        color: AppColors.surfaceSubtle,
+        child: Icon(_kindIconOf(kind), size: 24, color: AppColors.textTertiary),
       );
     }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: child,
-    );
+    return ClipRRect(borderRadius: AppRadius.br8, child: child);
   }
 }
 
@@ -1148,85 +796,54 @@ class _UploadStatusLine extends StatelessWidget {
   final String? uploadError;
   final VoidCallback onRetry;
 
-  String _humanSize(int? bytes) {
+  static String _humanSize(int? bytes) {
     if (bytes == null || bytes <= 0) return '';
-    if (bytes < 1024) return '${bytes}B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
-    return '${(bytes / 1024 / 1024).toStringAsFixed(1)}MB';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
   }
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
+    final error = uploadError;
+    final size = _humanSize(fileSize);
     if (uploading) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '上传中 ${(uploadProgress * 100).toStringAsFixed(0)}%',
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kHint,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1.2,
-            ),
+            style: AppText.caption12,
           ),
-          SizedBox(height: ui(4)),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(ui(2)),
-            child: LinearProgressIndicator(
-              value: uploadProgress,
-              minHeight: ui(3),
-              backgroundColor: _kBg,
-              valueColor: const AlwaysStoppedAnimation(_kPurple),
-            ),
-          ),
+          const SizedBox(height: AppSpace.s4),
+          AppProgressBar(value: uploadProgress, height: 4),
         ],
       );
     }
-    if (uploadError != null) {
+    if (error != null) {
       return Row(
         children: [
-          Icon(
+          const Icon(
             Icons.error_outline_rounded,
-            size: ui(14),
-            color: const Color(0xFFF04545),
+            size: 14,
+            color: AppColors.danger,
           ),
-          SizedBox(width: ui(4)),
+          const SizedBox(width: AppSpace.s4),
           Expanded(
             child: Text(
-              uploadError!,
+              error,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: const Color(0xFFF04545),
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w400,
-                height: 1.2,
-              ),
+              style: AppText.caption12.copyWith(color: AppColors.danger),
             ),
           ),
-          InkWell(
+          AppButton(
+            label: '重试',
+            variant: AppButtonVariant.text,
+            size: AppButtonSize.sm,
             onTap: onRetry,
-            borderRadius: BorderRadius.circular(ui(4)),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: ui(6),
-                vertical: ui(2),
-              ),
-              child: Text(
-                '重试',
-                style: TextStyle(
-                  fontSize: ui(12),
-                  color: _kPurple,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w500,
-                  height: 1.2,
-                ),
-              ),
-            ),
           ),
         ],
       );
@@ -1234,34 +851,19 @@ class _UploadStatusLine extends StatelessWidget {
     if (uploaded) {
       return Row(
         children: [
-          Icon(
+          const Icon(
             Icons.check_circle_rounded,
-            size: ui(14),
-            color: _kPurple,
+            size: 14,
+            color: AppColors.success,
           ),
-          SizedBox(width: ui(4)),
+          const SizedBox(width: AppSpace.s4),
           Text(
-            '已上传${_humanSize(fileSize).isEmpty ? '' : ' · '}${_humanSize(fileSize)}',
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kHint,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1.2,
-            ),
+            size.isEmpty ? '已上传' : '已上传 · $size',
+            style: AppText.caption12,
           ),
         ],
       );
     }
-    return Text(
-      _humanSize(fileSize),
-      style: TextStyle(
-        fontSize: ui(12),
-        color: _kHint,
-        fontFamily: 'PingFang SC',
-        fontWeight: AppFont.w400,
-        height: 1.2,
-      ),
-    );
+    return Text(size, style: AppText.caption12);
   }
 }

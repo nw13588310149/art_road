@@ -64,7 +64,7 @@ class AdminHomeActionBadgeCounts {
   /// 人脸库：`schoolUserFaceSum.status0Count`（待审核）。
   final int faceAudit;
 
-  /// 校圈治理：`indexSum.postStatus0Count`（今日校圈）。
+  /// 校圈治理：`indexSum.postStatus0Count`（待处理的校圈举报数）。
   final int postReview;
 
   /// 校长信箱：`headmaster/principalMailboxList` status=0 total（待回复）。
@@ -381,12 +381,12 @@ String formatAdminHomeIsoDate(DateTime date) {
       '${date.day.toString().padLeft(2, '0')}';
 }
 
-/// 数据看板查询区间：含今天在内共 7 天（`startDate` … `endDate`）。
+/// 数据看板查询区间：截至昨天的 7 天（`startDate` … `endDate`），当天还没过完，不计入。
 ({String startDate, String endDate}) adminHomeLast7DaysDateRange({
   DateTime? anchor,
 }) {
-  final end = anchor ?? DateTime.now();
-  final endDate = DateTime(end.year, end.month, end.day);
+  final now = anchor ?? DateTime.now();
+  final endDate = DateTime(now.year, now.month, now.day - 1);
   final startDate = endDate.subtract(const Duration(days: 6));
   return (
     startDate: formatAdminHomeIsoDate(startDate),

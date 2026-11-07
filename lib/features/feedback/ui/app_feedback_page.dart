@@ -1,28 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../../app/router/route_paths.dart';
-import '../../shell/ui/shell_layout.dart';
+import '../../../core/ui/ui.dart';
 import '../../smart_campus/data/principal_mailbox_repository.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kInnerGray = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPlaceholder = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF715EFE);
-
-/// 意见反馈页返回：统一回到个人中心（个人中心入口为 pushReplacement，不能依赖 pop）。
-void _backFromFeedback(BuildContext context) {
-  Navigator.of(context).pushReplacementNamed(RoutePaths.personalCenter);
-}
+const _kMaxLength = 500;
 
 /// 全局「意见反馈」页：与校长信箱分离，走 `/app/user/feedback*` 接口。
 class AppFeedbackPage extends ConsumerStatefulWidget {
@@ -35,7 +19,9 @@ class AppFeedbackPage extends ConsumerStatefulWidget {
 class _AppFeedbackPageState extends ConsumerState<AppFeedbackPage> {
   final _bodyCtrl = TextEditingController();
   bool _submitting = false;
-  bool _loading = false;
+  bool _loading = true;
+  String? _loadError;
+  String? _formError;
   List<FeedbackRecord> _records = const <FeedbackRecord>[];
 
   late final PrincipalMailboxRepository _repo;
@@ -53,18 +39,19 @@ class _AppFeedbackPageState extends ConsumerState<AppFeedbackPage> {
     super.dispose();
   }
 
-  void _toast(String msg) {
-    AppToast.show(context, msg);
-  }
-
   Future<void> _loadFeedback() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
     try {
       final resp = await _repo.feedbackList(current: 1, size: 50);
       if (!mounted) return;
       if (!resp.isSuccess) {
-        _toast(resp.displayMsg);
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _loadError = resp.displayMsg;
+        });
         return;
       }
       setState(() {
@@ -73,8 +60,10 @@ class _AppFeedbackPageState extends ConsumerState<AppFeedbackPage> {
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loading = false);
-      _toast('网络异常，请稍后再试');
+      setState(() {
+        _loading = false;
+        _loadError = '网络异常，请检查网络后重试';
+      });
     }
   }
 
@@ -82,119 +71,322 @@ class _AppFeedbackPageState extends ConsumerState<AppFeedbackPage> {
     if (_submitting) return;
     final body = _bodyCtrl.text.trim();
     if (body.isEmpty) {
-      _toast('请先填写反馈内容');
+      setState(() => _formError = '请先填写反馈内容');
       return;
     }
     setState(() => _submitting = true);
     try {
       final resp = await _repo.feedbackSave(content: body);
       if (!mounted) return;
+      setState(() => _submitting = false);
       if (!resp.isSuccess) {
-        _toast(resp.displayMsg);
-        setState(() => _submitting = false);
+        AppToast.showError(context, resp.displayMsg);
         return;
       }
       _bodyCtrl.clear();
-      setState(() => _submitting = false);
-      _toast('已提交反馈，感谢你的建议');
+      AppToast.showSuccess(context, '反馈已提交，回复会显示在「我的反馈」中');
       unawaited(_loadFeedback());
     } catch (_) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      _toast('网络异常，请稍后再试');
+      AppToast.showError(context, '网络异常，请稍后重试');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return ShellPageSurface(
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(ui(ShellLayoutSpec.panelRadius)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _FeedbackHeader(
-              ui: ui,
-              onBack: () => _backFromFeedback(context),
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(ui(16), ui(14), ui(16), ui(16)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    final navigator = Navigator.of(context);
+    final form = _FeedbackForm(
+      controller: _bodyCtrl,
+      errorText: _formError,
+      submitting: _submitting,
+      onChanged: () {
+        if (_formError != null) {
+          setState(() => _formError = null);
+        }
+      },
+      onSubmit: _onSubmit,
+    );
+    final history = _FeedbackHistory(
+      loading: _loading,
+      error: _records.isEmpty ? _loadError : null,
+      records: _records,
+      onRetry: _loadFeedback,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: '意见反馈',
+          subtitle: '想要的范画资料、功能建议都可以告诉我们',
+          onBack: navigator.canPop() ? navigator.pop : null,
+        ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const padding = EdgeInsets.fromLTRB(
+                AppSpace.page,
+                AppSpace.s4,
+                AppSpace.page,
+                AppSpace.s24,
+              );
+              if (constraints.maxWidth < 760) {
+                return SingleChildScrollView(
+                  padding: padding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      form,
+                      const SizedBox(height: AppSpace.s16),
+                      SizedBox(height: 420, child: history),
+                    ],
+                  ),
+                );
+              }
+              return Padding(
+                padding: padding,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const _SectionTitle('我的反馈'),
-                        const Spacer(),
-                        if (_records.isNotEmpty)
-                          Text(
-                            '共 ${_records.length} 条',
-                            style: TextStyle(
-                              fontSize: ui(12),
-                              color: _kTextHint,
-                              fontFamily: 'PingFang SC',
-                              fontWeight: AppFont.w400,
-                              height: 1.2,
-                            ),
-                          ),
-                      ],
-                    ),
-                    SizedBox(height: ui(12)),
-                    Expanded(
-                      child: _loading
-                          ? const Center(
-                              child: AppLoadingIndicator(),
-                            )
-                          : (_records.isEmpty
-                                ? const _FeedbackEmptyHint()
-                                : ListView.separated(
-                                    padding: EdgeInsets.only(bottom: ui(8)),
-                                    itemBuilder: (_, i) => _FeedbackTile(
-                                      record: _records[i],
-                                    ),
-                                    separatorBuilder: (_, _) =>
-                                        SizedBox(height: ui(10)),
-                                    itemCount: _records.length,
-                                  )),
-                    ),
-                    SizedBox(height: ui(12)),
-                    Transform.translate(
-                      offset: Offset(0, -ui(10)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const _SectionTitle('写新反馈'),
-                          SizedBox(height: ui(8)),
-                          _BodyField(
-                            controller: _bodyCtrl,
-                            hint: '请描述你的意见或建议，如想要的范画资源、作品点评或画室工具的使用体验等',
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: ui(12)),
-                    Align(
-                      alignment: Alignment.center,
-                      child: _SubmitButton(
-                        label: _submitting ? '提交中…' : '提交给美术之路',
-                        onTap: _submitting ? null : _onSubmit,
-                        busy: _submitting,
-                      ),
+                    Expanded(child: history),
+                    const SizedBox(width: AppSpace.s16),
+                    SizedBox(
+                      width: 360,
+                      child: SingleChildScrollView(child: form),
                     ),
                   ],
                 ),
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
+      ],
+    );
+  }
+}
+
+class _FeedbackForm extends StatelessWidget {
+  const _FeedbackForm({
+    required this.controller,
+    required this.errorText,
+    required this.submitting,
+    required this.onChanged,
+    required this.onSubmit,
+  });
+
+  final TextEditingController controller;
+  final String? errorText;
+  final bool submitting;
+  final VoidCallback onChanged;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      title: '写新反馈',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppInputField(
+            controller: controller,
+            hint: '请描述你的意见或建议，如想要的范画资源、作品点评或画室工具的使用体验',
+            multiline: true,
+            minLines: 8,
+            maxLines: 12,
+            maxLength: _kMaxLength,
+            errorText: errorText,
+            onChanged: (_) => onChanged(),
+          ),
+          const SizedBox(height: AppSpace.s8),
+          Text(
+            '反馈会发送给美术之路产品团队，回复会显示在「我的反馈」中。',
+            style: AppText.caption12,
+          ),
+          const SizedBox(height: AppSpace.s16),
+          AppButton(
+            label: '提交反馈',
+            loading: submitting,
+            expand: true,
+            onTap: onSubmit,
+          ),
+        ],
       ),
     );
   }
+}
+
+class _FeedbackHistory extends StatelessWidget {
+  const _FeedbackHistory({
+    required this.loading,
+    required this.error,
+    required this.records,
+    required this.onRetry,
+  });
+
+  final bool loading;
+  final String? error;
+  final List<FeedbackRecord> records;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget content;
+    if (loading && records.isEmpty) {
+      content = ListView(
+        padding: const EdgeInsets.all(AppSpace.s16),
+        children: const [
+          AppSkeletonText(lines: 3),
+          SizedBox(height: AppSpace.s24),
+          AppSkeletonText(lines: 3),
+        ],
+      );
+    } else if (error != null) {
+      content = AppErrorState(
+        title: '反馈记录加载失败',
+        description: error,
+        onRetry: onRetry,
+      );
+    } else if (records.isEmpty) {
+      content = const AppEmptyState(
+        icon: Icons.forum_outlined,
+        title: '还没有提交过反馈',
+        description: '写下你的意见或建议，提交后可以在这里查看回复',
+      );
+    } else {
+      content = ListView.builder(
+        padding: const EdgeInsets.only(bottom: AppSpace.s8),
+        itemCount: records.length,
+        itemBuilder: (_, i) =>
+            _FeedbackTile(record: records[i], divider: i < records.length - 1),
+      );
+    }
+    return AppCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s4,
+            ),
+            child: Row(
+              children: [
+                Text('我的反馈', style: AppText.title16),
+                const Spacer(),
+                if (records.isNotEmpty)
+                  Text.rich(
+                    TextSpan(
+                      style: AppText.caption12,
+                      children: [
+                        const TextSpan(text: '共 '),
+                        TextSpan(
+                          text: '${records.length}',
+                          style: AppText.number(
+                            size: 12,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                        const TextSpan(text: ' 条'),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(child: content),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedbackTile extends StatelessWidget {
+  const _FeedbackTile({required this.record, required this.divider});
+
+  final FeedbackRecord record;
+  final bool divider;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasReply = record.replyContent.trim().isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.all(AppSpace.s16),
+      decoration: BoxDecoration(
+        border: divider
+            ? const Border(bottom: BorderSide(color: AppColors.lineSoft))
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              AppTag(
+                label: hasReply ? '已回复' : '待回复',
+                tone: hasReply ? AppTone.success : AppTone.warning,
+              ),
+              const Spacer(),
+              if (record.createTime.isNotEmpty)
+                Text(
+                  formatFeedbackTime(record.createTime),
+                  style: AppText.caption12,
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpace.s8),
+          Text(record.content, style: AppText.body14),
+          if (hasReply) ...[
+            const SizedBox(height: AppSpace.s12),
+            Container(
+              padding: const EdgeInsets.all(AppSpace.s12),
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceSubtle,
+                borderRadius: AppRadius.br8,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.support_agent_rounded,
+                        size: 16,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: AppSpace.s4),
+                      Text('官方回复', style: AppText.caption12Strong),
+                      const Spacer(),
+                      if (record.replyTime.isNotEmpty)
+                        Text(
+                          formatFeedbackTime(record.replyTime),
+                          style: AppText.caption12,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpace.s4),
+                  Text(record.replyContent, style: AppText.body13),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 列表时间统一为「MM-DD HH:mm」，不显示秒；无法解析时原样返回。
+String formatFeedbackTime(String raw) {
+  final parsed = DateTime.tryParse(raw.trim());
+  if (parsed == null) {
+    return raw;
+  }
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${two(parsed.month)}-${two(parsed.day)} '
+      '${two(parsed.hour)}:${two(parsed.minute)}';
 }
 
 class FeedbackRecord {
@@ -258,382 +450,4 @@ String _pickString(Map<String, dynamic> m, List<String> keys) {
     if (s.isNotEmpty) return s;
   }
   return '';
-}
-
-class _FeedbackHeader extends StatelessWidget {
-  const _FeedbackHeader({required this.ui, required this.onBack});
-
-  final double Function(num) ui;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: ui(82),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              AppAssets.infoTopBg,
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-            ),
-          ),
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: _FeedbackBackButton(onTap: onBack),
-          ),
-          Positioned(
-            top: ui(20),
-            left: 0,
-            right: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '意见反馈',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    color: _kTextDark,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w600,
-                    height: 1.2,
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                Text(
-                  '想要的范画资料、功能建议都可以告诉我们，工作人员会尽快处理',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: _kTextHint,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeedbackBackButton extends StatelessWidget {
-  const _FeedbackBackButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: ui(32),
-        height: ui(32),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: const Color(0xFFF3F2F3), width: 1),
-        ),
-        child: Icon(
-          Icons.chevron_left,
-          size: ui(20),
-          color: const Color(0xFF0B081A),
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: ui(16),
-        color: _kTextDark,
-        fontFamily: 'PingFang SC',
-        fontWeight: AppFont.w500,
-        height: 28 / 16,
-      ),
-    );
-  }
-}
-
-class _BodyField extends StatelessWidget {
-  const _BodyField({required this.controller, required this.hint});
-
-  final TextEditingController controller;
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(140),
-      decoration: BoxDecoration(
-        color: _kInnerGray,
-        borderRadius: BorderRadius.circular(ui(12)),
-      ),
-      child: AppTextField(
-        controller: controller,
-        maxLines: null,
-        expands: true,
-        textAlignVertical: TextAlignVertical.top,
-        cursorColor: _kPurple,
-        cursorWidth: 1.5,
-        cursorHeight: ui(14),
-        style: TextStyle(
-          fontSize: ui(12),
-          color: _kTextDark,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 20 / 12,
-        ),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            fontSize: ui(12),
-            color: _kPlaceholder,
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w400,
-            height: 20 / 12,
-          ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.all(ui(16)),
-        ),
-      ),
-    );
-  }
-}
-
-class _SubmitButton extends StatelessWidget {
-  const _SubmitButton({
-    required this.label,
-    required this.onTap,
-    this.busy = false,
-  });
-
-  final String label;
-  final VoidCallback? onTap;
-  final bool busy;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final disabled = onTap == null || busy;
-    return InkWell(
-      onTap: disabled ? null : onTap,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Opacity(
-        opacity: disabled ? 0.7 : 1.0,
-        child: Container(
-          width: ui(240),
-          height: ui(52),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.centerRight,
-              end: Alignment.centerLeft,
-              colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
-            ),
-            borderRadius: BorderRadius.circular(ui(12)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0x599585FF),
-                blurRadius: ui(20),
-                offset: Offset(0, ui(16)),
-              ),
-            ],
-          ),
-          child: busy
-              ? const AppLoadingIndicator(size: 16, color: Colors.white)
-              : Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: ui(14),
-                    color: Colors.white,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w500,
-                    height: 1,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FeedbackEmptyHint extends StatelessWidget {
-  const _FeedbackEmptyHint();
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.forum_outlined, size: ui(48), color: _kPlaceholder),
-          SizedBox(height: ui(12)),
-          Text(
-            '暂无历史反馈，欢迎在下方提一条',
-            style: TextStyle(
-              fontSize: ui(13),
-              color: _kTextHint,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeedbackTile extends StatelessWidget {
-  const _FeedbackTile({required this.record});
-
-  final FeedbackRecord record;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final hasReply = record.replyContent.trim().isNotEmpty;
-    return Container(
-      padding: EdgeInsets.all(ui(12)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(10)),
-        border: Border.all(color: _kBorderSoft),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: ui(8),
-                  vertical: ui(2),
-                ),
-                decoration: BoxDecoration(
-                  color: hasReply
-                      ? const Color(0xFF35BD7C).withValues(alpha: 0.12)
-                      : _kPurple.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(ui(4)),
-                ),
-                child: Text(
-                  hasReply ? '已回复' : '已提交',
-                  style: TextStyle(
-                    fontSize: ui(11),
-                    color: hasReply ? const Color(0xFF35BD7C) : _kPurple,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w500,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              if (record.createTime.isNotEmpty)
-                Text(
-                  record.createTime,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: _kTextHint,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 1.2,
-                  ),
-                ),
-            ],
-          ),
-          SizedBox(height: ui(8)),
-          Text(
-            record.content,
-            style: TextStyle(
-              fontSize: ui(13),
-              color: _kTextDark,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 20 / 13,
-            ),
-          ),
-          if (hasReply) ...[
-            SizedBox(height: ui(10)),
-            Container(
-              padding: EdgeInsets.all(ui(10)),
-              decoration: BoxDecoration(
-                color: _kInnerGray,
-                borderRadius: BorderRadius.circular(ui(8)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.support_agent_rounded,
-                        size: ui(14),
-                        color: _kPurple,
-                      ),
-                      SizedBox(width: ui(4)),
-                      Text(
-                        '官方回复',
-                        style: TextStyle(
-                          fontSize: ui(12),
-                          color: _kPurple,
-                          fontFamily: 'PingFang SC',
-                          fontWeight: AppFont.w500,
-                          height: 1.2,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (record.replyTime.isNotEmpty)
-                        Text(
-                          record.replyTime,
-                          style: TextStyle(
-                            fontSize: ui(11),
-                            color: _kTextHint,
-                            fontFamily: 'PingFang SC',
-                            fontWeight: AppFont.w400,
-                            height: 1.2,
-                          ),
-                        ),
-                    ],
-                  ),
-                  SizedBox(height: ui(6)),
-                  Text(
-                    record.replyContent,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextDark,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 20 / 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }

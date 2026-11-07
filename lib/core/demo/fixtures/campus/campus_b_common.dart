@@ -8,6 +8,7 @@ import '../../data/demo_campus_data.dart';
 import '../../data/demo_marking_data.dart';
 import '../../demo_accounts.dart';
 import '../../demo_backend.dart';
+import '../../demo_clock.dart';
 import '../../demo_store.dart';
 import '../../media/demo_media.dart';
 
@@ -39,6 +40,57 @@ DateTime cbAt(DateTime day, String hm) {
 
 /// 相对今天偏移 [days] 天的 `HH:mm` 时刻。
 DateTime cbRel(int days, String hm) => cbAt(cbAddDays(cbToday(), days), hm);
+
+/// 已经发生的事（提交、审批、消息）落在 [days] 天（通常为 0 或负数）的 `HH:mm`；
+/// 晚于 [DemoClock.now] 时逐日前移，保证列表里不出现未来时间，时刻仍在白天。
+DateTime cbPast(int days, String hm) =>
+    cbRel(days - cbPastShift(days, hm), hm);
+
+/// 把一天里的任意时刻按比例压进白天 08:30–21:30（同一天内先后顺序不变），
+/// 用于按比例插值生成的提交时间，避免出现凌晨。
+DateTime cbDaytime(DateTime t) {
+  final minutes = 510 + (t.hour * 60 + t.minute) * 780 ~/ 1440;
+  return DateTime(t.year, t.month, t.day, minutes ~/ 60, minutes % 60);
+}
+
+/// 不晚于 [DemoClock.now]。
+DateTime cbNotAfterNow(DateTime t) {
+  final limit = DemoClock.now();
+  return t.isAfter(limit) ? limit : t;
+}
+
+/// [cbPast] 需要整体前移的天数；同一段对话按最后一条算出后统一前移，先后顺序不乱。
+int cbPastShift(int days, String hm) {
+  final limit = DemoClock.now();
+  var shift = 0;
+  while (cbRel(days - shift, hm).isAfter(limit)) {
+    shift++;
+  }
+  return shift;
+}
+
+/// 以 [DemoClock.now] 为基准往前推：先退 [days] 个整天，再只在白天
+/// （08:30–21:30）里往前数 [ago]，跳过夜间；越早的事时间越早，秒数归零。
+DateTime cbAgo(Duration ago, {int days = 0}) {
+  final now = DemoClock.now();
+  var t = DateTime(
+    now.year,
+    now.month,
+    now.day - days,
+    now.hour,
+    now.minute,
+  );
+  var left = ago;
+  while (true) {
+    final dayStart = DateTime(t.year, t.month, t.day, 8, 30);
+    final available = t.difference(dayStart);
+    if (left <= available) {
+      return t.subtract(left);
+    }
+    left -= available;
+    t = DateTime(t.year, t.month, t.day - 1, 21, 30);
+  }
+}
 
 DateTime? cbParse(Object? raw) {
   final text = raw?.toString().trim() ?? '';
@@ -288,27 +340,25 @@ List<Map<String, dynamic>> cbClassroomList() => [
 
 // ── 节次 ──────────────────────────────────────────────────────────────
 
-/// 节次与学生端作息一致：1 上午 / 2 下午 / 3 晚间 / 4 晚间小课。
-const Map<int, (String, String)> cbLineTimes = {
-  1: ('08:00', '11:30'),
-  2: ('14:00', '17:30'),
-  3: ('19:00', '21:00'),
-  4: ('21:10', '22:00'),
+/// 节次即 [DemoClock.daySlots]：1 上午 08:30–11:30 / 2 下午 14:00–17:00 /
+/// 3 晚上 19:00–21:00，学生端、老师端、管理端与首页共用。
+final Map<int, (String, String)> cbLineTimes = {
+  for (var i = 0; i < DemoClock.daySlots.length; i++)
+    i + 1: DemoClock.daySlots[i],
 };
+
+const List<String> cbLineNames = ['上午', '下午', '晚上'];
 
 int cbLineNumOf(String start) {
   final hour = int.tryParse(start.split(':').first) ?? 8;
   if (hour < 12) {
     return 1;
   }
-  if (hour < 18) {
-    return 2;
-  }
-  return hour < 21 ? 3 : 4;
+  return hour < 18 ? 2 : 3;
 }
 
 (String, String) cbLineTime(int lineNum) =>
-    cbLineTimes[lineNum] ?? cbLineTimes[lineNum.clamp(1, 4)]!;
+    cbLineTimes[lineNum.clamp(1, cbLineTimes.length)]!;
 
 // ── 学生 ──────────────────────────────────────────────────────────────
 

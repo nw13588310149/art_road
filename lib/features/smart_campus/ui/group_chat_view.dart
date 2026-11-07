@@ -20,7 +20,7 @@
 //            并叠加 `#F9EEFF→#F9EEFF` 与左侧白色淡出，整体看起来像
 //            浅紫白渐变。
 //          · 内嵌灰底圆角内容板（#F5F6FA padding 16）承载消息流：
-//            ① 顶部紫色公告条（铃铛 + 公告内容 + 「编辑公告」 + 更新时间）
+//            ① 顶部公告条（公告内容 + 「编辑公告」 + 「某某 · 时间 更新」）
 //            ② 中部消息 LIST（ListView）：
 //               - 系统提示：「入群通知 李老师邀请了 教务处-王教务、赵宇 加入群聊」
 //                          「群公告 李老师发布了最新群公告」
@@ -49,12 +49,12 @@
 //     消息时直接 mapping。
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -65,13 +65,13 @@ import '../../../core/network/chat_sync_payload.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/network/snowflake_id.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../../core/widgets/wechat_emoji.dart';
 import '../../../core/audio/recording/recording_bytes_loader.dart';
 import '../../../core/audio/recording/recording_capture.dart';
 import '../../../core/audio/recording/recording_playback.dart';
+import 'widgets/smart_campus_page_banner.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../courseware/ui/courseware_file_picker.dart';
 import '../navigation/group_chat_return.dart';
@@ -81,24 +81,23 @@ import '../services/group_chat_media_saver.dart';
 import 'widgets/group_chat_media_action_sheet.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardBg = Colors.white;
-const Color _kBoardBg = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF715EFE);
+const Color _kCardBg = AppColors.surface;
+const Color _kBoardBg = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextDivider = AppColors.textTertiary;
+const Color _kPurple = AppColors.brand;
 const Color _kPurpleLight = Color(0xFFB48BFF);
-const Color _kRecordRed = Color(0xFFFF323C);
-const Color _kRecordRedLight = Color(0xFFFF7A7A);
+const Color _kRecordRed = AppColors.danger;
+const Color _kRecordRedLight = AppColors.danger;
 const Color _kAnnouncementBg = Color(0xBDEFE5FF); // rgba(239,229,255,0.74)
 const Color _kBlueLink = Color(0xFF325BFF);
 const Color _kPdfBlueGradStart = Color(0xFFD7E2FF);
-const Color _kPdfBlueGradEnd = Color(0xFFF9FBFF);
+const Color _kPdfBlueGradEnd = AppColors.surfaceSubtle;
 const Color _kPdfBorder = Color(0xFFE5EFFF);
-const Color _kPdfRed = Color(0xFFFF5040);
+const Color _kPdfRed = AppColors.danger;
 
 // =============================================================================
 // 顶级视图
@@ -882,7 +881,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       fromUserId: widget.currentUserId,
       fromName: widget.currentUserName,
       avatarUrl: widget.currentUserAvatarUrl,
-      avatarColor: const Color(0xFF715EFE),
+      avatarColor: AppColors.brand,
       sentAt: DateTime.now(),
       bubble: _TextBubble(text: text),
     );
@@ -1065,7 +1064,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       fromUserId: widget.currentUserId,
       fromName: widget.currentUserName,
       avatarUrl: widget.currentUserAvatarUrl,
-      avatarColor: const Color(0xFF715EFE),
+      avatarColor: AppColors.brand,
       sentAt: DateTime.now(),
       bubble: _ImageBubble(url: '', localBytes: bytes, uploading: true),
     );
@@ -1148,7 +1147,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       setState(() {
         _announcement = draft;
         _announcementUpdatedAt =
-            '更新于 ${_formatLastTime(DateTime.now(), withDateForOldDays: false)}';
+            '${_formatLastTime(DateTime.now(), withDateForOldDays: false)} 更新';
       });
       AppToast.show(context, '群公告已更新');
     } else {
@@ -1178,21 +1177,17 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
               maxLines: 8,
               minLines: 6,
               maxLength: 500,
-              cursorColor: const Color(0xFF715EFE),
+              cursorColor: AppColors.brand,
               cursorWidth: 1.5,
               cursorHeight: 16,
               style: const TextStyle(
                 fontSize: 14,
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 height: 1.55,
               ),
               decoration: InputDecoration(
                 hintText: '请输入群公告内容',
-                hintStyle: const TextStyle(
-                  color: _kTextHint,
-                  fontFamily: 'PingFang SC',
-                ),
+                hintStyle: const TextStyle(color: _kTextHint),
                 filled: true,
                 fillColor: _kBoardBg,
                 border: OutlineInputBorder(
@@ -1373,19 +1368,19 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
                                       color: _kPurple,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: Colors.white,
+                                        color: AppColors.surface,
                                         width: 2,
                                       ),
                                     ),
                                     child: uploading
                                         ? const AppLoadingIndicator(
                                             size: 16,
-                                            color: Colors.white,
+                                            color: AppColors.surface,
                                           )
                                         : const Icon(
                                             Icons.camera_alt_rounded,
                                             size: 13,
-                                            color: Colors.white,
+                                            color: AppColors.surface,
                                           ),
                                   ),
                                 ),
@@ -1406,7 +1401,6 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
                       style: const TextStyle(
                         fontSize: 14,
                         color: _kTextDark,
-                        fontFamily: 'PingFang SC',
                         height: 1.5,
                       ),
                       decoration: InputDecoration(
@@ -1462,7 +1456,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       context: context,
       barrierDismissible: true,
       barrierLabel: '关闭',
-      barrierColor: Colors.black.withValues(alpha: 0.4),
+      barrierColor: AppColors.ink.withValues(alpha: 0.4),
       transitionDuration: const Duration(milliseconds: 280),
       pageBuilder: (ctx, anim, secAnim) {
         Widget drawer = _GroupDetailDrawer(
@@ -1664,7 +1658,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       fromUserId: widget.currentUserId,
       fromName: widget.currentUserName,
       avatarUrl: widget.currentUserAvatarUrl,
-      avatarColor: const Color(0xFF715EFE),
+      avatarColor: AppColors.brand,
       sentAt: DateTime.now(),
       bubble: _VoiceBubble(durationSec: duration, waveform: downsampled),
     );
@@ -1841,54 +1835,57 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
             orElse: () => convs.first,
           );
     final memberCount = _detailMemberCount ?? currentConv.memberCount;
-    return Container(
-      color: _kPageBg,
-      // 直接占满父容器，不再保留任何顶部辅助 row（任课老师 / 管理群聊
-      // 等下拉按钮已下线，群信息走 header bar 上的 menu icon 入口）。
-      child: _ChatLayout(
-          conversations: convs,
-          selectedConvId: selectedId,
-          hasSelection: convs.isNotEmpty,
-          onSelectConv: _selectConversation,
-          messages: _messages,
-          loadingMessages: _loadingMessages,
-          loadingOlder: _loadingOlder,
-          hasMoreOlder: _hasMoreOlder,
-          messagesController: _messagesController,
-          currentUserId: widget.currentUserId,
-          playingVoiceId: _playingVoiceId,
-          playingFraction: _playingFraction,
-          onToggleVoice: _toggleVoicePlay,
-          inputController: _inputController,
-          onSend: _send,
-          onBack: widget.onBack,
-          currentConv: currentConv,
-          memberCount: memberCount,
-          announcement: _announcement,
-          announcementUpdatedAt: _announcementUpdatedAt,
-          canEditAnnouncement: _canEditAnnouncement,
-          onEditAnnouncement: _editAnnouncement,
-          onMessageLongPress: _onMessageLongPress,
-          muted: _muted,
-          pinned: _pinned,
-          onToggleMute: _toggleMute,
-          onTogglePin: _togglePin,
-          onUploadImage: _pickAndSendImage,
-          voiceMode: _voiceMode,
-          recording: _recording,
-          willCancel: _willCancel,
-          liveWaveform: _liveWaveform,
-          onToggleVoiceMode: _toggleVoiceMode,
-          onRecordPressStart: _onRecordPressStart,
-          onRecordPressMove: _onRecordPressMove,
-          onRecordPressEnd: _onRecordPressEnd,
-          onShowDetail: _openGroupDetailDrawer,
-          showEmoji: _showEmoji,
-          onToggleShowEmoji: _toggleShowEmoji,
-          onSetShowEmoji: _setShowEmoji,
-          shouldDismissInputOnBlankTap: _shouldDismissInputOnBlankTap,
-          onDismissInputModes: _dismissSpecialInputModes,
-        ),
+    return SmartCampusSecondaryPageShell(
+      bodyScrollable: false,
+      header: AppPageHeader(
+        title: '群聊',
+        subtitle: '班级群与教研群的消息、群公告和群成员',
+        onBack: widget.onBack,
+      ),
+      body: _ChatLayout(
+        conversations: convs,
+        selectedConvId: selectedId,
+        hasSelection: convs.isNotEmpty,
+        onSelectConv: _selectConversation,
+        messages: _messages,
+        loadingMessages: _loadingMessages,
+        loadingOlder: _loadingOlder,
+        hasMoreOlder: _hasMoreOlder,
+        messagesController: _messagesController,
+        currentUserId: widget.currentUserId,
+        playingVoiceId: _playingVoiceId,
+        playingFraction: _playingFraction,
+        onToggleVoice: _toggleVoicePlay,
+        inputController: _inputController,
+        onSend: _send,
+        onBack: widget.onBack,
+        currentConv: currentConv,
+        memberCount: memberCount,
+        announcement: _announcement,
+        announcementUpdatedAt: _announcementUpdatedAt,
+        canEditAnnouncement: _canEditAnnouncement,
+        onEditAnnouncement: _editAnnouncement,
+        onMessageLongPress: _onMessageLongPress,
+        muted: _muted,
+        pinned: _pinned,
+        onToggleMute: _toggleMute,
+        onTogglePin: _togglePin,
+        onUploadImage: _pickAndSendImage,
+        voiceMode: _voiceMode,
+        recording: _recording,
+        willCancel: _willCancel,
+        liveWaveform: _liveWaveform,
+        onToggleVoiceMode: _toggleVoiceMode,
+        onRecordPressStart: _onRecordPressStart,
+        onRecordPressMove: _onRecordPressMove,
+        onRecordPressEnd: _onRecordPressEnd,
+        onShowDetail: _openGroupDetailDrawer,
+        showEmoji: _showEmoji,
+        onToggleShowEmoji: _toggleShowEmoji,
+        onSetShowEmoji: _setShowEmoji,
+        shouldDismissInputOnBlankTap: _shouldDismissInputOnBlankTap,
+        onDismissInputModes: _dismissSpecialInputModes,
+      ),
     );
   }
 }
@@ -1913,7 +1910,6 @@ class _NoSelectionHint extends StatelessWidget {
             style: TextStyle(
               color: _kTextSecondary,
               fontSize: ui(13),
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
             ),
           ),
@@ -1938,7 +1934,6 @@ class _EmptyConversationsHint extends StatelessWidget {
         style: TextStyle(
           color: _kTextSecondary,
           fontSize: ui(13),
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
         ),
       ),
@@ -2076,66 +2071,6 @@ class _ChatLayout extends StatelessWidget {
               SizedBox(height: ui(8)),
               Expanded(
                 child: _ChatRightPane(
-                    conv: currentConv,
-                    hasSelection: hasSelection,
-                    memberCount: memberCount,
-                    announcement: announcement,
-                    announcementUpdatedAt: announcementUpdatedAt,
-                    canEditAnnouncement: canEditAnnouncement,
-                    onEditAnnouncement: onEditAnnouncement,
-                    onMessageLongPress: onMessageLongPress,
-                    messages: messages,
-                    loadingMessages: loadingMessages,
-                    loadingOlder: loadingOlder,
-                    hasMoreOlder: hasMoreOlder,
-                    messagesController: messagesController,
-                    currentUserId: currentUserId,
-                    playingVoiceId: playingVoiceId,
-                    playingFraction: playingFraction,
-                    onToggleVoice: onToggleVoice,
-                    inputController: inputController,
-                    onSend: onSend,
-                    muted: muted,
-                    pinned: pinned,
-                    onToggleMute: onToggleMute,
-                    onTogglePin: onTogglePin,
-                    onUploadImage: onUploadImage,
-                    outerCornerLeft: true,
-                    voiceMode: voiceMode,
-                    recording: recording,
-                    willCancel: willCancel,
-                    liveWaveform: liveWaveform,
-                    onToggleVoiceMode: onToggleVoiceMode,
-                    onRecordPressStart: onRecordPressStart,
-                    onRecordPressMove: onRecordPressMove,
-                    onRecordPressEnd: onRecordPressEnd,
-                    onShowDetail: onShowDetail,
-                    showEmoji: showEmoji,
-                    onToggleShowEmoji: onToggleShowEmoji,
-                    onSetShowEmoji: onSetShowEmoji,
-                    dismissTapEnabled: shouldDismissInputOnBlankTap,
-                    onDismissTap: onDismissInputModes,
-                  ),
-                ),
-              ],
-            );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              width: ui(230),
-              child: _ConversationListPane(
-                conversations: conversations,
-                selectedConvId: selectedConvId,
-                onSelect: onSelectConv,
-                onBack: onBack,
-                dismissTapEnabled: shouldDismissInputOnBlankTap,
-                onDismissTap: onDismissInputModes,
-              ),
-            ),
-            Expanded(
-              child: _ChatRightPane(
                   conv: currentConv,
                   hasSelection: hasSelection,
                   memberCount: memberCount,
@@ -2160,6 +2095,7 @@ class _ChatLayout extends StatelessWidget {
                   onToggleMute: onToggleMute,
                   onTogglePin: onTogglePin,
                   onUploadImage: onUploadImage,
+                  outerCornerLeft: true,
                   voiceMode: voiceMode,
                   recording: recording,
                   willCancel: willCancel,
@@ -2178,6 +2114,65 @@ class _ChatLayout extends StatelessWidget {
               ),
             ],
           );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: ui(256),
+              child: _ConversationListPane(
+                conversations: conversations,
+                selectedConvId: selectedConvId,
+                onSelect: onSelectConv,
+                onBack: onBack,
+                dismissTapEnabled: shouldDismissInputOnBlankTap,
+                onDismissTap: onDismissInputModes,
+              ),
+            ),
+            Expanded(
+              child: _ChatRightPane(
+                conv: currentConv,
+                hasSelection: hasSelection,
+                memberCount: memberCount,
+                announcement: announcement,
+                announcementUpdatedAt: announcementUpdatedAt,
+                canEditAnnouncement: canEditAnnouncement,
+                onEditAnnouncement: onEditAnnouncement,
+                onMessageLongPress: onMessageLongPress,
+                messages: messages,
+                loadingMessages: loadingMessages,
+                loadingOlder: loadingOlder,
+                hasMoreOlder: hasMoreOlder,
+                messagesController: messagesController,
+                currentUserId: currentUserId,
+                playingVoiceId: playingVoiceId,
+                playingFraction: playingFraction,
+                onToggleVoice: onToggleVoice,
+                inputController: inputController,
+                onSend: onSend,
+                muted: muted,
+                pinned: pinned,
+                onToggleMute: onToggleMute,
+                onTogglePin: onTogglePin,
+                onUploadImage: onUploadImage,
+                voiceMode: voiceMode,
+                recording: recording,
+                willCancel: willCancel,
+                liveWaveform: liveWaveform,
+                onToggleVoiceMode: onToggleVoiceMode,
+                onRecordPressStart: onRecordPressStart,
+                onRecordPressMove: onRecordPressMove,
+                onRecordPressEnd: onRecordPressEnd,
+                onShowDetail: onShowDetail,
+                showEmoji: showEmoji,
+                onToggleShowEmoji: onToggleShowEmoji,
+                onSetShowEmoji: onSetShowEmoji,
+                dismissTapEnabled: shouldDismissInputOnBlankTap,
+                onDismissTap: onDismissInputModes,
+              ),
+            ),
+          ],
+        );
       },
     );
   }
@@ -2346,7 +2341,6 @@ class _DetailDrawerHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w600,
               height: 1.2,
             ),
@@ -2362,9 +2356,8 @@ class _DetailDrawerHeader extends StatelessWidget {
               child: Text(
                 '$memberCount 人',
                 style: TextStyle(
-                  fontSize: ui(11),
+                  fontSize: ui(12),
                   color: _kPurple,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1,
                 ),
@@ -2435,9 +2428,7 @@ class _DetailSummaryCard extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     _AvatarCircle(
-                      avatarUrl: (logoUrl ?? '').isEmpty
-                          ? null
-                          : _resolveMediaUrl(logoUrl),
+                      avatarUrl: null,
                       fallback: className,
                       size: ui(44),
                       radius: ui(10),
@@ -2455,14 +2446,14 @@ class _DetailSummaryCard extends StatelessWidget {
                             color: _kPurple,
                             borderRadius: BorderRadius.circular(ui(5)),
                             border: Border.all(
-                              color: Colors.white,
+                              color: AppColors.surface,
                               width: ui(1.5),
                             ),
                           ),
                           child: Icon(
                             Icons.edit_rounded,
                             size: ui(10),
-                            color: Colors.white,
+                            color: AppColors.surface,
                           ),
                         ),
                       ),
@@ -2484,9 +2475,8 @@ class _DetailSummaryCard extends StatelessWidget {
                                 child: Text(
                                   className,
                                   style: TextStyle(
-                                    fontSize: ui(15),
+                                    fontSize: ui(16),
                                     color: _kTextDark,
-                                    fontFamily: 'PingFang SC',
                                     fontWeight: AppFont.w600,
                                     height: 1.3,
                                   ),
@@ -2529,7 +2519,7 @@ class _DetailSummaryCard extends StatelessWidget {
                         _SummaryChip(
                           icon: Icons.school_rounded,
                           label: '学生 $studentCount',
-                          color: const Color(0xFF12CE51),
+                          color: AppColors.success,
                         ),
                       ],
                     ),
@@ -2558,7 +2548,6 @@ class _DetailSummaryCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(13),
                         color: _kTextDark,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w500,
                         height: 1.2,
                       ),
@@ -2567,9 +2556,8 @@ class _DetailSummaryCard extends StatelessWidget {
                     Text(
                       muted ? '该群消息不再提醒' : '开启后，新消息将静默接收',
                       style: TextStyle(
-                        fontSize: ui(11),
+                        fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         height: 1.2,
                       ),
                     ),
@@ -2613,9 +2601,8 @@ class _SummaryChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: ui(11),
+              fontSize: ui(12),
               color: color,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1,
             ),
@@ -2643,7 +2630,7 @@ class _MuteSwitch extends StatelessWidget {
         height: ui(22),
         padding: EdgeInsets.all(ui(2)),
         decoration: BoxDecoration(
-          color: value ? _kPurple : const Color(0xFFCECED1),
+          color: value ? _kPurple : AppColors.textTertiary,
           borderRadius: BorderRadius.circular(ui(11)),
         ),
         child: Align(
@@ -2652,11 +2639,11 @@ class _MuteSwitch extends StatelessWidget {
             width: ui(18),
             height: ui(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
+                  color: AppColors.ink.withValues(alpha: 0.12),
                   blurRadius: 2,
                 ),
               ],
@@ -2682,7 +2669,7 @@ class _DetailCardLeadingIcon extends StatelessWidget {
       height: ui(32),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.6),
+        color: AppColors.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: ClipRRect(
@@ -2735,7 +2722,6 @@ class _DetailAnnouncementCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kPurple,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                     height: 1.2,
                   ),
@@ -2747,7 +2733,6 @@ class _DetailAnnouncementCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(13),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.6,
                     ),
@@ -2758,7 +2743,6 @@ class _DetailAnnouncementCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextHint,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       fontStyle: FontStyle.italic,
                       height: 1.5,
@@ -2824,7 +2808,6 @@ class _DetailSectionCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w600,
                   height: 1.2,
                 ),
@@ -2843,7 +2826,7 @@ class _DetailSectionCard extends StatelessWidget {
                   child: Text(
                     '$count',
                     style: TextStyle(
-                      fontSize: ui(11),
+                      fontSize: ui(12),
                       color: _kTextSecondary,
                       fontFamily: 'Manrope',
                       fontWeight: AppFont.w500,
@@ -2929,9 +2912,8 @@ class _MemberGrid extends StatelessWidget {
                           label,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: ui(11),
+                            fontSize: ui(12),
                             color: _kTextDark,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.3,
                           ),
@@ -3006,7 +2988,6 @@ class _MemberTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(13),
                         color: _kTextDark,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w500,
                         height: 1.3,
                       ),
@@ -3019,9 +3000,8 @@ class _MemberTile extends StatelessWidget {
                       child: Text(
                         '（${member.nickname}）',
                         style: TextStyle(
-                          fontSize: ui(11),
+                          fontSize: ui(12),
                           color: _kTextHint,
-                          fontFamily: 'PingFang SC',
                           height: 1.3,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -3042,9 +3022,8 @@ class _MemberTile extends StatelessWidget {
                       child: Text(
                         badge!,
                         style: TextStyle(
-                          fontSize: ui(10),
+                          fontSize: ui(12),
                           color: _kPurple,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w500,
                           height: 1.2,
                         ),
@@ -3058,9 +3037,8 @@ class _MemberTile extends StatelessWidget {
                 Text(
                   member.mobile!,
                   style: TextStyle(
-                    fontSize: ui(11),
+                    fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     height: 1.2,
                   ),
                 ),
@@ -3095,8 +3073,7 @@ class _InitialAvatar extends StatelessWidget {
         initial,
         style: TextStyle(
           fontSize: size * 0.44,
-          color: Colors.white,
-          fontFamily: 'PingFang SC',
+          color: AppColors.surface,
           fontWeight: AppFont.w600,
         ),
       ),
@@ -3122,14 +3099,14 @@ class _GroupChatBackButton extends StatelessWidget {
         width: ui(32),
         height: ui(32),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderSoft),
         ),
         child: Icon(
           Icons.arrow_back_ios_new_rounded,
           size: ui(16),
-          color: const Color(0xFF1C274C),
+          color: AppColors.ink,
         ),
       ),
     );
@@ -3192,16 +3169,7 @@ class _ConversationListPaneState extends State<_ConversationListPane> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: ui(68),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(ui(4), ui(12), 0, 0),
-                  child: _GroupChatBackButton(onTap: widget.onBack),
-                ),
-              ),
-            ),
+            SizedBox(height: ui(12)),
             _ConvSearchField(
               controller: _searchCtrl,
               onChanged: (_) => setState(() {}),
@@ -3226,7 +3194,9 @@ class _ConversationListPaneState extends State<_ConversationListPane> {
                         return Divider(
                           height: 1,
                           thickness: 0.5,
-                          color: hideDivider ? Colors.transparent : _kBorderSoft,
+                          color: hideDivider
+                              ? Colors.transparent
+                              : _kBorderSoft,
                         );
                       },
                       itemBuilder: (context, i) {
@@ -3278,7 +3248,6 @@ class _ConvSearchField extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.2,
               ),
@@ -3290,8 +3259,7 @@ class _ConvSearchField extends StatelessWidget {
                 hintText: '搜索群聊',
                 hintStyle: TextStyle(
                   fontSize: ui(14),
-                  color: const Color(0xFFD1D1D1),
-                  fontFamily: 'PingFang SC',
+                  color: AppColors.textPlaceholder,
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -3308,7 +3276,7 @@ class _ConvSearchField extends StatelessWidget {
               child: Icon(
                 Icons.cancel_rounded,
                 size: ui(16),
-                color: const Color(0xFFD1D1D1),
+                color: AppColors.textPlaceholder,
               ),
             ),
         ],
@@ -3329,7 +3297,6 @@ class _ConversationSearchEmptyHint extends StatelessWidget {
         style: TextStyle(
           color: _kTextSecondary,
           fontSize: ui(13),
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
         ),
       ),
@@ -3351,89 +3318,71 @@ class _ConversationCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
+      selected: active,
       child: Container(
-        height: ui(60),
-        padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(8)),
+        padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(10)),
         decoration: BoxDecoration(
           color: active ? _kBoardBg : Colors.transparent,
           borderRadius: BorderRadius.circular(ui(8)),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: ui(40),
-              height: ui(40),
-              child: _AvatarCircle(
-                avatarUrl: conv.avatarUrl,
-                fallback: conv.name,
-                size: ui(40),
-                radius: ui(8),
-                color: conv.avatarColor,
-              ),
-            ),
+            AppAvatar(name: conv.name, size: 40),
             SizedBox(width: ui(10)),
             Expanded(
-              child: SizedBox(
-                height: ui(36),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      conv.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: ui(14),
-                        color: _kTextDark,
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w500,
-                        height: 1.2,
-                      ),
-                    ),
-                    Text(
-                      conv.lastMessage,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: ui(11),
-                        color: _kTextHint,
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w400,
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(width: ui(6)),
-            SizedBox(
-              height: ui(36),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppAssetGraphic(
-                    conv.pinned
-                        ? AppAssets.groupChatPin
-                        : AppAssets.groupChatPinOff,
-                    width: ui(12),
-                    height: ui(12),
-                    fit: BoxFit.contain,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          conv.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.body14Strong.copyWith(
+                            color: AppColors.ink,
+                            height: 20 / 14,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: ui(6)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (conv.pinned) ...[
+                              const Icon(
+                                Icons.push_pin_outlined,
+                                size: 12,
+                                color: AppColors.textTertiary,
+                              ),
+                              const SizedBox(width: 2),
+                            ],
+                            Text(
+                              conv.lastTime,
+                              style: AppText.caption12.copyWith(
+                                color: AppColors.textTertiary,
+                                height: 14 / 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    conv.lastTime,
-                    style: TextStyle(
-                      fontSize: ui(11),
-                      color: _kTextDivider,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 1.2,
+                    conv.lastMessage,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption12.copyWith(
+                      color: AppColors.textTertiary,
                     ),
                   ),
                 ],
@@ -3473,58 +3422,57 @@ class _CompactConversationStrip extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.fromLTRB(ui(12), ui(12), ui(8), 0),
         child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _GroupChatBackButton(onTap: onBack),
-          Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: ui(8)),
-              itemCount: conversations.length,
-              separatorBuilder: (a, b) => SizedBox(width: ui(8)),
-              itemBuilder: (context, i) {
-                final c = conversations[i];
-                final active = c.id == selectedConvId;
-                return GestureDetector(
-                  onTap: () => onSelect(c.id),
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: ui(8),
-                      vertical: ui(6),
-                    ),
-                    decoration: BoxDecoration(
-                      color: active ? _kBoardBg : Colors.white,
-                      borderRadius: BorderRadius.circular(ui(12)),
-                    ),
-                    child: Row(
-                      children: [
-                        _AvatarCircle(
-                          avatarUrl: c.avatarUrl,
-                          fallback: c.name,
-                          size: ui(36),
-                          radius: ui(8),
-                          color: c.avatarColor,
-                        ),
-                        SizedBox(width: ui(6)),
-                        Text(
-                          c.name,
-                          style: TextStyle(
-                            fontSize: ui(12),
-                            color: _kTextDark,
-                            fontFamily: 'PingFang SC',
-                            fontWeight: AppFont.w500,
-                            height: 1,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _GroupChatBackButton(onTap: onBack),
+            Expanded(
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: ui(8)),
+                itemCount: conversations.length,
+                separatorBuilder: (a, b) => SizedBox(width: ui(8)),
+                itemBuilder: (context, i) {
+                  final c = conversations[i];
+                  final active = c.id == selectedConvId;
+                  return GestureDetector(
+                    onTap: () => onSelect(c.id),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: ui(8),
+                        vertical: ui(6),
+                      ),
+                      decoration: BoxDecoration(
+                        color: active ? _kBoardBg : AppColors.surface,
+                        borderRadius: BorderRadius.circular(ui(12)),
+                      ),
+                      child: Row(
+                        children: [
+                          _AvatarCircle(
+                            avatarUrl: null,
+                            fallback: c.name,
+                            size: ui(36),
+                            radius: ui(8),
+                            color: c.avatarColor,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: ui(6)),
+                          Text(
+                            c.name,
+                            style: TextStyle(
+                              fontSize: ui(12),
+                              color: _kTextDark,
+                              fontWeight: AppFont.w500,
+                              height: 1,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );
@@ -3806,21 +3754,6 @@ class _ChatHeaderBar extends StatelessWidget {
       height: ui(68),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(ui(16)),
-                topRight: Radius.circular(ui(16)),
-              ),
-              child: Image.asset(
-                AppAssets.authBgTop,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.fill,
-                alignment: Alignment.centerRight,
-              ),
-            ),
-          ),
           Positioned(
             left: 0,
             right: 0,
@@ -3841,33 +3774,20 @@ class _ChatHeaderBar extends StatelessWidget {
                           Text(
                             title,
                             style: TextStyle(
-                              fontSize: ui(15),
+                              fontSize: ui(16),
                               color: _kTextDark,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w600,
                               height: 1.1,
-                            ),
-                          ),
-                          SizedBox(width: ui(8)),
-                          InkWell(
-                            onTap: onShowDetail,
-                            borderRadius: BorderRadius.circular(ui(4)),
-                            child: AppAssetGraphic(
-                              AppAssets.groupChatSet,
-                              width: ui(13),
-                              height: ui(13),
-                              fit: BoxFit.contain,
                             ),
                           ),
                         ],
                       ),
                       SizedBox(height: ui(4)),
                       Text(
-                        '$memberCount人',
+                        '$memberCount 人',
                         style: TextStyle(
-                          fontSize: ui(11),
+                          fontSize: ui(12),
                           color: _kTextDivider,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                           height: 1,
                         ),
@@ -3904,11 +3824,7 @@ class _ChatHeaderBar extends StatelessWidget {
 }
 
 class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({
-    this.asset,
-    this.icon,
-    required this.onTap,
-  });
+  const _HeaderIconButton({this.asset, this.icon, required this.onTap});
 
   final String? asset;
   final IconData? icon;
@@ -3933,10 +3849,10 @@ class _HeaderIconButton extends StatelessWidget {
         height: ui(32),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.8),
+          color: AppColors.surface.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(ui(8)),
         ),
-        child: Icon(icon, size: ui(18), color: const Color(0xFF1C274C)),
+        child: Icon(icon, size: ui(18), color: AppColors.ink),
       ),
     );
   }
@@ -4069,7 +3985,6 @@ class _ChatBodyBoard extends StatelessWidget {
                         style: TextStyle(
                           color: _kTextSecondary,
                           fontSize: 13,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                         ),
                       ),
@@ -4089,9 +4004,8 @@ class _ChatBodyBoard extends StatelessWidget {
                                   : Text(
                                       '上滑加载更多',
                                       style: TextStyle(
-                                        fontSize: ui(11),
+                                        fontSize: ui(12),
                                         color: _kTextHint,
-                                        fontFamily: 'PingFang SC',
                                         fontWeight: AppFont.w400,
                                       ),
                                     ),
@@ -4204,7 +4118,6 @@ class _AnnouncementBar extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 20 / 13,
                   ),
@@ -4212,20 +4125,12 @@ class _AnnouncementBar extends StatelessWidget {
               ),
               if (editable)
                 Padding(
-                  padding: EdgeInsets.only(left: ui(8), top: ui(1)),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                  padding: EdgeInsets.only(left: ui(8)),
+                  child: AppButton(
+                    label: '编辑公告',
+                    variant: AppButtonVariant.text,
+                    size: AppButtonSize.sm,
                     onTap: onEdit,
-                    child: Text(
-                      '编辑公告',
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        color: _kTextDark,
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w500,
-                        height: 1,
-                      ),
-                    ),
                   ),
                 ),
             ],
@@ -4237,9 +4142,8 @@ class _AnnouncementBar extends StatelessWidget {
               child: Text(
                 updatedAt,
                 style: TextStyle(
-                  fontSize: ui(11),
+                  fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.1,
                 ),
@@ -4268,7 +4172,6 @@ class _DateDivider extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -4305,7 +4208,6 @@ class _RecallMessageRow extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -4377,15 +4279,14 @@ class _SystemMessageRow extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: ui(6)),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(ui(4)),
             ),
             child: Text(
               message.tagLabel,
               style: TextStyle(
-                fontSize: ui(11),
+                fontSize: ui(12),
                 color: _kTextSecondary,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -4398,7 +4299,6 @@ class _SystemMessageRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextSecondary,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -4451,6 +4351,7 @@ class _UserMessageRow extends StatelessWidget {
     );
     Widget bubble = _BubbleDispatcher(
       message: message,
+      mine: isMine,
       playingVoiceId: playingVoiceId,
       playingFraction: playingFraction,
       onToggleVoice: onToggleVoice,
@@ -4477,7 +4378,6 @@ class _UserMessageRow extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -4489,7 +4389,6 @@ class _UserMessageRow extends StatelessWidget {
       style: TextStyle(
         fontSize: ui(12),
         color: _kTextDivider,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w400,
         height: 1,
       ),
@@ -4548,6 +4447,7 @@ class _UserMessageRow extends StatelessWidget {
 class _BubbleDispatcher extends StatelessWidget {
   const _BubbleDispatcher({
     required this.message,
+    required this.mine,
     required this.playingVoiceId,
     required this.playingFraction,
     required this.onToggleVoice,
@@ -4555,6 +4455,7 @@ class _BubbleDispatcher extends StatelessWidget {
   });
 
   final _UserChatMessage message;
+  final bool mine;
   final String? playingVoiceId;
   final double playingFraction;
   final ValueChanged<String> onToggleVoice;
@@ -4564,7 +4465,7 @@ class _BubbleDispatcher extends StatelessWidget {
   Widget build(BuildContext context) {
     final b = message.bubble;
     if (b is _TextBubble) {
-      return _TextBubbleView(text: b.text);
+      return _TextBubbleView(text: b.text, mine: mine);
     }
     if (b is _FileBubble) {
       return _FileBubbleView(bubble: b);
@@ -4609,9 +4510,12 @@ List<InlineSpan> _chatTextSpans(
 }
 
 class _TextBubbleView extends StatelessWidget {
-  const _TextBubbleView({required this.text});
+  const _TextBubbleView({required this.text, this.mine = false});
 
   final String text;
+
+  /// 本人消息用浅紫底，与他人的白底气泡区分。
+  final bool mine;
 
   @override
   Widget build(BuildContext context) {
@@ -4619,20 +4523,17 @@ class _TextBubbleView extends StatelessWidget {
     final baseStyle = TextStyle(
       fontSize: ui(14),
       color: _kTextDark,
-      fontFamily: 'PingFang SC',
       fontWeight: AppFont.w400,
       height: 1.7,
     );
     return Container(
       padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: mine ? AppColors.brandWash : AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Text.rich(
-        TextSpan(
-          children: _chatTextSpans(text, baseStyle, ui),
-        ),
+        TextSpan(children: _chatTextSpans(text, baseStyle, ui)),
         style: baseStyle,
       ),
     );
@@ -4651,7 +4552,7 @@ class _FileBubbleView extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Row(
@@ -4667,7 +4568,6 @@ class _FileBubbleView extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1.6,
                 ),
@@ -4676,9 +4576,8 @@ class _FileBubbleView extends StatelessWidget {
               Text(
                 bubble.fileSize,
                 style: TextStyle(
-                  fontSize: ui(11),
+                  fontSize: ui(12),
                   color: _kTextSecondary,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1,
                 ),
@@ -4761,9 +4660,8 @@ class _FileIconBlock extends StatelessWidget {
               child: Text(
                 extension.toUpperCase(),
                 style: TextStyle(
-                  fontSize: ui(8),
-                  color: Colors.white,
-                  fontFamily: 'PingFang SC',
+                  fontSize: ui(12),
+                  color: AppColors.surface,
                   fontWeight: FontWeight.w700,
                   height: 1,
                 ),
@@ -4807,7 +4705,7 @@ class _VoiceBubbleView extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
         ),
         child: Row(
@@ -4845,8 +4743,7 @@ class _VoiceBubbleView extends StatelessWidget {
               '${bubble.durationSec}s',
               style: TextStyle(
                 fontSize: ui(13),
-                color: const Color(0xFF6D6B75),
-                fontFamily: 'PingFang SC',
+                color: AppColors.textSecondary,
                 fontWeight: AppFont.w400,
                 height: 1.2,
               ),
@@ -4960,7 +4857,7 @@ class _ImageBubbleView extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               preview,
-              ColoredBox(color: Colors.black.withValues(alpha: 0.18)),
+              ColoredBox(color: AppColors.ink.withValues(alpha: 0.18)),
               const Center(child: AppLoadingIndicator()),
             ],
           ),
@@ -5030,7 +4927,9 @@ List<GroupChatMediaDownloadItem> _downloadItemsForBubble(_ChatBubble bubble) {
   return const [];
 }
 
-List<GroupChatMediaDownloadItem> _downloadItemsForImageBubble(_ImageBubble bubble) {
+List<GroupChatMediaDownloadItem> _downloadItemsForImageBubble(
+  _ImageBubble bubble,
+) {
   if (bubble.uploading) return const [];
   if (bubble.localBytes != null) {
     return [
@@ -5056,7 +4955,9 @@ List<GroupChatMediaDownloadItem> _downloadItemsForImageBubble(_ImageBubble bubbl
   ];
 }
 
-List<GroupChatMediaDownloadItem> _downloadItemsForVoiceBubble(_VoiceBubble bubble) {
+List<GroupChatMediaDownloadItem> _downloadItemsForVoiceBubble(
+  _VoiceBubble bubble,
+) {
   final url = bubble.url?.trim() ?? '';
   if (url.isEmpty) return const [];
   return [
@@ -5069,7 +4970,9 @@ List<GroupChatMediaDownloadItem> _downloadItemsForVoiceBubble(_VoiceBubble bubbl
   ];
 }
 
-List<GroupChatMediaDownloadItem> _downloadItemsForFileBubble(_FileBubble bubble) {
+List<GroupChatMediaDownloadItem> _downloadItemsForFileBubble(
+  _FileBubble bubble,
+) {
   final url = bubble.url?.trim() ?? '';
   if (url.isEmpty) return const [];
   final fallback = bubble.fileName.trim().isNotEmpty
@@ -5096,7 +4999,10 @@ List<GroupChatMediaDownloadItem> _downloadItemsForSharedCardBubble(
     items.add(
       GroupChatMediaDownloadItem(
         label: label,
-        suggestedFileName: fileNameFromUrl(resolved, fallback: 'chat_image.jpg'),
+        suggestedFileName: fileNameFromUrl(
+          resolved,
+          fallback: 'chat_image.jpg',
+        ),
         kind: GroupChatMediaKind.image,
         url: resolved,
       ),
@@ -5109,7 +5015,10 @@ List<GroupChatMediaDownloadItem> _downloadItemsForSharedCardBubble(
     items.add(
       GroupChatMediaDownloadItem(
         label: '保存视频',
-        suggestedFileName: fileNameFromUrl(resolved, fallback: 'chat_video.mp4'),
+        suggestedFileName: fileNameFromUrl(
+          resolved,
+          fallback: 'chat_video.mp4',
+        ),
         kind: GroupChatMediaKind.video,
         url: resolved,
       ),
@@ -5121,8 +5030,11 @@ List<GroupChatMediaDownloadItem> _downloadItemsForSharedCardBubble(
     if (resolved.isEmpty) return;
     items.add(
       GroupChatMediaDownloadItem(
-        label: '保存音频',
-        suggestedFileName: fileNameFromUrl(resolved, fallback: 'chat_audio.m4a'),
+        label: '保存语音',
+        suggestedFileName: fileNameFromUrl(
+          resolved,
+          fallback: 'chat_audio.m4a',
+        ),
         kind: GroupChatMediaKind.audio,
         url: resolved,
       ),
@@ -5164,10 +5076,9 @@ void _navigateSharedContent(
       Navigator.pushNamed(
         context,
         RoutePaths.consultationDetail,
-        arguments: GroupChatReturnNavigator.wrapMap(
-          <String, dynamic>{'id': id == null ? 0 : (int.tryParse(id) ?? 0)},
-          classId: groupChatClassId,
-        ),
+        arguments: GroupChatReturnNavigator.wrapMap(<String, dynamic>{
+          'id': id == null ? 0 : (int.tryParse(id) ?? 0),
+        }, classId: groupChatClassId),
       );
     case 'video':
       if (b.schoolMode) {
@@ -5206,28 +5117,24 @@ void _navigateSharedContent(
       Navigator.pushNamed(
         context,
         RoutePaths.courseware,
-        arguments: GroupChatReturnNavigator.wrapMap(
-          <String, dynamic>{
-            'previewItem': <String, dynamic>{
-              'id': int.tryParse(id ?? '') ?? 0,
-              'title': b.title,
-              'typeValue': b.kjTypeValue ?? '3',
-              'audioUrl': b.kjAudioUrl ?? '',
-              'imageUrls': b.kjImageUrls,
-            },
+        arguments: GroupChatReturnNavigator.wrapMap(<String, dynamic>{
+          'previewItem': <String, dynamic>{
+            'id': int.tryParse(id ?? '') ?? 0,
+            'title': b.title,
+            'typeValue': b.kjTypeValue ?? '3',
+            'audioUrl': b.kjAudioUrl ?? '',
+            'imageUrls': b.kjImageUrls,
           },
-          classId: groupChatClassId,
-        ),
+        }, classId: groupChatClassId),
       );
     case 'book':
       if (id == null || id.isEmpty) return;
       Navigator.pushNamed(
         context,
         RoutePaths.gallery,
-        arguments: GroupChatReturnNavigator.wrapMap(
-          <String, dynamic>{'workId': id},
-          classId: groupChatClassId,
-        ),
+        arguments: GroupChatReturnNavigator.wrapMap(<String, dynamic>{
+          'workId': id,
+        }, classId: groupChatClassId),
       );
     default:
       break;
@@ -5278,7 +5185,7 @@ class _SharedCardBubbleView extends StatelessWidget {
       width: ui(220),
       padding: EdgeInsets.all(ui(10)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Row(
@@ -5299,7 +5206,7 @@ class _SharedCardBubbleView extends StatelessWidget {
                   return Container(
                     width: ui(44),
                     height: ui(44),
-                    color: const Color(0xFFF3F2F3),
+                    color: AppColors.lineSoft,
                     alignment: Alignment.center,
                     child: Icon(
                       bubble.icon,
@@ -5326,7 +5233,6 @@ class _SharedCardBubbleView extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.4,
                   ),
@@ -5334,11 +5240,7 @@ class _SharedCardBubbleView extends StatelessWidget {
                 SizedBox(height: ui(2)),
                 Text(
                   bubble.subtitle,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    color: _kTextHint,
-                    fontFamily: 'PingFang SC',
-                  ),
+                  style: TextStyle(fontSize: ui(12), color: _kTextHint),
                 ),
               ],
             ),
@@ -5414,7 +5316,7 @@ class _ChatInputBarState extends State<_ChatInputBar> {
       child: Container(
         height: ui(52),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -5470,7 +5372,6 @@ class _ChatComposerField extends StatelessWidget {
     final baseStyle = TextStyle(
       fontSize: ui(14),
       color: _kTextDark,
-      fontFamily: 'PingFang SC',
       fontWeight: AppFont.w400,
       height: 1.7,
     );
@@ -5489,9 +5390,7 @@ class _ChatComposerField extends StatelessWidget {
             if (hasText)
               IgnorePointer(
                 child: Text.rich(
-                  TextSpan(
-                    children: _chatTextSpans(value.text, baseStyle, ui),
-                  ),
+                  TextSpan(children: _chatTextSpans(value.text, baseStyle, ui)),
                   maxLines: 1,
                   overflow: TextOverflow.visible,
                   strutStyle: strutStyle,
@@ -5501,7 +5400,7 @@ class _ChatComposerField extends StatelessWidget {
               controller: controller,
               focusNode: focusNode,
               maxLines: 1,
-              cursorColor: const Color(0xFF715EFE),
+              cursorColor: AppColors.brand,
               cursorWidth: 1.5,
               cursorHeight: ui(14 * 1.7),
               style: baseStyle.copyWith(
@@ -5513,7 +5412,6 @@ class _ChatComposerField extends StatelessWidget {
                 hintStyle: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDivider,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.7,
                 ),
@@ -5550,53 +5448,11 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    return AppButton(
+      label: '发送',
+      icon: Icons.send_rounded,
+      size: AppButtonSize.sm,
       onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Opacity(
-        opacity: enabled ? 1 : 0.45,
-        child: Container(
-          width: ui(74),
-          height: ui(36),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: enabled ? _kPurple : null,
-            gradient: enabled
-                ? null
-                : const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [Color(0xFFE8DEFF), Color(0xFFD4C2FF)],
-                  ),
-            borderRadius: BorderRadius.circular(ui(8)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '发送',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: ui(13),
-                  color: Colors.white,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w400,
-                  height: 24 / 13,
-                ),
-              ),
-              SizedBox(width: ui(4)),
-              AppAssetGraphic(
-                AppAssets.groupChatSend,
-                width: ui(12),
-                height: ui(12),
-                fit: BoxFit.contain,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -5635,7 +5491,7 @@ class _VoiceHoldBar extends StatelessWidget {
         height: ui(52),
         padding: EdgeInsets.symmetric(horizontal: ui(8)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -5678,8 +5534,7 @@ class _VoiceHoldBar extends StatelessWidget {
                     '按住说话',
                     style: TextStyle(
                       fontSize: ui(14),
-                      color: Colors.white,
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.surface,
                       fontWeight: AppFont.w500,
                       height: 1,
                       letterSpacing: 0.4,
@@ -5717,7 +5572,7 @@ class _RecordingHintCard extends StatelessWidget {
           height: ui(74),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(12)),
           ),
           child: _LiveBigWaveform(heights: waveform, color: color),
@@ -5729,7 +5584,6 @@ class _RecordingHintCard extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(13),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 24 / 13,
           ),
@@ -5809,40 +5663,10 @@ class _AvatarCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasUrl = (avatarUrl ?? '').isNotEmpty;
-    final ch = fallback.isNotEmpty ? fallback.characters.first : '?';
-    final initial = Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(radius),
-      ),
-      child: Text(
-        ch,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: size * 0.4,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w600,
-          height: 1,
-        ),
-      ),
-    );
-    if (!hasUrl) return initial;
-    final resolvedUrl = _resolveMediaUrl(avatarUrl);
-    if (resolvedUrl.isEmpty) return initial;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: Image.network(
-        resolvedUrl,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (ctx, err, st) => initial,
-      ),
-    );
+    final resolvedUrl = (avatarUrl ?? '').isEmpty
+        ? ''
+        : _resolveMediaUrl(avatarUrl);
+    return AppAvatar(name: fallback, url: resolvedUrl, size: size);
   }
 }
 
@@ -5860,7 +5684,7 @@ class _Conversation {
     required this.muted,
     required this.pinned,
     required this.memberCount,
-    this.avatarColor = const Color(0xFF715EFE),
+    this.avatarColor = AppColors.brand,
     this.avatarUrl,
   });
 
@@ -5949,7 +5773,7 @@ class _UserChatMessage extends _ChatMessage {
     required this.fromName,
     required this.bubble,
     this.avatarUrl,
-    this.avatarColor = const Color(0xFF715EFE),
+    this.avatarColor = AppColors.brand,
   });
 
   final String fromUserId;
@@ -6191,7 +6015,7 @@ class GroupChatMessageParser {
           }
           bubble = _SharedCardBubble(
             icon: Icons.menu_book_rounded,
-            iconColor: const Color(0xFF715EFE),
+            iconColor: AppColors.brand,
             title: (obj?['title'] ?? '课件分享').toString(),
             subtitle: '云盘课件',
             subtype: 'kj',
@@ -6205,7 +6029,7 @@ class GroupChatMessageParser {
         case 'video':
           bubble = _SharedCardBubble(
             icon: Icons.play_circle_outline_rounded,
-            iconColor: const Color(0xFFF59E0B),
+            iconColor: AppColors.warning,
             title: (obj?['name'] ?? obj?['title'] ?? '视频分享').toString(),
             subtitle: '视频 · ${obj?['duration'] ?? ''}',
             subtype: 'video',
@@ -6308,10 +6132,10 @@ class GroupChatMessageParser {
   Color _avatarColorFor(String uid) {
     final palette = <Color>[
       Color(0xFF325BFF),
-      Color(0xFFF97316),
-      Color(0xFFB98FFF),
-      Color(0xFF12CE51),
-      Color(0xFF715EFE),
+      AppColors.warning,
+      AppColors.brandSoft,
+      AppColors.success,
+      AppColors.brand,
     ];
     if (uid.isEmpty) return palette.first;
     final h = uid.hashCode.abs();
@@ -6664,10 +6488,10 @@ _GroupDetail _parseGroupDetail(
   if (announcement.isNotEmpty && announcementAt != null) {
     final whenLabel = _formatLastTime(announcementAt, withDateForOldDays: true);
     updatedAt = announcementBy.isEmpty
-        ? '更新于 $whenLabel'
-        : '更新于 $announcementBy $whenLabel';
+        ? '$whenLabel 更新'
+        : '$announcementBy · $whenLabel 更新';
   } else if (announcement.isNotEmpty && announcementBy.isNotEmpty) {
-    updatedAt = '更新于 $announcementBy';
+    updatedAt = '$announcementBy 更新';
   }
 
   // 教师 / 学生列表
@@ -6814,12 +6638,12 @@ String _formatLastTime(DateTime? t, {bool withDateForOldDays = false}) {
 
 Color _avatarColorFor(String key) {
   const palette = <Color>[
-    Color(0xFF715EFE),
+    AppColors.brand,
     Color(0xFF325BFF),
-    Color(0xFFF97316),
-    Color(0xFFB98FFF),
-    Color(0xFF12CE51),
-    Color(0xFFFF6A00),
+    AppColors.warning,
+    AppColors.brandSoft,
+    AppColors.success,
+    AppColors.warning,
   ];
   if (key.isEmpty) return palette.first;
   return palette[key.hashCode.abs() % palette.length];

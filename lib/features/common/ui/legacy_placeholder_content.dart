@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/router/route_paths.dart';
+import '../../../core/ui/ui.dart';
+import '../../personal_center/ui/my_qr_code_page.dart';
+import 'terms_page.dart';
+
+/// 1.0 遗留路由的承接页：已有新页面的直接渲染新页面，其余显示「暂未开放」。
 class LegacyPlaceholderContent extends StatelessWidget {
   const LegacyPlaceholderContent({
     required this.routeName,
@@ -10,47 +16,37 @@ class LegacyPlaceholderContent extends StatelessWidget {
   final String routeName;
   final String title;
 
+  void _back(BuildContext context) {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+    navigator.pushReplacementNamed(RoutePaths.home);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
+    switch (routeName) {
+      case RoutePaths.qrcode:
+        return const MyQrCodePage();
+      case RoutePaths.xieyi:
+        return TermsContent(onBack: () => _back(context));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(title: title, onBack: () => _back(context)),
+        Expanded(
+          child: AppEmptyState(
+            icon: Icons.construction_outlined,
+            title: '「$title」暂未开放',
+            description: '该功能正在整理中，可以先返回继续使用其他功能',
+            actionLabel: '返回',
+            onAction: () => _back(context),
+          ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF171A20),
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              '页面迁移中',
-              style: TextStyle(fontSize: 15, color: Color(0xFF666666)),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              routeName,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF999999)),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 }

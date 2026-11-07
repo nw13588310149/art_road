@@ -5,11 +5,10 @@ import '../../../core/demo/demo_accounts.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../shell/state/shell_state.dart';
-import '../../shell/ui/shell_layout.dart';
 import 'student_artworks_view.dart';
 import 'teacher_artworks_view.dart';
 
-/// 作品档案（学生）/ 作品点评（教职）。
+/// 作品档案（学生）/ 作品点评（教职）。页头与卡片直接排在页面底色上，与学情中心一致。
 ///
 /// 路由参数（可选）：`{'artworkId': String}` 直接打开该作品的详情 / 点评工作台。
 class ArtworksPage extends ConsumerStatefulWidget {
@@ -43,20 +42,14 @@ class _ArtworksPageState extends ConsumerState<ArtworksPage> {
     final resolvedRole = role.trim().isNotEmpty
         ? role
         : DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
-    final staff = isStaffRole(resolvedRole);
-    return ShellPageSurface(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(ShellLayoutSpec.panelRadius),
-        child: staff
-            ? TeacherArtworksView(
-                key: const ValueKey('artworks-teacher'),
-                initialArtworkId: _initialArtworkId,
-              )
-            : StudentArtworksView(
-                key: const ValueKey('artworks-student'),
-                initialArtworkId: _initialArtworkId,
-              ),
-      ),
-    );
+    return isStaffRole(resolvedRole)
+        ? TeacherArtworksView(
+            key: const ValueKey('artworks-teacher'),
+            initialArtworkId: _initialArtworkId,
+          )
+        : StudentArtworksView(
+            key: const ValueKey('artworks-student'),
+            initialArtworkId: _initialArtworkId,
+          );
   }
 }

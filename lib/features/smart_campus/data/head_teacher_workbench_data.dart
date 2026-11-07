@@ -1,3 +1,4 @@
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/media_url.dart';
@@ -41,8 +42,7 @@ class FocusStudentItem {
   final String time;
 
   factory FocusStudentItem.fromJson(Map<String, dynamic> json) {
-    final studentId =
-        pickFirstSnowflakeId(json, ['studentId', 'userId']) ?? '';
+    final studentId = pickFirstSnowflakeId(json, ['studentId', 'userId']) ?? '';
     final name = _pickString(json, [
       'studentName',
       'realname',
@@ -57,8 +57,9 @@ class FocusStudentItem {
       'avatar',
       'headImg',
     ]);
-    final studentHeadUrl =
-        headUrlRaw.isNotEmpty ? MediaUrl.resolve(headUrlRaw) : null;
+    final studentHeadUrl = headUrlRaw.isNotEmpty
+        ? MediaUrl.resolve(headUrlRaw)
+        : null;
     final avatarCharRaw = _pickString(json, ['avatarChar', 'headChar']);
     final avatarChar = avatarCharRaw.isNotEmpty
         ? avatarCharRaw.characters.first
@@ -72,17 +73,17 @@ class FocusStudentItem {
       className: _pickString(json, ['className', 'class']),
       tag: _pickString(json, ['tag', 'focusTag', 'label']),
       reason: _pickString(json, ['reason', 'desc', 'remark', 'content']),
-      time: _pickString(json, ['time', 'createTime', 'updateTime', 'focusTime']),
+      time: _pickString(json, [
+        'time',
+        'createTime',
+        'updateTime',
+        'focusTime',
+      ]),
     );
   }
 }
 
-const List<String> kFocusStudentPresetTags = [
-  '心理关注',
-  '考勤关注',
-  '学业关注',
-  '行为关注',
-];
+const List<String> kFocusStudentPresetTags = ['心理关注', '考勤关注', '学业关注', '行为关注'];
 
 /// 最近 7 个自然日（含今天）的 `yyyy-MM-dd` 区间。
 (String beginDate, String endDate) headTeacherWorkbenchLastSevenDaysRange([
@@ -91,7 +92,10 @@ const List<String> kFocusStudentPresetTags = [
   final end = anchor ?? DateTime.now();
   final endDate = DateTime(end.year, end.month, end.day);
   final beginDate = endDate.subtract(const Duration(days: 6));
-  return (headTeacherWorkbenchIsoDate(beginDate), headTeacherWorkbenchIsoDate(endDate));
+  return (
+    headTeacherWorkbenchIsoDate(beginDate),
+    headTeacherWorkbenchIsoDate(endDate),
+  );
 }
 
 String headTeacherWorkbenchIsoDate(DateTime date) {
@@ -204,15 +208,15 @@ List<FocusStudentItem> parseFocusStudentList(dynamic raw) {
 (Color background, Color text) focusStudentTagColors(String tag) {
   final normalized = tag.trim();
   if (normalized.contains('心理')) {
-    return (const Color(0xFF715EFE), Colors.white);
+    return (AppColors.brand, AppColors.surface);
   }
   if (normalized.contains('考勤') || normalized.contains('查寝')) {
-    return (const Color(0xFF325BFF), Colors.white);
+    return (const Color(0xFF325BFF), AppColors.surface);
   }
   if (normalized.contains('学业') || normalized.contains('成绩')) {
-    return (const Color(0xFFDBEE49), const Color(0xFF0B081A));
+    return (const Color(0xFFDBEE49), AppColors.ink);
   }
-  return (const Color(0xFFDBEE49), const Color(0xFF0B081A));
+  return (const Color(0xFFDBEE49), AppColors.ink);
 }
 
 String formatFocusStudentTime(String raw) {
@@ -225,7 +229,10 @@ String formatFocusStudentTime(String raw) {
     return hm.isNotEmpty ? '今天 $hm' : '今天';
   }
   if (trimmed.length >= 16) {
-    return trimmed.substring(5, 16).replaceFirst('-', '月').replaceFirst(' ', '日 ');
+    return trimmed
+        .substring(5, 16)
+        .replaceFirst('-', '月')
+        .replaceFirst(' ', '日 ');
   }
   return trimmed;
 }

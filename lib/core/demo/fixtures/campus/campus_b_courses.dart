@@ -56,129 +56,20 @@ class CbCourse {
 
 // ── 课表来源 ──────────────────────────────────────────────────────────
 
-/// 模板每节课在各班的授课老师：优先模板老师，同一时段已被占用时换成同科目
-/// 任教该班的其他老师，保证演示账号（李静、赵雪）不会同一时间出现在两个班。
-final Map<String, String> _templateTeachers = _assignTemplateTeachers();
-
-Map<String, String> _assignTemplateTeachers() {
-  final result = <String, String>{};
-  final template = DemoCampusData.timetableTemplate;
-  for (var i = 0; i < template.length; i++) {
-    final slot = template[i];
-    final pool = cbSubjectKey(slot.courseName);
-    final subjectStaff = [
-      for (final s in DemoCampusData.staff)
-        if (s.subject == pool) s.id,
-    ];
-    final used = <String>{};
-    for (final c in DemoCampusData.classes) {
-      final candidates = [
-        for (final s in DemoCampusData.staff)
-          if (s.subject == pool && s.classIds.contains(c.id)) s.id,
-      ];
-      var pick = '';
-      if (candidates.contains(slot.teacherId) &&
-          !used.contains(slot.teacherId)) {
-        pick = slot.teacherId;
-      } else {
-        pick = candidates.firstWhere(
-          (id) => !used.contains(id),
-          orElse: () => '',
-        );
-        if (pick.isEmpty) {
-          pick = subjectStaff.firstWhere(
-            (id) => !used.contains(id),
-            orElse: () => '',
-          );
-        }
-        if (pick.isEmpty) {
-          pick = candidates.isNotEmpty ? candidates.first : slot.teacherId;
-        }
-      }
-      used.add(pick);
-      result['$i|${c.id}'] = pick;
-    }
-  }
-  return result;
-}
-
-/// 小班固定课：保证两位演示老师每天都有课可签。
-const List<
-  ({
-    String classId,
-    int weekday,
-    String start,
-    String end,
-    String subject,
-    String teacher,
-    String room,
-  })
->
-_smallPlan = [
-  (
-    classId: '601',
-    weekday: 3,
-    start: '19:00',
-    end: '21:00',
-    subject: '素描',
-    teacher: 't-1',
-    room: '素描教室 A',
-  ),
-  (
-    classId: '601',
-    weekday: 7,
-    start: '09:00',
-    end: '11:30',
-    subject: '素描',
-    teacher: 't-1',
-    room: '素描教室 A',
-  ),
-  (
-    classId: '602',
-    weekday: 7,
-    start: '14:00',
-    end: '16:30',
-    subject: '色彩',
-    teacher: 't-3',
-    room: '色彩教室 B',
-  ),
-  (
-    classId: '603',
-    weekday: 2,
-    start: '19:00',
-    end: '21:00',
-    subject: '速写',
-    teacher: 't-4',
-    room: '速写教室 C',
-  ),
-  (
-    classId: '603',
-    weekday: 5,
-    start: '19:00',
-    end: '21:00',
-    subject: '速写',
-    teacher: 't-4',
-    room: '速写教室 C',
-  ),
-  (
-    classId: '603',
-    weekday: 6,
-    start: '19:00',
-    end: '21:00',
-    subject: '速写',
-    teacher: 't-4',
-    room: '速写教室 C',
-  ),
-  (
-    classId: '603',
-    weekday: 7,
-    start: '14:00',
-    end: '16:30',
-    subject: '速写',
-    teacher: 't-4',
-    room: '速写教室 C',
-  ),
+/// 小班固定课：放在大班不排课的周二晚上与周日，成员不会撞上本班大课。
+const List<({String classId, DemoTimetableSlot slot})> _smallPlan = [
+  (classId: '601', slot: DemoTimetableSlot.am(7, '素描', 't-1', '素描教室 A')),
+  (classId: '602', slot: DemoTimetableSlot.eve(2, '色彩', 't-3', '色彩教室 B')),
+  (classId: '602', slot: DemoTimetableSlot.pm(7, '色彩', 't-3', '色彩教室 B')),
+  (classId: '603', slot: DemoTimetableSlot.eve(2, '速写', 't-4', '速写教室 C')),
+  (classId: '603', slot: DemoTimetableSlot.pm(7, '速写', 't-4', '速写教室 C')),
 ];
+
+/// [day] 所在周（周一开始）往后 [weeks] 周的星期 [weekday]。
+DateTime cbWeekday(DateTime day, int weekday, {int weeks = 0}) {
+  final monday = cbAddDays(cbDay(day), 1 - day.weekday);
+  return cbAddDays(monday, weeks * 7 + weekday - 1);
+}
 
 /// 模板生成的课次 id：`7` + 日期 + 班级 + 节次（与学生端课表的课次 id 一致）。
 String _generatedId(DateTime day, String classId, int lineNum) =>
@@ -279,13 +170,19 @@ String cbApplyCourseId(Map<String, dynamic> apply, int index) =>
     '6${cbStr(apply['id'])}${cbTwo(index)}';
 
 List<Map<String, dynamic>> _seedApplies() {
+  final today = cbToday();
+  DateTime upcoming(int weekday) {
+    final day = cbWeekday(today, weekday);
+    return day.isAfter(today) ? day : cbAddDays(day, 7);
+  }
+
   Map<String, dynamic> build({
     required String id,
     required String staffId,
     required String classId,
     required String subject,
     required int lineNum,
-    required List<int> dayOffsets,
+    required List<DateTime> days,
     required List<int> students,
     required int status,
     required int createdDaysAgo,
@@ -300,9 +197,9 @@ List<Map<String, dynamic>> _seedApplies() {
       '速写' => '速写教室 C',
       _ => '素描教室 A',
     });
-    final dates = [for (final d in dayOffsets) cbDate(cbAddDays(cbToday(), d))];
+    final dates = [for (final d in days) cbDate(d)];
     final studentIds = [for (final i in students) '${900000 + i}'];
-    final created = cbRel(
+    final created = cbPast(
       -createdDaysAgo,
       '10:20',
     ).add(Duration(minutes: cbHash(id) % 50));
@@ -343,14 +240,15 @@ List<Map<String, dynamic>> _seedApplies() {
     };
   }
 
+  // 申请都落在申请老师和学生都空闲的时段（周日、周四 / 周六晚上）。
   return [
     build(
       id: '3700001',
       staffId: 't-1',
       classId: '601',
       subject: '素描',
-      lineNum: 3,
-      dayOffsets: [3],
+      lineNum: 2,
+      days: [upcoming(DateTime.sunday)],
       students: [1, 3, 6],
       status: 0,
       createdDaysAgo: 0,
@@ -360,8 +258,11 @@ List<Map<String, dynamic>> _seedApplies() {
       staffId: 't-4',
       classId: '603',
       subject: '速写',
-      lineNum: 2,
-      dayOffsets: [2, 9, 16, 23, 30],
+      lineNum: 1,
+      days: [
+        for (var w = 0; w < 5; w++)
+          cbAddDays(upcoming(DateTime.sunday), w * 7),
+      ],
       students: [12, 15, 18, 5],
       status: 0,
       createdDaysAgo: 1,
@@ -373,22 +274,22 @@ List<Map<String, dynamic>> _seedApplies() {
       classId: '501',
       subject: '素描',
       lineNum: 3,
-      dayOffsets: [-5],
+      days: [cbWeekday(today, DateTime.thursday, weeks: -1)],
       students: [12, 15],
       status: 1,
-      createdDaysAgo: 8,
+      createdDaysAgo: 12,
     ),
     build(
       id: '3700004',
       staffId: 't-3',
       classId: '602',
       subject: '色彩',
-      lineNum: 1,
-      dayOffsets: [1],
+      lineNum: 2,
+      days: [upcoming(DateTime.saturday)],
       students: [10, 13, 16],
       status: 2,
       createdDaysAgo: 2,
-      reason: '与周六色彩写生外出时间冲突，请改到周日下午再申请。',
+      reason: '当天下午刘芳老师带联考冲刺1班外出写生，时间冲突，请改到周六晚上再申请。',
       color: '#FFD6B8',
     ),
     build(
@@ -396,8 +297,8 @@ List<Map<String, dynamic>> _seedApplies() {
       staffId: 't-3',
       classId: '602',
       subject: '色彩',
-      lineNum: 2,
-      dayOffsets: [6],
+      lineNum: 3,
+      days: [upcoming(DateTime.saturday)],
       students: [19, 22],
       status: 0,
       createdDaysAgo: 0,
@@ -446,105 +347,30 @@ List<CbCourse> _applyCourses(DateTime? onDay) {
   return result;
 }
 
-/// 学生端林小雨的个人小课，老师端同步展示：周二 / 周四晚间改画课，以及当天
-/// 围绕当前时刻的三节一对一（已结束 / 进行中 / 即将开始），任意时刻都能演示签到。
+/// 学生端林小雨的个人改画小课（[DemoCampusData.demoStudentSmallCourses]），
+/// 老师端同步展示；课次 id 为 `8` + 日期 + 节次。
 List<CbCourse> _demoStudentSmallCourses(DateTime day) {
   final compact = '${day.year}${cbTwo(day.month)}${cbTwo(day.day)}';
-  const org = '城东校区';
-  CbCourse course(
-    String id,
-    String name,
-    String teacher,
-    String start,
-    String end,
-    int lineNum,
-    String room,
-  ) => CbCourse(
-    id: id,
-    day: day,
-    classId: '501',
-    type: 1,
-    subjectName: name,
-    teacherUserId: DemoCampusData.staffById(teacher)?.userId ?? '',
-    start: start,
-    end: end,
-    lineNum: lineNum,
-    classroomId: cbClassroomId(org, room),
-    color: cbCourseColor(name, small: true),
-    studentIds: const [_demoStudentId],
-  );
-
-  final result = <CbCourse>[];
-  final weekly = switch (day.weekday) {
-    DateTime.tuesday => ('素描改画小课', 't-1'),
-    DateTime.thursday => ('色彩改画小课', 't-3'),
-    _ => null,
-  };
-  if (weekly != null) {
-    result.add(
-      course(
-        '8${compact}4',
-        weekly.$1,
-        weekly.$2,
-        '21:10',
-        '22:00',
-        4,
-        '小课教室 2',
-      ),
-    );
-  }
-  final now = DateTime.now();
-  if (cbDay(now) != day) {
-    return result;
-  }
-  String clock(int minutes) => '${cbTwo(minutes ~/ 60)}:${cbTwo(minutes % 60)}';
-  final minutes = now.hour * 60 + now.minute;
-  final base = minutes - minutes % 10;
-  const lastMinute = 23 * 60 + 59;
-  for (final s in [
-    (
-      seq: 1,
-      start: base - 180,
-      length: 50,
-      name: '速写一对一改画',
-      teacher: 't-4',
-      room: '小课教室 1',
-    ),
-    (
-      seq: 2,
-      start: base - 10 < 0 ? 0 : base - 10,
-      length: 60,
-      name: '素描头像精讲（一对一）',
-      teacher: 't-1',
-      room: '小课教室 3',
-    ),
-    (
-      seq: 3,
-      start: base + 100,
-      length: 50,
-      name: '色彩静物小组课',
-      teacher: 't-3',
-      room: '色彩教室 B',
-    ),
-  ]) {
-    final end = s.start + s.length;
-    final clampedEnd = s.seq == 2 && end > lastMinute ? lastMinute : end;
-    if (s.start < 0 || clampedEnd > lastMinute) {
-      continue;
-    }
-    result.add(
-      course(
-        '8$compact${s.seq}',
-        s.name,
-        s.teacher,
-        clock(s.start),
-        clock(clampedEnd),
-        0,
-        s.room,
-      ),
-    );
-  }
-  return result;
+  final home = DemoCampusData.classById('501');
+  final org = home?.organizationName ?? '城东校区';
+  return [
+    for (final slot in DemoCampusData.demoStudentSmallCourses)
+      if (slot.weekday == day.weekday)
+        CbCourse(
+          id: '8$compact${cbLineNumOf(slot.start)}',
+          day: day,
+          classId: '501',
+          type: 1,
+          subjectName: slot.courseName,
+          teacherUserId: DemoCampusData.staffById(slot.teacherId)?.userId ?? '',
+          start: slot.start,
+          end: slot.end,
+          lineNum: cbLineNumOf(slot.start),
+          classroomId: cbClassroomId(org, slot.room),
+          color: cbCourseColor(slot.courseName, small: true),
+          studentIds: const [_demoStudentId],
+        ),
+  ];
 }
 
 // ── 按日期取课 ────────────────────────────────────────────────────────
@@ -553,20 +379,19 @@ List<CbCourse> cbCoursesOn(DateTime date) {
   final day = cbDay(date);
   final deleted = {for (final m in _deletedRows()) cbStr(m['id'])};
   final result = <CbCourse>[];
-  final template = DemoCampusData.timetableTemplate;
-  for (var i = 0; i < template.length; i++) {
-    final slot = template[i];
-    if (slot.weekday != day.weekday) {
+  for (final c in DemoCampusData.classes) {
+    if (cbClass(c.id) == null) {
       continue;
     }
-    for (final c in DemoCampusData.classes) {
-      final id = _generatedId(day, c.id, cbLineNumOf(slot.start));
-      if (deleted.contains(id) || cbClass(c.id) == null) {
+    for (final slot in DemoCampusData.timetableOf(c.id)) {
+      if (slot.weekday != day.weekday) {
         continue;
       }
-      final teacher = DemoCampusData.staffById(
-        _templateTeachers['$i|${c.id}'] ?? slot.teacherId,
-      );
+      final lineNum = cbLineNumOf(slot.start);
+      final id = _generatedId(day, c.id, lineNum);
+      if (deleted.contains(id)) {
+        continue;
+      }
       result.add(
         CbCourse(
           id: id,
@@ -574,10 +399,11 @@ List<CbCourse> cbCoursesOn(DateTime date) {
           classId: c.id,
           type: 0,
           subjectName: slot.courseName,
-          teacherUserId: teacher?.userId ?? '',
+          teacherUserId:
+              DemoCampusData.staffById(slot.teacherId)?.userId ?? '',
           start: slot.start,
           end: slot.end,
-          lineNum: cbLineNumOf(slot.start),
+          lineNum: lineNum,
           classroomId: cbClassroomId(c.organizationName, slot.room),
           color: cbCourseColor(slot.courseName),
         ),
@@ -585,9 +411,11 @@ List<CbCourse> cbCoursesOn(DateTime date) {
     }
   }
   for (final plan in _smallPlan) {
+    final slot = plan.slot;
     final cls = cbClass(plan.classId);
-    final id = _generatedId(day, plan.classId, cbLineNumOf(plan.start));
-    if (plan.weekday != day.weekday || cls == null || deleted.contains(id)) {
+    final lineNum = cbLineNumOf(slot.start);
+    final id = _generatedId(day, plan.classId, lineNum);
+    if (slot.weekday != day.weekday || cls == null || deleted.contains(id)) {
       continue;
     }
     result.add(
@@ -596,13 +424,16 @@ List<CbCourse> cbCoursesOn(DateTime date) {
         day: day,
         classId: plan.classId,
         type: 1,
-        subjectName: plan.subject,
-        teacherUserId: DemoCampusData.staffById(plan.teacher)?.userId ?? '',
-        start: plan.start,
-        end: plan.end,
-        lineNum: cbLineNumOf(plan.start),
-        classroomId: cbClassroomId(cbStr(cls['campusName'], '城东校区'), plan.room),
-        color: cbCourseColor(plan.subject, small: true),
+        subjectName: slot.courseName,
+        teacherUserId: DemoCampusData.staffById(slot.teacherId)?.userId ?? '',
+        start: slot.start,
+        end: slot.end,
+        lineNum: lineNum,
+        classroomId: cbClassroomId(
+          cbStr(cls['campusName'], '城东校区'),
+          slot.room,
+        ),
+        color: cbCourseColor(slot.courseName, small: true),
       ),
     );
   }
@@ -708,7 +539,7 @@ Map<String, dynamic> _defaultSign(CbCourse c) {
     for (final m in cbSignMakeups())
       if (cbStr(m['courseId']) == c.id) cbStr(m['studentId']): m,
   };
-  final forced = _forcedAbsences();
+  final forced = cbForcedAbsences();
   for (final sid in cbCourseStudents(c)) {
     final makeup = makeups[sid];
     final isForced =
@@ -1056,29 +887,48 @@ DateTime _weekdayOnOrBefore(DateTime day) {
   return d;
 }
 
-/// 林小雨的固定缺勤课（与学生端一致）：可申请补签、已通过、已驳回各一节。
-({String open, String approved, String rejected}) _forcedAbsences() {
+/// 林小雨的固定缺勤课（学生端与老师端共用）：可申请补签、已通过、已驳回各一节，
+/// 都是工作日上午或下午的大课（周一至周六的上午、下午都有课）。
+({String open, String approved, String rejected}) cbForcedAbsences() {
   final today = cbToday();
   String id(int daysAgo, int lineNum) => _generatedId(
     _weekdayOnOrBefore(cbAddDays(today, -daysAgo)),
     '501',
     lineNum,
   );
-  return (open: id(2, 3), approved: id(9, 2), rejected: id(16, 3));
+  return (open: id(2, 2), approved: id(9, 1), rejected: id(16, 2));
 }
+
+/// 补签申请的原因与审核意见（学生端与管理端共用）。
+const cbForcedMakeupTexts = (
+  approved: (
+    reason: '人脸识别设备故障未能打卡，任课老师可以作证',
+    remark: '经任课老师确认情况属实，同意补签',
+  ),
+  rejected: (
+    reason: '下午身体不舒服回宿舍休息，忘记请假',
+    remark: '未提前请假，按缺勤处理；后续请先向班主任报备',
+  ),
+);
 
 List<Map<String, dynamic>> _seedSignMakeups() {
   final result = <Map<String, dynamic>>[];
-  final forced = _forcedAbsences();
+  final forced = cbForcedAbsences();
   for (final (id, courseId, status, reason, remark) in [
     (
       '6302',
       forced.rejected,
       2,
-      '当晚身体不舒服提前回宿舍了，忘记请假',
-      '未提前请假，按缺勤处理；后续请先向班主任报备',
+      cbForcedMakeupTexts.rejected.reason,
+      cbForcedMakeupTexts.rejected.remark,
     ),
-    ('6301', forced.approved, 1, '人脸识别设备故障未能打卡，任课老师可以作证', '经任课老师确认情况属实，同意补签'),
+    (
+      '6301',
+      forced.approved,
+      1,
+      cbForcedMakeupTexts.approved.reason,
+      cbForcedMakeupTexts.approved.remark,
+    ),
   ]) {
     final course = cbCourseById(courseId);
     if (course == null) {

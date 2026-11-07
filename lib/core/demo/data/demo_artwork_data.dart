@@ -18,6 +18,7 @@ class _SeedReview {
     this.score,
     this.content, [
     this.tags = const <int>[],
+    this.time = '',
   ]);
 
   final String teacherId;
@@ -26,6 +27,9 @@ class _SeedReview {
 
   /// 老师标签序号（从 1 开始；8 为该老师的专属标签）。
   final List<int> tags;
+
+  /// 指定的点评时间 `yyyy-MM-dd HH:mm:ss`；为空时取绘画日期次日的晚自习时段。
+  final String time;
 }
 
 class _SeedWork {
@@ -72,11 +76,12 @@ typedef DemoArtworkAggregate = ({
 });
 
 abstract final class DemoArtworkData {
-  static const worksKey = 'artworks:v1';
-  static const annotationsKey = 'artwork_annotations:v1';
-  static const uploadsKey = 'artwork_uploads:v1';
+  // v2：分数、提交时间、标签类型与批注颜色调整后，旧的本地演示数据不再沿用。
+  static const worksKey = 'artworks:v2';
+  static const annotationsKey = 'artwork_annotations:v2';
+  static const uploadsKey = 'artwork_uploads:v2';
 
-  static String tagsKey(String teacherId) => 'artwork_tags:$teacherId';
+  static String tagsKey(String teacherId) => 'artwork_tags:v2:$teacherId';
 
   static const statusReviewed = 'REVIEWED';
   static const statusPending = 'PENDING';
@@ -187,13 +192,18 @@ abstract final class DemoArtworkData {
     '构图失衡': ('动笔前先画 2–3 个小构图，确定主体的位置与大小。', '素描', '构图', '构图网格'),
     '线条生硬': ('多练长线条的轻重虚实，衣纹注意疏密与节奏。', '速写', '线条', '速写计时'),
     '色调不统一': ('先定整体色调，再用环境色统一画面的冷暖关系。', '色彩', '色调', '取色色卡'),
-    '透视错误': ('先确定视平线和消失点，椭圆注意近宽远窄的透视变化。', '素描', '透视', '构图网格'),
+    '透视错误': ('先确定视平线和消失点，椭圆注意近宽远窄的透视变化。', '素描', '透视', '透视辅助'),
     '环境色不足': ('暗部与投影里加入周围的环境色，让物体融入空间。', '色彩', '环境色', '取色色卡'),
     '暗部偏闷': ('暗部加入反光与冷暖变化，避免一遍平涂。', '素描', '暗部', '明度检查'),
     '动态僵硬': ('先用几根动态线确定重心与动势，再刻画细节。', '速写', '动态', '速写计时'),
   };
 
-  static const _positiveTags = <String>{'细节出彩'};
+  /// 点评标签两类，接口以颜色区分：亮点绿色，问题琥珀色（与 `ArtworkRules` 一致）。
+  static const highlightColor = '#3B9A6E';
+  static const problemColor = '#B9770F';
+
+  static bool _isHighlight(String name, String color) =>
+      color.toUpperCase() == highlightColor || name == '细节出彩';
 
   /// 学生「我的高频问题」：只统计已完成点评（学生可见）的作品。
   static Map<String, dynamic> insightsOf(List<Map<String, dynamic>> works) {
@@ -260,12 +270,12 @@ abstract final class DemoArtworkData {
             'color': stat.color,
             'count': stat.count,
             'explanation': stat.explanation,
-            'positive': _positiveTags.contains(stat.name),
+            'positive': _isHighlight(stat.name, stat.color),
           },
       ],
       'suggestions': <Map<String, dynamic>>[
         for (final stat
-            in ranked.where((s) => !_positiveTags.contains(s.name)).take(3))
+            in ranked.where((s) => !_isHighlight(s.name, s.color)).take(3))
           _suggestionOf(stat),
       ],
     };
@@ -299,19 +309,19 @@ abstract final class DemoArtworkData {
   // ── 标签 ─────────────────────────────────────────────────────────────
 
   static const _standardTags = <(String, String, String)>[
-    ('结构错误', '形体比例或透视关系不准确。先用辅助线核对大的比例和骨点位置，再深入刻画。', '#D64A62'),
-    ('明暗层次弱', '黑白灰关系没有拉开，暗部与亮部之间的过渡层次不足，画面显得发平。', '#B9770F'),
-    ('构图失衡', '主体位置或大小不合适，画面重心偏移。动笔前先用小构图推敲布局。', '#DE7A34'),
-    ('线条生硬', '线条缺少轻重、虚实变化，转折处可以更有节奏，避免描边式的均匀线条。', '#4A74D6'),
-    ('色调不统一', '画面冷暖倾向不明确，局部颜色跳出整体色调，注意环境色的相互影响。', '#1F8FA8'),
-    ('细节出彩', '局部刻画深入到位，质感与空间表现准确，值得在后续作品中保持。', '#3B9A6E'),
-    ('透视错误', '近大远小和消失点不统一，先确定视平线和主要透视线再起形。', '#715EFE'),
+    ('结构错误', '形体比例或透视关系不准确。先用辅助线核对大的比例和骨点位置，再深入刻画。', problemColor),
+    ('明暗层次弱', '黑白灰关系没有拉开，暗部与亮部之间的过渡层次不足，画面显得发平。', problemColor),
+    ('构图失衡', '主体位置或大小不合适，画面重心偏移。动笔前先用小构图推敲布局。', problemColor),
+    ('线条生硬', '线条缺少轻重、虚实变化，转折处可以更有节奏，避免描边式的均匀线条。', problemColor),
+    ('色调不统一', '画面冷暖倾向不明确，局部颜色跳出整体色调，注意环境色的相互影响。', problemColor),
+    ('细节出彩', '局部刻画深入到位，质感与空间表现准确，值得在后续作品中保持。', highlightColor),
+    ('透视错误', '近大远小和消失点不统一，先确定视平线和主要透视线再起形。', problemColor),
   ];
 
   static const _exclusiveTags = <String, (String, String, String)>{
-    't-2': ('暗部偏闷', '暗部笔触过于平涂，缺少反光和细微变化。', '#6D6B75'),
-    't-3': ('环境色不足', '物体暗部和投影缺少周围环境色的影响，颜色显得孤立。', '#1F8FA8'),
-    't-4': ('动态僵硬', '人物重心和动势不明确，动作像摆拍，先用几根动态线确定姿态。', '#DE7A34'),
+    't-2': ('暗部偏闷', '暗部笔触过于平涂，缺少反光和细微变化。', problemColor),
+    't-3': ('环境色不足', '物体暗部和投影缺少周围环境色的影响，颜色显得孤立。', problemColor),
+    't-4': ('动态僵硬', '人物重心和动势不明确，动作像摆拍，先用几根动态线确定姿态。', problemColor),
   };
 
   /// 演示前的历史用量（这些老师此前点评过的作品不在演示列表里）。
@@ -346,6 +356,7 @@ abstract final class DemoArtworkData {
 
   static const _seeds = <_SeedWork>[
     // 学生演示账号林小雨：两份待点评（在李静的队列里），六份已完成点评。
+    // 日常作品各科均分与学情中心月考一致：素描最高、速写次之、色彩有待加强。
     _SeedWork(
       person: 1,
       title: '石膏头像长期作业',
@@ -364,7 +375,7 @@ abstract final class DemoArtworkData {
       description: '尝试了偏暖的整体色调，花瓣的颜色不知道是不是太跳。',
       teachers: ['t-1', 't-3'],
       reviews: [
-        _SeedReview('t-3', 87, '花卉的色彩倾向明确，花瓣边缘的虚实处理得不错，背景还可以再统一一些。', [6, 5]),
+        _SeedReview('t-3', 83, '花卉的色彩倾向明确，花瓣边缘的虚实处理得不错，背景还可以再统一一些。', [6, 5]),
       ],
     ),
     _SeedWork(
@@ -376,7 +387,7 @@ abstract final class DemoArtworkData {
       description: '尝试用补色处理暗部。',
       teachers: ['t-3'],
       reviews: [
-        _SeedReview('t-3', 89, '画面完整，色彩关系清楚。继续关注边缘虚实与主次关系，暗部层次还可以更丰富。', [6, 8]),
+        _SeedReview('t-3', 83, '画面完整，色彩关系清楚。继续关注边缘虚实与主次关系，暗部层次还可以更丰富。', [6, 8]),
       ],
     ),
     _SeedWork(
@@ -417,8 +428,14 @@ abstract final class DemoArtworkData {
       description: '这次重点练习头部结构和明暗交界线。',
       teachers: ['t-1', 't-2'],
       reviews: [
-        _SeedReview('t-1', 82, '结构交代清楚，暗部再整体一些；五官位置略有偏差，先用三庭五眼核对比例再刻画细节。', [2]),
-        _SeedReview('t-2', 80, '暗部笔触偏平，反光和投影的层次可以再拉开。', [8, 1]),
+        _SeedReview(
+          't-1',
+          88,
+          '结构交代清楚，暗部再整体一些；五官位置略有偏差，先用三庭五眼核对比例再刻画细节。',
+          [2],
+          '2026-11-06 09:10:00',
+        ),
+        _SeedReview('t-2', 86, '暗部笔触偏平，反光和投影的层次可以再拉开。', [8, 1]),
       ],
     ),
     _SeedWork(
@@ -429,7 +446,7 @@ abstract final class DemoArtworkData {
       images: ['art/color-still-4.jpg'],
       teachers: ['t-3'],
       reviews: [
-        _SeedReview('t-3', 84, '色彩关系较协调，冷暖对比还可以拉开，背景用笔再概括一些。', [5]),
+        _SeedReview('t-3', 80, '色彩关系较协调，冷暖对比还可以拉开，背景用笔再概括一些。', [5]),
       ],
     ),
     _SeedWork(
@@ -441,7 +458,7 @@ abstract final class DemoArtworkData {
       description: '第一次画玻璃瓶，反光有点难。',
       teachers: ['t-1'],
       reviews: [
-        _SeedReview('t-1', 78, '碗口的透视椭圆偏窄，瓶身中轴线要垂直；右侧衬布占比过大，画面重心偏右。', [
+        _SeedReview('t-1', 82, '碗口的透视椭圆偏窄，瓶身中轴线要垂直；右侧衬布占比过大，画面重心偏右。', [
           7,
           1,
           3,
@@ -677,17 +694,29 @@ abstract final class DemoArtworkData {
 
   static List<Map<String, dynamic>> seedWorks() => <Map<String, dynamic>>[
     for (var i = 0; i < _seeds.length; i++)
-      _buildWork(_seeds[i], 'aw-${1001 + i}'),
+      _buildWork(_seeds[i], 'aw-${1001 + i}', i),
   ];
 
-  static Map<String, dynamic> _buildWork(_SeedWork seed, String id) {
+  /// 学生提交作品的时间：当天晚自习（18:30–21:30）里分散开。
+  static const _submitTimes = <String>[
+    '18:42', '19:05', '20:16', '19:38', '21:07', '18:55', '20:48', '19:21',
+    '20:33', '21:18', '19:52', '18:36', '20:04', '21:25', '19:14',
+  ];
+
+  /// 老师点评的时间：次日晚自习时段，与提交时间错开。
+  static const _reviewTimes = <String>[
+    '19:26', '20:12', '20:51', '19:48', '21:09', '18:58', '20:37',
+  ];
+
+  static Map<String, dynamic> _buildWork(_SeedWork seed, String id, int index) {
+    final submitted = _submitTimes[index % _submitTimes.length];
     return <String, dynamic>{
       'id': id,
       'personIndex': seed.person,
       'title': seed.title,
       'subject': seed.subject,
       'drawingDate': seed.date,
-      'createTime': '${seed.date} 19:20:00',
+      'createTime': '${seed.date} $submitted:00',
       'description': seed.description,
       'images': <Map<String, dynamic>>[
         for (var k = 0; k < seed.images.length; k++)
@@ -698,21 +727,28 @@ abstract final class DemoArtworkData {
       ],
       'teacherIds': <String>[...seed.teachers],
       'reviews': <Map<String, dynamic>>[
-        for (final review in seed.reviews) _buildReview(review, seed.date),
+        for (var k = 0; k < seed.reviews.length; k++)
+          _buildReview(seed.reviews[k], seed.date, index * 3 + k),
       ],
     };
   }
 
-  static Map<String, dynamic> _buildReview(_SeedReview review, String date) {
+  static Map<String, dynamic> _buildReview(
+    _SeedReview review,
+    String date,
+    int slot,
+  ) {
     final defs = _tagDefs(review.teacherId);
     final day = DateTime.parse(date).add(const Duration(days: 1));
-    final time = review.teacherId == 't-1' ? '21:30:00' : '20:40:00';
+    final reviewedTime = review.time.isNotEmpty
+        ? review.time
+        : '${_ymd(day)} ${_reviewTimes[slot % _reviewTimes.length]}:00';
     return <String, dynamic>{
       'teacherId': review.teacherId,
       'score': review.score,
       'maxScore': 100.0,
       'content': review.content,
-      'reviewedTime': '${_ymd(day)} $time',
+      'reviewedTime': reviewedTime,
       'tags': <Map<String, dynamic>>[
         for (final index in review.tags)
           if (index >= 1 && index <= defs.length)
@@ -737,7 +773,8 @@ abstract final class DemoArtworkData {
     String idOf(String title) => works
         .firstWhere((w) => w['personIndex'] == 1 && w['title'] == title)['id']
         .toString();
-    const red = '#D64A62';
+    // 与批注笔一致：红取色板危险色，蓝取素描科目色。
+    const red = '#E5323B';
     const blue = '#4A74D6';
     return <String, dynamic>{
       idOf('几何体明暗关系'): <String, dynamic>{

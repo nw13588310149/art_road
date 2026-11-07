@@ -72,6 +72,33 @@ class DemoTimetableSlot {
     required this.room,
   });
 
+  /// 上午 08:30–11:30。
+  const DemoTimetableSlot.am(
+    this.weekday,
+    this.courseName,
+    this.teacherId,
+    this.room,
+  ) : start = '08:30',
+      end = '11:30';
+
+  /// 下午 14:00–17:00。
+  const DemoTimetableSlot.pm(
+    this.weekday,
+    this.courseName,
+    this.teacherId,
+    this.room,
+  ) : start = '14:00',
+      end = '17:00';
+
+  /// 晚上 19:00–21:00。
+  const DemoTimetableSlot.eve(
+    this.weekday,
+    this.courseName,
+    this.teacherId,
+    this.room,
+  ) : start = '19:00',
+      end = '21:00';
+
   /// 1 = 周一 … 7 = 周日。
   final int weekday;
   final String start;
@@ -160,7 +187,7 @@ abstract final class DemoCampusData {
       subject: '色彩',
       roles: ['teacher'],
       organizationName: '城东校区',
-      classIds: ['501', '502', '503'],
+      classIds: ['501', '503'],
     ),
     DemoCampusStaff(
       id: 't-4',
@@ -193,7 +220,7 @@ abstract final class DemoCampusData {
       subject: '速写',
       roles: ['teacher', 'headTeacher'],
       organizationName: '安宁校区',
-      classIds: ['503'],
+      classIds: ['503', '502'],
     ),
     DemoCampusStaff(
       id: 't-7',
@@ -239,25 +266,81 @@ abstract final class DemoCampusData {
     ),
   ];
 
-  /// 每个班级同一套周课表模板（教室按校区区分）。
-  static const timetableTemplate = <DemoTimetableSlot>[
-    DemoTimetableSlot(weekday: 1, start: '08:00', end: '11:30', courseName: '素描', teacherId: 't-1', room: '素描教室 A'),
-    DemoTimetableSlot(weekday: 1, start: '14:00', end: '17:30', courseName: '色彩', teacherId: 't-3', room: '色彩教室 B'),
-    DemoTimetableSlot(weekday: 1, start: '19:00', end: '21:00', courseName: '速写', teacherId: 't-4', room: '速写教室 C'),
-    DemoTimetableSlot(weekday: 2, start: '08:00', end: '11:30', courseName: '色彩', teacherId: 't-3', room: '色彩教室 B'),
-    DemoTimetableSlot(weekday: 2, start: '14:00', end: '17:30', courseName: '素描', teacherId: 't-1', room: '素描教室 A'),
-    DemoTimetableSlot(weekday: 2, start: '19:00', end: '21:00', courseName: '美术常识', teacherId: 't-7', room: '多媒体教室'),
-    DemoTimetableSlot(weekday: 3, start: '08:00', end: '11:30', courseName: '速写', teacherId: 't-4', room: '速写教室 C'),
-    DemoTimetableSlot(weekday: 3, start: '14:00', end: '17:30', courseName: '色彩', teacherId: 't-3', room: '色彩教室 B'),
-    DemoTimetableSlot(weekday: 3, start: '19:00', end: '21:00', courseName: '文化课', teacherId: 't-8', room: '多媒体教室'),
-    DemoTimetableSlot(weekday: 4, start: '08:00', end: '11:30', courseName: '素描', teacherId: 't-1', room: '素描教室 A'),
-    DemoTimetableSlot(weekday: 4, start: '14:00', end: '17:30', courseName: '速写', teacherId: 't-4', room: '速写教室 C'),
-    DemoTimetableSlot(weekday: 4, start: '19:00', end: '21:00', courseName: '色彩', teacherId: 't-3', room: '色彩教室 B'),
-    DemoTimetableSlot(weekday: 5, start: '08:00', end: '11:30', courseName: '色彩', teacherId: 't-3', room: '色彩教室 B'),
-    DemoTimetableSlot(weekday: 5, start: '14:00', end: '17:30', courseName: '素描', teacherId: 't-1', room: '素描教室 A'),
-    DemoTimetableSlot(weekday: 5, start: '19:00', end: '21:00', courseName: '文化课', teacherId: 't-8', room: '多媒体教室'),
-    DemoTimetableSlot(weekday: 6, start: '08:30', end: '11:30', courseName: '模拟考试', teacherId: 't-1', room: '考试大厅'),
-    DemoTimetableSlot(weekday: 6, start: '14:00', end: '17:00', courseName: '色彩写生', teacherId: 't-3', room: '室外写生'),
+  /// 联考冲刺1班的周课表；首页等只需要一份课表的地方沿用它。
+  static const timetableTemplate = _timetable501;
+
+  /// 各班周课表：只用上午 08:30–11:30、下午 14:00–17:00、晚上 19:00–21:00
+  /// 三个固定时段（与 `DemoClock.daySlots` 一致），每周循环，不随打开演示的时刻
+  /// 变化。三个班错开科目，同一位老师不会同时出现在两个班；周二、周四、周六
+  /// 晚上不排大课，留给小课和晚自习；周日休息（小班课除外）。
+  static const classTimetables = <String, List<DemoTimetableSlot>>{
+    '501': _timetable501,
+    '502': _timetable502,
+    '503': _timetable503,
+  };
+
+  static List<DemoTimetableSlot> timetableOf(String classId) =>
+      classTimetables[classId] ?? const <DemoTimetableSlot>[];
+
+  static const _timetable501 = <DemoTimetableSlot>[
+    DemoTimetableSlot.am(1, '素描', 't-1', '素描教室 A'),
+    DemoTimetableSlot.pm(1, '色彩', 't-3', '色彩教室 B'),
+    DemoTimetableSlot.eve(1, '速写', 't-4', '速写教室 C'),
+    DemoTimetableSlot.am(2, '色彩', 't-3', '色彩教室 B'),
+    DemoTimetableSlot.pm(2, '素描', 't-1', '素描教室 A'),
+    DemoTimetableSlot.am(3, '速写', 't-4', '速写教室 C'),
+    DemoTimetableSlot.pm(3, '色彩', 't-3', '色彩教室 B'),
+    DemoTimetableSlot.eve(3, '文化课', 't-8', '多媒体教室'),
+    DemoTimetableSlot.am(4, '素描', 't-1', '素描教室 A'),
+    DemoTimetableSlot.pm(4, '速写', 't-4', '速写教室 C'),
+    DemoTimetableSlot.am(5, '色彩', 't-3', '色彩教室 B'),
+    DemoTimetableSlot.pm(5, '素描', 't-1', '素描教室 A'),
+    DemoTimetableSlot.eve(5, '美术常识', 't-7', '多媒体教室'),
+    DemoTimetableSlot.am(6, '模拟考试', 't-1', '考试大厅'),
+    DemoTimetableSlot.pm(6, '色彩写生', 't-3', '室外写生'),
+  ];
+
+  static const _timetable502 = <DemoTimetableSlot>[
+    DemoTimetableSlot.am(1, '色彩', 't-5', '色彩教室 B'),
+    DemoTimetableSlot.pm(1, '速写', 't-6', '速写教室 C'),
+    DemoTimetableSlot.eve(1, '文化课', 't-8', '多媒体教室'),
+    DemoTimetableSlot.am(2, '速写', 't-6', '速写教室 C'),
+    DemoTimetableSlot.pm(2, '色彩', 't-5', '色彩教室 B'),
+    DemoTimetableSlot.am(3, '素描', 't-1', '素描教室 A'),
+    DemoTimetableSlot.pm(3, '速写', 't-6', '速写教室 C'),
+    DemoTimetableSlot.eve(3, '美术常识', 't-7', '多媒体教室'),
+    DemoTimetableSlot.am(4, '色彩', 't-5', '色彩教室 B'),
+    DemoTimetableSlot.pm(4, '素描', 't-1', '素描教室 A'),
+    DemoTimetableSlot.am(5, '速写', 't-6', '速写教室 C'),
+    DemoTimetableSlot.pm(5, '色彩', 't-5', '色彩教室 B'),
+    DemoTimetableSlot.eve(5, '素描', 't-1', '素描教室 A'),
+    DemoTimetableSlot.am(6, '模拟考试', 't-2', '考试大厅'),
+    DemoTimetableSlot.pm(6, '色彩写生', 't-5', '室外写生'),
+  ];
+
+  static const _timetable503 = <DemoTimetableSlot>[
+    DemoTimetableSlot.am(1, '速写', 't-6', '速写教室 C'),
+    DemoTimetableSlot.pm(1, '素描', 't-2', '素描教室 A'),
+    DemoTimetableSlot.eve(1, '美术常识', 't-7', '多媒体教室'),
+    DemoTimetableSlot.am(2, '素描', 't-2', '素描教室 A'),
+    DemoTimetableSlot.pm(2, '速写', 't-6', '速写教室 C'),
+    DemoTimetableSlot.am(3, '色彩', 't-3', '色彩教室 B'),
+    DemoTimetableSlot.pm(3, '素描', 't-2', '素描教室 A'),
+    DemoTimetableSlot.eve(3, '速写', 't-6', '速写教室 C'),
+    DemoTimetableSlot.am(4, '速写', 't-6', '速写教室 C'),
+    DemoTimetableSlot.pm(4, '色彩', 't-3', '色彩教室 B'),
+    DemoTimetableSlot.am(5, '素描', 't-2', '素描教室 A'),
+    DemoTimetableSlot.pm(5, '速写', 't-6', '速写教室 C'),
+    DemoTimetableSlot.eve(5, '文化课', 't-8', '多媒体教室'),
+    DemoTimetableSlot.am(6, '模拟考试', 't-6', '考试大厅'),
+    DemoTimetableSlot.pm(6, '创作构图', 't-6', '速写教室 C'),
+  ];
+
+  /// 演示学生林小雨（联考冲刺1班）的个人改画小课：周二、周四、周六晚上。
+  static const demoStudentSmallCourses = <DemoTimetableSlot>[
+    DemoTimetableSlot.eve(2, '素描改画小课', 't-1', '小课教室 2'),
+    DemoTimetableSlot.eve(4, '色彩改画小课', 't-3', '小课教室 2'),
+    DemoTimetableSlot.eve(6, '速写改画小课', 't-4', '小课教室 2'),
   ];
 
   static DemoCampusClass classOfPerson(int personIndex) {

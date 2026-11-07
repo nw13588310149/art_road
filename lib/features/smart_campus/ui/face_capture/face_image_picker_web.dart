@@ -8,6 +8,7 @@
 //
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:typed_data';
@@ -15,7 +16,6 @@ import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/widgets/app_toast.dart';
 import '../../../../core/widgets/scaled_dialog.dart';
 import '../../../shell/ui/shell_layout.dart';
 import 'face_id_photo_flow.dart';
@@ -173,8 +173,7 @@ class _FaceCameraDialogState extends State<_FaceCameraDialog> {
   @override
   void initState() {
     super.initState();
-    _viewType =
-        'face-camera-${DateTime.now().microsecondsSinceEpoch}';
+    _viewType = 'face-camera-${DateTime.now().microsecondsSinceEpoch}';
     _video = html.VideoElement()
       ..autoplay = true
       ..muted = true
@@ -245,9 +244,9 @@ class _FaceCameraDialogState extends State<_FaceCameraDialog> {
     final bytes = _shotBytes;
     if (bytes == null) return;
     final name = 'camera-${DateTime.now().millisecondsSinceEpoch}.jpg';
-    Navigator.of(context).pop(
-      FaceCapturedPhoto(bytes: bytes, name: name, mimeType: 'image/jpeg'),
-    );
+    Navigator.of(
+      context,
+    ).pop(FaceCapturedPhoto(bytes: bytes, name: name, mimeType: 'image/jpeg'));
   }
 
   void _cancel() {
@@ -265,7 +264,7 @@ class _FaceCameraDialogState extends State<_FaceCameraDialog> {
         width: ui(540),
         padding: EdgeInsets.fromLTRB(ui(20), ui(20), ui(20), ui(20)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(ui(24)),
         ),
         child: Column(
@@ -275,9 +274,8 @@ class _FaceCameraDialogState extends State<_FaceCameraDialog> {
             Text(
               '摄像头采集',
               style: TextStyle(
-                fontSize: ui(18),
-                color: const Color(0xFF0B081A),
-                fontFamily: 'PingFang SC',
+                fontSize: ui(16),
+                color: AppColors.ink,
                 fontWeight: AppFont.w600,
                 height: 1.2,
               ),
@@ -287,8 +285,7 @@ class _FaceCameraDialogState extends State<_FaceCameraDialog> {
               '请正对摄像头，保持光线均匀，露出额头与双耳后点击「拍摄」。',
               style: TextStyle(
                 fontSize: ui(13),
-                color: const Color(0xFF6D6B75),
-                fontFamily: 'PingFang SC',
+                color: AppColors.textSecondary,
                 fontWeight: AppFont.w400,
                 height: 1.5,
               ),
@@ -299,7 +296,7 @@ class _FaceCameraDialogState extends State<_FaceCameraDialog> {
               child: AspectRatio(
                 aspectRatio: 4 / 3,
                 child: Container(
-                  color: Colors.black,
+                  color: AppColors.ink,
                   child: hasShot
                       ? Image.memory(_shotBytes!, fit: BoxFit.cover)
                       : HtmlElementView(viewType: _viewType),

@@ -1,82 +1,141 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/ui/ui.dart';
+
+/// 服务协议与隐私政策（登录 / 注册页打开的公开页面）。
+///
+/// 路由参数传 [TermsPage.privacyAnchor] 时直接定位到隐私政策；
+/// 底部「我已阅读并同意」返回 `true`，左上角返回为 `false`。
 class TermsPage extends StatelessWidget {
   const TermsPage({super.key});
 
+  /// 路由参数：打开后定位到《隐私政策》。
+  static const privacyAnchor = 'privacy';
+
   @override
   Widget build(BuildContext context) {
+    final anchor = ModalRoute.of(context)?.settings.arguments;
     return Scaffold(
-      appBar: AppBar(title: const Text('服务协议与隐私政策')),
-      body: Container(
-        width: double.infinity,
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.separated(
-                itemBuilder: (context, index) =>
-                    _TermsSectionView(section: _sections[index]),
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 16),
-                itemCount: _sections.length,
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: 230,
-              height: 40,
-              child: FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('我已阅读并同意上述内容'),
-              ),
-            ),
-          ],
+      backgroundColor: AppColors.page,
+      body: SafeArea(
+        child: TermsContent(
+          initialAnchor: anchor is String ? anchor : null,
+          onBack: () => Navigator.of(context).pop(false),
+          onAgree: () => Navigator.of(context).pop(true),
         ),
       ),
     );
   }
 }
 
-class _TermsSection {
-  const _TermsSection(this.title, this.paragraphs, {this.major = false});
+/// 协议正文 + 页头，可嵌在外壳内（不带同意按钮）或公开页面里使用。
+class TermsContent extends StatefulWidget {
+  const TermsContent({
+    this.onBack,
+    this.onAgree,
+    this.initialAnchor,
+    super.key,
+  });
 
-  final String title;
-  final List<String> paragraphs;
+  final VoidCallback? onBack;
 
-  /// 协议 / 政策的大标题，字号更大。
-  final bool major;
+  /// 为空时不显示底部「我已阅读并同意」操作栏。
+  final VoidCallback? onAgree;
+  final String? initialAnchor;
+
+  @override
+  State<TermsContent> createState() => _TermsContentState();
 }
 
-class _TermsSectionView extends StatelessWidget {
-  const _TermsSectionView({required this.section});
+class _TermsContentState extends State<TermsContent> {
+  final _privacyKey = GlobalKey();
 
-  final _TermsSection section;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialAnchor == TermsPage.privacyAnchor) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final target = _privacyKey.currentContext;
+        if (target != null) {
+          Scrollable.ensureVisible(target, duration: Duration.zero);
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final onAgree = widget.onAgree;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          section.title,
-          style: TextStyle(
-            fontSize: section.major ? 18 : 15,
-            height: 1.6,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF1A1A1A),
+        AppPageHeader(
+          title: '服务协议与隐私政策',
+          subtitle: '更新日期 2026-11-01 · 生效日期 2026-11-01',
+          onBack: widget.onBack,
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.page,
+              AppSpace.s4,
+              AppSpace.page,
+              AppSpace.s24,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: AppCard(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.s24,
+                    AppSpace.s24,
+                    AppSpace.s24,
+                    AppSpace.s12,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final section in _sections)
+                        _TermsSectionView(
+                          key: section.anchor == TermsPage.privacyAnchor
+                              ? _privacyKey
+                              : null,
+                          section: section,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 6),
-        for (final paragraph in section.paragraphs)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              paragraph,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.8,
-                color: Color(0xFF333333),
+        if (onAgree != null)
+          DecoratedBox(
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              border: Border(top: BorderSide(color: AppColors.lineSoft)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpace.page,
+                vertical: AppSpace.s12,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '请阅读完整内容，同意后返回登录或注册页继续',
+                          style: AppText.caption12,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpace.s16),
+                      AppButton(label: '我已阅读并同意', onTap: onAgree),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -85,12 +144,65 @@ class _TermsSectionView extends StatelessWidget {
   }
 }
 
+class _TermsSection {
+  const _TermsSection(
+    this.title,
+    this.paragraphs, {
+    this.major = false,
+    this.anchor,
+  });
+
+  final String title;
+  final List<String> paragraphs;
+
+  /// 协议 / 政策的大标题。
+  final bool major;
+  final String? anchor;
+}
+
+class _TermsSectionView extends StatelessWidget {
+  const _TermsSectionView({required this.section, super.key});
+
+  final _TermsSection section;
+
+  static final _paragraphStyle = AppText.body14.copyWith(
+    height: 1.7,
+    color: AppColors.textSecondary,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        top: section.major ? AppSpace.s8 : 0,
+        bottom: AppSpace.s12,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            section.title,
+            style: section.major ? AppText.title20 : AppText.title16,
+          ),
+          const SizedBox(height: AppSpace.s8),
+          for (final paragraph in section.paragraphs)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpace.s8),
+              child: Text(paragraph, style: _paragraphStyle),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+const _operator = '艺考网';
+
 const _sections = <_TermsSection>[
   _TermsSection('美术之路服务协议', [
-    '更新日期：2026 年 11 月 1 日　　生效日期：2026 年 11 月 1 日',
-    '欢迎使用「美术之路」（以下简称「本应用」）。本应用由「[运营主体]」（以下简称「我们」）开发和运营，'
+    '欢迎使用「美术之路」（以下简称「本应用」）。本应用由$_operator（以下简称「我们」）开发和运营，'
         '面向美术艺考学生、画室教师及教学管理人员，提供学情查询、作品点评、范画学习、画室工具、视频课程、'
-        '智慧校园和 AI 美术助教等服务。',
+        '智慧校园和美术答疑助手「小美同学」等服务。',
     '请您在注册、登录或使用本应用前，仔细阅读并充分理解本协议与隐私政策的全部内容。您勾选同意或实际使用本应用，'
         '即视为您已阅读并同意受其约束。若您未满 18 周岁，请在监护人陪同下阅读，并在取得监护人同意后使用。',
   ], major: true),
@@ -99,15 +211,15 @@ const _sections = <_TermsSection>[
     '2. 作品服务：上传日常作品照片，由任课老师在线点评、评分并归档；在校圈中分享作品与画室动态。',
     '3. 学习服务：范画库、画室工具箱、视频中心、美术常识题库、笔记与收藏等学习功能。',
     '4. 智慧校园：课表、考勤签到、宿舍、班级群聊与通知等管理功能，具体以您所在画室开通的服务为准。',
-    '5. AI 美术助教「小美同学」：提供美术专业问答和作品分析参考。',
+    '5. 美术答疑助手「小美同学」：美术常识问答，回答仅供参考。',
   ]),
   _TermsSection('二、账号注册与使用', [
-    '1. 您应使用本人手机号注册，或使用画室分配的账号登录，并保证所填写的姓名、所在画室、身份等信息真实、准确。',
+    '1. 您应使用本人手机号注册，或使用画室分配的账号登录，所填写的姓名、所在画室、身份等信息应真实、准确。',
     '2. 学生、任课老师、班主任、宿管、管理员等身份由所在画室统一配置，不同身份可使用的功能和可查看的数据范围不同。',
-    '3. 请妥善保管账号和密码，不得出借、转让或与他人共用；发现账号被盗用时，请立即联系我们或所在画室处理。',
+    '3. 请妥善保管账号和密码，不得出借、转让或与他人共用；发现账号被盗用时，请及时联系我们或所在画室处理。',
   ]),
   _TermsSection('三、作品与内容', [
-    '1. 您上传的作品照片、文字、图片、音视频等内容，著作权归您或原作者所有。',
+    '1. 您上传的作品照片、文字、图片、视频等内容，著作权归您或原作者所有。',
     '2. 为向您提供存储、展示、点评、统计及备份服务，您授予我们在服务范围内非独占、免费的使用许可。'
         '该许可仅用于向您本人及您所在画室的老师、同学展示；如需将作品用于宣传推广，我们将另行征得您的同意。',
     '3. 发布到校圈的内容对您所在画室的成员可见。请勿上传抄袭他人的作品，不得冒用他人作品参与点评或排名，'
@@ -122,11 +234,11 @@ const _sections = <_TermsSection>[
     '4. 原卷与成绩数据仅用于教学评估和学情分析。未经您或监护人同意，我们不会向画室以外的第三方提供可识别到个人的原卷和成绩。',
   ]),
   _TermsSection('五、会员服务', [
-    '1. 部分功能（如范画高清原图、AI 作品分析等）需要开通会员后使用，具体权益与价格以页面展示为准。',
+    '1. 部分功能（如范画高清原图等）需要开通会员后使用，具体权益、开通方式与价格以正式页面为准。',
     '2. 会员兑换码需在有效期内兑换，兑换成功后不予退换，法律法规另有规定的除外。',
   ]),
-  _TermsSection('六、AI 服务说明', [
-    '小美同学的回答由人工智能模型生成，仅供学习参考，不代表任课老师或阅卷老师的专业评价，也不构成考试结果或录取承诺。'
+  _TermsSection('六、小美同学使用说明', [
+    '小美同学的回答由模型生成，仅供学习参考，不代表任课老师或阅卷老师的专业评价，也不构成考试结果或录取承诺。'
         '请勿在对话中输入身份证号、家庭住址等敏感个人信息。',
   ]),
   _TermsSection('七、行为规范', [
@@ -140,10 +252,10 @@ const _sections = <_TermsSection>[
   _TermsSection('美术之路隐私政策', [
     '我们重视您的个人信息与隐私保护，遵循合法、正当、必要和诚信的原则处理个人信息。以下说明我们如何收集、使用、共享、'
         '存储和保护您的信息，以及您享有的权利。',
-  ], major: true),
+  ], major: true, anchor: TermsPage.privacyAnchor),
   _TermsSection('一、我们收集的信息', [
     '1. 账号信息：手机号、姓名或昵称、头像、性别、出生日期、所在地区、就读画室、专业方向和目标院校。',
-    '2. 学习数据：您上传的作品照片及老师点评，考试原卷图片，各科成绩、档位、评语与排名，刷题记录、笔记、收藏，'
+    '2. 学习数据：您上传的作品照片及老师点评，考试原卷图片，各科成绩、档位、评语与排名，题库练习记录、笔记、收藏，'
         '以及您与小美同学的对话内容。',
     '3. 校园数据：在您所在画室开通智慧校园时，包括班级、课表、考勤签到记录和宿舍分配等。考勤签到如需使用位置或人脸信息，'
         '我们会另行取得您或监护人的单独同意。',
@@ -153,7 +265,7 @@ const _sections = <_TermsSection>[
   ]),
   _TermsSection('二、信息的使用', [
     '1. 提供成绩查询、原卷查看、作品点评、学习记录同步和消息通知。',
-    '2. 生成成长曲线、薄弱科目分析和个性化学习建议。',
+    '2. 生成成长曲线、薄弱科目统计和学习建议。',
     '3. 在去标识化的前提下进行统计分析，用于改进教学服务和产品体验。',
     '4. 我们不会出售您的个人信息，也不会将其用于与本服务无关的用途。',
   ]),
@@ -176,8 +288,8 @@ const _sections = <_TermsSection>[
         '我们将在 7 个工作日内处理。注销后，您的个人资料与学习记录将被删除或匿名化处理，法律法规另有规定的除外。',
   ]),
   _TermsSection('七、联系我们', [
-    '运营主体：[运营主体]',
-    '如您对本协议或隐私政策有任何疑问、意见或投诉，可以通过「个人中心 - 联系客服」或「意见反馈」与我们联系，'
+    '运营主体：$_operator',
+    '如您对本协议或隐私政策有任何疑问、意见或投诉，可以通过「个人中心 - 意见反馈」或左侧导航的「意见反馈」与我们联系，'
         '我们将在 15 个工作日内答复。',
   ]),
 ];

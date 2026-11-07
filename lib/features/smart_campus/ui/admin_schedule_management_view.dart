@@ -33,6 +33,7 @@
 //      #FF6A00 待审核 / #0CAC40·#12CE51 已通过
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -43,45 +44,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/api_response.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
-import '../../../core/widgets/segment_toggle.dart';
 import '../../school/data/school_repository.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/admin_repository.dart';
 import '../data/schedule_color_palette.dart';
+import '../data/campus_format.dart';
 import '../data/schedule_course_card_builder.dart';
 import '../data/schedule_slot_time.dart';
 import '../data/schedule_teaching_week.dart';
-import '../data/smart_campus_count_badge.dart';
 import 'widgets/schedule_course_card.dart';
 import 'widgets/schedule_grid_shell.dart';
 import 'widgets/schedule_idle_slot.dart';
-import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 通用配色 -----------------------------------------------------------
 
-const Color _kCardBg = Colors.white;
-const Color _kInnerGray = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kRedBadge = Color(0xFFF04545);
+const Color _kInnerGray = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
 
-const Color _kStatusGreen = Color(0xFF0CAC40);
-const Color _kStatusPurple = Color(0xFF8E7FFF);
+const Color _kStatusGreen = AppColors.success;
+const Color _kStatusPurple = AppColors.brandSoft;
 
 // 申请卡状态色
-const Color _kPendingBg = Color(0xFFFFEDD3);
-const Color _kPendingFg = Color(0xFFFF6A00);
-const Color _kPassedBg = Color(0xFFE4FFED);
-const Color _kPassedFg = Color(0xFF12CE51);
-const Color _kRejectedBg = Color(0xFFFFE5E5);
-const Color _kRejectedFg = Color(0xFFE83A3A);
+const Color _kPendingBg = AppColors.warningSoft;
+const Color _kPendingFg = AppColors.warning;
+const Color _kPassedBg = AppColors.successSoft;
+const Color _kPassedFg = AppColors.success;
+const Color _kRejectedBg = AppColors.dangerSoft;
+const Color _kRejectedFg = AppColors.danger;
 
 // 列与行尺寸 — 网格壳层见 schedule_grid_shell.dart
 
@@ -170,12 +166,9 @@ bool _applyRecordMatchesDateFilter(
   DateTime now, {
   required DateTime selectedDay,
 }) {
-  final range = _applyDateFilterRange(
-    filter,
-    now,
-    selectedDay: selectedDay,
-  );
-  final hasAnyDate = record.applyAt != null ||
+  final range = _applyDateFilterRange(filter, now, selectedDay: selectedDay);
+  final hasAnyDate =
+      record.applyAt != null ||
       record.courseStart != null ||
       record.courseEnd != null ||
       record.courseDates.isNotEmpty;
@@ -240,6 +233,7 @@ class _AdminScheduleManagementViewState
   /// `courseList` 都要求 classId 必填，所以默认进入 = 班级列表第 1 项；
   /// 列表为空前用空字符串占位，加载完成后自动回填。
   List<({String id, String name})> _classes = const [];
+
   /// 班级 id → 是否小班（后端 `type`: 0 大班 / 1 小班）。
   Map<String, bool> _classIsSmallById = const {};
   String? _selectedClassId;
@@ -281,8 +275,7 @@ class _AdminScheduleManagementViewState
   List<_TimeConfig> get _activeTimeConfigs =>
       _timeConfigs.isNotEmpty ? _timeConfigs : _kDefaultTimeConfigs;
 
-  String _fmtDate(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+  String _fmtDate(DateTime d) => campusDate(d);
 
   String _isoDate(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -309,12 +302,7 @@ class _AdminScheduleManagementViewState
 
   void _gotoCurrent() {
     final anchor = scheduleCurrentTeachingWeekAnchor();
-    unawaited(
-      _loadSchedule(
-        weekStart: anchor.monday,
-        weekNumber: anchor.week,
-      ),
-    );
+    unawaited(_loadSchedule(weekStart: anchor.monday, weekNumber: anchor.week));
   }
 
   Future<void> _pickDate() async {
@@ -366,7 +354,7 @@ class _AdminScheduleManagementViewState
       context: context,
       barrierLabel: '关闭',
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.18),
+      barrierColor: AppColors.ink.withValues(alpha: 0.18),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, animation, secondary) {
         return DashboardScaleScope(
@@ -422,7 +410,10 @@ class _AdminScheduleManagementViewState
     );
     if (deleteScope == null || !mounted) return;
 
-    final ids = await _resolveDeleteCourseIds(raw: raw, deleteScope: deleteScope);
+    final ids = await _resolveDeleteCourseIds(
+      raw: raw,
+      deleteScope: deleteScope,
+    );
     if (!mounted) return;
     if (ids.isEmpty) return;
 
@@ -703,7 +694,14 @@ class _AdminScheduleManagementViewState
         _pickString(m, ['timeEnd', 'endTime', 'finishTime', 'end'], ''),
       );
       if (start.isEmpty || end.isEmpty) continue;
-      list.add(_TimeConfig(lineNum: lineNum, start: start, end: end));
+      list.add(
+        _TimeConfig(
+          lineNum: lineNum,
+          start: start,
+          end: end,
+          label: _pickString(m, ['name', 'lineName'], ''),
+        ),
+      );
     }
     list.sort((a, b) => a.lineNum.compareTo(b.lineNum));
     if (!mounted || list.isEmpty) return;
@@ -991,6 +989,7 @@ class _AdminScheduleManagementViewState
         _TimeSlotData(
           start: configs[i].start,
           end: configs[i].end,
+          label: configs[i].label,
           height: _calcSlotHeight(i, cells),
         ),
     ];
@@ -1007,9 +1006,8 @@ class _AdminScheduleManagementViewState
         if (n > maxCards) maxCards = n;
       }
     }
-    // 1 张：96 + 24 padding = 120；2 张：96 + 6 + 96 + 24 = 222；
-    // N 张：120 + (N - 1) × 102（102 = 96 卡高 + 6 间距）。
-    return 120.0 + (maxCards - 1) * 102.0;
+    // N 张课卡：上下各 6 留白，卡片之间 6。
+    return maxCards * (kScheduleCourseCardHeight + 6) + 6;
   }
 
   /// 把后端返回的日期字符串归一化到当前周内的 [0..6]，否则返回 -1。
@@ -1052,7 +1050,11 @@ class _AdminScheduleManagementViewState
   ) {
     final rawCopy = Map<String, dynamic>.from(json);
     return _ScheduleCardData(
-      display: buildScheduleCourseCard(json, smallIdxInCell),
+      display: buildScheduleCourseCard(
+        json,
+        smallIdxInCell,
+        subline: ScheduleCardSubline.teacher,
+      ),
       raw: rawCopy,
     );
   }
@@ -1071,8 +1073,7 @@ class _AdminScheduleManagementViewState
               d.day == today.day;
           return _DayHeaderData(
             weekdayLabel: labels[i],
-            dateLabel:
-                '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}',
+            dateLabel: campusMonthDay(d),
             date: DateTime(d.year, d.month, d.day),
             today: isToday,
           );
@@ -1155,7 +1156,7 @@ class _AdminScheduleManagementViewState
 
     await showScaledDialog<void>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
+      barrierColor: AppColors.ink.withValues(alpha: 0.8),
       builder: (dialogContext) {
         return DashboardScaleScope(
           data: scaleData,
@@ -1182,7 +1183,6 @@ class _AdminScheduleManagementViewState
                       style: TextStyle(
                         fontSize: ui(16),
                         color: _kTextDark,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w600,
                         height: 1.25,
                       ),
@@ -1193,7 +1193,6 @@ class _AdminScheduleManagementViewState
                       style: TextStyle(
                         fontSize: ui(13),
                         color: _kTextSecondary,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.3,
                       ),
@@ -1225,8 +1224,8 @@ class _AdminScheduleManagementViewState
                             begin: Alignment.centerRight,
                             end: Alignment.centerLeft,
                             colors: <Color>[
-                              Color(0xFF9585FF),
-                              Color(0xFF715EFE),
+                              AppColors.brandSoft,
+                              AppColors.brand,
                             ],
                           ),
                           borderRadius: BorderRadius.circular(ui(12)),
@@ -1241,9 +1240,8 @@ class _AdminScheduleManagementViewState
                         child: Text(
                           '关闭',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.surface,
                             fontSize: ui(16),
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 12 / 16,
                           ),
@@ -1297,24 +1295,38 @@ class _AdminScheduleManagementViewState
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return SmartCampusSchedulePageShell(
-      backgroundColor: _kCardBg,
-      bodyScrollable: _tab != _AdminScheduleTab.schedule,
-      header: _AdminScheduleHeader(
-        onBack: widget.onBack,
-        tab: _tab,
-        applyPendingCount: _pendingApplyCount,
-        onTabChanged: (t) {
-          setState(() => _tab = t);
-          if (t == _AdminScheduleTab.applyAudit) {
-            _loadApplies();
-            unawaited(_loadPendingApplyCount());
-          }
-        },
-      ),
-      body: _tab == _AdminScheduleTab.schedule
-          ? _buildScheduleTab(ui)
-          : _buildApplyTab(ui),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: '排课与课表',
+          subtitle: '按班级查看与调整周课表，审核任课老师的小课申请',
+          onBack: widget.onBack,
+          bottom: AppTabs<_AdminScheduleTab>(
+            tabs: [
+              const AppTab(value: _AdminScheduleTab.schedule, label: '课表'),
+              AppTab(
+                value: _AdminScheduleTab.applyAudit,
+                label: '小课审核',
+                count: _pendingApplyCount > 0 ? _pendingApplyCount : null,
+              ),
+            ],
+            value: _tab,
+            onChanged: (t) {
+              setState(() => _tab = t);
+              if (t == _AdminScheduleTab.applyAudit) {
+                _loadApplies();
+                unawaited(_loadPendingApplyCount());
+              }
+            },
+          ),
+        ),
+        Expanded(
+          child: _tab == _AdminScheduleTab.schedule
+              ? _buildScheduleTab(ui)
+              : SingleChildScrollView(child: _buildApplyTab(ui)),
+        ),
+      ],
     );
   }
 
@@ -1416,8 +1428,7 @@ class _AdminScheduleManagementViewState
 
   String _applyDayFilterLabel() {
     final d = _applyFilterDay;
-    return '${d.month.toString().padLeft(2, '0')}/'
-        '${d.day.toString().padLeft(2, '0')}';
+    return campusMonthDay(d);
   }
 
   Widget _buildApplyTab(double Function(num) ui) {
@@ -1474,201 +1485,8 @@ class _AdminScheduleManagementViewState
 // 顶部 banner：返回 + 居中标题 + 右上 tab 分段
 // =============================================================================
 
-class _AdminScheduleHeader extends StatelessWidget {
-  const _AdminScheduleHeader({
-    required this.onBack,
-    required this.tab,
-    required this.onTabChanged,
-    required this.applyPendingCount,
-  });
-
-  final VoidCallback onBack;
-  final _AdminScheduleTab tab;
-  final ValueChanged<_AdminScheduleTab> onTabChanged;
-
-  /// 全量待审核申请数；≤0 时不显示角标。
-  final int applyPendingCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return SmartCampusScheduleTopBar(
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(20),
-            top: ui(20),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: const Color(0xFF1C274C),
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Text(
-                '排课与课表',
-                style: TextStyle(
-                  fontSize: ui(16),
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w600,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(20),
-            top: ui(16),
-            child: _AdminTabSegment(
-              tab: tab,
-              applyPendingCount: applyPendingCount,
-              onChanged: onTabChanged,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdminTabSegment extends StatelessWidget {
-  const _AdminTabSegment({
-    required this.tab,
-    required this.onChanged,
-    required this.applyPendingCount,
-  });
-
-  final _AdminScheduleTab tab;
-  final ValueChanged<_AdminScheduleTab> onChanged;
-  final int applyPendingCount;
-
-  String? get _applyBadgeText =>
-      smartCampusCountBadgeLabel(applyPendingCount);
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.all(ui(4)),
-      decoration: BoxDecoration(
-        color: _kInnerGray,
-        borderRadius: BorderRadius.circular(ui(8)),
-        border: Border.all(color: _kBorderSoft),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _AdminTabChip(
-            label: '周课表与排课',
-            active: tab == _AdminScheduleTab.schedule,
-            onTap: () => onChanged(_AdminScheduleTab.schedule),
-          ),
-          SizedBox(width: ui(4)),
-          _AdminTabChip(
-            label: '小课申请审核',
-            active: tab == _AdminScheduleTab.applyAudit,
-            badge: _applyBadgeText,
-            onTap: () => onChanged(_AdminScheduleTab.applyAudit),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdminTabChip extends StatelessWidget {
-  const _AdminTabChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-    this.badge,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  final String? badge;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: ui(14), vertical: ui(7)),
-            decoration: BoxDecoration(
-              color: active ? _kTextDark : Colors.transparent,
-              borderRadius: BorderRadius.circular(ui(6)),
-            ),
-            child: Text(
-              label,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.visible,
-              style: TextStyle(
-                fontSize: ui(14),
-                color: active ? Colors.white : _kTextSecondary,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1.2,
-              ),
-            ),
-          ),
-          if (badge != null)
-            Positioned(
-              right: ui(-4),
-              top: ui(-4),
-              child: Container(
-                constraints: BoxConstraints(minWidth: ui(16)),
-                height: ui(15),
-                padding: EdgeInsets.symmetric(horizontal: ui(5)),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _kRedBadge,
-                  borderRadius: BorderRadius.circular(ui(20)),
-                ),
-                child: Text(
-                  badge!,
-                  style: TextStyle(
-                    fontSize: ui(10),
-                    color: Colors.white,
-                    fontFamily: 'Manrope',
-                    fontWeight: FontWeight.w800,
-                    height: 1.0,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// tab 1 - 子 header：班级 dropdown + 查看/编辑
-// =============================================================================
-
-class _ScheduleClassFilterField extends StatefulWidget {
+/// 班级下拉（[AppSelect]）。
+class _ScheduleClassFilterField extends StatelessWidget {
   const _ScheduleClassFilterField({
     required this.options,
     required this.selectedClassId,
@@ -1682,85 +1500,22 @@ class _ScheduleClassFilterField extends StatefulWidget {
   final ValueChanged<({String id, String name})> onChanged;
 
   @override
-  State<_ScheduleClassFilterField> createState() =>
-      _ScheduleClassFilterFieldState();
-}
-
-class _ScheduleClassFilterFieldState extends State<_ScheduleClassFilterField> {
-  final _fieldKey = GlobalKey();
-  bool _open = false;
-
-  ({String id, String name})? get _selected {
-    for (final o in widget.options) {
-      if (o.id == widget.selectedClassId) return o;
-    }
-    return null;
-  }
-
-  String get _label {
-    if (widget.loading) return '加载班级…';
-    return _selected?.name ?? '选择班级';
-  }
-
-  Future<void> _openMenu() async {
-    if (widget.loading || widget.options.isEmpty) return;
-    final fieldCtx = _fieldKey.currentContext;
-    if (fieldCtx == null) return;
-    setState(() => _open = true);
-    final selected = await showAppPopupSelector<({String id, String name})>(
-      anchorContext: fieldCtx,
-      items: widget.options,
-      value: _selected,
-      itemLabel: (o) => o.name,
-      width: DashboardScaleScope.of(fieldCtx).ui(280),
-    );
-    if (!mounted) return;
-    setState(() => _open = false);
-    if (selected != null) widget.onChanged(selected);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      key: _fieldKey,
-      onTap: _openMenu,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        width: ui(220),
-        height: ui(44),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(ui(12)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                _label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: ui(14),
-                  height: 1.2,
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                ),
-              ),
-            ),
-            AnimatedRotation(
-              turns: _open ? 0.5 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: ui(22),
-                color: const Color(0xFFC6C6C6),
-              ),
-            ),
-          ],
-        ),
+    final hasSelected = options.any((o) => o.id == selectedClassId);
+    return SizedBox(
+      width: 200,
+      child: AppSelect<String>(
+        enabled: !loading && options.isNotEmpty,
+        hint: loading ? '班级加载中' : '选择班级',
+        options: [
+          for (final o in options) AppSelectOption(value: o.id, label: o.name),
+        ],
+        value: hasSelected ? selectedClassId : null,
+        onChanged: (id) {
+          for (final o in options) {
+            if (o.id == id) onChanged(o);
+          }
+        },
       ),
     );
   }
@@ -1779,20 +1534,24 @@ class _ViewEditSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentToggle(
-      selectedIndex: mode == _ScheduleMode.view ? 0 : 1,
-      options: [
-        const SegmentToggleOption(label: '查看'),
-        SegmentToggleOption(label: '编辑', enabled: editEnabled),
+    return AppSegmented<_ScheduleMode>(
+      size: AppControlSize.sm,
+      segments: [
+        const AppSegment(value: _ScheduleMode.view, label: '查看'),
+        AppSegment(
+          value: _ScheduleMode.edit,
+          label: '编辑',
+          enabled: editEnabled,
+        ),
       ],
-      onChanged: (i) =>
-          onChanged(i == 0 ? _ScheduleMode.view : _ScheduleMode.edit),
+      value: mode,
+      onChanged: onChanged,
     );
   }
 }
 
 // =============================================================================
-// 控制条：教学周 + legend + 周切换 + 当周日期
+// 控制条：第 N 周 + 大课 / 小课图例 + 周切换 + 选日期
 // =============================================================================
 
 class _ScheduleControlBar extends StatelessWidget {
@@ -1814,257 +1573,52 @@ class _ScheduleControlBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
-      decoration: BoxDecoration(
-        color: _kInnerGray,
-        borderRadius: BorderRadius.circular(ui(12)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w600,
-                      height: 1,
-                    ),
-                    children: [
-                      const TextSpan(text: '教学周第 '),
-                      TextSpan(
-                        text: '$week',
-                        style: const TextStyle(color: _kPurple),
-                      ),
-                      const TextSpan(text: ' 周'),
-                    ],
-                  ),
-                ),
-                SizedBox(height: ui(8)),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const _LegendItem(
-                      dotColor: _kStatusPurple,
-                      label: '大课',
-                      tail: '编辑模式下可编辑',
-                    ),
-                    SizedBox(width: ui(16)),
-                    const _LegendItem(
-                      dotColor: _kStatusGreen,
-                      label: '小课',
-                      tail: '待任课老师发起请求',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          _WeekSwitcher(onPrev: onPrev, onCurrent: onCurrent, onNext: onNext),
-          SizedBox(width: ui(8)),
-          _ControlPill(
-            onTap: onPickDate,
-            child: SizedBox(
-              width: ui(132),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      weekDateLabel,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
-                      style: TextStyle(
-                        fontSize: ui(14),
-                        color: _kTextDark,
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w500,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: ui(8)),
-                  AppPickerAssetIcon(
-                    AppAssets.iconScheduleCalendar,
-                    imageSize: ui(18),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  const _LegendItem({
-    required this.dotColor,
-    required this.label,
-    required this.tail,
-  });
-
-  final Color dotColor;
-  final String label;
-  final String tail;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(ui(4)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: ui(6),
-                height: ui(6),
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              SizedBox(width: ui(4)),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: ui(12),
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w400,
-                ),
-              ),
-            ],
+        Text('第 $week 周', style: AppText.title16),
+        const SizedBox(width: AppSpace.s12),
+        const AppTag(label: '大课', dotColor: _kStatusPurple),
+        const SizedBox(width: AppSpace.s8),
+        const AppTag(label: '小课', dotColor: _kStatusGreen),
+        const SizedBox(width: AppSpace.s4),
+        const Tooltip(
+          message: '编辑模式下可拖动、删除大课；小课由任课老师申请，在「小课审核」中处理',
+          child: Icon(
+            Icons.help_outline_rounded,
+            size: 16,
+            color: AppColors.textTertiary,
           ),
         ),
-        SizedBox(width: ui(8)),
-        Text(
-          tail,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: _kTextHint,
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w400,
-          ),
+        const Spacer(),
+        AppIconButton(
+          icon: Icons.chevron_left_rounded,
+          semanticLabel: '上一周',
+          size: AppButtonSize.sm,
+          onTap: onPrev,
+        ),
+        const SizedBox(width: AppSpace.s8),
+        AppButton(
+          label: '本周',
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.sm,
+          onTap: week == kScheduleCurrentTeachingWeek ? null : onCurrent,
+        ),
+        const SizedBox(width: AppSpace.s8),
+        AppIconButton(
+          icon: Icons.chevron_right_rounded,
+          semanticLabel: '下一周',
+          size: AppButtonSize.sm,
+          onTap: onNext,
+        ),
+        const SizedBox(width: AppSpace.s8),
+        AppButton(
+          label: weekDateLabel,
+          icon: Icons.calendar_today_outlined,
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.sm,
+          onTap: onPickDate,
         ),
       ],
-    );
-  }
-}
-
-class _ControlPill extends StatelessWidget {
-  const _ControlPill({required this.child, this.onTap});
-
-  final Widget child;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        height: ui(40),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(ui(8)),
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _WeekSwitcher extends StatelessWidget {
-  const _WeekSwitcher({
-    required this.onPrev,
-    required this.onCurrent,
-    required this.onNext,
-  });
-
-  final VoidCallback onPrev;
-  final VoidCallback onCurrent;
-  final VoidCallback onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(40),
-      padding: EdgeInsets.all(ui(4)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ChevronButton(icon: Icons.chevron_left_rounded, onTap: onPrev),
-          SizedBox(width: ui(12)),
-          InkWell(
-            onTap: onCurrent,
-            borderRadius: BorderRadius.circular(ui(4)),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(2)),
-              child: Text(
-                '本周',
-                style: TextStyle(
-                  fontSize: ui(14),
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w500,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: ui(12)),
-          _ChevronButton(icon: Icons.chevron_right_rounded, onTap: onNext),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChevronButton extends StatelessWidget {
-  const _ChevronButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        width: ui(32),
-        height: ui(32),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(ui(8)),
-        ),
-        child: Icon(icon, size: ui(18), color: const Color(0xFF1C274C)),
-      ),
     );
   }
 }
@@ -2158,7 +1712,7 @@ class _DayBodyRow extends StatelessWidget {
         children: [
           for (var i = 0; i < rowCells.length; i++)
             SizedBox(
-              width: ui(kScheduleGridDayColWidth),
+              width: ScheduleGridScope.dayWidthOf(context),
               height: ui(height),
               child: Stack(
                 children: [
@@ -2294,11 +1848,11 @@ class _CellContent extends StatelessWidget {
       return wrapHover(
         isEditing
             ? Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: ui(12),
-                  vertical: ui(12),
+                padding: EdgeInsets.all(ui(6)),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: _ApplySmallLessonButton(onTap: onApplySmallLesson),
                 ),
-                child: _ApplySmallLessonButton(onTap: onApplySmallLesson),
               )
             : const ScheduleIdleSlot(),
       );
@@ -2310,10 +1864,10 @@ class _CellContent extends StatelessWidget {
       Align(
         alignment: Alignment.topCenter,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(12)),
+          padding: EdgeInsets.all(ui(6)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (var i = 0; i < cards.length; i++) ...[
                 if (i > 0) SizedBox(height: ui(6)),
@@ -2379,9 +1933,6 @@ class _DraggableScheduleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final deleteHandler = _deletable ? onDelete : null;
-    final cardHeight = card.display.kind == ScheduleCourseCardKind.bigExtended
-        ? 120.0
-        : 96.0;
     Widget courseCard = ScheduleCourseCard(
       data: card.display,
       editable: isEditing || _draggable,
@@ -2389,7 +1940,8 @@ class _DraggableScheduleCard extends StatelessWidget {
     );
     if (deleteHandler != null) {
       courseCard = ScheduleCourseSwipeDelete(
-        cardHeight: cardHeight,
+        cardHeight: kScheduleCourseCardHeight,
+        widthDesign: null,
         onDelete: deleteHandler,
         child: courseCard,
       );
@@ -2415,7 +1967,10 @@ class _DraggableScheduleCard extends StatelessWidget {
       hapticFeedbackOnStart: true,
       feedback: DashboardScaleScope(
         data: scaleData,
-        child: _DragFeedback(card: card),
+        child: SizedBox(
+          width: ScheduleGridScope.dayWidthOf(context) - 12,
+          child: _DragFeedback(card: card),
+        ),
       ),
       childWhenDragging: Opacity(opacity: 0.32, child: courseCard),
       child: courseCard,
@@ -2441,7 +1996,7 @@ class _DragFeedback extends StatelessWidget {
           borderRadius: BorderRadius.circular(ui(8)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
+              color: AppColors.ink.withValues(alpha: 0.18),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -2460,42 +2015,13 @@ class _ApplySmallLessonButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    return AppButton(
+      label: '编辑大课',
+      icon: Icons.edit_outlined,
+      variant: AppButtonVariant.quiet,
+      size: AppButtonSize.sm,
+      expand: true,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        width: double.infinity,
-        height: ui(48),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: _kInnerGray,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              AppAssets.scheduleApplyCourse,
-              width: ui(14),
-              height: ui(14),
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: ui(6)),
-            Text(
-              '编辑大课',
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kTextDark,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 16 / 12,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -2547,7 +2073,11 @@ class _TimeConfig {
     required this.lineNum,
     required this.start,
     required this.end,
+    this.label = '',
   });
+
+  /// 节次名称（上午 / 下午 / 晚上）。
+  final String label;
 
   final int lineNum;
   final String start;
@@ -2556,11 +2086,9 @@ class _TimeConfig {
 
 /// API 拉取失败 / 未返回时的兜底节次配置（5 节）。
 const List<_TimeConfig> _kDefaultTimeConfigs = [
-  _TimeConfig(lineNum: 1, start: '08:00', end: '08:40'),
-  _TimeConfig(lineNum: 2, start: '08:50', end: '09:35'),
-  _TimeConfig(lineNum: 3, start: '09:50', end: '10:30'),
-  _TimeConfig(lineNum: 4, start: '10:30', end: '11:25'),
-  _TimeConfig(lineNum: 5, start: '14:00', end: '14:45'),
+  _TimeConfig(lineNum: 1, start: '08:30', end: '11:30', label: '上午'),
+  _TimeConfig(lineNum: 2, start: '14:00', end: '17:00', label: '下午'),
+  _TimeConfig(lineNum: 3, start: '19:00', end: '21:00', label: '晚上'),
 ];
 
 // =============================================================================
@@ -2621,8 +2149,7 @@ List<DateTime> _computeScheduleReuseDates({
 String _normalizeCourseDateIso(dynamic raw) {
   final s = raw?.toString().trim() ?? '';
   if (s.isEmpty) return '';
-  final d =
-      DateTime.tryParse(s) ?? DateTime.tryParse(s.split('T').first);
+  final d = DateTime.tryParse(s) ?? DateTime.tryParse(s.split('T').first);
   if (d == null) return '';
   return '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
@@ -2640,7 +2167,7 @@ Future<String?> _showDeleteCourseConfirmDialog(
   return showScaledDialog<String>(
     context: context,
     barrierDismissible: true,
-    barrierColor: Colors.black.withValues(alpha: 0.18),
+    barrierColor: AppColors.ink.withValues(alpha: 0.18),
     builder: (dialogContext) {
       final ui = DashboardScaleScope.of(dialogContext).ui;
       return Dialog(
@@ -2655,7 +2182,7 @@ Future<String?> _showDeleteCourseConfirmDialog(
               width: ui(420),
               padding: EdgeInsets.fromLTRB(ui(24), ui(28), ui(24), ui(20)),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(ui(24)),
               ),
               child: Column(
@@ -2665,9 +2192,8 @@ Future<String?> _showDeleteCourseConfirmDialog(
                   Text(
                     '删除课程',
                     style: TextStyle(
-                      fontSize: ui(18),
-                      color: const Color(0xFF0B081A),
-                      fontFamily: 'PingFang SC',
+                      fontSize: ui(16),
+                      color: AppColors.ink,
                       fontWeight: AppFont.w600,
                     ),
                   ),
@@ -2678,8 +2204,7 @@ Future<String?> _showDeleteCourseConfirmDialog(
                     style: TextStyle(
                       fontSize: ui(14),
                       height: 1.6,
-                      color: const Color(0xFF788698),
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.textSecondary,
                       fontWeight: AppFont.w400,
                     ),
                   ),
@@ -2689,7 +2214,6 @@ Future<String?> _showDeleteCourseConfirmDialog(
                     style: TextStyle(
                       fontSize: ui(14),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                     ),
                   ),
@@ -2917,7 +2441,7 @@ class _AdminEditCourseDrawerState
       width: ui(600),
       height: double.infinity,
       child: Container(
-        color: Colors.white,
+        color: AppColors.surface,
         child: Column(
           children: [
             _DrawerHeader(title: '编辑大课', onClose: widget.onCancel),
@@ -3080,7 +2604,6 @@ class _DrawerHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w600,
               height: 1.2,
             ),
@@ -3132,7 +2655,6 @@ class _SectionLabel extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(14),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w500,
             height: 20 / 14,
           ),
@@ -3166,7 +2688,6 @@ class _ReadonlyField extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(14),
           color: _kTextSecondary,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 20 / 14,
         ),
@@ -3195,7 +2716,7 @@ class _SubmitGradientButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.centerRight,
             end: Alignment.centerLeft,
-            colors: <Color>[Color(0xFF9585FF), Color(0xFF715EFE)],
+            colors: <Color>[AppColors.brandSoft, AppColors.brand],
           ),
           borderRadius: BorderRadius.circular(ui(12)),
         ),
@@ -3205,8 +2726,7 @@ class _SubmitGradientButton extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: ui(16),
-              color: Colors.white,
-              fontFamily: 'PingFang SC',
+              color: AppColors.surface,
               fontWeight: AppFont.w500,
               height: 1,
             ),
@@ -3245,7 +2765,6 @@ class _ApplyDetailRow extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 20 / 12,
             ),
@@ -3257,7 +2776,6 @@ class _ApplyDetailRow extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 20 / 12,
             ),
@@ -3486,9 +3004,8 @@ class _ApplyListHeaderRow extends StatelessWidget {
           child: Text(
             '小课排班申请',
             style: TextStyle(
-              fontSize: ui(18),
-              color: const Color(0xFF1A1A1A),
-              fontFamily: 'PingFang SC',
+              fontSize: ui(16),
+              color: AppColors.ink,
               fontWeight: AppFont.w500,
               height: 1.2,
             ),
@@ -3528,7 +3045,7 @@ class _ApplyDateFilterToggle extends StatelessWidget {
       height: ui(44),
       padding: EdgeInsets.all(ui(4)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
         border: Border.all(color: _kBorderSoft),
       ),
@@ -3537,7 +3054,8 @@ class _ApplyDateFilterToggle extends StatelessWidget {
           for (var i = 0; i < labels.length; i++) ...[
             if (i > 0) SizedBox(width: ui(4)),
             _ApplyDateFilterChip(
-              label: filters[i] == _ApplyDateFilter.day &&
+              label:
+                  filters[i] == _ApplyDateFilter.day &&
                       filter == _ApplyDateFilter.day
                   ? dayChipLabel
                   : labels[i],
@@ -3573,15 +3091,14 @@ class _ApplyDateFilterChip extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: ui(16)),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF0B081A) : Colors.transparent,
+          color: selected ? AppColors.ink : Colors.transparent,
           borderRadius: BorderRadius.circular(ui(6)),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: selected ? Colors.white : _kTextSecondary,
-            fontFamily: 'PingFang SC',
+            color: selected ? AppColors.surface : _kTextSecondary,
             fontWeight: AppFont.w500,
             height: 1,
           ),
@@ -3688,7 +3205,7 @@ class _ApplyCard extends StatelessWidget {
                         width: ui(40),
                         height: ui(40),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(ui(8)),
                         ),
                         clipBehavior: Clip.antiAlias,
@@ -3715,7 +3232,6 @@ class _ApplyCard extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: ui(14),
                                       color: _kTextDark,
-                                      fontFamily: 'PingFang SC',
                                       fontWeight: AppFont.w500,
                                       height: 1.2,
                                     ),
@@ -3738,7 +3254,6 @@ class _ApplyCard extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: ui(12),
                                       color: _kTextDark,
-                                      fontFamily: 'PingFang SC',
                                       fontWeight: AppFont.w400,
                                       height: 1,
                                     ),
@@ -3751,7 +3266,6 @@ class _ApplyCard extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: ui(12),
                                       color: _kTextHint,
-                                      fontFamily: 'PingFang SC',
                                       fontWeight: AppFont.w400,
                                       height: 1,
                                     ),
@@ -3771,7 +3285,7 @@ class _ApplyCard extends StatelessWidget {
                       vertical: ui(8),
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(ui(8)),
                     ),
                     child: Row(
@@ -3785,7 +3299,6 @@ class _ApplyCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: ui(12),
                                   color: _kTextHint,
-                                  fontFamily: 'PingFang SC',
                                   fontWeight: AppFont.w400,
                                   height: 20 / 12,
                                 ),
@@ -3796,7 +3309,6 @@ class _ApplyCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: ui(12),
                                   color: _kTextDark,
-                                  fontFamily: 'PingFang SC',
                                   fontWeight: AppFont.w400,
                                   height: 20 / 12,
                                 ),
@@ -3813,7 +3325,6 @@ class _ApplyCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: ui(12),
                                   color: _kTextHint,
-                                  fontFamily: 'PingFang SC',
                                   fontWeight: AppFont.w400,
                                   height: 20 / 12,
                                 ),
@@ -3826,7 +3337,6 @@ class _ApplyCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: ui(12),
                                   color: _kTextDark,
-                                  fontFamily: 'PingFang SC',
                                   fontWeight: AppFont.w400,
                                   height: 20 / 12,
                                 ),
@@ -3846,7 +3356,6 @@ class _ApplyCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(12),
                           color: _kTextHint,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w400,
                           height: 20 / 12,
                         ),
@@ -3857,7 +3366,6 @@ class _ApplyCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextDark,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 20 / 12,
                           ),
@@ -3921,7 +3429,6 @@ class _ApplyStatusBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: fg,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 15.24 / 12,
         ),
@@ -3955,10 +3462,10 @@ class _CardActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                  colors: [AppColors.brandSoft, AppColors.brand],
                 )
               : null,
-          color: primary ? null : Colors.white,
+          color: primary ? null : AppColors.surface,
           borderRadius: BorderRadius.circular(ui(8)),
           border: primary ? null : Border.all(color: _kBorderSoft),
         ),
@@ -3966,8 +3473,7 @@ class _CardActionButton extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: primary ? Colors.white : _kTextDark,
-            fontFamily: 'PingFang SC',
+            color: primary ? AppColors.surface : _kTextDark,
             fontWeight: AppFont.w400,
             height: 24 / 14,
           ),
@@ -4003,7 +3509,6 @@ class _ApplyEmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -4025,7 +3530,7 @@ Future<String?> _showRejectDialog(
   final controller = TextEditingController();
   return showScaledDialog<String>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.80),
+    barrierColor: AppColors.ink.withValues(alpha: 0.80),
     builder: (dialogContext) {
       final ui = DashboardScaleScope.of(dialogContext).ui;
       return GradientHeaderDialog(
@@ -4048,7 +3553,6 @@ Future<String?> _showRejectDialog(
               style: TextStyle(
                 fontSize: ui(16),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 20 / 16,
               ),
@@ -4059,7 +3563,6 @@ Future<String?> _showRejectDialog(
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 20 / 14,
               ),
@@ -4072,7 +3575,7 @@ Future<String?> _showRejectDialog(
                 vertical: ui(12),
               ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(ui(8)),
                 border: Border.all(color: _kBorderSoft, width: 1),
               ),
@@ -4088,7 +3591,6 @@ Future<String?> _showRejectDialog(
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 20 / 14,
                 ),
@@ -4097,7 +3599,6 @@ Future<String?> _showRejectDialog(
                   hintStyle: TextStyle(
                     fontSize: ui(14),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 20 / 14,
                   ),

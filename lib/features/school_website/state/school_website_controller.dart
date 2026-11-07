@@ -23,22 +23,24 @@ class SchoolWebsiteController extends StateNotifier<SchoolWebsiteState> {
 
   final SchoolWebsiteRepository _repository;
 
+  /// 加载失败后重试。
+  Future<void> reload() => _load();
+
   Future<void> _load() async {
     state = state.copyWith(loading: true, errorMessage: '');
     final response = await _repository.getHomePage();
     if (!mounted) return;
     if (!response.isSuccess) {
-      state = state.copyWith(
-        loading: false,
-        errorMessage: response.displayMsg,
-      );
+      state = state.copyWith(loading: false, errorMessage: response.displayMsg);
       return;
     }
-    final html = parseSchoolHomePageHtml(response.data);
+    final data = response.data;
+    final html = parseSchoolHomePageHtml(data);
     if (html == null || html.isEmpty) {
       state = state.copyWith(loading: false, errorMessage: '暂无官网内容');
       return;
     }
-    state = state.copyWith(loading: false, htmlContent: html);
+    final title = data is Map ? data['title']?.toString().trim() ?? '' : '';
+    state = state.copyWith(loading: false, htmlContent: html, title: title);
   }
 }

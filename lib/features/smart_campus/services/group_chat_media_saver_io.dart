@@ -59,7 +59,7 @@ Future<GroupChatMediaSaveResult> saveGroupChatMediaBytesImpl({
       : null;
   final dialogTitle = switch (kind) {
     GroupChatMediaKind.image => '保存图片',
-    GroupChatMediaKind.audio => '保存音频',
+    GroupChatMediaKind.audio => '保存语音',
     GroupChatMediaKind.video => '保存视频',
     GroupChatMediaKind.file => '保存文件',
   };
@@ -82,10 +82,7 @@ Future<GroupChatMediaSaveResult> saveGroupChatMediaBytesImpl({
     }
     return GroupChatMediaSaveResult(ok: true, path: path);
   } on UnimplementedError {
-    return const GroupChatMediaSaveResult(
-      ok: false,
-      error: '当前平台暂不支持保存该文件',
-    );
+    return const GroupChatMediaSaveResult(ok: false, error: '当前平台暂不支持保存该文件');
   } catch (error) {
     return GroupChatMediaSaveResult(ok: false, error: '保存失败：$error');
   }

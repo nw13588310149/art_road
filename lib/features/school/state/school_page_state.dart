@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/router/route_paths.dart';
-import '../../../core/constants/app_assets.dart';
 
 class SchoolQuickAction {
   const SchoolQuickAction({
@@ -13,13 +12,13 @@ class SchoolQuickAction {
   });
 
   final String name;
-  final String icon;
+  final IconData icon;
   final String route;
 
   /// 1.0 中通过 storage 写入的 firstMenu 初值；2.0 改为路由参数透传给二级页面。
   final int? firstMenu;
 
-  /// 商城/模考 等"即将上线"按钮：点击不跳转，弹出占位提示。
+  /// 「即将上线」的入口：点击不跳转，只给出提示。
   final bool comingSoon;
 }
 
@@ -44,6 +43,9 @@ class SchoolLearningItem {
 
   int get remainingCount =>
       (allCount - completeCount).clamp(0, allCount > 0 ? allCount : 0);
+
+  bool get completed =>
+      progress >= 100 || (allCount > 0 && completeCount >= allCount);
 }
 
 class SchoolBannerItem {
@@ -70,6 +72,25 @@ class SchoolNewsItem {
   final DateTime? createTime;
 }
 
+/// 画室课程视频（校园课件首屏的课件目录）。
+class SchoolCourseVideo {
+  const SchoolCourseVideo({
+    required this.id,
+    required this.title,
+    required this.coverUrl,
+    required this.duration,
+    required this.teacherName,
+    required this.category,
+  });
+
+  final String id;
+  final String title;
+  final String coverUrl;
+  final String duration;
+  final String teacherName;
+  final String category;
+}
+
 class SchoolPageState {
   const SchoolPageState({
     this.loading = true,
@@ -79,6 +100,7 @@ class SchoolPageState {
     this.bannerItems = const [],
     this.learningItems = const [],
     this.newsItems = const [],
+    this.courseVideos = const [],
     this.errorMessage = '',
   });
 
@@ -89,6 +111,7 @@ class SchoolPageState {
   final List<SchoolBannerItem> bannerItems;
   final List<SchoolLearningItem> learningItems;
   final List<SchoolNewsItem> newsItems;
+  final List<SchoolCourseVideo> courseVideos;
   final String errorMessage;
 
   SchoolPageState copyWith({
@@ -99,6 +122,7 @@ class SchoolPageState {
     List<SchoolBannerItem>? bannerItems,
     List<SchoolLearningItem>? learningItems,
     List<SchoolNewsItem>? newsItems,
+    List<SchoolCourseVideo>? courseVideos,
     String? errorMessage,
   }) {
     return SchoolPageState(
@@ -109,43 +133,35 @@ class SchoolPageState {
       bannerItems: bannerItems ?? this.bannerItems,
       learningItems: learningItems ?? this.learningItems,
       newsItems: newsItems ?? this.newsItems,
+      courseVideos: courseVideos ?? this.courseVideos,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 }
 
-/// 校园课件页六宫格按钮（校园专属资料，接口携带真实 schoolId）。
+/// 校园课件页的入口条（校园专属资料，接口携带真实 schoolId）；
+/// 学情、作品、范画等与首页重复的入口不再放在这里。
 List<SchoolQuickAction> buildSchoolQuickActions() {
   return const <SchoolQuickAction>[
     SchoolQuickAction(
-      name: '学情',
-      icon: AppAssets.homeArtXueqing,
-      route: RoutePaths.studyCenter,
+      name: '课程视频',
+      icon: Icons.play_circle_outline_rounded,
+      route: RoutePaths.schoolVideo,
     ),
     SchoolQuickAction(
-      name: '作品',
-      icon: AppAssets.homeArtZuopin,
-      route: RoutePaths.artworks,
-    ),
-    SchoolQuickAction(
-      name: '范画',
-      icon: AppAssets.homeArtFanhua,
-      route: RoutePaths.gallery,
-    ),
-    SchoolQuickAction(
-      name: '刷题',
-      icon: AppAssets.homeBtn5,
+      name: '题库',
+      icon: Icons.quiz_outlined,
       route: RoutePaths.schoolCamp,
     ),
     SchoolQuickAction(
-      name: '微校',
-      icon: AppAssets.homeBtn8,
+      name: '画室官网',
+      icon: Icons.account_balance_outlined,
       route: RoutePaths.schoolWebsite,
     ),
     SchoolQuickAction(
-      name: '视频',
-      icon: AppAssets.schoolV2QuickVideo,
-      route: RoutePaths.schoolVideo,
+      name: '校园资讯',
+      icon: Icons.feed_outlined,
+      route: RoutePaths.consultation,
     ),
   ];
 }

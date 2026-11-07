@@ -36,6 +36,7 @@
 // 字体：PingFang SC（标题 16/18 / 正文 12/14）+ Barlow（时间 18 / 数值 32）
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -45,40 +46,38 @@ import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/course_subject_tag.dart';
-import '../../../core/widgets/app_loading_indicator.dart';
 import '../data/course_sign_data.dart';
 import '../data/teacher_attendance_data.dart';
 import '../state/teacher_attendance_controller.dart';
 import 'course_sign_countdown.dart';
 import 'widgets/course_sign_status_picker.dart';
-import 'widgets/smart_campus_stat_card.dart';
 import 'widgets/teacher_today_course_card.dart';
+import '../data/campus_format.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kCardBg = Colors.white;
-const Color _kInnerGray = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kBorderHair = Color(0xFFE6E9F1);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSection = Color(0xFF1A1A1A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleSoftHint = Color(0xFFF0E8FC); // 大班签到提示带 bg
-const Color _kEndedTagBg = Color(0xFFE6E9F1);
-const Color _kStatusGreen = Color(0xFF0CAC40);
-const Color _kStatusPresent = Color(0xFF0CAC40); // 实到
-const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kStatusLate = Color(0xFFFF323C); // 迟到 / 缺课 / 未到
-const Color _kStatusLeave = Color(0xFF325BFF); // 请假
-const Color _kBigClassDot = Color(0xFF8E7FFF); // 大课 tag dot
-const Color _kSmallClassDot = Color(0xFF0CAC40); // 小课 tag dot
+const Color _kPageBg = AppColors.page;
+const Color _kCardBg = AppColors.surface;
+const Color _kInnerGray = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kBorderHair = AppColors.line;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSection = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSoftHint = AppColors.brandWash; // 大班签到提示带 bg
+const Color _kEndedTagBg = AppColors.line;
+const Color _kStatusGreen = AppColors.success;
+const Color _kStatusPresent = AppColors.success; // 实到
+const Color _kTextDivider = AppColors.textTertiary;
+const Color _kStatusLate = AppColors.danger; // 缺课 / 未到（迟到用 warning）
+const Color _kStatusLeave = AppColors.info; // 请假
+const Color _kBigClassDot = AppColors.brandSoft; // 大课 tag dot
+const Color _kSmallClassDot = AppColors.success; // 小课 tag dot
 
 // 各区块最低高度（Figma 设计值），避免数据加载前后页面高度跳动。
 const double _kRecentRecordSectionMinHeight = 178;
@@ -246,7 +245,7 @@ List<_StatItem> _statsFromSummary(TeacherAttendanceSummary summary) {
     _StatItem(value: '${summary.normalCount}', label: '正常签到'),
     _StatItem(value: '${summary.lateCount}', label: '学生迟到'),
     _StatItem(value: '${summary.absentCount}', label: '缺勤人次'),
-    _StatItem(value: rateLabel, label: '出勤率', valueColor: _kPurple),
+    _StatItem(value: rateLabel, label: '出勤率（正常 + 迟到）', valueColor: _kPurple),
   ];
 }
 
@@ -451,234 +450,138 @@ class _TeacherClassAttendanceViewState
     final stats = _statsFromSummary(attendance.summary);
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
-      header: _AttendanceBanner(
+      header: AppPageHeader(
+        title: '签课管理',
+        subtitle: '查看授课签到统计，给今日课程签到、签退并登记学生出勤',
         onBack: widget.onBack,
-        onOpenHistory: _openHistory,
+        actions: [
+          AppButton(
+            label: '签到历史',
+            icon: Icons.history_rounded,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: _openHistory,
+          ),
+        ],
       ),
       bodyScrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _StatsHeaderRow(
-              tabIdx: _selectedTabIdx,
-              onTab: (i) {
-                setState(() => _selectedTabIdx = i);
-                unawaited(
-                  ref
-                      .read(teacherAttendanceControllerProvider.notifier)
-                      .selectRange(TeacherAttendanceRange.values[i]),
-                );
-              },
+            tabIdx: _selectedTabIdx,
+            onTab: (i) {
+              setState(() => _selectedTabIdx = i);
+              unawaited(
+                ref
+                    .read(teacherAttendanceControllerProvider.notifier)
+                    .selectRange(TeacherAttendanceRange.values[i]),
+              );
+            },
+          ),
+          SizedBox(height: ui(12)),
+          _StatsRow(stats: stats),
+          SizedBox(height: ui(16)),
+          _SectionHeaderRow(
+            title: '最近签课记录',
+            trailingLabel: '查看全部',
+            onTrailingTap: _openHistory,
+          ),
+          SizedBox(height: ui(12)),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: ui(_kRecentRecordSectionMinHeight),
             ),
-            SizedBox(height: ui(12)),
-            _StatsRow(stats: stats),
-            SizedBox(height: ui(16)),
-            _SectionHeaderRow(
-              title: '最近签课记录',
-              trailingLabel: '查看全部',
-              onTrailingTap: _openHistory,
-            ),
-            SizedBox(height: ui(12)),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: ui(_kRecentRecordSectionMinHeight),
-              ),
-              child: recentRecords.isEmpty
-                  ? _AttendanceEmptyPanel(
-                      loading: false,
-                      message: '暂无最近签课记录',
-                      expand: true,
-                    )
-                  : _RecentRecordsRow(records: recentRecords),
-            ),
-            SizedBox(height: ui(16)),
-            // 双列：今日课程 + 签到操作（空态也保留结构，避免加载后高度突变）
-            LayoutBuilder(
-              builder: (context, c) {
-                final emptyMessage = attendance.error.isNotEmpty
-                    ? attendance.error
-                    : '今日暂无课程';
-                final actionPanel = classes.isEmpty
-                    ? _SignActionEmptyPanel(
-                        loading: false,
-                        message: emptyMessage,
-                      )
-                    : _ActionPanelSwitcher(
-                        data: classes[activeIdx],
-                        onPickStudentStatus: (idx) =>
-                            _pickStudentStatus(classes[activeIdx], idx),
-                        onBulkSign: () => _bulkSign(classes[activeIdx]),
-                      );
-                final isCompact = c.maxWidth < ui(720);
-                if (isCompact) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SectionTitle('今日课程'),
-                      SizedBox(height: ui(12)),
-                      _TodayClassesPanel(
-                        title: _todayPanelTitle(),
-                        classes: classes,
-                        activeIdx: activeIdx,
-                        emptyMessage: emptyMessage,
-                        onSelect: (idx) => _selectClass(idx, classes),
-                      ),
-                      SizedBox(height: ui(16)),
-                      _SectionTitle('签到操作'),
-                      SizedBox(height: ui(12)),
-                      actionPanel,
-                    ],
-                  );
-                }
-                return Row(
+            child: recentRecords.isEmpty
+                ? _AttendanceEmptyPanel(
+                    loading: false,
+                    message: '暂无最近签课记录',
+                    expand: true,
+                  )
+                : _RecentRecordsRow(records: recentRecords),
+          ),
+          SizedBox(height: ui(16)),
+          // 双列：今日课程 + 签到操作（空态也保留结构，避免加载后高度突变）
+          LayoutBuilder(
+            builder: (context, c) {
+              final emptyMessage = attendance.error.isNotEmpty
+                  ? attendance.error
+                  : '今日暂无课程';
+              final actionPanel = classes.isEmpty
+                  ? _SignActionEmptyPanel(loading: false, message: emptyMessage)
+                  : _ActionPanelSwitcher(
+                      data: classes[activeIdx],
+                      onPickStudentStatus: (idx) =>
+                          _pickStudentStatus(classes[activeIdx], idx),
+                      onBulkSign: () => _bulkSign(classes[activeIdx]),
+                    );
+              final isCompact = c.maxWidth < ui(720);
+              if (isCompact) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      width: ui(340),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _SectionTitle('今日课程'),
-                          SizedBox(height: ui(12)),
-                          _TodayClassesPanel(
-                            title: _todayPanelTitle(),
-                            classes: classes,
-                            activeIdx: activeIdx,
-                            emptyMessage: emptyMessage,
-                            onSelect: (idx) => _selectClass(idx, classes),
-                          ),
-                        ],
-                      ),
+                    _SectionTitle('今日课程'),
+                    SizedBox(height: ui(12)),
+                    _TodayClassesPanel(
+                      title: _todayPanelTitle(),
+                      classes: classes,
+                      activeIdx: activeIdx,
+                      emptyMessage: emptyMessage,
+                      onSelect: (idx) => _selectClass(idx, classes),
                     ),
-                    SizedBox(width: ui(16)),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _SectionTitle('签到操作'),
-                          SizedBox(height: ui(12)),
-                          actionPanel,
-                        ],
-                      ),
-                    ),
+                    SizedBox(height: ui(16)),
+                    _SectionTitle('签到操作'),
+                    SizedBox(height: ui(12)),
+                    actionPanel,
                   ],
                 );
-              },
-            ),
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: ui(340),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionTitle('今日课程'),
+                        SizedBox(height: ui(12)),
+                        _TodayClassesPanel(
+                          title: _todayPanelTitle(),
+                          classes: classes,
+                          activeIdx: activeIdx,
+                          emptyMessage: emptyMessage,
+                          onSelect: (idx) => _selectClass(idx, classes),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: ui(16)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionTitle('签到操作'),
+                        SizedBox(height: ui(12)),
+                        actionPanel,
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  String _todayPanelTitle() {
-    final now = DateTime.now();
-    const weeks = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-    return '${now.year}年${now.month}月${now.day}日 ${weeks[now.weekday - 1]}';
-  }
+  String _todayPanelTitle() => campusDateWithWeekday(DateTime.now());
 }
 
 // =============================================================================
 // 顶部 banner（62 高）
 // =============================================================================
-
-class _AttendanceBanner extends StatelessWidget {
-  const _AttendanceBanner({required this.onBack, required this.onOpenHistory});
-
-  final VoidCallback onBack;
-  final VoidCallback onOpenHistory;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: const Color(0xFF1C274C),
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Text(
-                '签课管理',
-                style: TextStyle(
-                  fontSize: ui(16),
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w600,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: ui(14),
-            child: InkWell(
-              onTap: onOpenHistory,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                height: ui(34),
-                padding: EdgeInsets.symmetric(horizontal: ui(12)),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.history_rounded, size: ui(16), color: _kPurple),
-                    SizedBox(width: ui(4)),
-                    Text(
-                      '历史记录',
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        color: _kTextDark,
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w600,
-                        height: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // =============================================================================
 // 签课数据统计 header（标题 + 3 段 tab 切换器）
@@ -700,34 +603,21 @@ class _StatsHeaderRow extends StatelessWidget {
           child: Text(
             '签课数据统计',
             style: TextStyle(
-              fontSize: ui(18),
+              fontSize: ui(16),
               color: _kTextSection,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1,
             ),
           ),
         ),
-        Container(
-          height: ui(44),
-          padding: EdgeInsets.all(ui(4)),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(ui(8)),
-            border: Border.all(color: _kBorderSoft),
-          ),
-          child: Row(
-            children: [
-              for (var i = 0; i < labels.length; i++) ...[
-                if (i > 0) SizedBox(width: ui(4)),
-                _SegmentChip(
-                  label: labels[i],
-                  selected: i == tabIdx,
-                  onTap: () => onTab(i),
-                ),
-              ],
-            ],
-          ),
+        AppSegmented<int>(
+          size: AppControlSize.sm,
+          segments: [
+            for (var i = 0; i < labels.length; i++)
+              AppSegment(value: i, label: labels[i]),
+          ],
+          value: tabIdx,
+          onChanged: onTab,
         ),
       ],
     );
@@ -763,8 +653,7 @@ class _SegmentChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: selected ? Colors.white : _kTextSecondary,
-            fontFamily: 'PingFang SC',
+            color: selected ? AppColors.surface : _kTextSecondary,
             fontWeight: AppFont.w500,
             height: 1,
           ),
@@ -790,9 +679,7 @@ class _StatsRow extends StatelessWidget {
       children: [
         for (var i = 0; i < stats.length; i++) ...[
           if (i > 0) SizedBox(width: ui(12)),
-          Expanded(
-            child: _StatCard(item: stats[i]),
-          ),
+          Expanded(child: _StatCard(item: stats[i])),
         ],
       ],
     );
@@ -806,36 +693,19 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(100),
-      padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(16)),
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(ui(12)),
-      ),
-      child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                item.label,
-                style: TextStyle(
-                  fontSize: ui(14),
-                  color: Colors.black,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w500,
-                  height: 1,
-                ),
-              ),
-              Text(
-                item.value,
-                style: smartCampusStatValueTextStyle(
-                  ui,
-                  color: item.valueColor,
-                ),
-              ),
-            ],
+    final isRate = item.value.endsWith('%');
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s16),
+      child: SizedBox(
+        width: double.infinity,
+        child: AppStatTile(
+          label: item.label,
+          value: isRate
+              ? item.value.substring(0, item.value.length - 1)
+              : item.value,
+          unit: isRate ? '%' : null,
+          valueColor: item.valueColor,
+        ),
       ),
     );
   }
@@ -856,9 +726,8 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: ui(18),
+        fontSize: ui(16),
         color: _kTextSection,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w500,
         height: 1,
       ),
@@ -896,7 +765,6 @@ class _SectionHeaderRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                   ),
@@ -905,7 +773,7 @@ class _SectionHeaderRow extends StatelessWidget {
                 Icon(
                   Icons.chevron_right_rounded,
                   size: ui(16),
-                  color: const Color(0xFFCECED1),
+                  color: AppColors.textTertiary,
                 ),
               ],
             ),
@@ -970,7 +838,6 @@ class _AttendanceEmptyPanel extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
             ),
           );
@@ -1065,7 +932,7 @@ class _TeacherSignRecordCard extends StatelessWidget {
               Text(
                 time,
                 style: TextStyle(
-                  fontSize: ui(18),
+                  fontSize: ui(16),
                   color: _kTextSection,
                   fontFamily: 'Barlow',
                   fontWeight: FontWeight.w600,
@@ -1078,7 +945,6 @@ class _TeacherSignRecordCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1,
                 ),
@@ -1090,7 +956,7 @@ class _TeacherSignRecordCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _Avatar(seed: avatarSeed, size: ui(40), imageUrl: logoUrl),
+              _Avatar(seed: avatarSeed, size: ui(40)),
               SizedBox(width: ui(6)),
               Expanded(
                 child: Column(
@@ -1109,7 +975,6 @@ class _TeacherSignRecordCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: ui(14),
                               color: _kTextDark,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w600,
                               height: 1,
                             ),
@@ -1127,7 +992,6 @@ class _TeacherSignRecordCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -1267,7 +1131,6 @@ class _RecordStatCol extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1281,7 +1144,6 @@ class _RecordStatCol extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: hasValue ? _kTextDark : _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1298,7 +1160,7 @@ class _RecordStatCol extends StatelessWidget {
 const double _kAttendanceTagDesignHeight = 18;
 const double _kAttendanceTagDesignHPad = 4;
 const double _kAttendanceTagDesignRadius = 4;
-const double _kAttendanceTagDesignFontSize = 11;
+const double _kAttendanceTagDesignFontSize = 12;
 
 class _AttendanceInlineTag extends StatelessWidget {
   const _AttendanceInlineTag({
@@ -1319,7 +1181,7 @@ class _AttendanceInlineTag extends StatelessWidget {
     final isSmall = kind == _ClassKind.small;
     return _AttendanceInlineTag(
       label: isSmall ? '小课' : '大课',
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       // 边框用更可见的 #E6E9F1：在灰底今日课程卡 / 白底面板上都能读出完整
       // 外框，避免与紫色科目标签产生“看起来更矮”的视觉差。
       borderColor: _kBorderHair,
@@ -1332,7 +1194,6 @@ class _AttendanceInlineTag extends StatelessWidget {
     return TextStyle(
       fontSize: ui(_kAttendanceTagDesignFontSize),
       color: labelColor,
-      fontFamily: 'PingFang SC',
       fontWeight: AppFont.w400,
       // 均匀分配行内 leading，让文字在标签内上下居中。
       leadingDistribution: TextLeadingDistribution.even,
@@ -1357,10 +1218,7 @@ class _AttendanceInlineTag extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (leading != null) ...[
-            leading!,
-            SizedBox(width: ui(4)),
-          ],
+          if (leading != null) ...[leading!, SizedBox(width: ui(4))],
           Text(
             label,
             maxLines: 1,
@@ -1454,7 +1312,7 @@ class _TodayClassesPanel extends StatelessWidget {
           image: AssetImage(AppAssets.adminFaceLibraryEntryCardBg),
           fit: BoxFit.cover,
         ),
-        border: Border.all(color: Colors.white),
+        border: Border.all(color: AppColors.surface),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1465,7 +1323,6 @@ class _TodayClassesPanel extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextSection,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1,
             ),
@@ -1479,7 +1336,6 @@ class _TodayClassesPanel extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 20 / 13,
                   ),
@@ -1613,10 +1469,7 @@ class _SignInActionShell extends StatelessWidget {
 }
 
 class _SignActionEmptyPanel extends StatelessWidget {
-  const _SignActionEmptyPanel({
-    required this.loading,
-    required this.message,
-  });
+  const _SignActionEmptyPanel({required this.loading, required this.message});
 
   final bool loading;
   final String message;
@@ -1636,7 +1489,6 @@ class _SignActionEmptyPanel extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(13),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 20 / 13,
                   ),
@@ -1685,7 +1537,6 @@ class _BigClassActionPanel extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(16),
                     color: _kTextSection,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1,
                   ),
@@ -1730,7 +1581,6 @@ class _BigClassActionPanel extends StatelessWidget {
                             style: TextStyle(
                               fontSize: ui(14),
                               color: _kTextDark,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w600,
                               height: 1,
                             ),
@@ -1749,7 +1599,6 @@ class _BigClassActionPanel extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -1780,8 +1629,7 @@ class _BigClassActionPanel extends StatelessWidget {
                         '班级学生',
                         style: TextStyle(
                           fontSize: ui(16),
-                          color: Colors.black,
-                          fontFamily: 'PingFang SC',
+                          color: AppColors.ink,
                           fontWeight: AppFont.w500,
                           height: 20 / 16,
                         ),
@@ -1792,7 +1640,6 @@ class _BigClassActionPanel extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -1855,7 +1702,6 @@ class _BigClassActionPanel extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(13),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                       height: 20 / 13,
                     ),
@@ -1864,9 +1710,8 @@ class _BigClassActionPanel extends StatelessWidget {
                   Text(
                     '可先核对名单并修改状态，再点击下方完成全班签到；完成后学生端展示到课结果。',
                     style: TextStyle(
-                      fontSize: ui(11),
+                      fontSize: ui(12),
                       color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 12 / 11,
                     ),
@@ -1898,15 +1743,14 @@ class _BigClassActionPanel extends StatelessWidget {
                     Icon(
                       Icons.fact_check_outlined,
                       size: ui(20),
-                      color: Colors.white,
+                      color: AppColors.surface,
                     ),
                     SizedBox(width: ui(4)),
                     Text(
                       '一键完成全班签到',
                       style: TextStyle(
                         fontSize: ui(14),
-                        color: Colors.white,
-                        fontFamily: 'PingFang SC',
+                        color: AppColors.surface,
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -1920,7 +1764,7 @@ class _BigClassActionPanel extends StatelessWidget {
               width: double.infinity,
               padding: EdgeInsets.fromLTRB(ui(12), ui(8), ui(12), ui(8)),
               decoration: BoxDecoration(
-                color: const Color(0xFFE4FFED),
+                color: AppColors.successSoft,
                 borderRadius: BorderRadius.circular(ui(8)),
                 border: Border.all(color: _kBorderSoft, width: 0.5),
               ),
@@ -1933,7 +1777,6 @@ class _BigClassActionPanel extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(13),
                       color: _kStatusPresent,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                       height: 20 / 13,
                     ),
@@ -1942,9 +1785,8 @@ class _BigClassActionPanel extends StatelessWidget {
                   Text(
                     '当前状态：${data.signStatusLabel}。可在上方名单中查看或调整个别学生签到状态。',
                     style: TextStyle(
-                      fontSize: ui(11),
+                      fontSize: ui(12),
                       color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 14 / 11,
                     ),
@@ -1976,7 +1818,6 @@ class _SignActionEndedBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: _kTextSecondary,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1,
         ),
@@ -2003,7 +1844,7 @@ class _StatusChip extends StatelessWidget {
       height: ui(24),
       padding: EdgeInsets.symmetric(horizontal: ui(6), vertical: ui(2)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Row(
@@ -2015,7 +1856,7 @@ class _StatusChip extends StatelessWidget {
             decoration: BoxDecoration(
               color: dotColor,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1),
+              border: Border.all(color: AppColors.surface, width: 1),
             ),
           ),
           SizedBox(width: ui(4)),
@@ -2024,7 +1865,6 @@ class _StatusChip extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -2035,7 +1875,6 @@ class _StatusChip extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1,
             ),
@@ -2139,7 +1978,7 @@ class _StudentAttendCell extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: _dotColorFor(student.status),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1),
+                      border: Border.all(color: AppColors.surface, width: 1),
                     ),
                   ),
                 ),
@@ -2154,7 +1993,6 @@ class _StudentAttendCell extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 20 / 14,
               ),
@@ -2238,7 +2076,6 @@ class _SmallClassActionPanel extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: ui(16),
                     color: _kTextSection,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1,
                   ),
@@ -2280,7 +2117,6 @@ class _SmallClassActionPanel extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: ui(14),
                               color: _kTextDark,
-                              fontFamily: 'PingFang SC',
                               fontWeight: AppFont.w600,
                               height: 1,
                             ),
@@ -2299,7 +2135,6 @@ class _SmallClassActionPanel extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -2329,8 +2164,7 @@ class _SmallClassActionPanel extends ConsumerWidget {
                         '班级学生',
                         style: TextStyle(
                           fontSize: ui(16),
-                          color: Colors.black,
-                          fontFamily: 'PingFang SC',
+                          color: AppColors.ink,
                           fontWeight: AppFont.w500,
                           height: 20 / 16,
                         ),
@@ -2341,7 +2175,6 @@ class _SmallClassActionPanel extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -2356,7 +2189,7 @@ class _SmallClassActionPanel extends ConsumerWidget {
                     _StatusChip(
                       label: '应到',
                       count: data.students.length,
-                      dotColor: _kInnerGray,
+                      dotColor: AppColors.textTertiary,
                     ),
                     _StatusChip(
                       label: '实到',
@@ -2366,7 +2199,7 @@ class _SmallClassActionPanel extends ConsumerWidget {
                     _StatusChip(
                       label: '迟到',
                       count: _countOf(_AttendStatus.late),
-                      dotColor: _kStatusLate,
+                      dotColor: AppColors.warning,
                     ),
                     _StatusChip(
                       label: '请假',
@@ -2456,8 +2289,9 @@ class _TeacherCheckInButtons extends StatelessWidget {
           child: _TeacherSignActionButton(
             label: signOutState == _SignButtonState.done ? '已下课签' : '下课签到',
             state: signOutState,
-            onTap:
-                signOutState == _SignButtonState.actionable ? onSignOut : null,
+            onTap: signOutState == _SignButtonState.actionable
+                ? onSignOut
+                : null,
           ),
         ),
       ],
@@ -2482,7 +2316,7 @@ class _TeacherSignActionButton extends StatelessWidget {
     final isActionable = state == _SignButtonState.actionable;
     final isDone = state == _SignButtonState.done;
     final foreground = isActionable
-        ? Colors.white
+        ? AppColors.surface
         : (isDone ? _kStatusGreen : _kTextDivider);
     return InkWell(
       onTap: isActionable ? onTap : null,
@@ -2495,14 +2329,14 @@ class _TeacherSignActionButton extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                  colors: [AppColors.brandSoft, AppColors.brand],
                 )
               : null,
           color: isActionable
               ? null
               : (isDone
                     ? _kStatusGreen.withValues(alpha: 0.10)
-                    : const Color(0xFFE6E9F1)),
+                    : AppColors.line),
           border: isActionable
               ? null
               : Border.all(
@@ -2530,7 +2364,6 @@ class _TeacherSignActionButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(16),
                   color: foreground,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1.2,
                 ),
@@ -2548,56 +2381,18 @@ class _TeacherSignActionButton extends StatelessWidget {
 // =============================================================================
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({
-    required this.seed,
-    required this.size,
-    this.imageUrl = '',
-  });
+  const _Avatar({required this.seed, required this.size, this.imageUrl = ''});
 
   final String seed;
   final double size;
   final String imageUrl;
 
-  Widget _fallback(String initial) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: Color(0xFFB98FFF),
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: size * 0.4,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w500,
-          height: 1,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final initial = seed.isEmpty ? '?' : seed.characters.first.toUpperCase();
     final resolved = imageUrl.trim().isEmpty
         ? ''
         : MediaUrl.resolve(imageUrl.trim());
-    if (resolved.isNotEmpty) {
-      return ClipOval(
-        child: Image.network(
-          resolved,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _fallback(initial),
-        ),
-      );
-    }
-    return _fallback(initial);
+    return AppAvatar(name: seed, url: resolved, size: size);
   }
 }
 
@@ -2711,7 +2506,9 @@ bool _isBigClassBulkSignCompleted(_AttendClass data) {
     return true;
   }
   if (data.students.isNotEmpty &&
-      data.students.every((student) => student.status != _AttendStatus.missing)) {
+      data.students.every(
+        (student) => student.status != _AttendStatus.missing,
+      )) {
     return true;
   }
   return false;
@@ -2858,7 +2655,11 @@ class _HistoryView extends StatelessWidget {
     }
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
-      header: _HistoryBanner(onBack: onBack),
+      header: AppPageHeader(
+        title: '签到历史',
+        subtitle: '按日期查看全部授课签到记录',
+        onBack: onBack,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2879,7 +2680,9 @@ class _HistoryView extends StatelessWidget {
             const SizedBox.shrink()
           else if (error.isNotEmpty)
             ConstrainedBox(
-              constraints: BoxConstraints(minHeight: ui(_kHistoryListMinHeight)),
+              constraints: BoxConstraints(
+                minHeight: ui(_kHistoryListMinHeight),
+              ),
               child: _AttendanceEmptyPanel(
                 loading: false,
                 message: error,
@@ -2888,7 +2691,9 @@ class _HistoryView extends StatelessWidget {
             )
           else if (filteredDays.isEmpty)
             ConstrainedBox(
-              constraints: BoxConstraints(minHeight: ui(_kHistoryListMinHeight)),
+              constraints: BoxConstraints(
+                minHeight: ui(_kHistoryListMinHeight),
+              ),
               child: _HistoryEmptyState(query: query),
             )
           else
@@ -2944,69 +2749,6 @@ String _dateOnly(String value) {
   return trimmed;
 }
 
-class _HistoryBanner extends StatelessWidget {
-  const _HistoryBanner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: const Color(0xFF1C274C),
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Center(
-              child: Text(
-                '历史记录',
-                style: TextStyle(
-                  fontSize: ui(16),
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w600,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _HistoryFilterRow extends StatelessWidget {
   const _HistoryFilterRow({
     required this.filterIdx,
@@ -3031,7 +2773,7 @@ class _HistoryFilterRow extends StatelessWidget {
           height: ui(44),
           padding: EdgeInsets.all(ui(4)),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorderSoft),
           ),
@@ -3077,12 +2819,7 @@ class _HistorySummaryBar extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     return RichText(
       text: TextSpan(
-        style: TextStyle(
-          fontSize: ui(12),
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 1,
-        ),
+        style: TextStyle(fontSize: ui(12), fontWeight: AppFont.w400, height: 1),
         children: [
           const TextSpan(
             text: '共 ',
@@ -3161,7 +2898,7 @@ class _HistorySearchFieldState extends State<_HistorySearchField> {
       height: ui(44),
       padding: EdgeInsets.symmetric(horizontal: ui(20)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Row(
@@ -3183,7 +2920,6 @@ class _HistorySearchFieldState extends State<_HistorySearchField> {
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.2,
               ),
@@ -3194,8 +2930,7 @@ class _HistorySearchFieldState extends State<_HistorySearchField> {
                 hintText: '课程、班级、节次',
                 hintStyle: TextStyle(
                   fontSize: ui(14),
-                  color: const Color(0xFFD1D1D1),
-                  fontFamily: 'PingFang SC',
+                  color: AppColors.textPlaceholder,
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -3224,7 +2959,6 @@ class _HistoryDaySection extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(16),
             color: _kTextSection,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w500,
             height: 1,
           ),
@@ -3292,7 +3026,6 @@ class _HistoryEmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),

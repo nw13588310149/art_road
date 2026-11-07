@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_response.dart';
+import '../../ebooks/data/ebook_collection.dart';
 import '../data/my_collection_repository.dart';
 import 'my_collection_state.dart';
 
@@ -171,7 +172,7 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
   }
 
   /// 服务端返回的分类列表只是用来确认每个 Tab 是否启用，
-  /// 顺序统一以设计稿（全部 → 范画 → 视频 → 资讯）为准。
+  /// 顺序统一以 [kCollectionDefaultTabs] 为准。
   List<CollectionTabItem> _parseTabs(dynamic data) {
     final allowed = <int>{};
     if (data is List) {
@@ -203,6 +204,15 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
       if (raw is! Map<String, dynamic>) {
         continue;
       }
+      final rawType = _toInt(raw['type']);
+      final type = rawType == 0 ? activeType : rawType;
+      if (type == CollectionType.ebook) {
+        final ebook = _ebookEntry(raw, type);
+        if (ebook != null) {
+          result.add(ebook);
+        }
+        continue;
+      }
       final target = _resolveTarget(raw);
       if (target == null) {
         continue;
@@ -211,8 +221,6 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
       if (title.isEmpty) {
         continue;
       }
-      final rawType = _toInt(raw['type']);
-      final type = rawType == 0 ? activeType : rawType;
       final targetId = _toIdString(raw['targetId']);
       result.add(
         CollectionEntry(
@@ -231,6 +239,33 @@ class MyCollectionController extends StateNotifier<MyCollectionState> {
       );
     }
     return result;
+  }
+
+  /// 书刊收藏的卡片字段由书刊模块定义（[EbookCollection.itemOf]）。
+  CollectionEntry? _ebookEntry(Map<String, dynamic> raw, int type) {
+    final book = EbookCollection.itemOf(<String, dynamic>{...raw, 'type': type});
+    if (book == null || book.title.isEmpty) {
+      return null;
+    }
+    return CollectionEntry(
+      id: _toIdString(raw['id']),
+      targetId: book.bookId,
+      type: type,
+      title: book.title,
+      subtitle: book.subtitle,
+      coverUrl: book.coverUrl,
+      authorName: '',
+      avatarUrl: '',
+      metricText: '',
+      durationText: '',
+      rawPayload: <String, dynamic>{
+        'id': book.bookId,
+        'title': book.title,
+        'subtitle': book.subtitle,
+        'coverImg': book.coverUrl,
+        'pageCount': book.pageCount,
+      },
+    );
   }
 
   Map<String, dynamic>? _resolveTarget(Map<String, dynamic> raw) {

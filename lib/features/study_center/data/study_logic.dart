@@ -15,7 +15,7 @@ String _fmt(num value) {
       : rounded.toStringAsFixed(1);
 }
 
-/// 超过百分之多少的考生：(参考人数 - 名次) / (参考人数 - 1)。
+/// 超过百分之多少的考生：(参考人数 - 名次) / 参考人数，与「第 7 名 / 38 人」可以互相核对。
 int? surpassedPercentOf(int? ranking, int? participants) {
   if (ranking == null ||
       participants == null ||
@@ -24,21 +24,25 @@ int? surpassedPercentOf(int? ranking, int? participants) {
       ranking > participants) {
     return null;
   }
-  return ((participants - ranking) / (participants - 1) * 100).round();
+  return ((participants - ranking) / participants * 100).round();
 }
+
+/// 分数变化量：固定一位小数（`5.0`、`1.7`），同一列表里位数一致。
+String formatScoreDelta(num value) =>
+    ((value.abs() * 10).round() / 10).toStringAsFixed(1);
 
 final RegExp _datePattern = RegExp(r'^(\d{4})-(\d{2})-(\d{2})');
 
-/// `2026-09-20 08:30:00` → `2026.09.20`。
+/// `2026-09-20 08:30:00` → `2026-09-20`。
 String studyDateText(String time) {
   final match = _datePattern.firstMatch(time.trim());
-  return match == null ? time : '${match[1]}.${match[2]}.${match[3]}';
+  return match == null ? time : '${match[1]}-${match[2]}-${match[3]}';
 }
 
-/// `2026-09-20 08:30:00` → `09.20`（坐标轴等窄位置）。
+/// `2026-09-20 08:30:00` → `09-20`（坐标轴等窄位置）。
 String studyShortDate(String time) {
   final match = _datePattern.firstMatch(time.trim());
-  return match == null ? time : '${match[2]}.${match[3]}';
+  return match == null ? time : '${match[2]}-${match[3]}';
 }
 
 /// `2026-09-20` → (9, 20)。

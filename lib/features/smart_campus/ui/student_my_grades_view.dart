@@ -10,7 +10,7 @@
 //     （上方本次考试信息，下方科目与座位），**按科目区分在线 / 离线**
 //     （对齐机构管理端新建考试时按科目设置形式）：
 //       - 离线科目：展示「时间 + 考场 + 座位」，无需上传；
-//       - 在线科目（且考试正在进行）：学生自录上传视频 / 音频，最多 2 次，并展示提交状态
+//       - 在线科目（且考试正在进行）：学生上传作品照片 / 视频，最多 2 次，并展示提交状态
 //         （未开放 / 待提交 / 已提交 X/2·可重传 / 次数用完 / 已截止·未提交）。
 //     一场考试可同时含在线与离线科目（混合）。当前后端无「全部考试」列表与在线
 //     提交接口，使用 student_exam_schedule_data 的模拟数据；文件选择走真实系统
@@ -26,11 +26,11 @@
 //         + 灰小字 "各次月考/大考总均分平均"
 //      B. 紫渐变「最近班级」14 + 数值 32 + "/42" + 紫"持平"tag（横线图标）
 //      C. 绿渐变「最近年级」14 + 数值 32 + "/368" + 绿"上升3名"tag（上升箭头）
-//      D. 白底「本学期最佳考试」14 + 紫色 20px "六月摸底考试" + 紫底
+//      D. 白底「本学期最高分」+ 考试名
 //         "均分 91分" tag
 //   3. 双列卡：
 //      左 640「6次考试 折线趋势」（496 高白卡）：
-//         · 顶部科目 tabs（总均分 / 素描 / 色彩 / 速写 / 美术常识 / 文化课）
+//         · 顶部科目 tabs（三科均分 / 素描 / 色彩 / 速写 / 美术常识 / 文化课）
 //         · 左 Y 轴标签 100/95/90/85/80/0（80→0 用一段压缩刻度）
 //         · 6 个数据点（86/87/86.5/91/93/90），紫线 + 紫渐变填充
 //         · 每点上方紫色数值标签
@@ -40,7 +40,7 @@
 //         区间标签 + 占比% + 紫色渐变进度条 + 右下"X场"
 //   4. 「考试记录与各科成绩」2 列 × 多行卡片网格（每张 477 宽）：
 //      - 表头：「X月月考」16 + 日期灰字 + 折叠图标按钮
-//      - 5 项一排统计 (12px)：总均分 / 及格科数 / 优秀科数 / 班级排名 / 全校排名
+//      - 5 项一排统计 (12px)：三科均分 / 及格科数 / 优秀科数 / 班级排名 / 全校排名
 //      - 展开态：科目子卡（素描 / 色彩 / 速写 / 美术常识 / 文化课），
 //        含 老师名 + 科目 tag + 班/全校排名 + 教师评语 + 录像/录音/无录制
 //        tag + 蓝色右上角分数 + "查看详情"按钮
@@ -52,6 +52,7 @@
 // 字体：PingFang SC（中文） + Barlow（数字 32 / 20）
 // =============================================================================
 
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -61,13 +62,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shell/ui/shell_layout.dart';
-import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
-import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/scaled_dialog.dart';
-import '../../../core/widgets/segment_toggle.dart';
 import '../../../core/widgets/smooth_circle_network_avatar.dart';
 import '../../courseware/state/cloud_drive_controller.dart';
 import '../../courseware/ui/courseware_file_picker.dart';
@@ -78,30 +76,25 @@ import 'student_homework_submission_preview.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_empty_state.dart';
 
-const Color _kCardBg = Colors.white;
-const Color _kPageBg = Color(0xFFEFF3FC);
-const Color _kInnerGray = Color(0xFFF5F6FA);
-const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kBorderHair = Color(0xFFE6E9F1);
-const Color _kTextDark = Color(0xFF0B081A);
-const Color _kTextSection = Color(0xFF1A1A1A);
-const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextHint = Color(0xFFB6B5BB);
-const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kPurple = Color(0xFF715EFE);
-const Color _kPurpleLight = Color(0xFF8E7FFF);
-const Color _kPurpleSoftBg = Color(0xFFE3DFFF);
-const Color _kPurpleBestBg = Color(0xFFF7F2FF);
-const Color _kProgressBg = Color(0xFFF4F4FF);
+const Color _kCardBg = AppColors.surface;
+const Color _kPageBg = AppColors.page;
+const Color _kInnerGray = AppColors.surfaceSubtle;
+const Color _kBorderSoft = AppColors.lineSoft;
+const Color _kBorderHair = AppColors.line;
+const Color _kTextDark = AppColors.ink;
+const Color _kTextSection = AppColors.ink;
+const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextDivider = AppColors.textTertiary;
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleSoftBg = AppColors.brandTint;
+const Color _kPurpleBestBg = AppColors.brandWash;
 const Color _kBlueScore = Color(0xFF325BFF);
-const Color _kSubjectGreen = Color(0xFF0CAC40);
-const Color _kSubjectGreenBg = Color(0xFFDFFCF0);
-const Color _kRiseGreen = Color(0xFF12CE51);
-const Color _kFallRed = Color(0xFFF04545);
-const Color _kAxisLabel = Color(0xFFB6B5BB);
+const Color _kSubjectGreen = AppColors.success;
+const Color _kSubjectGreenBg = AppColors.successSoft;
+const Color _kAxisLabel = AppColors.textPlaceholder;
 
 /// 标题栏右侧主切换控件统一高度（与查寝管理页一致）。
-const double _kBannerControlHeight = 32;
 
 // =============================================================================
 // 顶级视图
@@ -201,10 +194,22 @@ class _StudentMyGradesViewState extends ConsumerState<StudentMyGradesView> {
     final visibleRecords = _visibleRecords;
     return SmartCampusSecondaryPageShell(
       backgroundColor: _kPageBg,
-      header: _ExamPageBanner(
+      header: AppPageHeader(
+        title: '我的考试',
+        subtitle: '考试安排、考场座位与线上测评提交，成绩公布后在「我的成绩」查看',
         onBack: widget.onBack,
-        selected: _mainTab,
-        onSelected: (v) => setState(() => _mainTab = v),
+        bottom: AppTabs<_MainTab>(
+          tabs: [
+            AppTab(
+              value: _MainTab.exams,
+              label: '全部考试',
+              count: _examsLoading ? null : _exams.length,
+            ),
+            const AppTab(value: _MainTab.grades, label: '我的成绩'),
+          ],
+          value: _mainTab,
+          onChanged: (v) => setState(() => _mainTab = v),
+        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,123 +269,6 @@ enum _MainTab { exams, grades }
 /// 「全部考试」列表筛选。
 enum _ExamFilter { all, pending, done }
 
-class _ExamPageBanner extends StatelessWidget {
-  const _ExamPageBanner({
-    required this.onBack,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final VoidCallback onBack;
-  final _MainTab selected;
-  final ValueChanged<_MainTab> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      padding: EdgeInsets.symmetric(horizontal: ui(12)),
-      decoration: smartCampusPageBannerDecoration(ui),
-      child: Row(
-        children: [
-          _BackButton(onTap: onBack),
-          Expanded(
-            child: Center(
-              child: Text(
-                '我的考试',
-                style: TextStyle(
-                  fontSize: ui(16),
-                  color: _kTextDark,
-                  fontFamily: 'PingFang SC',
-                  fontWeight: AppFont.w600,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          _MainTabs(selected: selected, onSelected: onSelected),
-        ],
-      ),
-    );
-  }
-}
-
-class _MainTabs extends StatelessWidget {
-  const _MainTabs({required this.selected, required this.onSelected});
-
-  final _MainTab selected;
-  final ValueChanged<_MainTab> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      constraints: BoxConstraints(minHeight: ui(_kBannerControlHeight)),
-      padding: EdgeInsets.all(ui(2)),
-      decoration: BoxDecoration(
-        color: _kInnerGray,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _BannerSectionTabItem(
-            label: '全部考试',
-            selected: selected == _MainTab.exams,
-            onTap: () => onSelected(_MainTab.exams),
-          ),
-          _BannerSectionTabItem(
-            label: '我的成绩',
-            selected: selected == _MainTab.grades,
-            onTap: () => onSelected(_MainTab.grades),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BannerSectionTabItem extends StatelessWidget {
-  const _BannerSectionTabItem({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(7)),
-        decoration: BoxDecoration(
-          color: selected ? _kTextDark : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: selected ? Colors.white : _kTextHint,
-            fontFamily: 'PingFang SC',
-            fontWeight: selected ? AppFont.w500 : AppFont.w400,
-            height: 1.2,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// 「我的成绩」tab 顶部：分区标题 + 本学期/上学期切换。
 class _GradesSemesterHeader extends StatelessWidget {
   const _GradesSemesterHeader({
@@ -403,35 +291,6 @@ class _GradesSemesterHeader extends StatelessWidget {
   }
 }
 
-class _BackButton extends StatelessWidget {
-  const _BackButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        width: ui(32),
-        height: ui(32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Icon(
-          Icons.chevron_left_rounded,
-          size: ui(20),
-          color: const Color(0xFF1C274C),
-        ),
-      ),
-    );
-  }
-}
-
 class _SemesterTabs extends StatelessWidget {
   const _SemesterTabs({required this.selected, required this.onSelected});
 
@@ -440,15 +299,14 @@ class _SemesterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentToggle(
-      selectedIndex: selected == _SemesterTab.current ? 0 : 1,
-      thumbColor: _kTextDark,
-      options: const [
-        SegmentToggleOption(label: '本学期'),
-        SegmentToggleOption(label: '上学期'),
+    return AppSegmented<_SemesterTab>(
+      size: AppControlSize.sm,
+      segments: const [
+        AppSegment(value: _SemesterTab.current, label: '本学期'),
+        AppSegment(value: _SemesterTab.previous, label: '上学期'),
       ],
-      onChanged: (i) =>
-          onSelected(i == 0 ? _SemesterTab.current : _SemesterTab.previous),
+      value: selected,
+      onChanged: onSelected,
     );
   }
 }
@@ -506,7 +364,7 @@ class _GradesStatsRow extends StatelessWidget {
   }
 }
 
-// 卡 A：学年考试均分（白底 + 进度条）
+// 卡 A～D：学年考试均分 / 最近班级排名 / 最近全校排名 / 本学期最高分
 class _AverageCard extends StatelessWidget {
   const _AverageCard({required this.score});
 
@@ -514,72 +372,54 @@ class _AverageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(100),
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(ui(12)),
-      ),
-      padding: EdgeInsets.fromLTRB(ui(16), ui(16), ui(16), ui(14)),
-      child: Stack(
+    final hasData = score > 0;
+    return _GradeStatCard(
+      label: '学年考试均分',
+      value: hasData ? _scoreLabel(score) : '—',
+      unit: hasData ? '分' : null,
+      note: '各次月考 / 大考三科均分的平均',
+    );
+  }
+}
+
+/// 成绩页统计卡：白底 AppCard + AppStatTile，右上角放趋势标签，底部一行口径说明。
+class _GradeStatCard extends StatelessWidget {
+  const _GradeStatCard({
+    required this.label,
+    required this.value,
+    required this.note,
+    this.unit,
+    this.trailing,
+  });
+
+  final String label;
+  final String value;
+  final String note;
+  final String? unit;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Text(
-              '学年考试均分',
-              style: TextStyle(
-                fontSize: ui(14),
-                color: Colors.black,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: AppStatTile(label: label, value: value, unit: unit),
               ),
-            ),
+              ?trailing,
+            ],
           ),
-          Positioned(
-            left: 0,
-            top: ui(28),
-            child: Text(
-              _scoreLabel(score),
-              style: smartCampusStatValueTextStyle(ui),
-            ),
-          ),
-          Positioned(
-            left: ui(64),
-            right: 0,
-            top: ui(36),
-            child: Text(
-              '各次月考/大考总均分平均',
-              textAlign: TextAlign.right,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: ui(11),
-                color: _kTextDivider,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w400,
-                height: 1,
-              ),
-            ),
-          ),
-          Positioned(
-            left: ui(64),
-            right: 0,
-            bottom: ui(2),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(ui(20)),
-              child: Stack(
-                children: [
-                  Container(height: ui(8), color: _kProgressBg),
-                  FractionallySizedBox(
-                    widthFactor: (score / 100).clamp(0.0, 1.0),
-                    child: Container(height: ui(8), color: _kPurpleLight),
-                  ),
-                ],
-              ),
-            ),
+          const SizedBox(height: AppSpace.s4),
+          Text(
+            note,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.caption12.copyWith(color: AppColors.textTertiary),
           ),
         ],
       ),
@@ -587,133 +427,20 @@ class _AverageCard extends StatelessWidget {
   }
 }
 
-// 卡 B / C：最近班级 / 最近年级（紫渐变 / 绿渐变 + 右上 tag）
-class _RankCard extends StatelessWidget {
-  const _RankCard({
-    required this.title,
-    required this.value,
-    required this.totalSuffix,
-    required this.cornerGlowColor,
-    required this.trend,
-  });
-
-  factory _RankCard.classRank({
-    required int rank,
-    required int total,
-    required int? trend,
-  }) => _RankCard(
-    title: '最近班级',
-    value: '$rank',
-    totalSuffix: '/$total',
-    cornerGlowColor: const Color(0x339346FF),
-    trend: trend,
+Widget _rankStatCard({
+  required String label,
+  required int rank,
+  required int total,
+  required int? trend,
+}) {
+  final hasRank = rank > 0;
+  return _GradeStatCard(
+    label: label,
+    value: hasRank ? '$rank' : '—',
+    unit: hasRank ? '名' : null,
+    trailing: trend == null || !hasRank ? null : _RankTrendTag(trend: trend),
+    note: total > 0 ? '共 $total 人参考' : '暂无排名',
   );
-
-  factory _RankCard.gradeRank({
-    required int rank,
-    required int total,
-    required int? trend,
-  }) => _RankCard(
-    title: '最近年级',
-    value: '$rank',
-    totalSuffix: '/$total',
-    cornerGlowColor: const Color(0x3346FF77),
-    trend: trend,
-  );
-
-  final String title;
-  final String value;
-  final String totalSuffix;
-  final Color cornerGlowColor;
-
-  /// 名次变化（正=进步/名次变小，负=退步，0=持平）；null 时不展示徽章。
-  final int? trend;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(100),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(ui(12)),
-        border: Border.all(color: Colors.white),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            top: 0,
-            right: 0,
-            child: SizedBox(
-              width: ui(88),
-              height: ui(72),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topRight,
-                    radius: 1,
-                    colors: [
-                      cornerGlowColor,
-                      cornerGlowColor.withValues(alpha: 0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: ui(16),
-            top: ui(16),
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: ui(14),
-                color: Colors.black,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1,
-              ),
-            ),
-          ),
-          Positioned(
-            left: ui(16),
-            top: ui(44),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  value,
-                  style: smartCampusStatValueTextStyle(ui),
-                ),
-                SizedBox(width: ui(2)),
-                Padding(
-                  padding: EdgeInsets.only(bottom: ui(2)),
-                  child: Text(
-                    totalSuffix,
-                    style: TextStyle(
-                      fontSize: ui(20),
-                      color: _kTextDivider,
-                      fontFamily: 'Barlow',
-                      fontWeight: FontWeight.w500,
-                      height: 1,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (trend != null)
-            Positioned(
-              right: ui(12),
-              top: ui(14),
-              child: _RankBadge(trend: trend!),
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ClassRankCard extends StatelessWidget {
@@ -722,7 +449,8 @@ class _ClassRankCard extends StatelessWidget {
   final StudentExamOverview? overview;
 
   @override
-  Widget build(BuildContext context) => _RankCard.classRank(
+  Widget build(BuildContext context) => _rankStatCard(
+    label: '最近班级排名',
     rank: overview?.latestClassRank ?? 0,
     total: overview?.latestClassTotal ?? 0,
     trend: overview?.classRankTrend,
@@ -735,65 +463,32 @@ class _GradeRankCard extends StatelessWidget {
   final StudentExamOverview? overview;
 
   @override
-  Widget build(BuildContext context) => _RankCard.gradeRank(
+  Widget build(BuildContext context) => _rankStatCard(
+    label: '最近全校排名',
     rank: overview?.latestSchoolRank ?? 0,
     total: overview?.latestSchoolTotal ?? 0,
     trend: overview?.schoolRankTrend,
   );
 }
 
-/// 名次变化徽章：上升 N 名（绿↑）/ 下降 N 名（红↓）/ 持平（灰—）。
+/// 名次变化：上升 N 名 / 下降 N 名 / 持平。
 /// 数据来自 `examOverview.trendList` 最近两场有效排名对比。
-class _RankBadge extends StatelessWidget {
-  const _RankBadge({required this.trend});
+class _RankTrendTag extends StatelessWidget {
+  const _RankTrendTag({required this.trend});
 
   /// 名次变化：>0 进步（名次变小）、<0 退步、0 持平。
   final int trend;
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final flat = trend == 0;
-    final up = trend > 0;
-    final color = flat ? _kTextSecondary : (up ? _kRiseGreen : _kFallRed);
-    final text = flat ? '持平' : (up ? '上升$trend名' : '下降${-trend}名');
-    return Container(
-      height: ui(24),
-      padding: EdgeInsets.symmetric(horizontal: ui(8)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(6)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (flat)
-            Container(width: ui(8), height: 1, color: color)
-          else
-            Icon(
-              up ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-              size: ui(12),
-              color: color,
-            ),
-          SizedBox(width: ui(4)),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: ui(11),
-              color: color,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1,
-            ),
-          ),
-        ],
-      ),
-    );
+    if (trend == 0) return const AppTag(label: '持平');
+    return trend > 0
+        ? AppTag(label: '上升 $trend 名', tone: AppTone.success)
+        : AppTag(label: '下降 ${-trend} 名', tone: AppTone.warning);
   }
 }
 
-// 卡 D：本学期最佳考试
+// 卡 D：本学期最高分（考试名写在说明行）
 class _BestExamCard extends StatelessWidget {
   const _BestExamCard({required this.overview});
 
@@ -801,88 +496,13 @@ class _BestExamCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(100),
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(ui(12)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(16),
-            top: ui(16),
-            child: Text(
-              '本学期最佳考试',
-              style: TextStyle(
-                fontSize: ui(14),
-                color: Colors.black,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1,
-              ),
-            ),
-          ),
-          Positioned(
-            left: ui(16),
-            top: ui(50),
-            right: ui(12),
-            child: Text(
-              overview?.bestExamName.isNotEmpty == true
-                  ? overview!.bestExamName
-                  : '暂无考试',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: ui(20),
-                color: _kPurple,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1.2,
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: ui(14),
-            child: Container(
-              height: ui(24),
-              padding: EdgeInsets.symmetric(horizontal: ui(8)),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: _kPurpleBestBg,
-                borderRadius: BorderRadius.circular(ui(6)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '均分 ',
-                    style: TextStyle(
-                      fontSize: ui(11),
-                      color: _kPurple,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 1,
-                    ),
-                  ),
-                  Text(
-                    '${_scoreLabel(overview?.bestExamScore ?? 0)}分',
-                    style: TextStyle(
-                      fontSize: ui(11),
-                      color: _kPurple,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w600,
-                      height: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+    final score = overview?.bestExamScore ?? 0;
+    final name = overview?.bestExamName ?? '';
+    return _GradeStatCard(
+      label: '本学期最高分',
+      value: score > 0 ? _scoreLabel(score) : '—',
+      unit: score > 0 ? '分' : null,
+      note: name.isNotEmpty ? '$name · 三科均分' : '暂无考试',
     );
   }
 }
@@ -972,9 +592,8 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: ui(18),
+        fontSize: ui(16),
         color: _kTextSection,
-        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w500,
         height: 1.2,
       ),
@@ -1030,7 +649,6 @@ class _LineChartCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                 ),
               ),
@@ -1079,8 +697,10 @@ class _LineChartArea extends StatelessWidget {
         final yAxisWidthPx = ui(yAxisWidth);
         final yAxisToPlotGapPx = ui(yAxisToPlotGap);
         final xLabelH = ui(20);
-        final chartW =
-            (w - yAxisWidthPx - yAxisToPlotGapPx).clamp(0.0, double.infinity);
+        final chartW = (w - yAxisWidthPx - yAxisToPlotGapPx).clamp(
+          0.0,
+          double.infinity,
+        );
         final chartH = (h - xLabelH).clamp(0.0, double.infinity);
         const tickCount = 6;
         final tickGap = chartH / (tickCount - 1);
@@ -1096,7 +716,6 @@ class _LineChartArea extends StatelessWidget {
         final axisLabelStyle = TextStyle(
           fontSize: ui(12),
           color: _kAxisLabel,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 20 / 12,
         );
@@ -1164,7 +783,10 @@ class _LineChartArea extends StatelessWidget {
                     for (var i = 0; i < points.length; i++)
                       Positioned(
                         left: points[i].dx - ui(20),
-                        top: (points[i].dy - ui(22)).clamp(0.0, chartH - ui(18)),
+                        top: (points[i].dy - ui(22)).clamp(
+                          0.0,
+                          chartH - ui(18),
+                        ),
                         width: ui(40),
                         child: Text(
                           values[i] == values[i].roundToDouble()
@@ -1174,7 +796,6 @@ class _LineChartArea extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextSecondary,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w500,
                             height: 20 / 12,
                           ),
@@ -1195,7 +816,6 @@ class _LineChartArea extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: ui(12),
                                     color: _kTextSecondary,
-                                    fontFamily: 'PingFang SC',
                                     fontWeight: AppFont.w400,
                                     height: 20 / 12,
                                   ),
@@ -1254,7 +874,7 @@ class _LinePainter extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFE3DFFF), Color(0x00E3DFFF)],
+          colors: [AppColors.brandTint, Color(0x00E3DFFF)],
         ).createShader(Rect.fromLTWH(0, 0, size.width, chartHeight));
       canvas.drawPath(fillPath, fillPaint);
 
@@ -1268,7 +888,7 @@ class _LinePainter extends CustomPainter {
     }
 
     // Dots
-    final dotFill = Paint()..color = Colors.white;
+    final dotFill = Paint()..color = AppColors.surface;
     final dotBorder = Paint()
       ..color = _kPurple
       ..strokeWidth = 1.5
@@ -1305,7 +925,6 @@ class _RankRowHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -1314,9 +933,8 @@ class _RankRowHeader extends StatelessWidget {
           Text(
             '班级总人数：$classTotal',
             style: TextStyle(
-              fontSize: ui(10),
+              fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -1325,9 +943,8 @@ class _RankRowHeader extends StatelessWidget {
           Text(
             '全校总人数：$schoolTotal',
             style: TextStyle(
-              fontSize: ui(10),
+              fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -1420,7 +1037,6 @@ class _RankCell extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -1441,7 +1057,7 @@ class _RankCell extends StatelessWidget {
           SizedBox(height: ui(4)),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(ui(6)),
             ),
             padding: EdgeInsets.symmetric(horizontal: ui(6), vertical: ui(4)),
@@ -1475,7 +1091,6 @@ class _MiniStatRow extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),
@@ -1485,7 +1100,6 @@ class _MiniStatRow extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextDark,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),
@@ -1586,7 +1200,6 @@ class _ScoreSegmentTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1,
                 ),
@@ -1597,7 +1210,6 @@ class _ScoreSegmentTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1,
                 ),
@@ -1620,7 +1232,7 @@ class _ScoreSegmentTile extends StatelessWidget {
                           gradient: LinearGradient(
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
-                            colors: [_kPurple, Color(0xFFE2D0FF)],
+                            colors: [_kPurple, AppColors.brandTint],
                           ),
                         ),
                       ),
@@ -1717,9 +1329,7 @@ class _ExamRecordsGrid extends StatelessWidget {
         child: SmartCampusEmptyState(
           illustration: AppAssets.emptyExamPlaceholder,
           title: filteredEmpty ? '该学期暂无成绩记录' : '暂无考试记录',
-          subtitle: filteredEmpty
-              ? '切换到其他学期查看，或等待老师公布本学期成绩。'
-              : '',
+          subtitle: filteredEmpty ? '切换到其他学期查看，或等待老师公布本学期成绩。' : '',
         ),
       );
     }
@@ -1841,8 +1451,7 @@ class _ExamCardHeader extends StatelessWidget {
           title,
           style: TextStyle(
             fontSize: ui(16),
-            color: Colors.black,
-            fontFamily: 'PingFang SC',
+            color: AppColors.ink,
             fontWeight: AppFont.w500,
             height: 1.2,
           ),
@@ -1853,7 +1462,6 @@ class _ExamCardHeader extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextDivider,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1.2,
           ),
@@ -1867,7 +1475,7 @@ class _ExamCardHeader extends StatelessWidget {
               height: ui(32),
               padding: EdgeInsets.symmetric(horizontal: ui(10)),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(ui(8)),
                 border: Border.all(color: _kBorderSoft),
               ),
@@ -1885,7 +1493,6 @@ class _ExamCardHeader extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                       height: 1,
                     ),
@@ -1904,7 +1511,7 @@ class _ExamCardHeader extends StatelessWidget {
             width: ui(32),
             height: ui(32),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(ui(8)),
               border: Border.all(color: _kBorderSoft),
             ),
@@ -1931,7 +1538,7 @@ class _ExamSummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final stats = <(String, String)>[
-      ('总均分', record.totalAvg),
+      ('三科均分', record.totalAvg),
       ('及格科数', '${record.passCount}'),
       ('优秀科数', '${record.excellentCount}'),
       ('班级排名', '${record.classRank}'),
@@ -1950,7 +1557,6 @@ class _ExamSummaryRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextSecondary,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -1961,7 +1567,6 @@ class _ExamSummaryRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kPurple,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.2,
                   ),
@@ -2025,7 +1630,6 @@ class _ExamSubjectTile extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: ui(14),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                       height: 1,
                     ),
@@ -2042,7 +1646,6 @@ class _ExamSubjectTile extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -2055,7 +1658,6 @@ class _ExamSubjectTile extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -2068,7 +1670,6 @@ class _ExamSubjectTile extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -2085,7 +1686,6 @@ class _ExamSubjectTile extends ConsumerWidget {
               style: TextStyle(
                 fontSize: ui(14),
                 color: _kBlueScore,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1.2,
               ),
@@ -2112,41 +1712,13 @@ class _SubjectTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final (bg, fg, label) = switch (subject) {
-      _SubjectKind.sketch => (
-        const Color(0xFFEAF0FB),
-        const Color(0xFF4A74D6),
-        '素描',
-      ),
-      _SubjectKind.color => (_kSubjectGreenBg, _kSubjectGreen, '色彩'),
-      _SubjectKind.speed => (
-        const Color(0xFFE4F3F7),
-        const Color(0xFF1F8FA8),
-        '速写',
-      ),
-      _SubjectKind.knowledge => (_kPurpleSoftBg, _kPurple, '美术常识'),
-      _SubjectKind.culture => (_kPurpleSoftBg, _kPurple, '文化课'),
-    };
-    return Container(
-      height: ui(16),
-      padding: EdgeInsets.symmetric(horizontal: ui(4)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: fg,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 15.24 / 12,
-        ),
-      ),
-    );
+    return AppTag.subject(switch (subject) {
+      _SubjectKind.sketch => '素描',
+      _SubjectKind.color => '色彩',
+      _SubjectKind.speed => '速写',
+      _SubjectKind.knowledge => '美术常识',
+      _SubjectKind.culture => '文化课',
+    });
   }
 }
 
@@ -2157,54 +1729,11 @@ class _MediaTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final (bg, fg, label, icon) = switch (kind) {
-      _ReplayMedia.video => (
-        _kPurpleSoftBg,
-        _kPurple,
-        '可回看录像',
-        Icons.videocam_outlined,
-      ),
-      _ReplayMedia.audio => (
-        _kPurpleSoftBg,
-        _kPurple,
-        '可回听录音',
-        Icons.mic_none_rounded,
-      ),
-      _ReplayMedia.image => (
-        _kPurpleSoftBg,
-        _kPurple,
-        '可查看原卷',
-        Icons.image_outlined,
-      ),
-      _ReplayMedia.none => (_kBorderHair, _kTextHint, '本场无回放录制', null),
+    return switch (kind) {
+      _ReplayMedia.video => const AppTag(label: '可回看考试录像', tone: AppTone.brand),
+      _ReplayMedia.image => const AppTag(label: '可查看试卷照片', tone: AppTone.brand),
+      _ReplayMedia.none => const AppTag(label: '本场没有回看资料'),
     };
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(6), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: ui(12), color: fg),
-            SizedBox(width: ui(2)),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: ui(11),
-              color: fg,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 15.24 / 11,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -2216,29 +1745,11 @@ class _ViewDetailButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    return AppButton(
+      label: '查看详情',
+      variant: AppButtonVariant.secondary,
+      size: AppButtonSize.sm,
       onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        width: ui(80),
-        height: ui(32),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: enabled ? Colors.white : const Color(0xFFF1F1F4),
-          borderRadius: BorderRadius.circular(ui(8)),
-        ),
-        child: Text(
-          enabled ? '查看详情' : '暂无回放',
-          style: TextStyle(
-            fontSize: ui(12),
-            color: enabled ? _kTextDark : _kTextHint,
-            fontFamily: 'PingFang SC',
-            fontWeight: AppFont.w500,
-            height: 16 / 12,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -2249,7 +1760,7 @@ class _ViewDetailButton extends StatelessWidget {
 
 enum _SubjectKind { sketch, color, speed, knowledge, culture }
 
-enum _ReplayMedia { video, audio, image, none }
+enum _ReplayMedia { video, image, none }
 
 class _ExamSubjectData {
   const _ExamSubjectData({
@@ -2341,15 +1852,9 @@ _ExamSubjectData _examSubjectFromApi(StudentExamSubjectScore score) {
   );
 }
 
-/// 资源相对路径 → 预览用「介质标签」（音频 / 视频 / 图片 / 文档）。
+/// 资源相对路径 → 预览用「介质标签」（视频 / 图片 / 文档）。
 String _resourceMediumLabel(String path) {
   final lower = path.toLowerCase();
-  if (lower.endsWith('.mp3') ||
-      lower.endsWith('.wav') ||
-      lower.endsWith('.m4a') ||
-      lower.endsWith('.aac')) {
-    return '音频';
-  }
   if (lower.endsWith('.mp4') ||
       lower.endsWith('.mov') ||
       lower.endsWith('.webm')) {
@@ -2377,11 +1882,6 @@ _ReplayMedia _mediaFromPath(String path) {
   if (lower.endsWith('.mp4') || lower.endsWith('.mov')) {
     return _ReplayMedia.video;
   }
-  if (lower.endsWith('.mp3') ||
-      lower.endsWith('.wav') ||
-      lower.endsWith('.m4a')) {
-    return _ReplayMedia.audio;
-  }
   if (lower.endsWith('.jpg') ||
       lower.endsWith('.jpeg') ||
       lower.endsWith('.png') ||
@@ -2395,11 +1895,10 @@ String _scoreLabel(double score) => score == score.roundToDouble()
     ? '${score.round()}'
     : score.toStringAsFixed(1);
 
-/// 按文件名扩展名识别在线考评可提交的媒体类型；非视频 / 音频 / 图片返回 null。
+/// 按文件名扩展名识别在线考评可提交的媒体类型；非图片 / 视频返回 null。
 StudentExamMediaKind? _examMediaKindFromName(String name) {
   final lower = name.toLowerCase();
   const videoExt = ['.mp4', '.mov', '.webm', '.avi', '.mkv', '.m4v', '.3gp'];
-  const audioExt = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.amr'];
   const imageExt = [
     '.png',
     '.jpg',
@@ -2411,24 +1910,21 @@ StudentExamMediaKind? _examMediaKindFromName(String name) {
     '.heif',
   ];
   if (videoExt.any(lower.endsWith)) return StudentExamMediaKind.video;
-  if (audioExt.any(lower.endsWith)) return StudentExamMediaKind.audio;
   if (imageExt.any(lower.endsWith)) return StudentExamMediaKind.image;
   return null;
 }
 
 /// iOS / iPad 考试作品上传类型；走对应 [CoursewarePickType] 以拉起系统相册。
-enum _ExamUploadKind { video, audio, image }
+enum _ExamUploadKind { image, video }
 
 extension _ExamUploadKindX on _ExamUploadKind {
   CoursewarePickType get pickType => switch (this) {
     _ExamUploadKind.video => CoursewarePickType.video,
-    _ExamUploadKind.audio => CoursewarePickType.audio,
     _ExamUploadKind.image => CoursewarePickType.image,
   };
 
   String get sheetLabel => switch (this) {
     _ExamUploadKind.video => '从相册选择视频',
-    _ExamUploadKind.audio => '选择音频文件',
     _ExamUploadKind.image => '从相册选择照片',
   };
 }
@@ -2442,12 +1938,10 @@ Future<CoursewarePickType?> _resolveExamUploadPickType(
   return showModalBottomSheet<CoursewarePickType>(
     context: context,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(alpha: 0.80),
+    barrierColor: AppColors.ink.withValues(alpha: 0.80),
     isScrollControlled: true,
-    builder: (ctx) => DashboardScaleScope(
-      data: scale,
-      child: const _ExamUploadKindSheet(),
-    ),
+    builder: (ctx) =>
+        DashboardScaleScope(data: scale, child: const _ExamUploadKindSheet()),
   );
 }
 
@@ -2471,7 +1965,7 @@ class _ExamUploadKindSheet extends StatelessWidget {
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(vertical: ui(8)),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(ui(16)),
                 ),
                 child: Column(
@@ -2481,9 +1975,8 @@ class _ExamUploadKindSheet extends StatelessWidget {
                         Container(height: 1, color: const Color(0x33000000)),
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: () => Navigator.of(
-                          context,
-                        ).pop(kinds[i].pickType),
+                        onTap: () =>
+                            Navigator.of(context).pop(kinds[i].pickType),
                         child: SizedBox(
                           height: ui(56),
                           child: Center(
@@ -2492,7 +1985,6 @@ class _ExamUploadKindSheet extends StatelessWidget {
                               style: TextStyle(
                                 color: _kTextDark,
                                 fontSize: ui(20),
-                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w400,
                                 height: 24 / 20,
                               ),
@@ -2516,7 +2008,7 @@ class _ExamUploadKindSheet extends StatelessWidget {
                   height: ui(56),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(ui(16)),
                   ),
                   child: Text(
@@ -2524,7 +2016,6 @@ class _ExamUploadKindSheet extends StatelessWidget {
                     style: TextStyle(
                       color: _kTextDark,
                       fontSize: ui(20),
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 24 / 20,
                     ),
@@ -2551,7 +2042,7 @@ Future<void> showExamSeatDialog(
 }) {
   return showScaledDialog<void>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.2),
+    barrierColor: AppColors.ink.withValues(alpha: 0.2),
     builder: (_) => _ExamSeatDialog(examId: examId, examTitle: examTitle),
   );
 }
@@ -2618,7 +2109,6 @@ class _ExamSeatDialogState extends ConsumerState<_ExamSeatDialog> {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextDark,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
             ),
           ),
@@ -2709,9 +2199,8 @@ class _SeatExamMeta extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: ui(15),
+                  fontSize: ui(16),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w600,
                   height: 1.2,
                 ),
@@ -2724,7 +2213,6 @@ class _SeatExamMeta extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextHint,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -2739,7 +2227,6 @@ class _SeatExamMeta extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kPurple,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.4,
             ),
@@ -2774,7 +2261,7 @@ class _SeatSubjectCard extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                colors: [AppColors.brandSoft, AppColors.brand],
               ),
               borderRadius: BorderRadius.circular(ui(10)),
             ),
@@ -2782,7 +2269,7 @@ class _SeatSubjectCard extends StatelessWidget {
             child: Icon(
               Icons.event_seat_rounded,
               size: ui(20),
-              color: Colors.white,
+              color: AppColors.surface,
             ),
           ),
           SizedBox(width: ui(12)),
@@ -2798,7 +2285,6 @@ class _SeatSubjectCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                     height: 1.2,
                   ),
@@ -2810,8 +2296,7 @@ class _SeatSubjectCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: ui(12),
-                    color: arranged ? _kTextHint : const Color(0xFFB6B5BB),
-                    fontFamily: 'PingFang SC',
+                    color: arranged ? _kTextHint : AppColors.textPlaceholder,
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -2839,9 +2324,8 @@ class _SeatSubjectCard extends StatelessWidget {
                 Text(
                   '座位号',
                   style: TextStyle(
-                    fontSize: ui(10),
+                    fontSize: ui(12),
                     color: _kTextHint,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                   ),
@@ -2853,8 +2337,7 @@ class _SeatSubjectCard extends StatelessWidget {
               '待编排',
               style: TextStyle(
                 fontSize: ui(12),
-                color: const Color(0xFFB6B5BB),
-                fontFamily: 'PingFang SC',
+                color: AppColors.textPlaceholder,
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -2951,24 +2434,7 @@ class _CountBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(3)),
-      decoration: BoxDecoration(
-        color: _kPurpleSoftBg,
-        borderRadius: BorderRadius.circular(ui(20)),
-      ),
-      child: Text(
-        '$count 场',
-        style: TextStyle(
-          fontSize: ui(12),
-          color: _kPurple,
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w500,
-          height: 1,
-        ),
-      ),
-    );
+    return AppTag(label: '$count 场');
   }
 }
 
@@ -2980,52 +2446,15 @@ class _ExamFilterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    Widget pill(_ExamFilter tab, String label) {
-      final active = selected == tab;
-      return GestureDetector(
-        onTap: () => onSelected(tab),
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: ui(32),
-          padding: EdgeInsets.symmetric(horizontal: ui(14)),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? _kTextDark : Colors.transparent,
-            borderRadius: BorderRadius.circular(ui(6)),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: ui(13),
-              color: active ? Colors.white : _kTextSecondary,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w500,
-              height: 1,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      height: ui(40),
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(4)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(8)),
-        border: Border.all(color: _kBorderSoft),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          pill(_ExamFilter.all, '全部'),
-          SizedBox(width: ui(6)),
-          pill(_ExamFilter.pending, '待考'),
-          SizedBox(width: ui(6)),
-          pill(_ExamFilter.done, '已考'),
-        ],
-      ),
+    return AppSegmented<_ExamFilter>(
+      size: AppControlSize.sm,
+      segments: const [
+        AppSegment(value: _ExamFilter.all, label: '全部'),
+        AppSegment(value: _ExamFilter.pending, label: '待考'),
+        AppSegment(value: _ExamFilter.done, label: '已考'),
+      ],
+      value: selected,
+      onChanged: onSelected,
     );
   }
 }
@@ -3114,8 +2543,7 @@ class _ExamScheduleCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: ui(16),
-                      color: Colors.black,
-                      fontFamily: 'PingFang SC',
+                      color: AppColors.ink,
                       fontWeight: AppFont.w500,
                       height: 1.2,
                     ),
@@ -3142,7 +2570,6 @@ class _ExamScheduleCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: _kTextSecondary,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -3174,7 +2601,6 @@ class _ExamScheduleCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       color: status.color,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w500,
                       height: 1,
                     ),
@@ -3233,9 +2659,8 @@ class _ModeTag extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: ui(11),
+              fontSize: ui(12),
               color: fg,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1,
             ),
@@ -3281,7 +2706,6 @@ class _ExamActionButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kPurple,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -3313,7 +2737,6 @@ class _PhaseBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: palette.fg,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -3339,9 +2762,8 @@ class _TypeTag extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: ui(11),
+          fontSize: ui(12),
           color: _kTextSecondary,
-          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -3360,52 +2782,22 @@ class _SubjectChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final fg = online ? _kBlueScore : _kPurple;
-    final bg = online ? const Color(0xFFEAF1FF) : _kPurpleBestBg;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(10), vertical: ui(5)),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(ui(6)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            online ? Icons.cloud_upload_outlined : Icons.event_seat_outlined,
-            size: ui(11),
-            color: fg,
-          ),
-          SizedBox(width: ui(4)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: ui(12),
-              color: fg,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 1,
-            ),
-          ),
-        ],
-      ),
-    );
+    return AppTag.subject(online ? '$label · 线上' : label);
   }
 }
 
 ({Color fg, Color bg}) _phasePalette(StudentExamPhase phase) {
   switch (phase) {
     case StudentExamPhase.registering:
-      return (fg: _kPurple, bg: _kPurpleSoftBg);
+      return (fg: AppTone.brand.foreground, bg: AppTone.brand.background);
     case StudentExamPhase.upcoming:
-      return (fg: _kBlueScore, bg: const Color(0xFFE7EEFF));
+      return (fg: AppTone.warning.foreground, bg: AppTone.warning.background);
     case StudentExamPhase.ongoing:
-      return (fg: _kSubjectGreen, bg: _kSubjectGreenBg);
+      return (fg: AppTone.brand.foreground, bg: AppTone.brand.background);
     case StudentExamPhase.finished:
-      return (fg: const Color(0xFFE8902A), bg: const Color(0xFFFFF1DF));
+      return (fg: AppTone.neutral.foreground, bg: AppTone.neutral.background);
     case StudentExamPhase.scored:
-      return (fg: _kTextSecondary, bg: const Color(0xFFF0F0F4));
+      return (fg: AppTone.success.foreground, bg: AppTone.success.background);
   }
 }
 
@@ -3413,14 +2805,14 @@ class _SubjectChip extends StatelessWidget {
 ({IconData icon, Color color, String text}) _examCardStatus(
   StudentExamScheduleItem exam,
 ) {
-  const red = Color(0xFFF04545);
-  const orange = Color(0xFFE8902A);
+  const red = AppColors.danger;
+  const orange = AppColors.warning;
   if (exam.phase == StudentExamPhase.scored) {
     if (exam.totalScore != null) {
       return (
         icon: Icons.emoji_events_outlined,
         color: _kPurple,
-        text: '总均分 ${_scoreLabel(exam.totalScore!)}',
+        text: '三科均分 ${_scoreLabel(exam.totalScore!)}',
       );
     }
     return (
@@ -3521,7 +2913,7 @@ class _SubjectChip extends StatelessWidget {
     case StudentExamSubmitState.missed:
       return (
         icon: Icons.error_outline_rounded,
-        color: Color(0xFFF04545),
+        color: AppColors.danger,
         text: '未提交 · 已截止',
       );
     case StudentExamSubmitState.notApplicable:
@@ -3531,7 +2923,7 @@ class _SubjectChip extends StatelessWidget {
 
 // =============================================================================
 // 考试详情右侧抽屉：上方「本次考试信息」；下方逐科目（离线 → 考场 + 座位；
-// 在线且正在进行 → 自录上传视频/音频，最多 2 次）。
+// 在线且正在进行 → 上传作品照片 / 视频，最多 2 次）。
 //
 // 在线 / 离线按科目区分（对齐机构管理端新建考试时的科目设置）。文件选择走真实
 // 系统选择器（pickCoursewareFiles），提交结果先暂存本地（模拟）；接口就绪后把
@@ -3552,7 +2944,7 @@ Future<void> showExamDetailDrawer(
     context: context,
     barrierLabel: '关闭',
     barrierDismissible: true,
-    barrierColor: Colors.black.withValues(alpha: 0.18),
+    barrierColor: AppColors.ink.withValues(alpha: 0.18),
     transitionDuration: const Duration(milliseconds: 240),
     pageBuilder: (ctx, animation, secondary) {
       return DashboardScaleScope(
@@ -3651,7 +3043,7 @@ class _ExamDetailDrawerState extends ConsumerState<_ExamDetailDrawer> {
     });
   }
 
-  /// 在线科目：选文件（视频/音频/图片）→ 上传文件服务器（带进度）→ 调 examSubmit → 刷新。
+  /// 在线科目：选文件（照片 / 视频）→ 上传文件服务器（带进度）→ 调 examSubmit → 刷新。
   /// iOS / iPad 先选媒体类型再进相册；其它平台走通用文件选择器。
   Future<void> _upload(StudentExamSubjectPlan subject) async {
     if (_busy || !subject.serverCanSubmit) return;
@@ -3686,7 +3078,7 @@ class _ExamDetailDrawerState extends ConsumerState<_ExamDetailDrawer> {
       final kind = _examMediaKindFromName(picked.name);
       if (kind == null) {
         _resetUpload();
-        AppToast.show(context, '仅支持上传视频、音频或图片文件', type: AppToastType.error);
+        AppToast.show(context, '仅支持上传照片或视频', type: AppToastType.error);
         return;
       }
       final uploader = ref.read(cloudDriveControllerProvider.notifier);
@@ -3758,7 +3150,7 @@ class _ExamDetailDrawerState extends ConsumerState<_ExamDetailDrawer> {
       width: ui(560),
       height: double.infinity,
       child: Container(
-        color: Colors.white,
+        color: AppColors.surface,
         child: Column(
           children: [
             // 抽屉头部：左紫色竖条 + 标题 + 关闭
@@ -3784,7 +3176,6 @@ class _ExamDetailDrawerState extends ConsumerState<_ExamDetailDrawer> {
                     style: TextStyle(
                       fontSize: ui(16),
                       color: _kTextDark,
-                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -3857,7 +3248,6 @@ class _ExamDetailDrawerState extends ConsumerState<_ExamDetailDrawer> {
                           style: TextStyle(
                             fontSize: ui(13),
                             color: _kTextHint,
-                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                           ),
                         ),
@@ -3917,7 +3307,6 @@ class _DrawerErrorBox extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(13),
               color: _kTextSecondary,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
             ),
           ),
@@ -3931,7 +3320,7 @@ class _DrawerErrorBox extends StatelessWidget {
                 vertical: ui(8),
               ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(ui(8)),
                 border: Border.all(color: _kBorderSoft),
               ),
@@ -3940,7 +3329,6 @@ class _DrawerErrorBox extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(13),
                   color: _kTextDark,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                 ),
               ),
@@ -3968,7 +3356,7 @@ class _ExamInfoBlock extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF7F2FF), Colors.white],
+          colors: [AppColors.brandWash, AppColors.surface],
         ),
         borderRadius: BorderRadius.circular(ui(14)),
         border: Border.all(color: _kBorderHair),
@@ -3983,9 +3371,8 @@ class _ExamInfoBlock extends StatelessWidget {
                 child: Text(
                   exam.name,
                   style: TextStyle(
-                    fontSize: ui(18),
+                    fontSize: ui(16),
                     color: _kTextDark,
-                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w600,
                     height: 1.3,
                   ),
@@ -4032,7 +3419,7 @@ class _ExamInfoBlock extends StatelessWidget {
                 vertical: ui(8),
               ),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: AppColors.surface.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(ui(8)),
               ),
               child: Row(
@@ -4050,7 +3437,6 @@ class _ExamInfoBlock extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextSecondary,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.5,
                       ),
@@ -4092,7 +3478,7 @@ class _ExamSubjectArrangeCard extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+                colors: [AppColors.brandSoft, AppColors.brand],
               ),
               borderRadius: BorderRadius.circular(ui(10)),
             ),
@@ -4100,7 +3486,7 @@ class _ExamSubjectArrangeCard extends StatelessWidget {
             child: Icon(
               Icons.event_seat_rounded,
               size: ui(20),
-              color: Colors.white,
+              color: AppColors.surface,
             ),
           ),
           SizedBox(width: ui(12)),
@@ -4119,7 +3505,6 @@ class _ExamSubjectArrangeCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: ui(14),
                           color: _kTextDark,
-                          fontFamily: 'PingFang SC',
                           fontWeight: AppFont.w600,
                           height: 1.2,
                         ),
@@ -4158,7 +3543,6 @@ class _ExamSubjectArrangeCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextHint,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -4179,7 +3563,7 @@ class _MetaLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final color = muted ? const Color(0xFFB6B5BB) : _kTextHint;
+    final color = muted ? AppColors.textPlaceholder : _kTextHint;
     return Row(
       children: [
         Icon(icon, size: ui(13), color: color),
@@ -4192,7 +3576,6 @@ class _MetaLine extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: color,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1.2,
             ),
@@ -4232,7 +3615,7 @@ class _ScorePill extends StatelessWidget {
 }
 
 // =============================================================================
-// 在线科目卡：状态 + 已上传文件 + 自录上传（视频/音频，最多 2 次）
+// 在线科目卡：状态 + 已上传文件 + 上传作品（照片 / 视频，最多 2 次）
 //
 // 文件选择走真实系统选择器；提交结果暂存本地（模拟），接口就绪后在外层
 // [_ExamDetailDialogState._upload] 接入真实上传即可。
@@ -4320,7 +3703,6 @@ class _ExamSubjectSubmitCard extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: ui(14),
                                     color: _kTextDark,
-                                    fontFamily: 'PingFang SC',
                                     fontWeight: AppFont.w600,
                                     height: 1.2,
                                   ),
@@ -4350,7 +3732,6 @@ class _ExamSubjectSubmitCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: ui(12),
                                   color: status.color,
-                                  fontFamily: 'PingFang SC',
                                   fontWeight: AppFont.w500,
                                   height: 1,
                                 ),
@@ -4423,11 +3804,10 @@ class _ExamSubjectSubmitCard extends StatelessWidget {
                     ),
                     SizedBox(height: ui(8)),
                     Text(
-                      '支持视频、音频或图片文件，最多 ${subject.maxUploads} 次，以最后一次为准。',
+                      '支持照片或视频，最多 ${subject.maxUploads} 次，以最后一次为准。',
                       style: TextStyle(
-                        fontSize: ui(11),
+                        fontSize: ui(12),
                         color: _kTextHint,
-                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.4,
                       ),
@@ -4472,9 +3852,8 @@ class _SeatNumberBlock extends StatelessWidget {
         Text(
           '座位号',
           style: TextStyle(
-            fontSize: ui(10),
+            fontSize: ui(12),
             color: _kTextHint,
-            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -4503,14 +3882,17 @@ class _OnlineCornerBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.cloud_upload_outlined, size: ui(11), color: Colors.white),
+          Icon(
+            Icons.cloud_upload_outlined,
+            size: ui(11),
+            color: AppColors.surface,
+          ),
           SizedBox(width: ui(4)),
           Text(
             '在线',
             style: TextStyle(
-              fontSize: ui(10),
-              color: Colors.white,
-              fontFamily: 'PingFang SC',
+              fontSize: ui(12),
+              color: AppColors.surface,
               fontWeight: AppFont.w500,
               height: 1,
             ),
@@ -4552,7 +3934,7 @@ class _SubjectSubmitNotice extends StatelessWidget {
           Icon(
             isError ? Icons.error_outline_rounded : Icons.info_outline_rounded,
             size: ui(15),
-            color: isError ? const Color(0xFFF04545) : _kTextHint,
+            color: isError ? AppColors.danger : _kTextHint,
           ),
           SizedBox(width: ui(6)),
           Expanded(
@@ -4560,8 +3942,7 @@ class _SubjectSubmitNotice extends StatelessWidget {
               notice,
               style: TextStyle(
                 fontSize: ui(12),
-                color: isError ? const Color(0xFFF04545) : _kTextSecondary,
-                fontFamily: 'PingFang SC',
+                color: isError ? AppColors.danger : _kTextSecondary,
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),
@@ -4600,7 +3981,6 @@ class _UploadQuotaBar extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextDark,
-                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1.2,
               ),
@@ -4654,7 +4034,6 @@ class _UploadEmptyHint extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextHint,
-              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -4716,64 +4095,60 @@ class _UploadedFileTile extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(ui(8)),
                 ),
                 alignment: Alignment.center,
-                child: Icon(
-                  _iconForKind(),
-                  size: ui(18),
-                  color: _kPurple,
+                child: Icon(_iconForKind(), size: ui(18), color: _kPurple),
+              ),
+              SizedBox(width: ui(10)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      upload.fileName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: ui(13),
+                        color: _kTextDark,
+                        fontWeight: AppFont.w500,
+                        height: 1.2,
+                      ),
+                    ),
+                    SizedBox(height: ui(3)),
+                    Text(
+                      '第 $index 次 · ${upload.kind.label} · ${upload.uploadedAt}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: ui(12),
+                        color: _kTextHint,
+                        fontWeight: AppFont.w400,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-          SizedBox(width: ui(10)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  upload.fileName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              SizedBox(width: ui(8)),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: ui(8),
+                  vertical: ui(3),
+                ),
+                decoration: BoxDecoration(
+                  color: _kSubjectGreenBg,
+                  borderRadius: BorderRadius.circular(ui(20)),
+                ),
+                child: Text(
+                  '已上传',
                   style: TextStyle(
-                    fontSize: ui(13),
-                    color: _kTextDark,
-                    fontFamily: 'PingFang SC',
+                    fontSize: ui(12),
+                    color: _kSubjectGreen,
                     fontWeight: AppFont.w500,
-                    height: 1.2,
+                    height: 1,
                   ),
                 ),
-                SizedBox(height: ui(3)),
-                Text(
-                  '第 $index 次 · ${upload.kind.label} · ${upload.uploadedAt}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: ui(11),
-                    color: _kTextHint,
-                    fontFamily: 'PingFang SC',
-                    fontWeight: AppFont.w400,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: ui(8)),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(3)),
-            decoration: BoxDecoration(
-              color: _kSubjectGreenBg,
-              borderRadius: BorderRadius.circular(ui(20)),
-            ),
-            child: Text(
-              '已上传',
-              style: TextStyle(
-                fontSize: ui(10),
-                color: _kSubjectGreen,
-                fontFamily: 'PingFang SC',
-                fontWeight: AppFont.w500,
-                height: 1,
               ),
-            ),
-          ),
             ],
           ),
         ),
@@ -4813,7 +4188,7 @@ class _UploadButton extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
-              colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
+              colors: [AppColors.brandSoft, AppColors.brand],
             ),
             borderRadius: BorderRadius.circular(ui(10)),
           ),
@@ -4823,20 +4198,21 @@ class _UploadButton extends StatelessWidget {
                   height: ui(18),
                   child: const CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.surface,
+                    ),
                   ),
                 )
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(icon, size: ui(17), color: Colors.white),
+                    Icon(icon, size: ui(17), color: AppColors.surface),
                     SizedBox(width: ui(6)),
                     Text(
                       label,
                       style: TextStyle(
                         fontSize: ui(14),
-                        color: Colors.white,
-                        fontFamily: 'PingFang SC',
+                        color: AppColors.surface,
                         fontWeight: AppFont.w500,
                         height: 1,
                       ),
@@ -4882,7 +4258,6 @@ class _UploadProgressBar extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kPurple,
-                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1,
                 ),
@@ -4907,7 +4282,7 @@ class _UploadProgressBar extends StatelessWidget {
             child: LinearProgressIndicator(
               value: submitting ? null : clamped,
               minHeight: ui(6),
-              backgroundColor: Colors.white,
+              backgroundColor: AppColors.surface,
               valueColor: const AlwaysStoppedAnimation<Color>(_kPurple),
             ),
           ),

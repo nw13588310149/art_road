@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 网络圆形头像。
+import '../ui/app_colors.dart';
+
+/// 网络圆形头像（旧组件；有名字时请用组件库 AppAvatar，失败时显示姓氏）。
 ///
 /// iPad 等高分屏上若仅用默认 [ClipOval] + [Image.network]，圆形边缘易出现
 /// 锯齿/毛边。此处统一：
@@ -54,11 +56,11 @@ class SmoothCircleNetworkAvatar extends StatelessWidget {
   }
 
   static Widget _defaultPlaceholder(double size) => Container(
-    color: const Color(0xFFE3DFFF),
+    color: AppColors.surfaceSubtle,
     alignment: Alignment.center,
     child: Icon(
       Icons.person,
-      color: const Color(0xFF715EFE),
+      color: AppColors.textTertiary,
       size: size * 0.55,
     ),
   );

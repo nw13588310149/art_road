@@ -1,66 +1,126 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
-import '../../../core/widgets/app_toast.dart';
-import '../../shell/ui/shell_layout.dart';
+import '../../../core/ui/ui.dart';
 import '../state/consultation_controller.dart';
 import '../state/consultation_detail_state.dart';
 import '../state/consultation_state.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-class ConsultationPage extends ConsumerWidget {
+class ConsultationPage extends ConsumerStatefulWidget {
   const ConsultationPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConsultationPage> createState() => _ConsultationPageState();
+}
+
+class _ConsultationPageState extends ConsumerState<ConsultationPage> {
+  ConsultationCategory _category = ConsultationCategory.all;
+
+  void _back() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+    navigator.pushReplacementNamed(RoutePaths.home);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final args = _parseArgs(ModalRoute.of(context)?.settings.arguments);
     final provider = consultationControllerProvider(args);
     final state = ref.watch(provider);
     final controller = ref.read(provider.notifier);
 
-    ref.listen<ConsultationState>(provider, (
-      previous,
-      next,
-    ) {
+    ref.listen<ConsultationState>(provider, (previous, next) {
       final msg = next.errorMessage;
       if (msg.isEmpty || msg == previous?.errorMessage) return;
-      AppToast.show(context, msg);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (controller.mounted) controller.clearError();
-      });
+      // 首屏失败由错误状态承接；已有内容时（加载更多失败）只轻提示。
+      if (next.items.isNotEmpty) {
+        AppToast.showError(context, msg);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (controller.mounted) controller.clearError();
+        });
+      }
     });
 
-    final ui = DashboardScaleScope.of(context).ui;
-    return ShellPageSurface(
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
-        // 与 ShellPageSurface 默认 panelRadius=16 保持一致，避免 header 顶角溢出。
-        borderRadius: BorderRadius.circular(ui(16)),
-        child: PageInitLoadingShell(
-          loading: state.loading && state.items.isEmpty,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ConsultationHeader(onBack: () => Navigator.of(context).maybePop()),
-              Expanded(
-                child: state.loading && state.items.isEmpty
-                    ? const SizedBox.shrink()
-                    : state.items.isEmpty
-                    ? const _ConsultationEmpty()
-                    : _ConsultationBody(
-                        state: state,
-                        sourceName: args.sourceName,
-                        onLoadMore: controller.loadMore,
-                      ),
-              ),
-            ],
-          ),
+    final counts = <ConsultationCategory, int>{
+      for (final category in ConsultationCategory.values)
+        category: state.items.where(category.matches).length,
+    };
+    final tabs = ConsultationCategory.values
+        .where((c) => c == ConsultationCategory.all || counts[c]! > 0)
+        .toList(growable: false);
+    final category = tabs.contains(_category)
+        ? _category
+        : ConsultationCategory.all;
+    final visible = state.items
+        .where(category.matches)
+        .toList(growable: false);
+
+    final Widget body;
+    if (state.loading && state.items.isEmpty) {
+      body = const _ConsultationSkeleton();
+    } else if (state.items.isEmpty && state.errorMessage.isNotEmpty) {
+      body = AppErrorState(
+        title: '资讯加载失败',
+        description: state.errorMessage,
+        onRetry: controller.refresh,
+      );
+    } else if (state.items.isEmpty) {
+      body = const AppEmptyState(
+        icon: Icons.feed_outlined,
+        title: '暂无资讯',
+        description: '画室或平台发布资讯后会显示在这里',
+      );
+    } else if (visible.isEmpty) {
+      body = AppEmptyState(
+        icon: Icons.feed_outlined,
+        title: '「${category.label}」暂无资讯',
+        actionLabel: '查看全部',
+        onAction: () => setState(() => _category = ConsultationCategory.all),
+      );
+    } else {
+      body = _ConsultationGrid(
+        items: visible,
+        loadingMore: state.loadingMore,
+        sourceName: args.sourceName,
+        onLoadMore: controller.loadMore,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppPageHeader(
+          title: args.schoolMode ? '校园资讯' : '资讯',
+          subtitle: args.schoolMode
+              ? '${args.sourceName ?? '画室'}发布的通知与动态'
+              : '联考政策、院校校考与备考经验',
+          onBack: _back,
+          bottom: tabs.length > 2
+              ? SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: AppTabs<ConsultationCategory>(
+                    tabs: [
+                      for (final tab in tabs)
+                        AppTab(
+                          value: tab,
+                          label: tab.label,
+                          count: counts[tab],
+                        ),
+                    ],
+                    value: category,
+                    onChanged: (value) => setState(() => _category = value),
+                  ),
+                )
+              : null,
         ),
-      ),
+        Expanded(child: body),
+      ],
     );
   }
 
@@ -92,98 +152,28 @@ bool _isTruthy(dynamic value) {
   return true;
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// 顶部 56 header（左返回 + 中标题"资讯"）
-// ─────────────────────────────────────────────────────────────────────
+int _columnsFor(double width) => width >= 840 ? 3 : (width >= 520 ? 2 : 1);
 
-class _ConsultationHeader extends StatelessWidget {
-  const _ConsultationHeader({required this.onBack});
+const _cardExtent = 104.0;
 
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(56),
-      padding: EdgeInsets.symmetric(horizontal: ui(20)),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFF3F2F3), width: 1)),
-      ),
-      child: Row(
-        children: [
-          ConsultationBackButton(onTap: onBack),
-          Expanded(
-            child: Center(
-              child: Text(
-                '资讯',
-                style: TextStyle(
-                  color: const Color(0xFF0B081A),
-                  fontSize: ui(16),
-                  fontWeight: AppFont.w600,
-                  fontFamily: 'PingFang SC',
-                ),
-              ),
-            ),
-          ),
-          // 占位与左侧对称（保持标题居中）
-          SizedBox(width: ui(32)),
-        ],
-      ),
-    );
-  }
-}
-
-class ConsultationBackButton extends StatelessWidget {
-  const ConsultationBackButton({super.key, required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: ui(32),
-        height: ui(32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: const Color(0xFFF3F2F3), width: 1),
-        ),
-        alignment: Alignment.center,
-        child: Icon(
-          Icons.chevron_left,
-          color: const Color(0xFF1C274C),
-          size: ui(20),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// 主体（banner 200 高度 + 3 列网格）
-// ─────────────────────────────────────────────────────────────────────
-
-class _ConsultationBody extends ConsumerStatefulWidget {
-  const _ConsultationBody({
-    required this.state,
-    this.sourceName,
+class _ConsultationGrid extends StatefulWidget {
+  const _ConsultationGrid({
+    required this.items,
+    required this.loadingMore,
     required this.onLoadMore,
+    this.sourceName,
   });
 
-  final ConsultationState state;
+  final List<ConsultationItem> items;
+  final bool loadingMore;
   final String? sourceName;
   final Future<void> Function() onLoadMore;
 
   @override
-  ConsumerState<_ConsultationBody> createState() => _ConsultationBodyState();
+  State<_ConsultationGrid> createState() => _ConsultationGridState();
 }
 
-class _ConsultationBodyState extends ConsumerState<_ConsultationBody> {
+class _ConsultationGridState extends State<_ConsultationGrid> {
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -208,126 +198,47 @@ class _ConsultationBodyState extends ConsumerState<_ConsultationBody> {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final items = widget.state.items;
-    const columns = 3;
-    final gap = ui(16);
-
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: ui(12)),
-      child: CustomScrollView(
-        controller: _scrollController,
-        physics: const ClampingScrollPhysics(),
-        slivers: [
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(ui(20), ui(4), ui(20), 0),
-            sliver: const SliverToBoxAdapter(child: _ConsultationBanner()),
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(ui(20), ui(16), ui(20), ui(8)),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                crossAxisSpacing: gap,
-                mainAxisSpacing: gap,
-                mainAxisExtent: ui(94),
+    final now = DateTime.now();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = _columnsFor(constraints.maxWidth - AppSpace.page * 2);
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.page,
+                AppSpace.s4,
+                AppSpace.page,
+                AppSpace.s24,
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  return _ConsultationCard(
-                    item: items[index],
-                    showLatestBadge: index < 3,
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: AppSpace.s16,
+                  mainAxisSpacing: AppSpace.s16,
+                  mainAxisExtent: _cardExtent,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _ConsultationCard(
+                    item: widget.items[index],
+                    latest: widget.items[index].isLatest(now),
                     sourceName: widget.sourceName,
-                  );
-                },
-                childCount: items.length,
-              ),
-            ),
-          ),
-          if (widget.state.loadingMore)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: ui(12)),
-                child: const Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: AppLoadingIndicator(),
                   ),
+                  childCount: widget.items.length,
                 ),
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ConsultationBanner extends StatelessWidget {
-  const _ConsultationBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return SizedBox(
-      height: ui(200),
-      width: double.infinity,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(ui(12)),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/demo/scene/studio-wall.jpg',
-              fit: BoxFit.cover,
-              alignment: const Alignment(0.4, -0.2),
-              errorBuilder: (context, error, stack) =>
-                  const ColoredBox(color: Color(0xFF715EFE)),
-            ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    const Color(0xFF2A1F6B).withValues(alpha: 0.92),
-                    const Color(0xFF715EFE).withValues(alpha: 0.55),
-                    const Color(0xFF715EFE).withValues(alpha: 0.0),
-                  ],
-                  stops: const [0, 0.45, 0.85],
+            if (widget.loadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: AppSpace.s24),
+                  child: Center(child: AppLoadingIndicator(size: 24)),
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(28)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '资讯中心',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: ui(22),
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w600,
-                    ),
-                  ),
-                  SizedBox(height: ui(8)),
-                  Text(
-                    '联考政策 · 校考简章 · 备考经验一手掌握',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: ui(13),
-                      fontFamily: 'PingFang SC',
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -335,225 +246,133 @@ class _ConsultationBanner extends StatelessWidget {
 class _ConsultationCard extends StatelessWidget {
   const _ConsultationCard({
     required this.item,
-    required this.showLatestBadge,
+    required this.latest,
     this.sourceName,
   });
 
   final ConsultationItem item;
-  final bool showLatestBadge;
+  final bool latest;
   final String? sourceName;
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Material(
-      color: const Color(0xFFF5F6FA),
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(ui(12)),
-        onTap: () => Navigator.pushNamed(
-          context,
-          RoutePaths.consultationDetail,
-          arguments: ConsultationDetailArgs(
-            id: item.id,
-            sourceName: sourceName,
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.s12),
+      onTap: () => Navigator.pushNamed(
+        context,
+        RoutePaths.consultationDetail,
+        arguments: ConsultationDetailArgs(id: item.id, sourceName: sourceName),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppImage(
+            src: item.coverUrl,
+            width: 80,
+            height: 80,
+            borderRadius: AppRadius.br8,
           ),
-        ),
-        child: SizedBox(
-          height: ui(116),
-          // Stack：底层是原有的卡片内容；顶层把「最新」徽标贴到左上角（距上/左各 8）。
-          child: Stack(
-            children: [
-              Padding(
-                padding: EdgeInsets.all(ui(12)),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(width: AppSpace.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body14Strong,
+                ),
+                const Spacer(),
+                Row(
                   children: [
-                    _CardThumbnail(url: item.coverUrl),
-                    SizedBox(width: ui(12)),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: const Color(0xFF1A1A1A),
-                              fontSize: ui(14),
-                              fontFamily: 'PingFang SC',
-                              fontWeight: AppFont.w500,
-                              height: 1.5,
-                            ),
-                          ),
-                          const Spacer(),
-                          Row(
-                            children: [
-                              Text(
-                                formatRelativeTime(item.createTime),
-                                style: TextStyle(
-                                  color: const Color(0xFF6D6B75),
-                                  fontSize: ui(12),
-                                  fontFamily: 'PingFang SC',
-                                  height: 20 / 12,
-                                ),
-                              ),
-                              SizedBox(width: ui(12)),
-                              _ViewCount(count: item.viewCount),
-                            ],
-                          ),
-                        ],
+                    if (latest) ...[
+                      const AppTag(label: '最新', tone: AppTone.brand),
+                      const SizedBox(width: AppSpace.s8),
+                    ],
+                    Flexible(
+                      child: Text(
+                        formatRelativeTime(item.createTime),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption12,
                       ),
                     ),
+                    const SizedBox(width: AppSpace.s12),
+                    ViewCountLabel(count: item.viewCount),
                   ],
                 ),
-              ),
-              if (showLatestBadge)
-                Positioned(
-                  left: ui(8),
-                  top: ui(8),
-                  child: const _LatestBadge(),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _CardThumbnail extends StatelessWidget {
-  const _CardThumbnail({required this.url});
-
-  final String url;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final cacheWidth =
-        (ui(70) * MediaQuery.devicePixelRatioOf(context)).round();
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: SizedBox(
-        width: ui(70),
-        height: ui(70),
-        child: url.isEmpty
-            ? const _ThumbnailPlaceholder()
-            : Image.network(
-                url,
-                fit: BoxFit.cover,
-                cacheWidth: cacheWidth,
-                filterQuality: FilterQuality.medium,
-                errorBuilder: (context, error, stack) =>
-                    const _ThumbnailPlaceholder(),
-              ),
-      ),
-    );
-  }
-}
-
-class _ThumbnailPlaceholder extends StatelessWidget {
-  const _ThumbnailPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      color: const Color(0xFFEFEFF4),
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.image_outlined,
-        color: const Color(0xFFB6B5BB),
-        size: ui(28),
-      ),
-    );
-  }
-}
-
-class _ViewCount extends StatelessWidget {
-  const _ViewCount({required this.count});
+/// 浏览量：眼睛图标 + 数字，资讯、视频共用一种写法。
+class ViewCountLabel extends StatelessWidget {
+  const ViewCountLabel({required this.count, super.key});
 
   final int count;
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset(
-          'assets/images/home/eye.png',
-          width: ui(14),
-          fit: BoxFit.contain,
+        const Icon(
+          Icons.visibility_outlined,
+          size: 14,
+          color: AppColors.textTertiary,
         ),
-        SizedBox(width: ui(4)),
+        const SizedBox(width: AppSpace.s4),
         Text(
-          count.toString(),
-          style: TextStyle(
-            color: const Color(0xFF6D6B75),
-            fontSize: ui(12),
-            fontFamily: 'PingFang SC',
-            height: 1.0,
-          ),
+          '$count',
+          style: AppText.number(size: 12, color: AppColors.textTertiary),
         ),
       ],
     );
   }
 }
 
-class _LatestBadge extends StatelessWidget {
-  const _LatestBadge();
+class _ConsultationSkeleton extends StatelessWidget {
+  const _ConsultationSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: const Color(0xFF715EFE),
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        '最新',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: ui(10),
-          fontFamily: 'PingFang SC',
-          fontWeight: AppFont.w400,
-          height: 16 / 10,
-        ),
-      ),
-    );
-  }
-}
-
-class _ConsultationEmpty extends StatelessWidget {
-  const _ConsultationEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.feed_outlined,
-            color: const Color(0xFFB6B5BB),
-            size: ui(48),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = _columnsFor(constraints.maxWidth - AppSpace.page * 2);
+        return GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.page,
+            AppSpace.s4,
+            AppSpace.page,
+            AppSpace.s24,
           ),
-          SizedBox(height: ui(12)),
-          Text(
-            '暂无资讯',
-            style: TextStyle(
-              color: const Color(0xFFB6B5BB),
-              fontSize: ui(14),
-              fontFamily: 'PingFang SC',
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: AppSpace.s16,
+            mainAxisSpacing: AppSpace.s16,
+            mainAxisExtent: _cardExtent,
+          ),
+          itemCount: columns * 3,
+          itemBuilder: (_, _) => const AppCard(
+            padding: EdgeInsets.all(AppSpace.s12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSkeleton(width: 80, height: 80, radius: AppRadius.control),
+                SizedBox(width: AppSpace.s12),
+                Expanded(child: AppSkeletonText(lines: 3)),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

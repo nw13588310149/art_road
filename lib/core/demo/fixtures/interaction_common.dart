@@ -80,10 +80,15 @@ DemoAuthorCard demoStudentAuthor(int personIndex) {
 
 DemoAuthorCard demoStaffAuthor(DemoCampusStaff staff) {
   final String identity;
+  final headOf = DemoCampusData.classes
+      .where((c) => c.headTeacherId == staff.id)
+      .firstOrNull;
   if (staff.roles.contains('admin')) {
     identity = '教务处 · ${DemoCampusData.schoolName}';
   } else if (staff.roles.contains('dormManager')) {
     identity = '宿管老师 · ${staff.organizationName}';
+  } else if (headOf != null) {
+    identity = '班主任 · ${staff.subject} · ${headOf.name}';
   } else {
     identity = '${staff.subject}老师 · ${staff.organizationName}';
   }

@@ -62,10 +62,7 @@ class SchoolRepository {
   Future<ApiResponse> getBannerList({required String schoolId}) {
     return client.post(
       '/app/user/bannerList',
-      data: <String, dynamic>{
-        'contentType': 0,
-        'schoolId': schoolId,
-      },
+      data: <String, dynamic>{'contentType': 0, 'schoolId': schoolId},
     );
   }
 
