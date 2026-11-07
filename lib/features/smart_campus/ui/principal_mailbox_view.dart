@@ -394,14 +394,16 @@ class _PrincipalMailboxViewState extends ConsumerState<PrincipalMailboxView> {
         title: '校长信箱',
         subtitle: '写给画室负责人（校长）的建议、举报或其他诉求，只有校长能看到',
         onBack: widget.onBack,
-        bottom: AppTabs<_MailboxMode>(
-          tabs: const [
-            AppTab(value: _MailboxMode.compose, label: '写信'),
-            AppTab(value: _MailboxMode.submitted, label: '已提交'),
-          ],
-          value: _mode,
-          onChanged: _switchMode,
-        ),
+        actions: [
+          AppSegmented<_MailboxMode>(
+            segments: const [
+              AppSegment(value: _MailboxMode.compose, label: '写信'),
+              AppSegment(value: _MailboxMode.submitted, label: '已提交'),
+            ],
+            value: _mode,
+            onChanged: _switchMode,
+          ),
+        ],
       ),
       body: Container(
         width: double.infinity,
@@ -507,19 +509,25 @@ class _ComposeForm extends StatelessWidget {
           SizedBox(height: ui(8)),
           _BodyField(controller: bodyCtrl, hint: '请写下你想反映的问题或建议'),
           SizedBox(height: ui(12)),
-          _UploadTile(
-            slot: attachment,
-            onTap: onUploadTap,
-            onRemove: onRemoveAttachment,
+          Align(
+            alignment: Alignment.centerRight,
+            child: _UploadTile(
+              slot: attachment,
+              onTap: onUploadTap,
+              onRemove: onRemoveAttachment,
+            ),
           ),
           const Spacer(),
           Align(
-            alignment: Alignment.centerRight,
-            child: AppButton(
-              label: '提交',
-              icon: Icons.send_rounded,
-              loading: submitting,
-              onTap: submitting ? null : onSubmit,
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: 240,
+              child: AppButton(
+                label: '提交给校长',
+                icon: Icons.send_rounded,
+                loading: submitting,
+                onTap: submitting ? null : onSubmit,
+              ),
             ),
           ),
         ],

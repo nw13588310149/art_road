@@ -63,6 +63,9 @@ const sharedContent = [
   { id: 'notes', route: '/', actions: [nav('我的笔记')] },
   { id: 'collection', route: '/', actions: [nav('我的收藏')] },
   { id: 'personal', route: '/', actions: [nav('个人中心')] },
+  { id: 'personal-membership', route: '/personal-center', actions: [/^会员权益与套餐$/] },
+  { id: 'personal-edit', route: '/personal-center', actions: [/^编辑资料$/, { check: '姓名' }] },
+  { id: 'personal-gender', route: '/info', actions: [/^性别/, { check: '选择性别' }] },
   { id: 'info', route: '/info' },
   { id: 'feedback', route: '/', actions: [nav('意见反馈')] },
   { id: 'help', route: '/help-guide' },
@@ -78,7 +81,31 @@ const sharedContent = [
   {
     id: 'search',
     route: '/',
-    actions: [{ type: '石膏', into: '搜索', enter: true, after: 2200 }],
+    actions: [
+      { type: '石膏', into: '搜索', after: 700 },
+      { check: /^清空$/, role: 'button' },
+      { check: /大卫石膏像/ },
+    ],
+  },
+  {
+    id: 'search-empty-clear',
+    route: '/',
+    actions: [
+      { type: '无匹配的走查关键词', into: '搜索', after: 700 },
+      { check: '没有找到相关内容' },
+      { click: /^清空$/, after: 250 },
+      { check: '没有找到相关内容', absent: true },
+      { check: /^清空$/, role: 'button', absent: true },
+    ],
+  },
+  {
+    id: 'search-open-result',
+    route: '/',
+    actions: [
+      { type: '大卫石膏像', into: '搜索', after: 700 },
+      { click: /大卫石膏像 · 侧转头像/, after: 600 },
+      { check: '点评要点' },
+    ],
   },
 ];
 
@@ -87,7 +114,11 @@ export const ROLES = [
     id: 'guest',
     steps: [
       { id: 'login', route: '/login' },
-      { id: 'register', route: '/login', actions: [{ click: '立即注册', after: 1800 }] },
+      { id: 'register', route: '/login', actions: [
+        { click: '立即注册', after: 500 },
+        { check: '请输入短信验证码', role: 'textbox' },
+        { check: /^获取验证码$/, role: 'button' },
+      ] },
       { id: 'forget', route: '/login', actions: [{ click: '忘记密码', after: 1800 }] },
       { id: 'terms', route: '/login', actions: [{ click: '用户服务协议', after: 1800 }] },
     ],
@@ -113,15 +144,38 @@ export const ROLES = [
         actions: [{ click: '上传作品', after: 1800 }],
       },
       { id: 'gallery', route: '/gallery' },
+      {
+        id: 'gallery-compare', route: '/gallery', actions: [
+          /大卫石膏像 · 侧转头像/, /^对比我的原卷$/,
+          { check: /^我的原卷/ },
+        ],
+      },
       { id: 'ebooks', route: '/ebooks' },
       {
         id: 'ebook-detail',
         route: '/ebooks',
         actions: [{ click: /联考素描静物高分解析/, after: 2200 }],
       },
+      {
+        id: 'ebook-reader', route: '/ebooks', actions: [
+          /联考素描静物高分解析/, /^(开始|继续|重新)阅读/,
+          { check: '目录与书签', role: 'button' },
+        ],
+      },
       { id: 'toolbox', route: '/toolbox' },
       ...toolSteps,
       ...sharedContent,
+      { id: 'quiz', route: '/camp', actions: [{ check: '练习方式' }] },
+      { id: 'school-quiz', route: '/school-camp' },
+      { id: 'school-video', route: '/school-video' },
+      { id: 'mock', route: '/mock' },
+      { id: 'design-system', route: '/design-system' },
+      {
+        id: 'quiz-answer', route: '/camp', actions: [
+          /顺序练习/, { click: /^选项 A/, role: 'checkbox' }, /^下一题$/,
+          { check: /^第 \d+ 题$/ },
+        ],
+      },
       { id: 'campus', route: '/smart-campus' },
       campusAction('my-class', '我的班级'),
       campusAction('my-schedule', '我的课表'),

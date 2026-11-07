@@ -36,6 +36,45 @@ void _expectFullyLaidOut(WidgetTester tester, String text, Rect bounds) {
 }
 
 void main() {
+  testWidgets('single-line controls keep hints and edits centered', (
+    tester,
+  ) async {
+    const search = ValueKey('search');
+    const input = ValueKey('input');
+    await tester.pumpWidget(
+      _host(
+        const SizedBox(
+          width: 250,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppSearchField(key: search, hint: '搜索范画', toolbar: true),
+              SizedBox(height: 16),
+              AppInputField(key: input, hint: '请输入标题'),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    for (final (key, hint, height) in [
+      (search, '搜索范画', 40.0),
+      (input, '请输入标题', 34.0),
+    ]) {
+      final field = find.byKey(key);
+      final editor = find.descendant(
+        of: field,
+        matching: find.byType(EditableText),
+      );
+      final center = tester.getCenter(field).dy;
+      expect(tester.getSize(field).height, height);
+      expect(tester.getCenter(find.text(hint)).dy, closeTo(center, 1));
+      await tester.enterText(editor, '石膏');
+      await tester.pump();
+      expect(tester.getCenter(editor).dy, closeTo(center, 1));
+    }
+  });
+
   testWidgets('asset graphics keep the original format on a decode error', (
     tester,
   ) async {

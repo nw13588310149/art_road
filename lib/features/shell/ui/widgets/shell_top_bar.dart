@@ -477,6 +477,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
   final _focusNode = FocusNode();
   final _layerLink = LayerLink();
   final _overlay = OverlayPortalController();
+  final _searchRegion = Object();
 
   Timer? _debounce;
 
@@ -491,6 +492,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
   void initState() {
     super.initState();
     _controller.addListener(_handleTextChange);
+    _focusNode.addListener(_handleFocusChange);
   }
 
   @override
@@ -498,6 +500,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
     _debounce?.cancel();
     _controller.removeListener(_handleTextChange);
     _controller.dispose();
+    _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
@@ -514,6 +517,10 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
     }
   }
 
+  void _handleFocusChange() {
+    if (_focusNode.hasFocus && _query.trim().isNotEmpty) _showOverlay();
+  }
+
   void _handleTextChange() {
     final value = _controller.text;
     if (value == _query) return;
@@ -521,10 +528,12 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
     final keyword = value.trim();
     setState(() {
       _query = value;
+      _pendingKeyword = '';
       if (keyword.isEmpty) {
-        _pendingKeyword = '';
         _status = _SearchStatus.idle;
         _results = _emptyResults;
+      } else {
+        _status = _SearchStatus.loading;
       }
     });
     if (keyword.isEmpty) {
@@ -569,7 +578,9 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         _SearchTab.note: _parseList(responses[3].data, type: 'note'),
       };
       setState(() {
-        _status = _SearchStatus.done;
+        _status = responses.any((response) => response.isSuccess)
+            ? _SearchStatus.done
+            : _SearchStatus.failed;
         _results = results;
         if (results[_activeTab]!.isEmpty) {
           _activeTab = _SearchTab.values.firstWhere(
@@ -647,12 +658,20 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
         controller: _overlay,
         overlayLocation: OverlayChildLocation.rootOverlay,
         overlayChildBuilder: _buildOverlay,
-        child: AppSearchField(
-          toolbar: true,
-          controller: _controller,
-          focusNode: _focusNode,
-          hint: '搜索范画、书刊、资讯、视频、笔记',
-          onSubmitted: _handleSubmitted,
+        child: TapRegion(
+          groupId: _searchRegion,
+          onTapOutside: (_) {
+            if (!_overlay.isShowing) return;
+            _focusNode.unfocus();
+            _hideOverlay();
+          },
+          child: AppSearchField(
+            toolbar: true,
+            controller: _controller,
+            focusNode: _focusNode,
+            hint: '搜索范画、书刊、资讯、视频、笔记',
+            onSubmitted: _handleSubmitted,
+          ),
         ),
       ),
     );
@@ -661,23 +680,15 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
   Widget _buildOverlay(BuildContext overlayContext) {
     final box = context.findRenderObject() as RenderBox?;
     final width = (box?.size.width ?? 360).clamp(340.0, 420.0);
-    return Stack(
-      children: [
-        // 点浮层外任意位置收起浮层。
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: () {
-              _focusNode.unfocus();
-              _hideOverlay();
-            },
-          ),
-        ),
-        CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          targetAnchor: Alignment.bottomLeft,
-          offset: const Offset(-2, AppSpace.s8),
+    return CompositedTransformFollower(
+      link: _layerLink,
+      showWhenUnlinked: false,
+      targetAnchor: Alignment.bottomLeft,
+      offset: const Offset(0, AppSpace.s8),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: TapRegion(
+          groupId: _searchRegion,
           child: SizedBox(
             width: width,
             child: _SearchPanel(
@@ -693,7 +704,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -715,7 +726,7 @@ class _SearchPanel extends StatelessWidget {
   final ValueChanged<_SearchItem> onItemTap;
   final VoidCallback onRetry;
 
-  static const double _bodyHeight = 320;
+  static const double _bodyHeight = 360;
 
   @override
   Widget build(BuildContext context) {
@@ -735,12 +746,12 @@ class _SearchPanel extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpace.s16),
               decoration: const BoxDecoration(
                 border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
               ),
               alignment: Alignment.centerLeft,
               child: AppTabs<_SearchTab>(
+                expand: true,
                 tabs: [
                   for (final tab in _SearchTab.values)
                     AppTab(
@@ -753,7 +764,10 @@ class _SearchPanel extends StatelessWidget {
                 onChanged: onTabChanged,
               ),
             ),
-            SizedBox(height: _bodyHeight, child: _buildBody()),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: SizedBox(height: _bodyHeight, child: _buildBody()),
+            ),
           ],
         ),
       ),
@@ -791,6 +805,11 @@ class _SearchPanel extends StatelessWidget {
               color: AppColors.textTertiary,
             ),
             chevron: true,
+            minHeight: 44,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpace.s12,
+              vertical: AppSpace.s8,
+            ),
             divider: index < list.length - 1,
             onTap: () => onItemTap(list[index]),
           ),

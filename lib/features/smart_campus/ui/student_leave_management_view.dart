@@ -288,14 +288,6 @@ class _StudentLeaveManagementViewState
         title: '我的请假',
         subtitle: '先由家长确认，再由班主任审批；已和家长沟通好的可直接交班主任审批',
         onBack: widget.onBack,
-        actions: [
-          AppButton(
-            label: '发起请假',
-            icon: Icons.add_rounded,
-            size: AppButtonSize.sm,
-            onTap: _submitting ? null : _showApplyDrawer,
-          ),
-        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,13 +304,29 @@ class _StudentLeaveManagementViewState
                   rejected: _countOf(_LeaveStatus.rejected),
                 ),
                 SizedBox(height: ui(12)),
-                AppTabs<_StatusTab>(
-                  tabs: [
-                    for (final t in _StatusTab.values)
-                      AppTab(value: t, label: t.label, count: _countOfTab(t)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SmartCampusStatusTabs<_StatusTab>(
+                        segments: [
+                          for (final t in _StatusTab.values)
+                            AppSegment(
+                              value: t,
+                              label: '${t.label}（${_countOfTab(t)}）',
+                            ),
+                        ],
+                        value: _tab,
+                        onChanged: (t) => setState(() => _tab = t),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpace.s12),
+                    AppButton(
+                      label: '发起请假',
+                      icon: Icons.add_rounded,
+                      size: AppButtonSize.sm,
+                      onTap: _submitting ? null : _showApplyDrawer,
+                    ),
                   ],
-                  value: _tab,
-                  onChanged: (t) => setState(() => _tab = t),
                 ),
                 SizedBox(height: ui(12)),
                 if (_loadError != null)

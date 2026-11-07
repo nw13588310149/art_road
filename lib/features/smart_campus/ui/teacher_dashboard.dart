@@ -30,6 +30,7 @@ import '../state/smart_campus_controller.dart';
 import '../state/smart_campus_state.dart';
 import 'widgets/role_switcher_buttons.dart';
 import 'widgets/smart_campus_home_card.dart';
+import 'widgets/smart_campus_stat_card.dart';
 import 'widgets/smart_campus_quick_action_icon.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
@@ -833,48 +834,61 @@ class _TeacherStatRow extends StatelessWidget {
     }
     return SizedBox(
       width: width.isFinite && width > 0 ? width : null,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < stats.length; i++) ...[
-              if (i > 0) const SizedBox(width: AppSpace.s12),
-              Expanded(child: _TeacherStatCard(item: stats[i])),
-            ],
+      height: 67,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < stats.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpace.s16),
+            Expanded(child: _TeacherStatCard(item: stats[i])),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// 首页指标：白底描边卡片里放 [AppStatTile]（标签在上、数字在下）；
-/// 「29天」「3.5小时」这类值拆成数字 + 中文单位。
+/// 学生与教职看板共用的居中指标，数值在上、标签在下。
 class _TeacherStatCard extends StatelessWidget {
   const _TeacherStatCard({required this.item});
 
   final SmartCampusStatCardData item;
 
-  static final RegExp _numberWithUnit = RegExp(
-    r'^(\d+(?:\.\d+)?)\s*([\u4e00-\u9fa5%]+)$',
-  );
-
   @override
   Widget build(BuildContext context) {
-    final match = _numberWithUnit.firstMatch(item.value.trim());
-    final highlight = item.label == '下一节' || item.label == '距离省统考';
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s12,
-        AppSpace.s12,
-        AppSpace.s8,
-        AppSpace.s12,
+    final ui = DashboardScaleScope.of(context).ui;
+    final countdown = item.label == '距离省统考';
+    final highlight = item.label == '下一节' || item.label == '待办';
+    return SmartCampusHomeCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s8,
+        vertical: AppSpace.s8,
       ),
-      child: AppStatTile(
-        label: item.label,
-        value: match == null ? item.value : match.group(1)!,
-        unit: match?.group(2),
-        valueColor: highlight ? AppColors.brand : AppColors.ink,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Center(
+              child: smartCampusHomeStatValue(
+                value: item.value,
+                ui: ui,
+                color: highlight ? AppColors.brand : AppColors.ink,
+                numberColor: countdown ? AppColors.brand : null,
+                suffixFontSize: countdown ? 14 : null,
+              ),
+            ),
+          ),
+          Text(
+            item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: AppText.caption12.copyWith(
+              color: AppColors.textSecondary,
+              height: 1,
+            ),
+          ),
+        ],
       ),
     );
   }

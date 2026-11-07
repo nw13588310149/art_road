@@ -10,6 +10,7 @@ import '../data/quiz_html.dart';
 import '../state/quiz_practice_state.dart';
 import '../state/quiz_session_controller.dart';
 import '../state/quiz_session_state.dart';
+import 'quiz_stats.dart';
 
 class QuizSessionPage extends ConsumerStatefulWidget {
   const QuizSessionPage({super.key, this.openCompletion = false});
@@ -525,29 +526,12 @@ class _CompletionDialog extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: AppStatTile(label: '未做', value: '$notDone', boxed: true),
-              ),
-              const SizedBox(width: AppSpace.s8),
-              Expanded(
-                child: AppStatTile(label: '已做', value: '$done', boxed: true),
-              ),
-              const SizedBox(width: AppSpace.s8),
-              Expanded(
-                child: AppStatTile(label: '错题', value: '$wrong', boxed: true),
-              ),
-              const SizedBox(width: AppSpace.s8),
-              Expanded(
-                child: AppStatTile(
-                  label: '正确率',
-                  value: done > 0 ? '$accuracyPercent' : '--',
-                  unit: done > 0 ? '%' : null,
-                  boxed: true,
-                ),
-              ),
-            ],
+          QuizStats(
+            notDone: notDone,
+            done: done,
+            wrong: wrong,
+            accuracyPercent: accuracyPercent,
+            spacing: AppSpace.s8,
           ),
           if (showRecommended) ...[
             const SizedBox(height: AppSpace.s16),

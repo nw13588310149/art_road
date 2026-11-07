@@ -804,98 +804,207 @@ class _CloudContentArea extends StatelessWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            if (state.isFolderView) ...[
-              AppIconButton.back(
-                semanticLabel: '返回文件夹列表',
-                onTap: onBackToOverview,
-              ),
-              const SizedBox(width: AppSpace.s8),
-            ],
-            Flexible(
-              child: Text(
-                state.isFolderView ? state.currentFolderName : categoryName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.title16,
-              ),
-            ),
-            const SizedBox(width: AppSpace.s8),
-            if (state.categories.isNotEmpty)
-              Text.rich(
-                TextSpan(
-                  style: AppText.caption12,
-                  children: [
-                    const TextSpan(text: '共 '),
-                    TextSpan(
-                      text: '$count',
-                      style: AppText.number(
-                        size: 12,
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                    TextSpan(text: state.isFolderView ? ' 份资料' : ' 个文件夹'),
-                  ],
+    return Padding(
+      // 与分类栏并排的内容区沿用 30 / 28 / 20 的起始位置。
+      padding: const EdgeInsets.fromLTRB(14, AppSpace.s12, AppSpace.s4, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: state.isFolderView ? AppSize.iconButtonSm : 20,
+            child: Row(
+              children: [
+                if (state.isFolderView) ...[
+                  AppIconButton.back(
+                    semanticLabel: '返回文件夹列表',
+                    onTap: onBackToOverview,
+                  ),
+                  const SizedBox(width: AppSpace.s8),
+                ],
+                Flexible(
+                  child: Text(
+                    state.isFolderView ? state.currentFolderName : categoryName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body14Strong,
+                  ),
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: AppSpace.s16),
-        Row(
-          children: [
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: 324,
-                  child: AppSearchField(
-                    controller: searchController,
-                    hint: state.isFolderView ? '搜索资料名称' : '搜索文件夹',
-                    onCleared: onClearSearch,
+                const SizedBox(width: AppSpace.s8),
+                if (state.categories.isNotEmpty)
+                  Text.rich(
+                    TextSpan(
+                      style: AppText.caption12,
+                      children: [
+                        const TextSpan(text: '共 '),
+                        TextSpan(
+                          text: '$count',
+                          style: AppText.number(
+                            size: 12,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                        TextSpan(text: state.isFolderView ? ' 份资料' : ' 个文件夹'),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpace.s16),
+          Row(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: 324,
+                    child: _CloudSearchField(
+                      controller: searchController,
+                      hint: state.isFolderView ? '搜索资料名称' : '搜索文件夹',
+                      onCleared: onClearSearch,
+                    ),
                   ),
                 ),
               ),
+              const SizedBox(width: AppSpace.s12),
+              _CloudToolbarButton(
+                label: state.sortType == CloudDriveSortType.none
+                    ? '排序'
+                    : '按${state.sortType.label}',
+                iconAsset: AppAssets.coursewareSort,
+                onTap: () => onSortChanged(state.sortType),
+              ),
+              const SizedBox(width: AppSpace.s12),
+              _CloudToolbarButton(
+                label: '刷新',
+                iconAsset: AppAssets.coursewareRefresh,
+                onTap: onRefresh,
+              ),
+            ],
+          ),
+          const SizedBox(height: 30),
+          Expanded(
+            child: AppRefreshIndicator(onRefresh: onRefresh, child: body),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppButton(
+              label: state.isFolderView ? '上传资料' : '新建文件夹',
+              iconAsset: state.isFolderView
+                  ? AppAssets.coursewareUploadFab
+                  : AppAssets.coursewareNewFolder,
+              variant: AppButtonVariant.floating,
+              onTap: state.isFolderView ? onUpload : onCreateFolder,
             ),
-            const SizedBox(width: AppSpace.s8),
-            AppButton(
-              label: state.sortType == CloudDriveSortType.none
-                  ? '排序'
-                  : '按${state.sortType.label}',
-              iconAsset: AppAssets.coursewareSort,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onTap: () => onSortChanged(state.sortType),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CloudSearchField extends StatelessWidget {
+  const _CloudSearchField({
+    required this.controller,
+    required this.hint,
+    required this.onCleared,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final VoidCallback onCleared;
+
+  @override
+  Widget build(BuildContext context) {
+    const border = OutlineInputBorder(
+      borderRadius: AppRadius.br12,
+      borderSide: BorderSide(color: AppColors.lineSoft),
+    );
+    return SizedBox(
+      height: AppSize.iconButton,
+      child: ValueListenableBuilder<TextEditingValue>(
+        valueListenable: controller,
+        builder: (context, value, _) => AppTextField(
+          controller: controller,
+          textInputAction: TextInputAction.search,
+          textAlignVertical: TextAlignVertical.center,
+          style: AppText.body14.copyWith(height: 1),
+          cursorColor: AppColors.brand,
+          cursorWidth: 1.5,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: AppText.body14.copyWith(
+              height: 1,
+              color: AppColors.textPlaceholder,
             ),
-            const SizedBox(width: AppSpace.s8),
-            AppButton(
-              label: '刷新',
-              iconAsset: AppAssets.coursewareRefresh,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onTap: onRefresh,
+            prefixIcon: const Padding(
+              padding: EdgeInsets.only(left: AppSpace.s16, right: 10),
+              child: AppAssetGraphic(
+                AppAssets.shellV2Search,
+                width: 18,
+                height: 18,
+              ),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 44),
+            suffixIcon: value.text.isEmpty
+                ? null
+                : AppIconButton(
+                    icon: Icons.cancel_rounded,
+                    semanticLabel: '清空',
+                    filled: false,
+                    size: AppButtonSize.sm,
+                    onTap: onCleared,
+                  ),
+            suffixIconConstraints: const BoxConstraints(minWidth: 40),
+            contentPadding: const EdgeInsets.only(right: AppSpace.s12),
+            filled: true,
+            fillColor: AppColors.surface,
+            enabledBorder: border,
+            focusedBorder: border.copyWith(
+              borderSide: const BorderSide(color: AppColors.brand),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CloudToolbarButton extends StatelessWidget {
+  const _CloudToolbarButton({
+    required this.label,
+    required this.iconAsset,
+    required this.onTap,
+  });
+
+  final String label;
+  final String iconAsset;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        height: AppSize.iconButton,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.br12,
+          border: Border.all(color: AppColors.lineSoft),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppAssetGraphic(iconAsset, width: 16, height: 16),
+            const SizedBox(width: AppSpace.s4),
+            Text(
+              label,
+              style: AppText.caption12Strong.copyWith(color: AppColors.ink),
             ),
           ],
         ),
-        const SizedBox(height: AppSpace.s16),
-        Expanded(
-          child: AppRefreshIndicator(onRefresh: onRefresh, child: body),
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: AppButton(
-            label: state.isFolderView ? '上传资料' : '新建文件夹',
-            iconAsset: state.isFolderView
-                ? AppAssets.coursewareUploadFab
-                : AppAssets.coursewareNewFolder,
-            variant: AppButtonVariant.floating,
-            onTap: state.isFolderView ? onUpload : onCreateFolder,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1417,15 +1526,12 @@ class _PreviewHeaderBar extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: ui(15),
-                        color: const Color(0xFF0B081A),
-                        fontFamily: 'PingFang SC',
-                        fontWeight: AppFont.w500,
+                    Flexible(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body14Strong,
                       ),
                     ),
                     SizedBox(width: ui(6)),

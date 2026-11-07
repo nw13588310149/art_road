@@ -1790,6 +1790,9 @@ class _ProgressMetricCell extends StatelessWidget {
 
 // ---- 学生提交表格 -----------------------------------------------------------
 
+const _submissionStudentWidth = 94.0;
+const _submissionActionWidth = 100.0;
+
 class _SubmissionsTable extends StatelessWidget {
   const _SubmissionsTable({
     required this.submissions,
@@ -1817,11 +1820,11 @@ class _SubmissionsTable extends StatelessWidget {
           ),
           child: Row(
             children: const [
-              SizedBox(width: 90 + 4, child: _ColHeader('学生')),
+              SizedBox(width: _submissionStudentWidth, child: _ColHeader('学生')),
               Expanded(child: _ColHeader('状态')),
               Expanded(child: _ColHeader('科目')),
               Expanded(child: _ColHeader('上传时间')),
-              SizedBox(width: 80, child: _ColHeader('操作')),
+              SizedBox(width: _submissionActionWidth, child: _ColHeader('操作')),
             ],
           ),
         ),
@@ -1873,7 +1876,7 @@ class _SubmissionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Container(
-      padding: EdgeInsets.symmetric(vertical: ui(12)),
+      padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(12)),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: _kBorderSoft, width: 1)),
       ),
@@ -1881,7 +1884,7 @@ class _SubmissionRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: ui(94),
+            width: _submissionStudentWidth,
             child: Row(
               children: [
                 _AvatarCircle(
@@ -1906,12 +1909,11 @@ class _SubmissionRow extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(width: ui(12)),
           Expanded(child: _StatusPill(state: item.state)),
           Expanded(child: _CellText(subjectCell)),
           Expanded(child: _CellText(item.uploadAt)),
           SizedBox(
-            width: ui(90),
+            width: _submissionActionWidth,
             child: item.state == _SubmissionState.missing
                 ? const SizedBox.shrink()
                 : Align(

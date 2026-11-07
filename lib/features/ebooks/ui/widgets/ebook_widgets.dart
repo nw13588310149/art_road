@@ -238,9 +238,22 @@ class EbookFeaturedCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            EbookCover(url: book.coverUrl, favorite: book.favorite),
+            Flexible(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 114),
+                  child: EbookCover(
+                    url: book.coverUrl,
+                    favorite: book.favorite,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(width: AppSpace.s12),
             Expanded(
+              flex: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

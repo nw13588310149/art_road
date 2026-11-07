@@ -64,4 +64,5 @@
   - build with `tool/build_web.ps1` and serve `build/web`;
   - screenshot every role at 1180×820 with `node tool/qa/screens.mjs --out=build/qa/after` (steps in `tool/qa/pages.mjs`; Playwright is loaded from `grading-web`, no new dependency); add a step when you add a page or entry;
   - in automated browsers, enable Flutter semantics (click `flt-semantics-placeholder`) before clicking;
-  - Flutter text fields ignore injected keystrokes, so cover text input with tests instead.
+  - Web QA enters Chinese text with Playwright `keyboard.insertText`. Use widget tests for field geometry and validation states.
+  - for UI changes, use `D:\桌面\music\musicDemo` at `80e9dd3c` as the read-only reference. Compare the affected entry, subviews and interaction states at 1180×820 and 1024×768 (`screens.mjs --width=1024 --height=768`), record any deliberate differences for art-specific content in `docs/走查/音乐之路界面对照.md`, and repeat affected checks after fixes. Add an expected visible control or result to new QA interaction steps so a fallback page cannot pass on screenshots alone.

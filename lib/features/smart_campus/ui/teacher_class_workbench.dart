@@ -303,14 +303,17 @@ class _TeacherClassWorkbenchViewState
       title: '班级工作台',
       subtitle: '本班学生、班级通知、请假与成绩',
       onBack: widget.onBack,
-      bottom: AppTabs<_WorkbenchTab>(
-        tabs: [
-          for (final t in _WorkbenchTab.values)
-            AppTab(value: t, label: t.label),
-        ],
-        value: _tab,
-        onChanged: (t) => setState(() => _tab = t),
-      ),
+      actions: [
+        AppSegmented<_WorkbenchTab>(
+          segments: [
+            for (final t in _WorkbenchTab.values)
+              AppSegment(value: t, label: t.label),
+          ],
+          value: _tab,
+          selectedColor: AppColors.ink,
+          onChanged: (t) => setState(() => _tab = t),
+        ),
+      ],
     );
 
     if (_classError.isNotEmpty) {

@@ -57,6 +57,7 @@ import '../data/schedule_teaching_week.dart';
 import 'widgets/schedule_course_card.dart';
 import 'widgets/schedule_grid_shell.dart';
 import 'widgets/schedule_idle_slot.dart';
+import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 通用配色 -----------------------------------------------------------
@@ -1295,38 +1296,42 @@ class _AdminScheduleManagementViewState
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
+    return SmartCampusSchedulePageShell(
+      bodyScrollable: false,
+      header: SmartCampusScheduleTopBar(
+        child: AppPageHeader(
           title: '排课与课表',
           subtitle: '按班级查看与调整周课表，审核任课老师的小课申请',
           onBack: widget.onBack,
-          bottom: AppTabs<_AdminScheduleTab>(
-            tabs: [
-              const AppTab(value: _AdminScheduleTab.schedule, label: '课表'),
-              AppTab(
-                value: _AdminScheduleTab.applyAudit,
-                label: '小课审核',
-                count: _pendingApplyCount > 0 ? _pendingApplyCount : null,
-              ),
-            ],
-            value: _tab,
-            onChanged: (t) {
-              setState(() => _tab = t);
-              if (t == _AdminScheduleTab.applyAudit) {
-                _loadApplies();
-                unawaited(_loadPendingApplyCount());
-              }
-            },
-          ),
+          actions: [
+            AppSegmented<_AdminScheduleTab>(
+              segments: [
+                const AppSegment(
+                  value: _AdminScheduleTab.schedule,
+                  label: '课表',
+                ),
+                AppSegment(
+                  value: _AdminScheduleTab.applyAudit,
+                  label: '小课审核',
+                  badge: _pendingApplyCount > 0 ? '$_pendingApplyCount' : null,
+                ),
+              ],
+              value: _tab,
+              selectedColor: AppColors.ink,
+              onChanged: (t) {
+                setState(() => _tab = t);
+                if (t == _AdminScheduleTab.applyAudit) {
+                  _loadApplies();
+                  unawaited(_loadPendingApplyCount());
+                }
+              },
+            ),
+          ],
         ),
-        Expanded(
-          child: _tab == _AdminScheduleTab.schedule
-              ? _buildScheduleTab(ui)
-              : SingleChildScrollView(child: _buildApplyTab(ui)),
-        ),
-      ],
+      ),
+      body: _tab == _AdminScheduleTab.schedule
+          ? _buildScheduleTab(ui)
+          : SingleChildScrollView(child: _buildApplyTab(ui)),
     );
   }
 
@@ -1370,13 +1375,18 @@ class _AdminScheduleManagementViewState
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(ui(20), 0, ui(20), ui(12)),
-          child: _ScheduleControlBar(
-            week: _currentWeek,
-            weekDateLabel: _fmtDate(_weekStart),
-            onPrev: _gotoPrev,
-            onCurrent: _gotoCurrent,
-            onNext: _gotoNext,
-            onPickDate: _pickDate,
+          child: AppCard(
+            color: AppColors.surfaceSubtle,
+            bordered: false,
+            padding: const EdgeInsets.all(AppSpace.s12),
+            child: _ScheduleControlBar(
+              week: _currentWeek,
+              weekDateLabel: _fmtDate(_weekStart),
+              onPrev: _gotoPrev,
+              onCurrent: _gotoCurrent,
+              onNext: _gotoNext,
+              onPickDate: _pickDate,
+            ),
           ),
         ),
         Expanded(

@@ -196,18 +196,17 @@ class _StudentMyGradesViewState extends ConsumerState<StudentMyGradesView> {
         title: '我的考试',
         subtitle: '考试安排、考场座位与线上测评提交，成绩公布后在「我的成绩」查看',
         onBack: widget.onBack,
-        bottom: AppTabs<_MainTab>(
-          tabs: [
-            AppTab(
-              value: _MainTab.exams,
-              label: '全部考试',
-              count: _examsLoading ? null : _exams.length,
-            ),
-            const AppTab(value: _MainTab.grades, label: '我的成绩'),
-          ],
-          value: _mainTab,
-          onChanged: (v) => setState(() => _mainTab = v),
-        ),
+        actions: [
+          AppSegmented<_MainTab>(
+            segments: const [
+              AppSegment(value: _MainTab.exams, label: '全部考试'),
+              AppSegment(value: _MainTab.grades, label: '我的成绩'),
+            ],
+            value: _mainTab,
+            selectedColor: AppColors.ink,
+            onChanged: (v) => setState(() => _mainTab = v),
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

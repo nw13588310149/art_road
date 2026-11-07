@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
 import '../../smart_campus/data/principal_mailbox_repository.dart';
 
@@ -190,40 +191,39 @@ class _FeedbackForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      title: '写新反馈',
-      padding: EdgeInsets.zero,
-      bordered: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppInputField(
-            controller: controller,
-            hint: '请描述你的意见或建议，如想要的范画资源、作品点评或画室工具的使用体验',
-            multiline: true,
-            minLines: 6,
-            maxLines: 6,
-            backgroundColor: AppColors.surfaceSubtle,
-            maxLength: _kMaxLength,
-            errorText: errorText,
-            onChanged: (_) => onChanged(),
-          ),
-          const SizedBox(height: AppSpace.s8),
-          Text('反馈会发送给美术之路产品团队，回复会显示在「我的反馈」中。', style: AppText.caption12),
-          const SizedBox(height: AppSpace.s16),
-          Center(
-            child: SizedBox(
-              width: 350,
-              child: AppButton(
-                label: '提交反馈',
-                loading: submitting,
-                expand: true,
-                onTap: onSubmit,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('写新反馈', style: AppText.body16.copyWith(fontWeight: AppFont.w500)),
+        const SizedBox(height: AppSpace.s12),
+        AppInputField(
+          controller: controller,
+          hint: '请描述你的意见或建议，如想要的范画资源、作品点评或画室工具的使用体验',
+          multiline: true,
+          size: AppControlSize.sm,
+          minLines: 6,
+          maxLines: 6,
+          backgroundColor: AppColors.surfaceSubtle,
+          maxLength: _kMaxLength,
+          errorText: errorText,
+          onChanged: (_) => onChanged(),
+        ),
+        const SizedBox(height: AppSpace.s8),
+        Text('反馈会发送给美术之路产品团队，回复会显示在「我的反馈」中。', style: AppText.caption12),
+        const SizedBox(height: AppSpace.s16),
+        Center(
+          child: SizedBox(
+            width: 240,
+            height: 52,
+            child: AppButton(
+              label: '提交反馈',
+              loading: submitting,
+              expand: true,
+              onTap: onSubmit,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -287,7 +287,10 @@ class _FeedbackHistory extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Text('我的反馈', style: AppText.title16),
+                Text(
+                  '我的反馈',
+                  style: AppText.body16.copyWith(fontWeight: AppFont.w500),
+                ),
                 const Spacer(),
                 if (records.isNotEmpty)
                   Text.rich(

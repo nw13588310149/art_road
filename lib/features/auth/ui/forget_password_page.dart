@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
 import '../state/auth_controller.dart';
 import '../state/auth_state.dart';
@@ -103,7 +104,7 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
       AppIconInputField(
         key: const ValueKey('mobile'),
         controller: _mobile,
-        icon: Icons.phone_iphone_rounded,
+        iconAsset: AppAssets.authPhone,
         hint: '请输入注册时使用的手机号',
         keyboardType: TextInputType.phone,
         textInputAction: TextInputAction.done,
@@ -141,7 +142,7 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
       AppIconInputField(
         key: const ValueKey('password'),
         controller: _password,
-        icon: Icons.lock_outline_rounded,
+        iconAsset: AppAssets.authPassword,
         hint: '请输入新密码',
         obscureText: true,
         textInputAction: TextInputAction.next,
@@ -159,7 +160,7 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
       AppIconInputField(
         key: const ValueKey('confirmPassword'),
         controller: _confirmPassword,
-        icon: Icons.lock_outline_rounded,
+        iconAsset: AppAssets.authPassword,
         hint: '请再次输入新密码',
         obscureText: true,
         textInputAction: TextInputAction.done,

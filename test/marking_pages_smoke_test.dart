@@ -127,6 +127,12 @@ void _pageTests() {
     expect(find.text('班级学情'), findsNothing);
     expect(find.text('参考人数'), findsOneWidget);
     expect(find.textContaining('更多考试'), findsOneWidget);
+    if (_contentSize.width >= 814) {
+      expect(
+        tester.getTopLeft(find.text('参考人数')).dy,
+        tester.getTopLeft(find.text('满分')).dy,
+      );
+    }
     await tester.drag(
       find.byType(CustomScrollView).first,
       const Offset(0, -700),

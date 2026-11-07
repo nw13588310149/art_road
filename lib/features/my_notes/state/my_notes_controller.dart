@@ -40,6 +40,13 @@ class MyNotesController extends StateNotifier<MyNotesState> {
       // `count` 字段（左侧导航的「（数字）」就是用它），不再需要额外请求一次
       // `/app/user/noteCount`，那是旧接口、且返回值在这里也不会被使用。
       final categoriesResponse = await _repository.getCategories();
+      if (!categoriesResponse.isSuccess) {
+        state = state.copyWith(
+          loading: false,
+          errorMessage: categoriesResponse.displayMsg,
+        );
+        return;
+      }
       final categories = _parseCategories(categoriesResponse.data);
 
       final selectedCategoryId = _resolveInitialCategoryId(
@@ -62,9 +69,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
         categories: categories,
         selectedCategoryId: selectedCategoryId,
         notes: notes,
-        errorMessage: notesResponse.isSuccess
-            ? null
-            : notesResponse.displayMsg,
+        errorMessage: notesResponse.isSuccess ? null : notesResponse.displayMsg,
       );
     } catch (_) {
       state = state.copyWith(loading: false, errorMessage: '');
@@ -97,9 +102,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
       state = state.copyWith(
         loading: false,
         notes: _parseNotes(response.data),
-        errorMessage: response.isSuccess
-            ? null
-            : response.displayMsg,
+        errorMessage: response.isSuccess ? null : response.displayMsg,
         clearEditingNote: true,
         clearEditorBackgroundImageUrl: true,
         clearPendingPencilKitData: true,
@@ -370,10 +373,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
   }
 
   void setSelectedColor(Color color) {
-    state = state.copyWith(
-      selectedColor: color,
-      toolMode: NoteToolMode.pen,
-    );
+    state = state.copyWith(selectedColor: color, toolMode: NoteToolMode.pen);
   }
 
   void setStrokeWidth(double width) {
@@ -420,10 +420,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
     }
     _redoOps.clear();
     _undoOps.add(_StrokeHistoryOp.erase(removed));
-    state = state.copyWith(
-      strokes: kept,
-      redoStrokes: const <NoteStroke>[],
-    );
+    state = state.copyWith(strokes: kept, redoStrokes: const <NoteStroke>[]);
   }
 
   bool _strokeHitsEraser(
@@ -457,8 +454,10 @@ class MyNotesController extends StateNotifier<MyNotesState> {
     if (length2 <= 0.0001) {
       return (p - a).distance;
     }
-    final t = (((p.dx - a.dx) * ab.dx + (p.dy - a.dy) * ab.dy) / length2)
-        .clamp(0.0, 1.0);
+    final t = (((p.dx - a.dx) * ab.dx + (p.dy - a.dy) * ab.dy) / length2).clamp(
+      0.0,
+      1.0,
+    );
     final projection = Offset(a.dx + ab.dx * t, a.dy + ab.dy * t);
     return (p - projection).distance;
   }
@@ -620,20 +619,20 @@ class MyNotesController extends StateNotifier<MyNotesState> {
 
     final resolvedInline = switch (kind) {
       NoteDrawingKind.pencilKit => NoteDrawingCodec.encodePkInline(
-          body.startsWith(NoteDrawingCodec.pkPrefix)
-              ? body.substring(NoteDrawingCodec.pkPrefix.length)
-              : body,
-        ),
+        body.startsWith(NoteDrawingCodec.pkPrefix)
+            ? body.substring(NoteDrawingCodec.pkPrefix.length)
+            : body,
+      ),
       NoteDrawingKind.strokes => () {
-          if (body.startsWith(NoteDrawingCodec.strokesPrefix) ||
-              body.startsWith('[')) {
-            final jsonText = body.startsWith(NoteDrawingCodec.strokesPrefix)
-                ? body.substring(NoteDrawingCodec.strokesPrefix.length)
-                : body;
-            return '${NoteDrawingCodec.strokesPrefix}$jsonText';
-          }
-          return NoteDrawingCodec.encodeStrokesInline(state.strokes);
-        }(),
+        if (body.startsWith(NoteDrawingCodec.strokesPrefix) ||
+            body.startsWith('[')) {
+          final jsonText = body.startsWith(NoteDrawingCodec.strokesPrefix)
+              ? body.substring(NoteDrawingCodec.strokesPrefix.length)
+              : body;
+          return '${NoteDrawingCodec.strokesPrefix}$jsonText';
+        }
+        return NoteDrawingCodec.encodeStrokesInline(state.strokes);
+      }(),
       NoteDrawingKind.remotePath => body,
     };
 
@@ -768,12 +767,12 @@ enum _StrokeHistoryKind { add, erase }
 
 class _StrokeHistoryOp {
   const _StrokeHistoryOp.add(this.stroke)
-      : kind = _StrokeHistoryKind.add,
-        removed = const <NoteStroke>[];
+    : kind = _StrokeHistoryKind.add,
+      removed = const <NoteStroke>[];
 
   const _StrokeHistoryOp.erase(this.removed)
-      : kind = _StrokeHistoryKind.erase,
-        stroke = null;
+    : kind = _StrokeHistoryKind.erase,
+      stroke = null;
 
   final _StrokeHistoryKind kind;
   final NoteStroke? stroke;

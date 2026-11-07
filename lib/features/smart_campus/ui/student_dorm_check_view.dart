@@ -263,28 +263,29 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
             label: '申请补卡',
             icon: Icons.event_available_outlined,
             size: AppButtonSize.sm,
+            variant: AppButtonVariant.secondary,
             onTap: state.submittingMakeup ? null : _openApplyDialog,
           ),
+          AppSegmented<StudentDormitoryListSection>(
+            segments: [
+              const AppSegment(
+                value: StudentDormitoryListSection.checkRecords,
+                label: '查寝记录',
+              ),
+              AppSegment(
+                value: StudentDormitoryListSection.makeupApplications,
+                label: state.makeupItems.isEmpty
+                    ? '补卡申请'
+                    : '补卡申请（${state.makeupItems.length}）',
+              ),
+            ],
+            value: state.listSection,
+            selectedColor: AppColors.ink,
+            onChanged: (section) => ref
+                .read(studentDormitoryControllerProvider.notifier)
+                .selectListSection(section),
+          ),
         ],
-        bottom: AppTabs<StudentDormitoryListSection>(
-          tabs: [
-            const AppTab(
-              value: StudentDormitoryListSection.checkRecords,
-              label: '查寝记录',
-            ),
-            AppTab(
-              value: StudentDormitoryListSection.makeupApplications,
-              label: '补卡申请',
-              count: state.makeupItems.isEmpty
-                  ? null
-                  : state.makeupItems.length,
-            ),
-          ],
-          value: state.listSection,
-          onChanged: (section) => ref
-              .read(studentDormitoryControllerProvider.notifier)
-              .selectListSection(section),
-        ),
       ),
       body: PageInitLoadingShell(
         loading:

@@ -147,7 +147,7 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
               Expanded(
                 child: AppInputField(
                   controller: _culture,
-                  label: '文化课成绩（满分 750）',
+                  label: '文化课成绩',
                   hint: '如 500',
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -163,7 +163,7 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
               Expanded(
                 child: AppInputField(
                   controller: _professional,
-                  label: '专业统考成绩（满分 ${rule.professionalFull}）',
+                  label: '专业统考成绩',
                   hint: rule.cultureOnly ? '只作合格判断' : '如 240',
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -172,11 +172,15 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
                   errorText: error != null && error.startsWith('专业')
                       ? error
                       : null,
-                  onChanged: (v) =>
-                      _update((d) => d.copyWith(professional: v)),
+                  onChanged: (v) => _update((d) => d.copyWith(professional: v)),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpace.s4),
+          Text(
+            '文化课满分 750 · 专业统考满分 ${rule.professionalFull}',
+            style: AppText.caption12,
           ),
           if (rule.withBonus) ...[
             const SizedBox(height: AppSpace.s16),

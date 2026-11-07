@@ -94,6 +94,10 @@ class _InfoBody extends StatelessWidget {
                 rows: [
                   AppListRow(
                     title: '头像',
+                    titleStyle: AppText.body14,
+                    padding: EdgeInsets.zero,
+                    minHeight: 64,
+                    chevronSize: 24,
                     trailing: AppAvatar(
                       name: name.isEmpty ? '我' : name,
                       url: field('headUrl'),
@@ -247,15 +251,24 @@ class _InfoBody extends StatelessWidget {
     final empty = value.isEmpty;
     return AppListRow(
       title: label,
+      titleStyle: AppText.body14,
+      padding: EdgeInsets.zero,
+      minHeight: 64,
+      chevronSize: 24,
       trailing: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
-        child: Text(
-          empty ? (onTap == null ? '—' : '未填写') : value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.right,
-          style: AppText.body14.copyWith(
-            color: empty ? AppColors.textPlaceholder : AppColors.textSecondary,
+        child: Padding(
+          padding: EdgeInsets.only(right: onTap == null ? 40 : 12),
+          child: Text(
+            empty ? (onTap == null ? '—' : '未填写') : value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: AppText.body14.copyWith(
+              color: empty
+                  ? AppColors.textPlaceholder
+                  : AppColors.textSecondary,
+            ),
           ),
         ),
       ),

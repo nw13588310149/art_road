@@ -25,6 +25,7 @@ class AppTabs<T> extends StatelessWidget {
     required this.onChanged,
     this.gap = 24,
     this.textOnly = false,
+    this.expand = false,
     super.key,
   });
 
@@ -35,22 +36,24 @@ class AppTabs<T> extends StatelessWidget {
   /// 页签之间的间距。
   final double gap;
   final bool textOnly;
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
+    final children = <Widget>[];
+    for (final tab in tabs) {
+      if (!expand && children.isNotEmpty) children.add(SizedBox(width: gap));
+      final item = _TabItem<T>(
+        tab: tab,
+        selected: tab.value == value,
+        textOnly: textOnly,
+        onTap: () => onChanged(tab.value),
+      );
+      children.add(expand ? Expanded(child: item) : item);
+    }
     return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < tabs.length; i++) ...[
-          if (i > 0) SizedBox(width: gap),
-          _TabItem<T>(
-            tab: tabs[i],
-            selected: tabs[i].value == value,
-            textOnly: textOnly,
-            onTap: () => onChanged(tabs[i].value),
-          ),
-        ],
-      ],
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+      children: children,
     );
   }
 }
@@ -103,7 +106,14 @@ class _TabItem<T> extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(tab.label, maxLines: 1, softWrap: false, style: style),
+                Flexible(
+                  child: Text(
+                    tab.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: style,
+                  ),
+                ),
                 if (count != null) Text('($count)', style: style),
               ],
             ),

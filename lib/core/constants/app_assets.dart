@@ -1,5 +1,8 @@
 abstract final class AppAssets {
   static const authBg = 'assets/images/auth/bg_art.jpg';
+  static const authPhone = 'assets/images/auth/phone.png';
+  static const authPassword = 'assets/images/auth/pass.png';
+  static const authSms = 'assets/images/auth/code.png';
 
   /// 艺考网标识（来自艺考网品牌库 yikao-marketing/brand/logo）。
   static const shellLogo = 'assets/images/brand/yikaowang_logo.svg';

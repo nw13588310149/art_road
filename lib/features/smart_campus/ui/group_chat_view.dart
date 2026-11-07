@@ -71,7 +71,6 @@ import '../../../core/widgets/wechat_emoji.dart';
 import '../../../core/audio/recording/recording_bytes_loader.dart';
 import '../../../core/audio/recording/recording_capture.dart';
 import '../../../core/audio/recording/recording_playback.dart';
-import 'widgets/smart_campus_page_banner.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../courseware/ui/courseware_file_picker.dart';
 import '../navigation/group_chat_return.dart';
@@ -1835,14 +1834,10 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
             orElse: () => convs.first,
           );
     final memberCount = _detailMemberCount ?? currentConv.memberCount;
-    return SmartCampusSecondaryPageShell(
-      bodyScrollable: false,
-      header: AppPageHeader(
-        title: '群聊',
-        subtitle: '班级群与教研群的消息、群公告和群成员',
-        onBack: widget.onBack,
-      ),
-      body: _ChatLayout(
+    return Semantics(
+      container: true,
+      label: '群聊',
+      child: _ChatLayout(
         conversations: convs,
         selectedConvId: selectedId,
         hasSelection: convs.isNotEmpty,
@@ -2060,13 +2055,16 @@ class _ChatLayout extends StatelessWidget {
           // 紧凑布局：会话列表收起为顶部 horizontal scroll；下方是 chat。
           return Column(
             children: [
-              _CompactConversationStrip(
-                conversations: conversations,
-                selectedConvId: selectedConvId,
-                onSelect: onSelectConv,
-                onBack: onBack,
-                dismissTapEnabled: shouldDismissInputOnBlankTap,
-                onDismissTap: onDismissInputModes,
+              SizedBox(
+                height: ui(64),
+                child: _CompactConversationStrip(
+                  conversations: conversations,
+                  selectedConvId: selectedConvId,
+                  onSelect: onSelectConv,
+                  onBack: onBack,
+                  dismissTapEnabled: shouldDismissInputOnBlankTap,
+                  onDismissTap: onDismissInputModes,
+                ),
               ),
               SizedBox(height: ui(8)),
               Expanded(
@@ -3085,34 +3083,6 @@ class _InitialAvatar extends StatelessWidget {
 // 左 280：会话列表
 // =============================================================================
 
-class _GroupChatBackButton extends StatelessWidget {
-  const _GroupChatBackButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: ui(32),
-        height: ui(32),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Icon(
-          Icons.arrow_back_ios_new_rounded,
-          size: ui(16),
-          color: AppColors.ink,
-        ),
-      ),
-    );
-  }
-}
-
 class _ConversationListPane extends StatefulWidget {
   const _ConversationListPane({
     required this.conversations,
@@ -3169,6 +3139,11 @@ class _ConversationListPaneState extends State<_ConversationListPane> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(height: ui(12)),
+            Padding(
+              padding: EdgeInsets.only(left: ui(4)),
+              child: AppIconButton.back(onTap: widget.onBack),
+            ),
             SizedBox(height: ui(12)),
             _ConvSearchField(
               controller: _searchCtrl,
@@ -3424,7 +3399,7 @@ class _CompactConversationStrip extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _GroupChatBackButton(onTap: onBack),
+            AppIconButton.back(onTap: onBack),
             Expanded(
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,

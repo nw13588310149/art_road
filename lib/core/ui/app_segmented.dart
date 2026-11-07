@@ -140,7 +140,7 @@ class _SegmentItem<T> extends StatelessWidget {
                 style: TextStyle(
                   fontSize: neutral ? 14 : 13,
                   height: 1.2,
-                  fontWeight: selected ? AppFont.w500 : AppFont.w400,
+                  fontWeight: selected || neutral ? AppFont.w500 : AppFont.w400,
                   color: selected
                       ? (neutral ? AppColors.ink : AppColors.onBrand)
                       : (neutral ? AppColors.textSecondary : AppColors.ink),

@@ -27,7 +27,10 @@ class _FeatureDefaultPage extends StatelessWidget {
           const SizedBox(height: AppSpace.s20),
           Text(title, style: AppText.title20),
           const SizedBox(height: AppSpace.s8),
-          Text('功能整理中，开放后会在首页通知', style: AppText.body14),
+          Text(
+            '功能整理中，开放后会在首页通知',
+            style: AppText.body14.copyWith(color: AppColors.textSecondary),
+          ),
         ],
       ),
     );

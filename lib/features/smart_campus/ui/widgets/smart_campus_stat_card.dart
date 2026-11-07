@@ -2,6 +2,8 @@ import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
+import '../../../shell/ui/shell_layout.dart';
+
 /// 统计卡数值字族：`assets/fonts/Barlow-SemiBold.ttf`
 const smartCampusStatValueFontFamily = 'Barlow SemiBold';
 
@@ -169,35 +171,49 @@ class SmartCampusStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     final display = valueLabel ?? '$value';
-    final Widget content =
+    final suffix = valueSuffix;
+    final valueText = Text(
+      display,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: valueIsText
+          ? smartCampusHomeStatValueTextStyle(
+              ui,
+              value: display,
+              color: valueColor,
+            )
+          : smartCampusStatValueTextStyle(ui, color: valueColor),
+    );
+    final content =
         child ??
-        (valueIsText
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body14Strong.copyWith(height: 1),
+            ),
+            const SizedBox(height: AppSpace.s8),
+            if (suffix == null || suffix.isEmpty)
+              valueText
+            else
+              Row(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.caption12,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    display,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.title16.copyWith(color: valueColor),
-                  ),
+                  Flexible(child: valueText),
+                  const SizedBox(width: AppSpace.s4),
+                  Text(suffix, style: AppText.caption12),
                 ],
-              )
-            : AppStatTile(
-                label: label,
-                value: display,
-                unit: valueSuffix,
-                valueColor: valueColor,
-              ));
+              ),
+          ],
+        );
     final card = Container(
       height: 100,
       width: double.infinity,

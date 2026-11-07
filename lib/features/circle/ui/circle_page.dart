@@ -113,20 +113,32 @@ class CirclePage extends ConsumerWidget {
                 ),
                 child: AppPageHeader(
                   title: governance ? '校圈治理' : '校圈',
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpace.s16,
+                    vertical: 13,
+                  ),
                   subtitle: governance
                       ? '处理同学和老师举报的动态，删除时需写明原因'
                       : '画室同学和老师分享的作品与日常',
                   onBack: () => _handleBack(context, controller),
                   actions: [
                     if (showFeed)
-                      AppSegmented<CircleMode>(
-                        trackColor: AppColors.page,
-                        segments: const [
-                          AppSegment(value: CircleMode.immersive, label: '沉浸'),
-                          AppSegment(value: CircleMode.list, label: '列表'),
-                        ],
-                        value: state.mode,
-                        onChanged: controller.setMode,
+                      SizedBox(
+                        width: 116,
+                        height: 36,
+                        child: AppSegmented<CircleMode>(
+                          trackColor: AppColors.page,
+                          expand: true,
+                          segments: const [
+                            AppSegment(
+                              value: CircleMode.immersive,
+                              label: '沉浸',
+                            ),
+                            AppSegment(value: CircleMode.list, label: '列表'),
+                          ],
+                          value: state.mode,
+                          onChanged: controller.setMode,
+                        ),
                       ),
                   ],
                   bottom: governance

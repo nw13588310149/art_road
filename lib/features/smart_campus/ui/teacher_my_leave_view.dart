@@ -254,14 +254,6 @@ class _TeacherMyLeaveViewState extends ConsumerState<TeacherMyLeaveView> {
         title: widget.title,
         subtitle: '提交后由教务老师审批，审批结果会同步到这里',
         onBack: widget.onBack,
-        actions: [
-          AppButton(
-            label: '发起请假',
-            icon: Icons.add_rounded,
-            size: AppButtonSize.sm,
-            onTap: _showApplyDrawer,
-          ),
-        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,26 +264,41 @@ class _TeacherMyLeaveViewState extends ConsumerState<TeacherMyLeaveView> {
             rejectedCount: _rejectedCount,
           ),
           SizedBox(height: ui(16)),
-          AppTabs<_StatusTab>(
-            tabs: [
-              for (final t in _StatusTab.values)
-                AppTab(
-                  value: t,
-                  label: t.label,
-                  count: switch (t) {
-                    _StatusTab.all => null,
-                    _StatusTab.pending => _pendingCount,
-                    _StatusTab.approved => _approvedCount,
-                    _StatusTab.rejected => _rejectedCount,
+          Row(
+            children: [
+              Expanded(
+                child: SmartCampusStatusTabs<_StatusTab>(
+                  segments: [
+                    const AppSegment(value: _StatusTab.all, label: '全部'),
+                    AppSegment(
+                      value: _StatusTab.pending,
+                      label: '${_StatusTab.pending.label}（$_pendingCount）',
+                    ),
+                    AppSegment(
+                      value: _StatusTab.approved,
+                      label: '${_StatusTab.approved.label}（$_approvedCount）',
+                    ),
+                    AppSegment(
+                      value: _StatusTab.rejected,
+                      label: '${_StatusTab.rejected.label}（$_rejectedCount）',
+                    ),
+                  ],
+                  value: _tab,
+                  onChanged: (t) {
+                    if (_tab == t) return;
+                    setState(() => _tab = t);
+                    unawaited(_loadList());
                   },
                 ),
+              ),
+              const SizedBox(width: AppSpace.s12),
+              AppButton(
+                label: '发起请假',
+                icon: Icons.add_rounded,
+                size: AppButtonSize.sm,
+                onTap: _showApplyDrawer,
+              ),
             ],
-            value: _tab,
-            onChanged: (t) {
-              if (_tab == t) return;
-              setState(() => _tab = t);
-              unawaited(_loadList());
-            },
           ),
           SizedBox(height: ui(16)),
           _CardsGrid(

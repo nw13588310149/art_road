@@ -27,6 +27,7 @@ import '../data/student_repository.dart';
 import 'widgets/schedule_course_card.dart';
 import 'widgets/schedule_grid_shell.dart';
 import 'widgets/schedule_idle_slot.dart';
+import 'widgets/smart_campus_page_banner.dart';
 
 class _TimeConfig {
   const _TimeConfig({
@@ -387,51 +388,87 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
   @override
   Widget build(BuildContext context) {
     final cells = _normalizeCells(_serverCells);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '我的课表',
-          subtitle: _subtitle,
-          onBack: widget.onBack,
-          actions: [
-            AppIconButton(
-              icon: Icons.chevron_left_rounded,
-              semanticLabel: '上一周',
-              size: AppButtonSize.sm,
-              onTap: _gotoPrev,
+    final weekEnd = _weekStart.add(const Duration(days: 6));
+    return SmartCampusSchedulePageShell(
+      bodyScrollable: false,
+      header: SmartCampusScheduleTopBar(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 160),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        text: '教学周第 ',
+                        children: [
+                          TextSpan(
+                            text: '$_currentWeek',
+                            style: const TextStyle(color: AppColors.brand),
+                          ),
+                          const TextSpan(text: ' 周'),
+                        ],
+                      ),
+                      style: AppText.title16,
+                    ),
+                    Text(
+                      [
+                        '${campusMonthDay(_weekStart)} – ${campusMonthDay(weekEnd)}',
+                        if (_classLabel.isNotEmpty) _classLabel,
+                      ].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption12,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            AppButton(
-              label: '本周',
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onTap: _currentWeek == kScheduleCurrentTeachingWeek
-                  ? null
-                  : _gotoCurrent,
-            ),
-            AppIconButton(
-              icon: Icons.chevron_right_rounded,
-              semanticLabel: '下一周',
-              size: AppButtonSize.sm,
-              onTap: _gotoNext,
+            AppPageHeader(
+              title: '我的课表',
+              subtitle: _subtitle,
+              onBack: widget.onBack,
+              actions: [
+                AppIconButton(
+                  icon: Icons.chevron_left_rounded,
+                  semanticLabel: '上一周',
+                  size: AppButtonSize.sm,
+                  onTap: _gotoPrev,
+                ),
+                AppButton(
+                  label: '本周',
+                  variant: AppButtonVariant.secondary,
+                  size: AppButtonSize.sm,
+                  onTap: _currentWeek == kScheduleCurrentTeachingWeek
+                      ? null
+                      : _gotoCurrent,
+                ),
+                AppIconButton(
+                  icon: Icons.chevron_right_rounded,
+                  semanticLabel: '下一周',
+                  size: AppButtonSize.sm,
+                  onTap: _gotoNext,
+                ),
+              ],
             ),
           ],
         ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              AppSpace.page,
-            ),
-            child: PageInitLoadingShell(
-              loading: !_initialLoadDone,
-              child: _buildContent(cells),
-            ),
-          ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.page,
+          AppSpace.s4,
+          AppSpace.page,
+          AppSpace.page,
         ),
-      ],
+        child: PageInitLoadingShell(
+          loading: !_initialLoadDone,
+          child: _buildContent(cells),
+        ),
+      ),
     );
   }
 }

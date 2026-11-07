@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../widgets/app_asset_graphic.dart';
 import '../widgets/app_text_field.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
@@ -15,7 +16,8 @@ import 'app_text.dart';
 /// 出错立即转红并在下方说明原因。[obscureText] 为 true 时右侧带「显示 / 隐藏密码」。
 class AppIconInputField extends StatefulWidget {
   const AppIconInputField({
-    required this.icon,
+    this.icon,
+    this.iconAsset,
     this.controller,
     this.hint,
     this.errorText,
@@ -29,9 +31,10 @@ class AppIconInputField extends StatefulWidget {
     this.autofocus = false,
     this.focusNode,
     super.key,
-  });
+  }) : assert((icon == null) != (iconAsset == null));
 
-  final IconData icon;
+  final IconData? icon;
+  final String? iconAsset;
   final TextEditingController? controller;
   final String? hint;
 
@@ -114,7 +117,10 @@ class _AppIconInputFieldState extends State<AppIconInputField> {
       ),
       child: Row(
         children: [
-          Icon(widget.icon, size: 20, color: AppColors.textSecondary),
+          if (widget.iconAsset case final asset?)
+            AppAssetGraphic(asset, width: 20, height: 20)
+          else
+            Icon(widget.icon, size: 20, color: AppColors.textSecondary),
           const SizedBox(width: 10),
           Expanded(
             child: AppTextField(

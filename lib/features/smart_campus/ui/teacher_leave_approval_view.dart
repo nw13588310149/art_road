@@ -418,16 +418,18 @@ class _TabsRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: AppTabs<_StatusTab>(
-                tabs: [
-                  for (final t in _StatusTab.values)
-                    AppTab(value: t, label: t.label, count: counts[t]),
-                ],
-                value: current,
-                onChanged: onTap,
-              ),
+            child: SmartCampusStatusTabs<_StatusTab>(
+              segments: [
+                for (final t in _StatusTab.values)
+                  AppSegment(
+                    value: t,
+                    label: counts[t] == null
+                        ? t.label
+                        : '${t.label}（${counts[t]}）',
+                  ),
+              ],
+              value: current,
+              onChanged: onTap,
             ),
           ),
           SizedBox(width: ui(16)),

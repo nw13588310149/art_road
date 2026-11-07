@@ -507,17 +507,18 @@ class _TeacherStudentRosterViewState
         title: '学生名册',
         subtitle: '任教班级学生的学籍、宿舍与家长联系方式',
         onBack: widget.onBack,
-        bottom: _FilterRow(
-          classOptions: _classOptions,
-          selectedLabel: _selectedClassLabel,
-          onClassPicked: _onClassPicked,
-          query: _query,
-          onQueryChanged: _onQueryChanged,
-        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _FilterRow(
+            classOptions: _classOptions,
+            selectedLabel: _selectedClassLabel,
+            onClassPicked: _onClassPicked,
+            query: _query,
+            onQueryChanged: _onQueryChanged,
+          ),
+          SizedBox(height: ui(16)),
           _StatsRow(total: totalForStats, male: maleCount, female: femaleCount),
           SizedBox(height: ui(20)),
           if (!_loadingStudents && list.isEmpty)
@@ -572,7 +573,8 @@ class _FilterRow extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-          width: 200,
+          width: 140,
+          height: 44,
           child: AppSelect<String>(
             options: [
               for (final o in classOptions)
@@ -589,7 +591,8 @@ class _FilterRow extends StatelessWidget {
         ),
         const Spacer(),
         SizedBox(
-          width: 300,
+          width: 324,
+          height: 44,
           child: _RosterSearchField(value: query, onChanged: onQueryChanged),
         ),
       ],
@@ -848,7 +851,6 @@ class _RosterSearchFieldState extends State<_RosterSearchField> {
       controller: _ctrl,
       hint: '搜索姓名、学号、宿舍',
       onChanged: widget.onChanged,
-      onCleared: () => widget.onChanged(''),
     );
   }
 }

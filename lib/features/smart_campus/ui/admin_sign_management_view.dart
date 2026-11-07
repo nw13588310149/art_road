@@ -104,6 +104,18 @@ class _AdminSignManagementViewState extends State<AdminSignManagementView> {
         subtitle: '大课批量签到 · 小课签到审核 · 补签审核',
         onBack: widget.onBack,
         actions: [
+          AppSegmented<_SignTab>(
+            segments: const [
+              AppSegment(value: _SignTab.large, label: '大课管理'),
+              AppSegment(value: _SignTab.small, label: '小课管理'),
+            ],
+            value: _tab,
+            selectedColor: AppColors.ink,
+            onChanged: (t) {
+              if (_tab == t) return;
+              setState(() => _tab = t);
+            },
+          ),
           AppButton(
             label: _pendingMakeupCount > 0
                 ? '补签审核（$_pendingMakeupCount）'
@@ -114,17 +126,6 @@ class _AdminSignManagementViewState extends State<AdminSignManagementView> {
             onTap: _openMakeupAuditDrawer,
           ),
         ],
-        bottom: AppTabs<_SignTab>(
-          tabs: const [
-            AppTab(value: _SignTab.large, label: '大课管理'),
-            AppTab(value: _SignTab.small, label: '小课管理'),
-          ],
-          value: _tab,
-          onChanged: (t) {
-            if (_tab == t) return;
-            setState(() => _tab = t);
-          },
-        ),
       ),
       bodyScrollable: false,
       body: IndexedStack(

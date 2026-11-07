@@ -230,7 +230,7 @@ class _MiniRank extends StatelessWidget {
       children: [
         Text(label, style: AppText.caption12),
         const SizedBox(height: 2),
-        StudyRankText(rank: rank, total: total, size: 16),
+        StudyRankText(rank: rank, total: total, totalUnit: '人', size: 16),
       ],
     );
   }

@@ -21,47 +21,17 @@ class StaffStatTiles extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tiles = [
-      AppStatTile(
-        label: '参考人数',
-        value: '${summary.count}',
-        unit: '人',
-        boxed: true,
-      ),
-      AppStatTile(
-        label: '平均分',
-        value: formatScore(summary.average),
-        unit: '分',
-        boxed: true,
-      ),
-      AppStatTile(
-        label: '最高分',
-        value: formatScore(summary.max),
-        unit: '分',
-        boxed: true,
-      ),
-      AppStatTile(
-        label: '最低分',
-        value: formatScore(summary.min),
-        unit: '分',
-        boxed: true,
-      ),
-      AppStatTile(
-        label: '中位数',
-        value: formatScore(summary.median),
-        unit: '分',
-        boxed: true,
-      ),
-      AppStatTile(
-        label: '满分',
-        value: formatScore(fullScore),
-        unit: '分',
-        boxed: true,
-      ),
+    final metrics = [
+      ('参考人数', '${summary.count}', '人'),
+      ('平均分', formatScore(summary.average), '分'),
+      ('最高分', formatScore(summary.max), '分'),
+      ('最低分', formatScore(summary.min), '分'),
+      ('中位数', formatScore(summary.median), '分'),
+      ('满分', formatScore(fullScore), '分'),
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 760
+        final columns = constraints.maxWidth >= 720
             ? 6
             : (constraints.maxWidth >= 460 ? 3 : 2);
         const gap = AppSpace.s12;
@@ -70,7 +40,33 @@ class StaffStatTiles extends StatelessWidget {
           spacing: gap,
           runSpacing: gap,
           children: [
-            for (final tile in tiles) SizedBox(width: width, child: tile),
+            for (final (label, value, unit) in metrics)
+              Container(
+                width: width,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpace.s12,
+                  vertical: AppSpace.s12,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.surfaceSubtle,
+                  borderRadius: AppRadius.br12,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: AppText.caption12),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 30,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: StudyNumberText(value, size: 24, unit: ' $unit'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         );
       },
@@ -275,7 +271,7 @@ class StaffCampusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       title: '校区对比',
-      subtitle: '$subjectLabel平均分 · 与全体均分对比',
+      subtitle: '$subjectLabel均分 · 对比全体',
       child: groups.isEmpty
           ? const SizedBox(
               height: 160,

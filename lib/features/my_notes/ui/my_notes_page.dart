@@ -503,12 +503,16 @@ class _NotesListView extends ConsumerWidget {
             onAddCategory: onAddCategory,
             onCategoryAction: onCategoryAction,
           ),
-          child: _NotesContentArea(
-            state: state,
-            onSelectFilter: controller.selectFilter,
-            onOpenNote: onOpenNote,
-            onCreate: onCreate,
-            onNoteAction: onNoteAction,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpace.s4, 2, AppSpace.s4, 0),
+            child: _NotesContentArea(
+              state: state,
+              onSelectFilter: controller.selectFilter,
+              onOpenNote: onOpenNote,
+              onCreate: onCreate,
+              onNoteAction: onNoteAction,
+              onRetry: controller.refresh,
+            ),
           ),
         ),
         if (state.busy) const Positioned.fill(child: AppLoadingOverlay()),
@@ -663,6 +667,7 @@ class _NotesContentArea extends StatelessWidget {
     required this.onOpenNote,
     required this.onCreate,
     required this.onNoteAction,
+    required this.onRetry,
   });
 
   static const List<MyNotesFilter> _visibleFilters = <MyNotesFilter>[
@@ -677,6 +682,7 @@ class _NotesContentArea extends StatelessWidget {
   final Future<void> Function() onCreate;
   final Future<void> Function(NoteEntry item, _NoteMenuAction action)
   onNoteAction;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -684,6 +690,14 @@ class _NotesContentArea extends StatelessWidget {
     final Widget body;
     if (state.loading && notes.isEmpty) {
       body = const _NotesGridSkeleton();
+    } else if (notes.isEmpty && state.errorMessage != null) {
+      body = AppErrorState(
+        title: '笔记加载失败',
+        description: state.errorMessage!.isEmpty
+            ? '请检查网络连接后重试'
+            : state.errorMessage!,
+        onRetry: onRetry,
+      );
     } else if (notes.isEmpty && state.activeFilter == MyNotesFilter.favorite) {
       body = const AppEmptyState(
         illustration: AppAssets.emptyNotesPlaceholder,

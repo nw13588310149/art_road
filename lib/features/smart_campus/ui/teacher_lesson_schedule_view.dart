@@ -62,6 +62,7 @@ import 'widgets/schedule_color_swatch_picker.dart';
 import 'widgets/schedule_course_card.dart';
 import 'widgets/schedule_grid_shell.dart';
 import 'widgets/schedule_idle_slot.dart';
+import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 通用配色（与学生 / 管理员端 schedule 保持一致）----------------------
@@ -1110,10 +1111,10 @@ class _TeacherLessonScheduleViewState
     final slots = _buildSlots(cells);
     final days = _buildDayHeaders();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
+    return SmartCampusSchedulePageShell(
+      bodyScrollable: false,
+      header: SmartCampusScheduleTopBar(
+        child: AppPageHeader(
           title: '授课课表',
           subtitle: _subtitle,
           onBack: widget.onBack,
@@ -1135,38 +1136,50 @@ class _TeacherLessonScheduleViewState
               onChanged: (m) => setState(() => _mode = m),
             ),
           ],
-          bottom: _TeacherScheduleControlBar(
-            weekStart: _weekStart,
-            isCurrentWeek: _currentWeek == kScheduleCurrentTeachingWeek,
-            onPrev: _gotoPrev,
-            onCurrent: _gotoCurrent,
-            onNext: _gotoNext,
-            onPickDate: _pickDate,
-          ),
         ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              AppSpace.page,
-            ),
-            child: ScheduleGridShell(
-              key: _scheduleGridKey,
-              slots: slots,
-              days: days,
-              body: _DaysBodyArea(
-                mode: _mode,
-                slots: slots,
-                days: days,
-                cells: cells,
-                onApplySmallLesson: _onApplySmallLesson,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.page,
+          AppSpace.s4,
+          AppSpace.page,
+          AppSpace.page,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppCard(
+              color: AppColors.surfaceSubtle,
+              bordered: false,
+              padding: const EdgeInsets.all(AppSpace.s12),
+              child: _TeacherScheduleControlBar(
+                weekStart: _weekStart,
+                week: _currentWeek,
+                isCurrentWeek: _currentWeek == kScheduleCurrentTeachingWeek,
+                onPrev: _gotoPrev,
+                onCurrent: _gotoCurrent,
+                onNext: _gotoNext,
+                onPickDate: _pickDate,
               ),
             ),
-          ),
+            const SizedBox(height: AppSpace.s12),
+            Expanded(
+              child: ScheduleGridShell(
+                key: _scheduleGridKey,
+                slots: slots,
+                days: days,
+                body: _DaysBodyArea(
+                  mode: _mode,
+                  slots: slots,
+                  days: days,
+                  cells: cells,
+                  onApplySmallLesson: _onApplySmallLesson,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -1178,6 +1191,7 @@ class _TeacherLessonScheduleViewState
 class _TeacherScheduleControlBar extends StatelessWidget {
   const _TeacherScheduleControlBar({
     required this.weekStart,
+    required this.week,
     required this.isCurrentWeek,
     required this.onPrev,
     required this.onCurrent,
@@ -1186,6 +1200,7 @@ class _TeacherScheduleControlBar extends StatelessWidget {
   });
 
   final DateTime weekStart;
+  final int week;
   final bool isCurrentWeek;
   final VoidCallback onPrev;
   final VoidCallback onCurrent;
@@ -1196,10 +1211,22 @@ class _TeacherScheduleControlBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const AppTag(label: '大课', dotColor: _kStatusPurple),
-        const SizedBox(width: AppSpace.s8),
-        const AppTag(label: '小课', dotColor: _kStatusGreen),
-        const Spacer(),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('教学周第 $week 周', style: AppText.body14Strong),
+              const SizedBox(height: AppSpace.s4),
+              const Wrap(
+                spacing: AppSpace.s8,
+                children: [
+                  AppTag(label: '大课', dotColor: _kStatusPurple),
+                  AppTag(label: '小课', dotColor: _kStatusGreen),
+                ],
+              ),
+            ],
+          ),
+        ),
         AppIconButton(
           icon: Icons.chevron_left_rounded,
           semanticLabel: '上一周',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
@@ -51,6 +52,8 @@ class _SchoolBody extends StatelessWidget {
   final SchoolPageState state;
   final Future<void> Function() onRefresh;
 
+  static const progressPanelWidth = 307.0;
+
   @override
   Widget build(BuildContext context) {
     final videos = _CourseVideosCard(state: state);
@@ -65,12 +68,7 @@ class _SchoolBody extends StatelessWidget {
           final wide = constraints.maxWidth >= 800;
           return SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              AppSpace.s24,
-            ),
+            padding: const EdgeInsets.only(bottom: AppSpace.s24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -89,7 +87,7 @@ class _SchoolBody extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpace.s16),
-                      SizedBox(width: 300, child: side),
+                      SizedBox(width: progressPanelWidth, child: side),
                     ],
                   )
                 else ...[
@@ -263,19 +261,27 @@ class _LearningProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      title: '学习进度',
-      subtitle: '按课时统计',
-      child: items.isEmpty
-          ? Text('暂无课时安排', style: AppText.caption12)
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < items.length; i++) ...[
-                  if (i > 0) const SizedBox(height: AppSpace.s16),
-                  _ProgressRow(item: items[i]),
-                ],
-              ],
-            ),
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpace.s16,
+        horizontal: AppSpace.s12,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '学习进度',
+            style: AppText.body16.copyWith(fontWeight: AppFont.w500, height: 1),
+          ),
+          const SizedBox(height: AppSpace.s12),
+          if (items.isEmpty)
+            Text('暂无课时安排', style: AppText.caption12)
+          else
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(height: AppSpace.s12),
+              _ProgressRow(item: items[i]),
+            ],
+        ],
+      ),
     );
   }
 }
@@ -289,32 +295,79 @@ class _ProgressRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final completed = item.completed;
     final progress = item.progress.clamp(0, 100);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 142),
+      child: AppCard(
+        color: AppColors.surfaceSubtle,
+        radius: 12,
+        bordered: false,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s16,
+          vertical: AppSpace.s12,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppTag.subject(item.text),
-            const Spacer(),
-            if (completed)
-              const AppTag(label: '已完成', tone: AppTone.success)
-            else
-              Text('$progress%', style: AppText.number(size: 14)),
+            Row(
+              children: [
+                Expanded(child: Text(item.text, style: AppText.body14Strong)),
+                if (completed)
+                  const AppTag(label: '已完成', tone: AppTone.success),
+              ],
+            ),
+            Row(
+              children: [
+                _ProgressStat(value: item.allCount, label: '总共'),
+                _ProgressStat(value: item.completeCount, label: '已上'),
+                _ProgressStat(value: item.remainingCount, label: '剩余'),
+              ],
+            ),
+            Row(
+              children: [
+                Text('课程进度', style: AppText.caption12),
+                const SizedBox(width: AppSpace.s8),
+                Expanded(
+                  child: AppProgressBar(
+                    value: progress / 100,
+                    color: completed ? AppColors.success : item.color,
+                  ),
+                ),
+                const SizedBox(width: AppSpace.s8),
+                Text('$progress%', style: AppText.number(size: 12)),
+              ],
+            ),
           ],
         ),
-        const SizedBox(height: AppSpace.s8),
-        AppProgressBar(
-          value: progress / 100,
-          color: completed ? AppColors.success : item.color,
-        ),
-        const SizedBox(height: AppSpace.s4),
-        Text(
-          completed
-              ? '${item.text}课程已全部完成'
-              : '已上 ${item.completeCount} / 共 ${item.allCount} 课时，剩余 ${item.remainingCount} 课时',
-          style: AppText.caption12,
-        ),
-      ],
+      ),
+    );
+  }
+}
+
+class _ProgressStat extends StatelessWidget {
+  const _ProgressStat({required this.value, required this.label});
+
+  final int value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: '$value', style: AppText.number(size: 20)),
+                TextSpan(text: ' 课时', style: AppText.caption12),
+              ],
+            ),
+          ),
+          Text(label, style: AppText.caption12),
+        ],
+      ),
     );
   }
 }
@@ -482,12 +535,7 @@ class _SchoolSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpace.page,
-        AppSpace.s4,
-        AppSpace.page,
-        AppSpace.s24,
-      ),
+      padding: EdgeInsets.only(bottom: AppSpace.s24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -506,7 +554,7 @@ class _SchoolSkeleton extends StatelessWidget {
           ),
           SizedBox(width: AppSpace.s16),
           SizedBox(
-            width: 300,
+            width: _SchoolBody.progressPanelWidth,
             child: AppCard(child: AppSkeletonText(lines: 8)),
           ),
         ],

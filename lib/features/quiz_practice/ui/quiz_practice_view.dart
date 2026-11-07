@@ -7,6 +7,7 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/ui/ui.dart';
 import '../state/quiz_practice_controller.dart';
 import '../state/quiz_practice_state.dart';
+import 'quiz_stats.dart';
 
 /// 题库首页（公开题库与画室题库共用）：统计 + 四种练习方式。
 class QuizPracticeView extends ConsumerWidget {
@@ -119,62 +120,26 @@ class _QuizContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final overall = _summaryOf(QuizPracticeType.sequence);
     final wrong = _summaryOf(QuizPracticeType.error);
-    final accuracyLow = overall.doneCount > 0 && overall.accuracyPercent < 60;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
-        AppSpace.page,
+        AppSpace.s24,
         AppSpace.s4,
-        AppSpace.page,
+        AppSpace.s24,
         AppSpace.s24,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppCard(
+          AppSectionHeader(
             title: '美术常识',
             subtitle: '美术史、名作鉴赏与联考常识，共 ${overall.allCount} 题',
-            child: Row(
-              children: [
-                Expanded(
-                  child: AppStatTile(
-                    label: '未做',
-                    value: '${overall.notDoneCount}',
-                    unit: '题',
-                    boxed: true,
-                  ),
-                ),
-                const SizedBox(width: AppSpace.s12),
-                Expanded(
-                  child: AppStatTile(
-                    label: '已做',
-                    value: '${overall.doneCount}',
-                    unit: '题',
-                    boxed: true,
-                  ),
-                ),
-                const SizedBox(width: AppSpace.s12),
-                Expanded(
-                  child: AppStatTile(
-                    label: '错题本',
-                    value: '${wrong.allCount}',
-                    unit: '题',
-                    boxed: true,
-                  ),
-                ),
-                const SizedBox(width: AppSpace.s12),
-                Expanded(
-                  child: AppStatTile(
-                    label: '正确率',
-                    value: overall.doneCount > 0
-                        ? '${overall.accuracyPercent}'
-                        : '--',
-                    unit: overall.doneCount > 0 ? '%' : null,
-                    valueColor: accuracyLow ? AppColors.danger : AppColors.ink,
-                    boxed: true,
-                  ),
-                ),
-              ],
-            ),
+          ),
+          const SizedBox(height: AppSpace.s12),
+          QuizStats(
+            notDone: overall.notDoneCount,
+            done: overall.doneCount,
+            wrong: wrong.allCount,
+            accuracyPercent: overall.accuracyPercent,
           ),
           const SizedBox(height: AppSpace.s24),
           const AppSectionHeader(title: '练习方式'),
@@ -228,6 +193,11 @@ class _PracticeModeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = summary.type;
     final isError = type == QuizPracticeType.error;
+    final caption = AppText.caption12;
+    final descriptionHeight =
+        MediaQuery.textScalerOf(context).scale(caption.fontSize!) *
+        caption.height! *
+        2;
     return AppPressable(
       onTap: onTap,
       child: Container(
@@ -271,7 +241,7 @@ class _PracticeModeCard extends StatelessWidget {
                           isError
                               ? '${summary.allCount}'
                               : '${summary.progressPercent}%',
-                          style: AppText.number(size: 24),
+                          style: AppText.displayNumber(size: 24),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -287,12 +257,15 @@ class _PracticeModeCard extends StatelessWidget {
             const SizedBox(height: AppSpace.s12),
             Text(type.label, style: AppText.title16),
             const SizedBox(height: AppSpace.s4),
-            Text(
-              type.description,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.caption12,
+            SizedBox(
+              height: descriptionHeight,
+              child: Text(
+                type.description,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: caption,
+              ),
             ),
             const SizedBox(height: AppSpace.s8),
             Text(

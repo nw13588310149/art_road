@@ -176,7 +176,11 @@ class _FigureLayout {
         (size.width - rulerWidth - 12) / totalUnits,
       ),
     );
-    groundY = size.height - bottomMargin;
+    final verticalSlack = math.max(
+      0.0,
+      size.height - topMargin - bottomMargin - 7.2 * unit,
+    );
+    groundY = size.height - bottomMargin - verticalSlack / 2;
     rulerX = rulerWidth - 12;
     final used = totalUnits * unit;
     var x = rulerWidth + math.max(0, (size.width - rulerWidth - 12 - used) / 2);
@@ -230,7 +234,11 @@ class _FigureDiagram extends StatelessWidget {
             },
             child: CustomPaint(
               size: constraints.biggest,
-              painter: _FigurePainter(layout: layout, selected: selected),
+              painter: _FigurePainter(
+                layout: layout,
+                selected: selected,
+                textStyle: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
           ),
         );
@@ -240,10 +248,15 @@ class _FigureDiagram extends StatelessWidget {
 }
 
 class _FigurePainter extends CustomPainter {
-  _FigurePainter({required this.layout, required this.selected});
+  _FigurePainter({
+    required this.layout,
+    required this.selected,
+    required this.textStyle,
+  });
 
   final _FigureLayout layout;
   final FigurePose selected;
+  final TextStyle? textStyle;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -429,10 +442,11 @@ class _FigurePainter extends CustomPainter {
     final base = number
         ? AppText.number(size: 12, color: AppColors.textTertiary)
         : (strong ? AppText.body14Strong : AppText.caption12);
+    final style = textStyle?.merge(base) ?? base;
     final painter = TextPainter(
       text: TextSpan(
         text: text,
-        style: color == null ? base : base.copyWith(color: color),
+        style: color == null ? style : style.copyWith(color: color),
       ),
       textDirection: ui.TextDirection.ltr,
     )..layout();
@@ -445,5 +459,7 @@ class _FigurePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _FigurePainter oldDelegate) =>
-      oldDelegate.selected != selected || oldDelegate.layout != layout;
+      oldDelegate.selected != selected ||
+      oldDelegate.layout != layout ||
+      oldDelegate.textStyle != textStyle;
 }

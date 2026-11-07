@@ -192,8 +192,12 @@ void main() {
   testWidgets('score calculator shows the Gansu worked example', (
     tester,
   ) async {
-    await _pumpToolbox(tester, size: const Size(950, 740), tool: 'score');
+    await _pumpToolbox(tester, size: const Size(814, 680), tool: 'score');
     final fields = find.byType(EditableText);
+    expect(
+      tester.getTopLeft(fields.at(0)).dy,
+      tester.getTopLeft(fields.at(1)).dy,
+    );
     await tester.enterText(fields.at(0), '500');
     await tester.enterText(fields.at(1), '240');
     await tester.pump();

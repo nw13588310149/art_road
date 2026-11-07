@@ -122,7 +122,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
             height: 16,
             fit: BoxFit.contain,
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: widget.toolbar ? AppSpace.s8 : 6),
           Expanded(
             child: AppTextField(
               controller: _controller,

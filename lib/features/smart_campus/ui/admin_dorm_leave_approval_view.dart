@@ -187,19 +187,21 @@ class _AdminDormLeaveApprovalViewState
             rejectedCount: _rejectedCount,
           ),
           SizedBox(height: ui(16)),
-          AppTabs<_StatusTab>(
-            tabs: [
-              for (final t in _StatusTab.values)
-                AppTab(
-                  value: t,
-                  label: t.label,
-                  count: switch (t) {
-                    _StatusTab.all => null,
-                    _StatusTab.pending => _pendingCount,
-                    _StatusTab.approved => _approvedCount,
-                    _StatusTab.rejected => _rejectedCount,
-                  },
-                ),
+          SmartCampusStatusTabs<_StatusTab>(
+            segments: [
+              const AppSegment(value: _StatusTab.all, label: '全部'),
+              AppSegment(
+                value: _StatusTab.pending,
+                label: '${_StatusTab.pending.label}（$_pendingCount）',
+              ),
+              AppSegment(
+                value: _StatusTab.approved,
+                label: '${_StatusTab.approved.label}（$_approvedCount）',
+              ),
+              AppSegment(
+                value: _StatusTab.rejected,
+                label: '${_StatusTab.rejected.label}（$_rejectedCount）',
+              ),
             ],
             value: _tab,
             onChanged: (t) {

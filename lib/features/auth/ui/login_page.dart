@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/demo/demo_accounts.dart';
 import '../../../core/demo/demo_config.dart';
 import '../../../core/demo/demo_store.dart';
@@ -37,7 +38,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         title: '账号登录',
         children: [
           AppIconInputField(
-            icon: Icons.phone_iphone_rounded,
+            iconAsset: AppAssets.authPhone,
             hint: '请输入手机号',
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
@@ -50,7 +51,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
           const SizedBox(height: AppSpace.s20),
           AppIconInputField(
-            icon: Icons.lock_outline_rounded,
+            iconAsset: AppAssets.authPassword,
             hint: '请输入密码',
             obscureText: true,
             textInputAction: TextInputAction.done,
