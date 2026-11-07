@@ -285,6 +285,7 @@ class _ProfileCard extends StatelessWidget {
     final meta = <String>[
       maskMobile(user['mobile']?.toString() ?? ''),
       user['school']?.toString().trim() ?? '',
+      user['campus']?.toString().trim() ?? '',
     ].where((e) => e.isNotEmpty).join(' · ');
     return AppCard(
       padding: const EdgeInsets.all(AppSpace.s20),

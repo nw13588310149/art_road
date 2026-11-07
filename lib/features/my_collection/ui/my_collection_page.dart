@@ -5,6 +5,7 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/class_share_drawer.dart';
+import '../../ebooks/data/ebook_collection.dart';
 import '../navigation/collection_return.dart';
 import '../state/my_collection_controller.dart';
 import '../state/my_collection_state.dart';
@@ -27,7 +28,29 @@ final Map<int, void Function(BuildContext context, String targetId)> _openers =
         RoutePaths.gallery,
         arguments: <String, dynamic>{'workId': id},
       ),
+      CollectionType.ebook: (context, id) => Navigator.pushNamed(
+        context,
+        RoutePaths.ebooks,
+        arguments: EbookCollection.routeArgs(id),
+      ),
     };
+
+/// 各类型的收藏入口，用于空状态说明。
+const Map<int, String> _collectSources = {
+  CollectionType.artwork: '范画库',
+  CollectionType.video: '视频中心',
+  CollectionType.news: '资讯',
+  CollectionType.ebook: '美术书刊',
+};
+
+/// 「范画库、视频中心、资讯或美术书刊」。
+String _allSourcesText() {
+  final sources = _collectSources.values.toList();
+  return '${sources.take(sources.length - 1).join('、')}或${sources.last}';
+}
+
+/// 群聊暂不能打开的分享类型（书刊分享卡还没有对应的打开方式）。
+const Set<int> _unshareableTypes = {CollectionType.ebook};
 
 /// 我的收藏：页头 + 类型筛选 + 收藏卡片网格（整卡可点，右下角分享 / 取消收藏）。
 class MyCollectionPage extends ConsumerWidget {
@@ -54,11 +77,11 @@ class MyCollectionPage extends ConsumerWidget {
         onRetry: controller.refresh,
       );
     } else if (state.items.isEmpty) {
-      final all = state.activeType == CollectionType.all;
+      final source = _collectSources[state.activeType];
       body = AppEmptyState(
         icon: Icons.bookmark_border_rounded,
-        title: all ? '还没有收藏内容' : '还没有收藏的$label',
-        description: '在范画库、视频中心或资讯里点击收藏，内容会出现在这里',
+        title: source == null ? '还没有收藏内容' : '还没有收藏的$label',
+        description: '在${source ?? _allSourcesText()}里点击收藏，内容会出现在这里',
       );
     } else {
       body = _CollectionGrid(
@@ -77,7 +100,7 @@ class MyCollectionPage extends ConsumerWidget {
         AppPageHeader(
           title: '我的收藏',
           subtitle: loadingItems || state.items.isEmpty
-              ? '范画、视频与资讯收藏'
+              ? '范画、视频、资讯与书刊收藏'
               : '共 ${state.items.length} 条收藏',
           onBack: navigator.canPop() ? navigator.pop : null,
           bottom: tabs.length < 2
@@ -251,6 +274,9 @@ class _CollectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final views = int.tryParse(item.metricText) ?? 0;
+    final pages = item.isEbook
+        ? int.tryParse('${item.rawPayload['pageCount'] ?? ''}') ?? 0
+        : 0;
     return AppCard(
       padding: const EdgeInsets.all(AppSpace.s12),
       onTap: onTap,
@@ -286,7 +312,15 @@ class _CollectionCard extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSpace.s8),
                     ],
-                    if (views > 0 && !item.isArtwork)
+                    if (pages > 0)
+                      Text(
+                        '$pages 页',
+                        style: AppText.number(
+                          size: 12,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    if (views > 0 && !item.isArtwork && !item.isEbook)
                       Flexible(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -311,14 +345,15 @@ class _CollectionCard extends StatelessWidget {
                         ),
                       ),
                     const Spacer(),
-                    AppIconButton(
-                      icon: Icons.share_outlined,
-                      semanticLabel: '分享给班级',
-                      size: AppButtonSize.sm,
-                      filled: false,
-                      color: AppColors.textSecondary,
-                      onTap: onShare,
-                    ),
+                    if (!_unshareableTypes.contains(item.type))
+                      AppIconButton(
+                        icon: Icons.share_outlined,
+                        semanticLabel: '分享给班级',
+                        size: AppButtonSize.sm,
+                        filled: false,
+                        color: AppColors.textSecondary,
+                        onTap: onShare,
+                      ),
                     AppIconButton(
                       icon: Icons.bookmark_remove_outlined,
                       semanticLabel: '取消收藏',
@@ -350,8 +385,10 @@ class _CollectionCover extends StatelessWidget {
         ? ''
         : MediaUrl.resolve(raw);
     final duration = item.durationText.trim();
-    return SizedBox.square(
-      dimension: _coverSize,
+    return SizedBox(
+      // 书刊封面是 3:4 竖版，其它类型裁成方图。
+      width: item.isEbook ? _coverSize * 3 / 4 : _coverSize,
+      height: _coverSize,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -394,6 +431,7 @@ class _CollectionCover extends StatelessWidget {
           CollectionType.video => Icons.play_circle_outline_rounded,
           CollectionType.news => Icons.feed_outlined,
           CollectionType.artwork => Icons.palette_outlined,
+          CollectionType.ebook => Icons.menu_book_outlined,
           _ => Icons.bookmark_border_rounded,
         },
         color: AppColors.textPlaceholder,

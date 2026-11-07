@@ -2,6 +2,7 @@ import '../data/demo_favorites.dart';
 import '../demo_backend.dart';
 import '../demo_store.dart';
 import 'content_common.dart';
+import 'content_ebooks.dart' show ensureDemoEbookSeeds, kDemoEbookFavoriteType;
 import 'content_news.dart';
 import 'content_videos.dart';
 
@@ -19,9 +20,12 @@ const _mediaKeys = <String>{
   'shortText3',
 };
 
-/// 「我的收藏」演示数据：首次访问时为账号预置几条视频、资讯与范画收藏。
+/// 「我的收藏」演示数据：首次访问时为账号预置几条视频、资讯与范画收藏，
+/// 书刊收藏由书刊模块预置。
 abstract final class DemoContentFavorites {
   static void ensureSeeded(String userId) {
+    // 书刊有自己的预置标记，放在本模块标记之前，已预置过的老账号也能补上。
+    ensureDemoEbookSeeds(userId);
     final seeded = DemoStore.map(_seededKey, () => <String, dynamic>{});
     if (seeded[userId] == true) {
       return;
@@ -170,6 +174,7 @@ void registerContentFavoriteFixtures(DemoRouter r) {
       {'id': DemoFavorites.typeGallery, 'name': '范画'},
       {'id': DemoFavorites.typeVideo, 'name': '视频'},
       {'id': DemoFavorites.typeNews, 'name': '资讯'},
+      {'id': kDemoEbookFavoriteType, 'name': '书刊'},
     ];
   });
 

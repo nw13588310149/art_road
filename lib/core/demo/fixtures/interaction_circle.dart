@@ -790,7 +790,7 @@ const _seedPosts = <_SeedPost>[
     favorites: 39,
     comments: [
       _SeedComment('s:22', '刷了一轮，外国美术史错了好多', 50),
-      _SeedComment('t:t-7', '错题会自动进入错题集，考前再过一遍就好。', 75),
+      _SeedComment('t:t-7', '错题会自动收进错题本，考前再过一遍就好。', 75),
     ],
   ),
   _SeedPost(

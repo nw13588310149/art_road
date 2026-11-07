@@ -251,7 +251,7 @@ void main() {
       expect(find.bySemanticsLabel('设置'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('^账户菜单')), findsOneWidget);
       semantics.dispose();
-      expect(find.text('搜索范画、资讯、视频、笔记'), findsOneWidget);
+      expect(find.text('搜索范画、书刊、资讯、视频、笔记'), findsOneWidget);
       expect(find.byType(AppBadge), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

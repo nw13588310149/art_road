@@ -205,7 +205,7 @@ class _MyCloudDrivePageState extends ConsumerState<MyCloudDrivePage> {
     final name = await _showNameDialog(
       context,
       title: '新建分类',
-      hint: '如素描资料、联考真题',
+      hint: '如素描资料、联考模拟题',
       confirmLabel: '创建',
     );
     if (name == null || name.isEmpty) {

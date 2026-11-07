@@ -1,3 +1,5 @@
+import '../../ebooks/data/ebook_collection.dart';
+
 class CollectionTabItem {
   const CollectionTabItem({required this.type, required this.label});
 
@@ -14,6 +16,7 @@ abstract final class CollectionType {
   static const video = 6;
   static const news = 9;
   static const artwork = 11;
+  static const ebook = EbookCollection.type;
 
   static String labelOf(int type) {
     for (final tab in kCollectionDefaultTabs) {
@@ -56,6 +59,7 @@ class CollectionEntry {
   bool get isVideo => type == CollectionType.video;
   bool get isNews => type == CollectionType.news;
   bool get isArtwork => type == CollectionType.artwork;
+  bool get isEbook => type == CollectionType.ebook;
 }
 
 class CollectionShareClass {
@@ -137,12 +141,13 @@ class MyCollectionState {
   }
 }
 
-/// 我的收藏 Tab 顺序：全部 → 范画 → 视频 → 资讯。
+/// 我的收藏 Tab 顺序：全部 → 范画 → 视频 → 资讯 → 书刊。
 const List<CollectionTabItem> kCollectionDefaultTabs = <CollectionTabItem>[
   CollectionTabItem(type: CollectionType.all, label: '全部'),
   CollectionTabItem(type: CollectionType.artwork, label: '范画'),
   CollectionTabItem(type: CollectionType.video, label: '视频'),
   CollectionTabItem(type: CollectionType.news, label: '资讯'),
+  CollectionTabItem(type: CollectionType.ebook, label: EbookCollection.label),
 ];
 
 /// 接口分类名 → 类型，由 [kCollectionDefaultTabs] 生成。

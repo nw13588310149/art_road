@@ -2,7 +2,7 @@
 
 范围：`lib/features/{ai_chat,courseware,school,video_tutorial,consultation,my_notes,my_collection,quiz_practice,circle,school_website,personal_center,common,help_guide,feedback}/**`，演示数据 `lib/core/demo/fixtures/content_*.dart`（不含 content_home、content_ebooks）与 `interaction_*.dart`。
 
-状态：已完成。`dart analyze`（本批 14 个功能目录 + `lib/core/demo` + `lib/core/ui` + `test`）无问题；相关测试（school_config_data、school_website_html_utils、ui_kit、design_system_page、shell_navigation、demo_clock、widget）42 项通过，1 项失败：`shell_navigation_test` 的「ShellTopBar icon buttons have names…」找不到顶栏搜索占位文字，失败点在壳层顶栏（A 批正在修改 `shell_top_bar.dart`），与本批文件无关。
+状态：已完成（含检查点 74d23fa 之后的补做与「书刊」收藏）。`dart analyze`（本批 14 个功能目录 + `lib/core/demo` + `lib/core/ui` + `test`）无问题；相关测试（my_collection_ebook、school_config_data、school_website_html_utils、ui_kit、design_system_page、shell_navigation、demo_clock、widget）45 项通过，1 项失败：`shell_navigation_test` 的「ShellTopBar icon buttons have names…」仍在找旧的顶栏占位「搜索范画、资讯、视频、笔记」（顶栏已改为含「书刊」），与本批文件无关，见共享文件修改请求 5。
 
 ## C 内容（01-访客与学生.md）
 
@@ -109,12 +109,12 @@
 ### 个人信息
 - S-123：已修复（AppPageHeader(onBack)，左对齐标题）
 - S-124：已修复（空值显示占位色「未填写」，可点击填写；邮箱弹窗内校验格式并给出示例）
-- S-125：部分修复（字段改名「所在画室」；演示资料接口 `demoUserInfo` 只返回「示范画室」、没有校区字段，校区需在 `platform_core_fixtures.dart` 补，已列入共享文件修改请求）
+- S-125：已修复（字段改名「所在画室」；演示资料接口现已返回 `campus`，个人信息在「所在画室」下新增只读的「所在校区」（无校区时不显示），个人中心资料卡显示「手机号 · 画室 · 校区」）
 - S-126：已修复（内容限宽 640 居中，分「基本资料 / 学籍信息 / 账号安全」三张卡；修改密码、账号注销移入账号安全；编辑弹窗全部改 AppDialog + AppInputField，性别用 AppSegmented，头像来源改 AppDialog）
 
 ### 意见反馈
-- S-127：部分修复（页面统一按「MM-DD HH:mm」显示，不再显示秒；反馈数据由 `campus/campus_a_mailbox.dart` 按 `DateTime.now()` 倒推生成，凌晨时间需在该文件改用 DemoClock，已列入共享文件修改请求）
-- S-128：部分修复（页头改 AppPageHeader，去掉居中标题与光斑背景；作为左侧导航一级页，只在由其他页 push 进入时显示返回。官方回复里的「感谢建议！」同在 `campus_a_mailbox.dart`，已列入共享文件修改请求）
+- S-127：已修复（页面统一按「MM-DD HH:mm」显示，不再显示秒；演示反馈的种子时间已由 `campus_a_mailbox.dart` 的维护方改为 `CampusA.ago`（以 DemoClock 为基准，不再出现凌晨））
+- S-128：已修复（页头改 AppPageHeader，去掉居中标题与光斑背景；作为左侧导航一级页，只在由其他页 push 进入时显示返回。官方回复的感叹号已由 `campus_a_mailbox.dart` 的维护方去掉）
 - S-129：已修复（AppButton(primary, md)「提交反馈」，无渐变、无投影）
 - S-130：已修复（状态改 AppTag：待回复 warning / 已回复 success，12px；回复时间 caption12）
 - S-131：部分修复（宽屏左栏「我的反馈」、右栏 360 宽「写新反馈」，不再把表单挤到底部；AppInputField 多行 + 0/500 字数统计 + 空内容红字提示；补加载骨架、空状态与加载失败重试。反馈接口只有 `content` 字段，截图附件与联系方式需接口支持后再加）
@@ -126,7 +126,7 @@
 - S-136：已修复（AppPageHeader「操作指南」+ 副标题「各功能的操作说明」（body13）；卡片副标题改 12px 标签；「美术常识刷题」改「美术常识题库练习」，「自动刷题」改「自动下一题」，「考前密卷」改「高频考点」并同步题库页面）
 
 ### 我的二维码
-- S-158：已修复（新增 `MyQrCodePage`：AppPageHeader(onBack) +「保存二维码」+ 与个人中心弹窗共用的 `MyQrCodeCard`，含骨架与加载失败重试；路由表把 /qrcode 交给 `LegacyPlaceholderContent`，该组件现按路由渲染真实页面：/qrcode → 二维码页，/xieyi → 协议正文，其余遗留路由显示 AppPageHeader + AppEmptyState「暂未开放」，不再展示路由路径。建议路由表直接映射 /qrcode → `MyQrCodePage`，见共享文件修改请求）
+- S-158：已修复（新增 `MyQrCodePage`：AppPageHeader(onBack) +「保存二维码」+ 与个人中心弹窗共用的 `MyQrCodeCard`，含骨架与加载失败重试；路由表把 /qrcode 交给 `LegacyPlaceholderContent`，该组件现按路由渲染真实页面：/qrcode → 二维码页，/xieyi → 协议正文，其余遗留路由显示 AppPageHeader + AppEmptyState「暂未开放」，不再展示路由路径。路由表现已直接映射 /qrcode → `MyQrCodePage`）
 
 ## 教职工（02-教职工.md）中落在本批文件里的条目
 
@@ -154,11 +154,28 @@
 
 - `lib/core/ui/app_menu.dart`：`showAppMenu<T>({context, items, width})` + `AppMenuItem<T>({value, label, icon, danger, enabled})`。「···」更多操作的弹出菜单，定位与动效同 AppSelect（组件下方 / 空间不够时上方，超出右边界时右对齐；白底圆角 12、行高 36、popover 阴影、淡入 180ms），删除类操作 `danger: true` 显示红字。用于我的笔记、我的云盘的分类 / 卡片菜单，替代各页私有的锚点菜单面板。已在 `ui.dart` 加一行导出。
 
+## 我的收藏接入书刊（追加任务）
+
+- 新增 `CollectionType.ebook`（= `EbookCollection.type` = 12），页签表 `kCollectionDefaultTabs` 追加「书刊」（排在资讯后），`kCollectionTypeByLabel` 随之得到 `'书刊': 12`；5 个页签仍用 AppSegmented。
+- 列表解析：type 为 12 的记录（「全部」页签里 type 为 0 时按当前页签补齐）交给 `EbookCollection.itemOf` 取书名、副标题、封面与页数，缺书刊 id 的记录跳过。
+- 打开：`_openers` 登记 `Navigator.pushNamed(context, RoutePaths.ebooks, arguments: EbookCollection.routeArgs(targetId))`。
+- 卡片：书刊封面按 3:4 竖版显示，底部显示「N 页」，无封面时用书本图标；书刊卡只保留「取消收藏」，暂不提供「分享给班级」（群聊的 book 分享卡会按范画 id 打开范画库，书刊打不开，见共享文件修改请求 7）。
+- 空状态按页签说明收藏入口（如「在美术书刊里点击收藏…」），「全部」为「范画库、视频中心、资讯或美术书刊」；页头副标题改「范画、视频、资讯与书刊收藏」。
+- 演示数据 `content_favorites.dart`：分类列表加 `{'id': 12, 'name': '书刊'}`；预置收藏时先调用 `ensureDemoEbookSeeds(userId)`（书刊自己的预置标记，已预置过收藏的老账号也会补上两本书刊）。
+- 新增测试 `test/my_collection_ebook_test.dart`（3 项）：类型 / 页签 / 分类名一致，书刊记录解析与打开参数，缺 id 记录跳过。
+
+## 检查点 74d23fa 之后的补做
+
+- `circle_publish_dialog.dart` 在检查点被还原为旧版本，已重新迁移：showAppDialog + AppDialog「发布动态」，AppSegmented「图片 / 视频」（不再提供音频发布，历史音频帖仍可浏览），AppInputField 必填 + 0/500 计数，上传区与封面区改色板与 12px 字号，上传进度用 AppProgressBar，失败「重试」用 AppButton(text)，操作按钮 AppButton「取消 / 发布」（发布中 loading），文件大小加空格（「1.2 MB」）。
+- 检查点里有几处改动没有落盘，已重新应用：题库题干的四处绝对化说法（`interaction_quiz_bank.dart`）、操作指南与校圈评论里的「错题集」→「错题本」、云盘演示数据「联考真题（示例）」→「联考模拟题」（含新建分类输入框的示例文字）。
+- 云盘 PDF 预览失败时不再向用户显示原始链接和异常文本，不支持预览的类型改为「暂不支持在应用内预览这类文件」（原文提示的「在浏览器中查看或下载」在应用里没有对应入口）。
+
 ## 共享文件修改请求
 
-1. `lib/app/router/app_router.dart`：建议 `/qrcode` 直接映射 `MyQrCodePage()`（`lib/features/personal_center/ui/my_qr_code_page.dart`）。目前经 `LegacyPlaceholderContent` 转发也能正常显示，属于整理项。（S-158）
-2. `lib/core/demo/fixtures/campus/campus_a_mailbox.dart`：① 意见反馈的提交 / 回复时间改用 `DemoClock.ago`，避免凌晨时间（S-127）；② 官方回复「感谢建议！」去掉感叹号（S-128）；③ 自动回复「感谢你的反馈！…有进展会第一时间告诉你。」改「已收到你的反馈，我们会在后续版本中评估。」（T-4）。
-3. 演示资料接口 `demoUserInfo`（`platform_core_fixtures.dart`）：补校区字段（如「示范画室 · 本部」），个人信息「所在画室」才能显示到校区。（S-125）
-4. `lib/features/smart_campus/`（管理员「校圈治理」入口）：打开校圈时传 `CirclePage(governance: true)`，标题会变「校圈治理」并隐藏「发布动态」（T-214）。「待处理 / 已处理」与举报原因需要帖子接口增加举报数据后再做（T-213）。
-5. `lib/features/auth/`（可选）：登录 / 注册页的协议链接可直接 push `TermsPage`，「同意」时页面 `pop(true)`、返回时 `pop(false)`；隐私政策可传 `initialAnchor: TermsPage.privacyAnchor` 直接定位。
-6. `lib/core/constants/app_assets.dart` 与 `assets/`（可选清理）：视频详情与题库改用组件库后，`videoV2Share`、`videoV2Star`、`videoV2StarFilled`、`videoV2Collapse`、`videoV2RelatedPlay`、`quizRecommendBubble` 在 `lib/` 中已无引用。
+已处理（核对时确认）：`/qrcode` 已直接映射 `MyQrCodePage`；`campus_a_mailbox.dart` 的反馈时间、「感谢建议」与自动回复（S-127、S-128、T-4）已改；`demoUserInfo` 已返回 `campus`（S-125）。
+
+1. `lib/features/smart_campus/`（管理员「校圈治理」入口，`smart_campus_page.dart` 约 204 行）：打开校圈时传 `CirclePage(onBack: …, governance: true)`，标题会变「校圈治理」并隐藏「发布动态」（T-214）。「待处理 / 已处理」与举报原因需要帖子接口增加举报数据后再做（T-213）。
+2. `lib/features/auth/`（可选）：登录 / 注册页的协议链接可直接 push `TermsPage`，「同意」时页面 `pop(true)`、返回时 `pop(false)`；隐私政策可传 `initialAnchor: TermsPage.privacyAnchor` 直接定位。
+3. `lib/core/constants/app_assets.dart` 与 `assets/`（可选清理）：以下常量在 `lib/` 中已无引用——视频 `videoV2Share`、`videoV2Star`、`videoV2StarFilled`、`videoV2Collapse`、`videoV2RelatedPlay`；题库 `quizRecommendBubble`；校圈发布 `circlePublishTabImage(Selected)`、`circlePublishTabVideo(Selected)`、`circlePublishTabAudio(Selected)`、`circlePublishPickImage`、`circlePublishPickVideo`、`circlePublishPickAudio`。
+4. `lib/features/smart_campus/ui/group_chat_view.dart` 与 `data/chat_share_payload.dart`：增加书刊分享卡（如 `param1: 'ebook'`，点击 `Navigator.pushNamed(RoutePaths.ebooks, arguments: EbookCollection.routeArgs(id))`）。加好后把 `my_collection_page.dart` 的 `_unshareableTypes` 清空、`my_collection_repository.dart` 的 `param1` 映射加上 12 → `'ebook'`，书刊收藏即可分享到班级。
+5. `test/shell_navigation_test.dart`（壳层维护方）：「ShellTopBar icon buttons have names…」仍在找旧占位「搜索范画、资讯、视频、笔记」，顶栏现为「搜索范画、书刊、资讯、视频、笔记」，测试需同步更新（当前唯一失败的测试，与本批文件无关）。

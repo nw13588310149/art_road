@@ -164,6 +164,8 @@ class _InfoBody extends StatelessWidget {
                       maxLength: 60,
                     ),
                   ),
+                  if (field('campus').isNotEmpty)
+                    _fieldRow('所在校区', field('campus'), null),
                   _fieldRow(
                     '专业方向',
                     field('primary'),
