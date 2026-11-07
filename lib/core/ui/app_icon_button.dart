@@ -24,18 +24,21 @@ class AppIconButton extends StatelessWidget {
     this.showTooltip = true,
     super.key,
   }) : _asset = null,
+       _assetSize = null,
        _isBack = false;
 
   const AppIconButton.asset({
     required String asset,
     required this.semanticLabel,
     required this.onTap,
+    double? assetSize,
+    this.size = AppButtonSize.md,
+    this.filled = true,
     this.badgeCount = 0,
     super.key,
   }) : _asset = asset,
+       _assetSize = assetSize,
        icon = null,
-       size = AppButtonSize.md,
-       filled = true,
        background = AppColors.surface,
        color = AppColors.ink,
        enabled = true,
@@ -45,6 +48,7 @@ class AppIconButton extends StatelessWidget {
   const AppIconButton.back({required this.onTap, super.key})
     : icon = Icons.chevron_left,
       _asset = null,
+      _assetSize = null,
       semanticLabel = '返回',
       size = AppButtonSize.sm,
       filled = true,
@@ -57,6 +61,7 @@ class AppIconButton extends StatelessWidget {
 
   final IconData? icon;
   final String? _asset;
+  final double? _assetSize;
   final bool _isBack;
   final String semanticLabel;
   final VoidCallback? onTap;
@@ -90,8 +95,8 @@ class AppIconButton extends StatelessWidget {
           ? Icon(icon, size: md || _isBack ? 20 : 18, color: color)
           : AppAssetGraphic(
               image,
-              width: extent,
-              height: extent,
+              width: _assetSize ?? extent,
+              height: _assetSize ?? extent,
               fit: BoxFit.contain,
             ),
     );

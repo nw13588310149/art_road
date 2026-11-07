@@ -6,6 +6,7 @@ import '../../../core/art/art_subject.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/art_subject_card.dart';
 import '../../../core/widgets/dashboard_course_notice_card.dart';
 import '../../../core/widgets/seamless_banner_carousel.dart';
@@ -458,7 +459,10 @@ class _QuickActionItem extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AppIconTile(icon: action.icon),
+          if (action.iconAsset case final asset?)
+            AppAssetGraphic(asset, width: 44, height: 44)
+          else
+            AppIconTile(icon: action.icon!),
           const SizedBox(height: AppSpace.s8),
           Text(
             action.name,

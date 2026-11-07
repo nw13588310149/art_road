@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
 import '../../../core/widgets/class_share_drawer.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
@@ -428,18 +429,18 @@ Future<_CloudMenuAction?> _showCloudMenu(
       const AppMenuItem(
         value: _CloudMenuAction.rename,
         label: '重命名',
-        icon: Icons.drive_file_rename_outline_rounded,
+        iconAsset: AppAssets.coursewareActionRename,
       ),
       if (share)
         const AppMenuItem(
           value: _CloudMenuAction.share,
           label: '分享到班级',
-          icon: Icons.share_outlined,
+          iconAsset: AppAssets.coursewareActionShare,
         ),
       const AppMenuItem(
         value: _CloudMenuAction.delete,
         label: '删除',
-        icon: Icons.delete_outline_rounded,
+        iconAsset: AppAssets.coursewareActionDelete,
         danger: true,
       ),
     ],
@@ -598,7 +599,7 @@ class _CloudSidebar extends StatelessWidget {
           const SizedBox(height: AppSpace.s8),
           AppButton(
             label: '新建分类',
-            icon: Icons.create_new_folder_outlined,
+            iconAsset: AppAssets.coursewareNewFolder,
             variant: AppButtonVariant.quiet,
             size: AppButtonSize.sm,
             expand: true,
@@ -641,10 +642,12 @@ class _CategoryRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              selected ? Icons.folder_rounded : Icons.folder_outlined,
-              size: 22,
-              color: selected ? AppColors.brand : AppColors.textSecondary,
+            AppAssetGraphic(
+              selected
+                  ? AppAssets.cloudCategorySelected
+                  : AppAssets.cloudCategoryIdle,
+              width: 28,
+              height: 28,
             ),
             const SizedBox(width: AppSpace.s8),
             Expanded(
@@ -665,12 +668,12 @@ class _CategoryRow extends StatelessWidget {
               ),
             ),
             Builder(
-              builder: (anchor) => AppIconButton(
-                icon: Icons.more_horiz_rounded,
+              builder: (anchor) => AppIconButton.asset(
+                asset: AppAssets.cloudActionMore,
+                assetSize: 20,
                 semanticLabel: '分类操作',
                 size: AppButtonSize.sm,
                 filled: false,
-                color: AppColors.textTertiary,
                 onTap: () async {
                   final action = await _showCloudMenu(anchor);
                   if (action != null) {
@@ -861,7 +864,7 @@ class _CloudContentArea extends StatelessWidget {
               label: state.sortType == CloudDriveSortType.none
                   ? '排序'
                   : '按${state.sortType.label}',
-              icon: Icons.swap_vert_rounded,
+              iconAsset: AppAssets.coursewareSort,
               variant: AppButtonVariant.secondary,
               size: AppButtonSize.sm,
               onTap: () => onSortChanged(state.sortType),
@@ -958,20 +961,21 @@ class _FolderCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              AppIconTile(
-                icon: item.hasContent
-                    ? Icons.folder_rounded
-                    : Icons.folder_open_outlined,
-                size: 36,
+              AppAssetGraphic(
+                item.hasContent
+                    ? AppAssets.cloudFolderFilledBg
+                    : AppAssets.cloudFolderEmptyBg,
+                width: 44,
+                height: 36,
               ),
               const Spacer(),
               Builder(
-                builder: (anchor) => AppIconButton(
-                  icon: Icons.more_horiz_rounded,
+                builder: (anchor) => AppIconButton.asset(
+                  asset: AppAssets.cloudActionMore,
+                  assetSize: 20,
                   semanticLabel: '文件夹操作',
                   size: AppButtonSize.sm,
                   filled: false,
-                  color: AppColors.textTertiary,
                   onTap: () async {
                     final action = await _showCloudMenu(anchor);
                     if (action != null) {
@@ -1137,12 +1141,12 @@ class _FileCard extends StatelessWidget {
                   ),
                 ),
                 Builder(
-                  builder: (anchor) => AppIconButton(
-                    icon: Icons.more_horiz_rounded,
+                  builder: (anchor) => AppIconButton.asset(
+                    asset: AppAssets.cloudActionMore,
+                    assetSize: 20,
                     semanticLabel: '资料操作',
                     size: AppButtonSize.sm,
                     filled: false,
-                    color: AppColors.textTertiary,
                     onTap: () async {
                       final action = await _showCloudMenu(anchor, share: true);
                       switch (action) {

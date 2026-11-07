@@ -53,8 +53,12 @@ abstract final class AppAssets {
       'assets/images/new/0图标/Frame 1912057261.png';
 
   // 首页九宫格通用图标
+  static const homeQuickNews = 'assets/images/home/home4.png';
+  static const homeQuickQuestionBank = 'assets/images/home/home5.png';
+  static const homeQuickGroupChat = 'assets/images/home/home7.png';
+  static const homeQuickSchoolCircle = 'assets/images/home/home9.png';
+  static const campusHomeActions = 'assets/images/smartCampus/home_actions';
 
-  // 我的云盘 / 我的笔记 左侧分类 —— 选中 / 未选中 icon。
   /// 左侧导航选中态背景图：深色（≈ #202020）圆角矩形 PNG，替代原本写死的纯色。
   /// 在 [_NavTile] 展开/折叠两态都通过 `BoxFit.cover` 铺满命中区，外层
   /// `BorderRadius.circular(12)` 仍保留，把图本身边缘渐变的透明像素裁掉。
@@ -92,6 +96,9 @@ abstract final class AppAssets {
   static const videoV2Fullscreen = 'assets/images/video/12.png';
   static const videoV2SeekForward15 = 'assets/images/video/16.png';
 
+  static const cloudCategorySelected = 'assets/images/home/nav4.png';
+  static const cloudCategoryIdle = 'assets/images/home/nav5.png';
+  static const cloudFolderIcon = 'assets/images/yunpan/yp1.png';
   static const cloudActionMore = 'assets/images/yunpan/yp2.png';
   static const cloudFolderFilledBg = 'assets/images/yunpan/yp8.png';
   static const cloudFolderEmptyBg = 'assets/images/yunpan/yp9.png';
@@ -99,6 +106,7 @@ abstract final class AppAssets {
   /// 我的云盘 / 课件中心 2.0 资产
   /// 1.png 上传弹窗顶部装饰图（含纸张、结构素描）
   static const coursewareUploadHeader = 'assets/images/courseware/1.png';
+  static const coursewareSort = 'assets/images/courseware/4.png';
   static const coursewareUploadFab = 'assets/images/courseware/6.png';
   static const coursewareNewFolder = 'assets/images/courseware/13.png';
   static const noteCreate = 'assets/images/note/3.png';
