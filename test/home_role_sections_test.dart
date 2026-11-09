@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -192,7 +193,8 @@ Future<void> _pumpHome(WidgetTester tester, String role) async {
           ),
         ),
         homeReviewStatsProvider.overrideWith(
-          (ref) async => const ArtworkStats(total: 25, reviewed: 18, pending: 7),
+          (ref) async =>
+              const ArtworkStats(total: 25, reviewed: 18, pending: 7),
         ),
         homeAdminTodoProvider.overrideWith(
           (ref) async => (leaves: 3, signs: 2),
@@ -223,10 +225,22 @@ Future<void> _pumpHome(WidgetTester tester, String role) async {
 }
 
 void main() {
+  setUpAll(() async {
+    for (final font in {
+      'Barlow': 'assets/fonts/Barlow-SemiBold.ttf',
+      'Manrope': 'assets/fonts/Manrope Medium.ttf',
+      'PingFang SC': 'assets/fonts/ttf/PingFangSC-Regular.otf',
+    }.entries) {
+      await (FontLoader(font.key)..addFont(rootBundle.load(font.value))).load();
+    }
+  });
   group('homeSectionsFor', () {
     test('each role only gets the cards that apply', () {
       final student = homeSectionsFor('student');
-      expect(student.practice && student.studySnapshot && student.courses, isTrue);
+      expect(
+        student.practice && student.studySnapshot && student.courses,
+        isTrue,
+      );
       expect(student.reviewQueue || student.todo || student.sideTodo, isFalse);
 
       final teacher = homeSectionsFor('teacher');
@@ -245,13 +259,20 @@ void main() {
       expect(dorm.studySnapshot || dorm.courses || dorm.subjects, isFalse);
 
       final unknown = homeSectionsFor('');
-      expect(unknown.practice || unknown.studySnapshot || unknown.sideTodo, isFalse);
+      expect(
+        unknown.practice || unknown.studySnapshot || unknown.sideTodo,
+        isFalse,
+      );
     });
 
     test('role falls back to the demo token before /myInfo returns', () {
       expect(resolveHomeRole('teacher', token: ''), 'teacher');
       expect(
-        resolveHomeRole('', token: 'demo.dormManager.13809310004', demoMode: true),
+        resolveHomeRole(
+          '',
+          token: 'demo.dormManager.13809310004',
+          demoMode: true,
+        ),
         'dormManager',
       );
       expect(resolveHomeRole('', token: '', demoMode: true), '');
@@ -260,25 +281,33 @@ void main() {
   });
 
   group('buildHomePractices', () {
-    test('two frequent problems open their tools, the weak subject opens the gallery', () {
-      final items = buildHomePractices(
-        insights: _insights,
-        snapshot: _studentSnapshot,
-      );
-      expect(items, hasLength(3));
-      expect(items[0].route, RoutePaths.artToolbox);
-      expect(items[0].arguments, {'tool': ArtTool.mirror.key});
-      expect(items[0].tag, '结构错误');
-      expect(items[0].reason, startsWith('老师点评中出现 3 次'));
-      expect(items[1].arguments, {'tool': ArtTool.quickSketch.key});
-      expect(items[2].source, HomePracticeSource.weakSubject);
-      expect(items[2].route, RoutePaths.gallery);
-      expect(items[2].arguments, {'subject': '色彩'});
-      expect(items[2].reason, contains('色彩 85 分（B 档）'));
-      for (final item in items.where((i) => i.route == RoutePaths.artToolbox)) {
-        expect(ArtTool.tryParse('${item.arguments['tool']}')?.key, item.arguments['tool']);
-      }
-    });
+    test(
+      'two frequent problems open their tools, the weak subject opens the gallery',
+      () {
+        final items = buildHomePractices(
+          insights: _insights,
+          snapshot: _studentSnapshot,
+        );
+        expect(items, hasLength(3));
+        expect(items[0].route, RoutePaths.artToolbox);
+        expect(items[0].arguments, {'tool': ArtTool.mirror.key});
+        expect(items[0].tag, '结构错误');
+        expect(items[0].reason, startsWith('老师点评中出现 3 次'));
+        expect(items[1].arguments, {'tool': ArtTool.quickSketch.key});
+        expect(items[2].source, HomePracticeSource.weakSubject);
+        expect(items[2].route, RoutePaths.gallery);
+        expect(items[2].arguments, {'subject': '色彩'});
+        expect(items[2].reason, contains('色彩 85 分（B 档）'));
+        for (final item in items.where(
+          (i) => i.route == RoutePaths.artToolbox,
+        )) {
+          expect(
+            ArtTool.tryParse('${item.arguments['tool']}')?.key,
+            item.arguments['tool'],
+          );
+        }
+      },
+    );
 
     test('without exam data the weak subject comes from daily artworks', () {
       final items = buildHomePractices(
@@ -398,23 +427,24 @@ void main() {
       );
     }
 
-    testWidgets('student sees today practice, latest review and study snapshot', (
-      tester,
-    ) async {
-      await _pumpHome(tester, 'student');
-      expect(tester.takeException(), isNull);
-      expectSameHeight(tester, HomePracticeCard, HomeLatestReviewCard);
-      expect(find.textContaining('今日练习'), findsOneWidget);
-      expect(find.text('镜像翻转'), findsOneWidget);
-      expect(find.text('色彩范画对照'), findsOneWidget);
-      expect(find.textContaining('最近点评'), findsOneWidget);
-      expect(find.text('石膏头像结构练习'), findsOneWidget);
-      expect(find.textContaining('结构交代清楚'), findsOneWidget);
-      expect(find.textContaining('学情速览'), findsOneWidget);
-      expect(find.text('今日课程'), findsOneWidget);
-      expect(find.textContaining('今日待办'), findsNothing);
-      expect(find.byType(ArtSubjectCard), findsNWidgets(3));
-    });
+    testWidgets(
+      'student sees today practice, latest review and study snapshot',
+      (tester) async {
+        await _pumpHome(tester, 'student');
+        expect(tester.takeException(), isNull);
+        expectSameHeight(tester, HomePracticeCard, HomeLatestReviewCard);
+        expect(find.textContaining('今日练习'), findsOneWidget);
+        expect(find.text('镜像翻转'), findsOneWidget);
+        expect(find.text('色彩范画对照'), findsOneWidget);
+        expect(find.textContaining('最近点评'), findsOneWidget);
+        expect(find.text('石膏头像结构练习'), findsOneWidget);
+        expect(find.textContaining('结构交代清楚'), findsOneWidget);
+        expect(find.textContaining('学情速览'), findsOneWidget);
+        expect(find.text('课程'), findsOneWidget);
+        expect(find.textContaining('今日待办'), findsNothing);
+        expect(find.byType(ArtSubjectCard), findsNWidgets(3));
+      },
+    );
 
     testWidgets('teacher sees the review queue next to the studio snapshot', (
       tester,
@@ -427,17 +457,19 @@ void main() {
       expect(find.text('开始点评'), findsOneWidget);
       expect(find.textContaining('已点评 18 件'), findsOneWidget);
       expect(find.textContaining('今日练习'), findsNothing);
-      expect(find.text('今日课程'), findsOneWidget);
+      expect(find.text('课程'), findsOneWidget);
     });
 
-    testWidgets('head teacher sees today todos beside the snapshot', (tester) async {
+    testWidgets('head teacher sees today todos beside the snapshot', (
+      tester,
+    ) async {
       await _pumpHome(tester, 'headTeacher');
       expect(tester.takeException(), isNull);
       expectSameHeight(tester, HomeStudySnapshotCard, HomeTodoCard);
       expect(find.text('今日待办'), findsOneWidget);
       expect(find.text('待点评作品'), findsOneWidget);
       expect(find.text('班级工作台'), findsOneWidget);
-      expect(find.text('今日课程'), findsOneWidget);
+      expect(find.text('课程'), findsOneWidget);
     });
 
     testWidgets('dorm manager has no study cards, courses or subject entries', (
@@ -454,11 +486,13 @@ void main() {
       expect(find.text('22:30'), findsOneWidget);
       expect(find.text('按宿舍查寝'), findsWidgets);
       expect(find.textContaining('学情速览'), findsNothing);
-      expect(find.text('今日课程'), findsNothing);
+      expect(find.text('课程'), findsNothing);
       expect(find.byType(ArtSubjectCard), findsNothing);
     });
 
-    testWidgets('admin swaps the empty course panel for today todos', (tester) async {
+    testWidgets('admin swaps the empty course panel for today todos', (
+      tester,
+    ) async {
       await _pumpHome(tester, 'admin');
       expect(tester.takeException(), isNull);
       expect(
@@ -469,7 +503,7 @@ void main() {
       expect(find.text('教师请假审批'), findsWidgets);
       expect(find.text('进入智慧校园'), findsOneWidget);
       expect(find.textContaining('画室学情速览'), findsOneWidget);
-      expect(find.text('今日课程'), findsNothing);
+      expect(find.text('课程'), findsNothing);
     });
   });
 }

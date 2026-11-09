@@ -91,6 +91,7 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
   }
 
   Future<void> _bootstrap() async {
+    if (!mounted) return;
     await _loadTimeConfigs();
     if (!mounted) return;
     await _loadSchedule();
@@ -102,6 +103,7 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
       final classResp = await ref
           .read(studentRepositoryProvider)
           .mySchoolClass();
+      if (!mounted) return;
       if (classResp.isSuccess) {
         final map = _asMap(classResp.data);
         final schoolClass = _asMap(map?['schoolClass']) ?? const {};

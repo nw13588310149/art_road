@@ -150,9 +150,9 @@ const sharedContent = [
     route: '/',
     actions: [
       { type: '无匹配的走查关键词', into: '搜索', after: 700 },
-      { check: '没有找到相关内容' },
+      { check: '暂无结果' },
       { click: /^清空$/, after: 250 },
-      { check: '没有找到相关内容', absent: true },
+      { check: '暂无结果', absent: true },
       { check: /^清空$/, role: 'button', absent: true },
     ],
   },
@@ -188,19 +188,19 @@ export const ROLES = [
       homeStep,
       {
         id: 'home-schedule', route: '/', actions: [
-          skipGuide, { click: /^完整课表$/, after: 1500 },
+          skipGuide, { click: /^周[一二三四五六日]/, after: 1500 },
           { check: /^节次$/ }, { check: '教学周' },
         ],
       },
       {
         id: 'home-toolbox-return', route: '/', actions: [
-          skipGuide, { click: /^画室工具箱$/, nth: 1 },
+          skipGuide, { click: /^工具箱$/, nth: 1 },
           { check: '分析工具' }, /^返回$/, { check: '今日练习' },
         ],
       },
       guideStep,
       noticeStep,
-      { id: 'demo-tag', route: '/', actions: [skipGuide, { click: '演示版', after: 1200 }] },
+      { id: 'account-menu', route: '/', actions: [skipGuide, { click: /^账户菜单/, after: 500 }, { check: '资料修改', role: 'menuitem' }] },
       { id: 'study', route: '/study' },
       { id: 'artworks', route: '/artworks' },
       {

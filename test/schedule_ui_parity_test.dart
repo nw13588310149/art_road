@@ -11,12 +11,56 @@ import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
 import 'package:the_road_of_art_flutter/core/ui/app_pressable.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/data/schedule_course_card_builder.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/ui/teacher_lesson_schedule_view.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/ui/student_my_schedule_view.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/ui/widgets/schedule_course_card.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/ui/widgets/schedule_grid_shell.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/ui/widgets/schedule_idle_slot.dart';
 
 void main() {
   const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+  testWidgets('首页进入课表后立即返回，不继续访问已销毁页面的 ref', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final storage = AppStorage(await SharedPreferences.getInstance());
+    final schoolClass = Completer<Map<String, Object>>();
+    var requestedClass = false;
+    var timeConfigRequests = 0;
+    final router = DemoRouter('schedule-dispose')
+      ..post('/app/school/v2/student/mySchoolClass', (_) {
+        requestedClass = true;
+        return schoolClass.future;
+      })
+      ..post('/app/school/v2/user/schoolTimeConfigList', (_) {
+        timeConfigRequests++;
+        return [];
+      });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appStorageProvider.overrideWithValue(storage),
+          apiClientProvider.overrideWithValue(
+            ApiClient(storage: storage, demoRouter: router),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(body: StudentMyScheduleView(onBack: () {})),
+        ),
+      ),
+    );
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(requestedClass, isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    schoolClass.complete({
+      'schoolClass': {'id': 'class-1', 'name': '联考冲刺1班'},
+    });
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(timeConfigRequests, 0);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('教师课表首屏加载完成后保留用户已选的教学周', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});

@@ -47,11 +47,8 @@ class _FakeShellRepository implements ShellRepository {
       const ApiResponse(code: 0, msg: 'ok', data: <Object>[]);
 
   @override
-  Future<ApiResponse> getUnreadCount() async => const ApiResponse(
-    code: 0,
-    msg: 'ok',
-    data: {'unReadMsgCount': 2},
-  );
+  Future<ApiResponse> getUnreadCount() async =>
+      const ApiResponse(code: 0, msg: 'ok', data: {'unReadMsgCount': 2});
 
   @override
   Future<ApiResponse> getMessageList() async => const ApiResponse(
@@ -126,10 +123,7 @@ void main() {
         RoutePaths.ebooks,
         {'bookId': 'eb-monthly-202611'},
       );
-      expectTarget(
-        _item(ShellNoticeTargetType.campus),
-        RoutePaths.smartCampus,
-      );
+      expectTarget(_item(ShellNoticeTargetType.campus), RoutePaths.smartCampus);
       expectTarget(
         _item(ShellNoticeTargetType.toolbox, 'score'),
         RoutePaths.artToolbox,
@@ -137,11 +131,20 @@ void main() {
       );
     });
 
-    test('an empty target id opens the module itself; system notices go nowhere', () {
-      expectTarget(_item(ShellNoticeTargetType.study), RoutePaths.studyCenter);
-      expect(shellNoticeDestination(_item(ShellNoticeTargetType.system)), isNull);
-      expect(shellNoticeDestination(_item(99, 'x')), isNull);
-    });
+    test(
+      'an empty target id opens the module itself; system notices go nowhere',
+      () {
+        expectTarget(
+          _item(ShellNoticeTargetType.study),
+          RoutePaths.studyCenter,
+        );
+        expect(
+          shellNoticeDestination(_item(ShellNoticeTargetType.system)),
+          isNull,
+        );
+        expect(shellNoticeDestination(_item(99, 'x')), isNull);
+      },
+    );
 
     test('category falls back to the target type', () {
       expect(parseShellNotice(_item(ShellNoticeTargetType.ebook)).kind, '书刊');
@@ -194,89 +197,113 @@ void main() {
     Map? byType(List<Map> list, int type) =>
         list.where((n) => n['targetType'] == type).firstOrNull;
 
-    test('student notices point at the same artwork, exam and book as the demo data', () async {
-      final list = await notices(DemoAccounts.student);
-      final artwork = byType(list, ShellNoticeTargetType.artwork)!;
-      final work = DemoArtworkData.seedWorks().firstWhere(
-        (w) => w['personIndex'] == 1 && w['title'] == '石膏头像结构练习',
-      );
-      expect(artwork['targetId'], work['id']);
-      expect(artwork['content'], contains('《石膏头像结构练习》'));
-      expect(artwork['content'], contains('李静老师'));
-      // 消息在最后一位老师点评（11-06 09:10）之后。
-      expect(artwork['createTime'], '2026-11-06 09:12:00');
-
-      expect(byType(list, ShellNoticeTargetType.study)!['targetId'], '26');
-
-      final books = await call(
-        platform,
-        'GET',
-        '/app/ebooks',
-        DemoAccounts.student,
-        query: {'sort': 'latest', 'size': 1},
-      ) as Map;
-      final newest = (books['records'] as List).first as Map;
-      final ebook = byType(list, ShellNoticeTargetType.ebook)!;
-      expect(ebook['targetId'], newest['id']);
-      expect(ebook['content'], contains('${newest['title']}'));
-
-      expect(byType(list, ShellNoticeTargetType.campus), isNotNull);
-      expect(byType(list, ShellNoticeTargetType.toolbox)!['targetId'], 'score');
-      for (final notice in list) {
-        final shown = parseShellNotice(
-          ShellNoticeItem(
-            id: notice['id'] as int,
-            targetType: notice['targetType'] as int,
-            targetId: '${notice['targetId']}',
-            content: '${notice['content']}',
-            createTime: '${notice['createTime']}',
-          ),
+    test(
+      'student notices point at the same artwork, exam and book as the demo data',
+      () async {
+        final list = await notices(DemoAccounts.student);
+        final artwork = byType(list, ShellNoticeTargetType.artwork)!;
+        final work = DemoArtworkData.seedWorks().firstWhere(
+          (w) => w['personIndex'] == 1 && w['title'] == '石膏头像结构练习',
         );
-        expect(shown.body, isNot(contains('！')));
-        expect(shown.body, isNot(contains('!')));
-        final time = DateTime.parse('${notice['createTime']}'.replaceFirst(' ', 'T'));
-        expect(time.isAfter(DemoClock.now()), isFalse, reason: '${notice['content']}');
-      }
-      final times = [for (final n in list) '${n['createTime']}'];
-      expect(times, [...times]..sort((a, b) => b.compareTo(a)));
-    });
+        expect(artwork['targetId'], work['id']);
+        expect(artwork['content'], contains('《石膏头像结构练习》'));
+        expect(artwork['content'], contains('李静老师'));
+        // 消息在最后一位老师点评（11-06 09:10）之后。
+        expect(artwork['createTime'], '2026-11-06 09:12:00');
 
-    test('teacher notice names the newest pending work and the real queue size', () async {
-      final list = await notices(DemoAccounts.teacher);
-      final artwork = byType(list, ShellNoticeTargetType.artwork)!;
-      final stats = await call(
-        marking,
-        'GET',
-        '/school/teacher/artworks/statistics',
-        DemoAccounts.teacher,
-      ) as Map;
-      expect(artwork['content'], contains('你还有 ${stats['pending']} 件作品待点评'));
-      final work = DemoArtworkData.seedWorks().firstWhere(
-        (w) => w['id'] == artwork['targetId'],
-      );
-      expect(DemoArtworkData.teacherIdsOf(work), contains('t-1'));
-      expect(DemoArtworkData.reviewOf(work, 't-1'), isNull);
-      expect(artwork['content'], contains('《${work['title']}》'));
-    });
+        expect(byType(list, ShellNoticeTargetType.study)!['targetId'], '26');
 
-    test('dorm managers get campus and book notices only, with the configured check time', () async {
-      final list = await notices(DemoAccounts.dormManager);
-      expect(byType(list, ShellNoticeTargetType.study), isNull);
-      expect(byType(list, ShellNoticeTargetType.artwork), isNull);
-      final config = await call(
-        platform,
-        'POST',
-        '/app/school/v2/user/schoolConfigList',
-        DemoAccounts.dormManager,
-      ) as List;
-      final evening = config.cast<Map>().firstWhere(
-        (c) => c['configKey'] == 'dormitoryNightCheckTime',
-      )['configValue'];
-      expect(
-        byType(list, ShellNoticeTargetType.campus)!['content'],
-        contains('$evening 截止'),
-      );
-    });
+        final books =
+            await call(
+                  platform,
+                  'GET',
+                  '/app/ebooks',
+                  DemoAccounts.student,
+                  query: {'sort': 'latest', 'size': 1},
+                )
+                as Map;
+        final newest = (books['records'] as List).first as Map;
+        final ebook = byType(list, ShellNoticeTargetType.ebook)!;
+        expect(ebook['targetId'], newest['id']);
+        expect(ebook['content'], contains('${newest['title']}'));
+
+        expect(byType(list, ShellNoticeTargetType.campus), isNotNull);
+        expect(
+          byType(list, ShellNoticeTargetType.toolbox)!['targetId'],
+          'score',
+        );
+        for (final notice in list) {
+          final shown = parseShellNotice(
+            ShellNoticeItem(
+              id: notice['id'] as int,
+              targetType: notice['targetType'] as int,
+              targetId: '${notice['targetId']}',
+              content: '${notice['content']}',
+              createTime: '${notice['createTime']}',
+            ),
+          );
+          expect(shown.body, isNot(contains('！')));
+          expect(shown.body, isNot(contains('!')));
+          final time = DateTime.parse(
+            '${notice['createTime']}'.replaceFirst(' ', 'T'),
+          );
+          expect(
+            time.isAfter(DemoClock.now()),
+            isFalse,
+            reason: '${notice['content']}',
+          );
+        }
+        final times = [for (final n in list) '${n['createTime']}'];
+        expect(times, [...times]..sort((a, b) => b.compareTo(a)));
+      },
+    );
+
+    test(
+      'teacher notice names the newest pending work and the real queue size',
+      () async {
+        final list = await notices(DemoAccounts.teacher);
+        final artwork = byType(list, ShellNoticeTargetType.artwork)!;
+        final stats =
+            await call(
+                  marking,
+                  'GET',
+                  '/school/teacher/artworks/statistics',
+                  DemoAccounts.teacher,
+                )
+                as Map;
+        expect(artwork['content'], contains('你还有 ${stats['pending']} 件作品待点评'));
+        final work = DemoArtworkData.seedWorks().firstWhere(
+          (w) => w['id'] == artwork['targetId'],
+        );
+        expect(DemoArtworkData.teacherIdsOf(work), contains('t-1'));
+        expect(DemoArtworkData.reviewOf(work, 't-1'), isNull);
+        expect(artwork['content'], contains('《${work['title']}》'));
+      },
+    );
+
+    test(
+      'dorm managers get campus and book notices only, with the configured check time',
+      () async {
+        final list = await notices(DemoAccounts.dormManager);
+        expect(byType(list, ShellNoticeTargetType.study), isNull);
+        expect(byType(list, ShellNoticeTargetType.artwork), isNull);
+        final config =
+            await call(
+                  platform,
+                  'POST',
+                  '/app/school/v2/user/schoolConfigList',
+                  DemoAccounts.dormManager,
+                )
+                as List;
+        final evening = config.cast<Map>().firstWhere(
+          (c) => c['configKey'] == 'dormitoryNightCheckTime',
+        )['configValue'];
+        expect(
+          byType(list, ShellNoticeTargetType.campus)!['content'],
+          contains('$evening 截止'),
+        );
+      },
+    );
 
     test('every role gets targeted, compliant notices', () async {
       final banned = RegExp(
@@ -311,7 +338,9 @@ void main() {
               as int);
       final before = await unread();
       expect(before, greaterThan(1));
-      final first = (await notices(account)).firstWhere((n) => n['read'] != true);
+      final first = (await notices(
+        account,
+      )).firstWhere((n) => n['read'] != true);
       await call(
         platform,
         'POST',
@@ -322,10 +351,18 @@ void main() {
         },
       );
       expect(await unread(), before - 1);
-      final again = (await notices(account)).firstWhere((n) => n['id'] == first['id']);
+      final again = (await notices(
+        account,
+      )).firstWhere((n) => n['id'] == first['id']);
       expect(again['read'], isTrue);
 
-      await call(platform, 'POST', '/app/msg/updateRead', account, body: {'ids': <int>[]});
+      await call(
+        platform,
+        'POST',
+        '/app/msg/updateRead',
+        account,
+        body: {'ids': <int>[]},
+      );
       expect(await unread(), 0);
     });
   });
@@ -377,7 +414,9 @@ void main() {
   });
 
   group('notice drawer', () {
-    testWidgets('tapping a notice closes the drawer and opens it', (tester) async {
+    testWidgets('tapping a notice closes the drawer and opens it', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1180, 820);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -419,10 +458,8 @@ void main() {
       );
       await tester.tap(find.text('打开通知'));
       await tester.pumpAndSettle();
-      expect(find.text('1 条未读 · 学情、作品点评与系统消息'), findsOneWidget);
-      // 只有未读消息带红点。
-      expect(find.byType(AppBadge), findsOneWidget);
-      expect(find.byIcon(Icons.chevron_right_rounded), findsNWidgets(2));
+      expect(find.text('通知(2)'), findsOneWidget);
+      expect(find.text('批量已读'), findsOneWidget);
 
       await tester.tap(find.textContaining('石膏头像结构练习'));
       await tester.pumpAndSettle();
@@ -430,7 +467,7 @@ void main() {
       expect(find.byType(AppDrawer), findsNothing);
     });
 
-    testWidgets('demo tag sits in the top bar and explains where data lives', (
+    testWidgets('top bar keeps the reference controls without extra labels', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1180, 820);
@@ -445,7 +482,9 @@ void main() {
                   width: 950,
                   child: ShellTopBar(
                     state: ShellState(
-                      navItems: buildDefaultNavItems(schoolCoursewareEnabled: false),
+                      navItems: buildDefaultNavItems(
+                        schoolCoursewareEnabled: false,
+                      ),
                     ),
                     onNavigate: (_) {},
                     onLogout: () async {},
@@ -453,7 +492,6 @@ void main() {
                     onLoadProvinces: () async =>
                         (provinces: const <String>[], error: null),
                     onUpdateProvince: (_) async => null,
-                    demoMode: true,
                   ),
                 ),
               ),
@@ -461,22 +499,22 @@ void main() {
           ),
         ),
       );
-      expect(find.widgetWithText(AppTag, '演示版'), findsOneWidget);
-      expect(tester.getSize(find.byType(ShellDemoModeTag)).height, 40);
+      expect(find.text('演示版'), findsNothing);
       for (final label in ['帮助', '通知', '设置']) {
         final button = find.byWidgetPredicate(
           (w) => w is AppIconButton && w.semanticLabel == label,
         );
-        expect(tester.getSize(button).width, greaterThanOrEqualTo(40), reason: label);
-        expect(tester.getSize(button).height, greaterThanOrEqualTo(40), reason: label);
+        expect(
+          tester.getSize(button).width,
+          greaterThanOrEqualTo(40),
+          reason: label,
+        );
+        expect(
+          tester.getSize(button).height,
+          greaterThanOrEqualTo(40),
+          reason: label,
+        );
       }
-      await tester.tap(find.byType(ShellDemoModeTag));
-      await tester.pumpAndSettle();
-      expect(find.byType(AppDialog), findsOneWidget);
-      expect(find.textContaining(ShellDemoModeTag.explanation), findsOneWidget);
-      await tester.tap(find.text('知道了'));
-      await tester.pumpAndSettle();
-      expect(find.byType(AppDialog), findsNothing);
     });
   });
 }

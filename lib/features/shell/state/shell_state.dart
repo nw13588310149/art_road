@@ -315,7 +315,7 @@ List<ShellNavItem> buildDefaultNavItems({
       activeIcon: AppAssets.leftNavShukan,
     ),
     const ShellNavItem(
-      label: '画室工具箱',
+      label: '工具箱',
       route: RoutePaths.artToolbox,
       icon: AppAssets.leftNavGongju,
       activeIcon: AppAssets.leftNavGongju,

@@ -1,4 +1,11 @@
 abstract final class AppAssets {
+  static const homeUserMenuLogout = 'assets/images/home/3.png';
+  static const homeUserMenuProfile = 'assets/images/home/2.png';
+  static const homeUserMenuRegion = 'assets/images/home/1.png';
+  static const leftNavScale = 'assets/images/shell/leftNav/sf.png';
+  static const leftNavActiveBg = 'assets/images/home/active.png';
+  static const leftNavBottom = 'assets/images/shell/leftNav/bottom.png';
+
   static const authBg = 'assets/images/auth/bg_art.jpg';
   static const authPhone = 'assets/images/auth/phone.png';
   static const authPassword = 'assets/images/auth/pass.png';

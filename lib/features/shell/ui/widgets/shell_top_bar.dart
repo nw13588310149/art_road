@@ -1,22 +1,27 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/router/app_navigator.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../core/constants/app_assets.dart';
-import '../../../../core/demo/demo_config.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../../core/network/media_url.dart';
+import '../../../../core/widgets/app_wheel_picker_sheet.dart';
+import '../../../../core/theme/app_font.dart';
+import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../ebooks/data/ebook_repository.dart';
 import '../../../gallery/data/gallery_repository.dart';
 import '../../data/shell_repository.dart';
 import '../../state/shell_controller.dart';
 import '../../state/shell_state.dart';
+import '../shell_layout.dart';
 import 'shell_notice_drawer.dart';
 
-/// 顶栏：全局搜索 +（演示版标识）+ 帮助 / 通知 / 设置 + 账户菜单，搜索框和快捷按钮各自使用白底。
+/// 顶栏：全局搜索 + 帮助 / 通知 / 设置 + 账户菜单，搜索框和快捷按钮各自使用白底。
 ///
 /// 只有图标的按钮都有读屏名称（帮助、通知、设置、账户菜单），走查脚本也按名称点击；
 /// 图标按钮与账户菜单的点击区域都是 40 高，铺满整条顶栏。
@@ -29,7 +34,6 @@ class ShellTopBar extends StatelessWidget {
     required this.onLoadProvinces,
     required this.onUpdateProvince,
     this.onOpenNotice,
-    this.demoMode = kDemoMode,
     super.key,
   });
 
@@ -43,9 +47,6 @@ class ShellTopBar extends StatelessWidget {
 
   /// 点开通知抽屉里的一条消息：标为已读并打开对应页面。
   final ValueChanged<ShellNoticeItem>? onOpenNotice;
-
-  /// 演示版在搜索框右侧常驻「演示版」标识。
-  final bool demoMode;
 
   static const double height = 40;
 
@@ -67,25 +68,14 @@ class ShellTopBar extends StatelessWidget {
                   ),
                 ),
               ),
-              if (demoMode) ...[const ShellDemoModeTag(), SizedBox(width: gap)],
+              SizedBox(width: gap),
               AppIconButton.asset(
                 asset: AppAssets.shellV2Help,
                 semanticLabel: '帮助',
                 onTap: () => onNavigate(RoutePaths.helpGuide),
               ),
               SizedBox(width: gap),
-              AppIconButton.asset(
-                asset: AppAssets.shellV2Notice,
-                semanticLabel: '通知',
-                badgeCount: state.unreadCount,
-                onTap: () => showShellNoticeDrawer(
-                  context,
-                  items: state.noticeItems,
-                  unreadCount: state.unreadCount,
-                  onMarkAllRead: onMarkAllRead,
-                  onOpen: onOpenNotice,
-                ),
-              ),
+              _noticeButton(context),
               SizedBox(width: gap),
               AppIconButton.asset(
                 asset: AppAssets.shellV2Setting,
@@ -103,6 +93,65 @@ class ShellTopBar extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _noticeButton(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final unread = state.unreadCount;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AppIconButton.asset(
+          asset: AppAssets.shellV2Notice,
+          semanticLabel: '通知',
+          onTap: () => showShellNoticeDrawer(
+            context,
+            items: state.noticeItems,
+            unreadCount: unread,
+            onMarkAllRead: onMarkAllRead,
+            onOpen: onOpenNotice,
+          ),
+        ),
+        if (unread > 0)
+          Positioned(
+            right: ui(-6),
+            top: ui(-4),
+            child: Container(
+              height: ui(14),
+              constraints: BoxConstraints(minWidth: ui(22)),
+              padding: EdgeInsets.symmetric(horizontal: ui(4)),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF04545),
+                borderRadius: BorderRadius.circular(ui(20)),
+              ),
+              child: Text(
+                unread > 99 ? '99+' : (unread > 9 ? '$unread+' : '$unread'),
+                textAlign: TextAlign.center,
+                textHeightBehavior: const TextHeightBehavior(
+                  applyHeightToFirstAscent: false,
+                  applyHeightToLastDescent: false,
+                ),
+                strutStyle: StrutStyle(
+                  fontSize: ui(9),
+                  height: 1,
+                  forceStrutHeight: true,
+                  leadingDistribution: TextLeadingDistribution.even,
+                ),
+                style: TextStyle(
+                  fontFamily: 'Manrope',
+                  color: Colors.white,
+                  fontSize: ui(9),
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                  leadingDistribution: TextLeadingDistribution.even,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -124,44 +173,15 @@ class ShellTopBar extends StatelessWidget {
       AppToast.showError(context, result.error ?? '地区列表加载失败，请稍后再试');
       return;
     }
-    final current = state.user.province.trim();
-    final selected = await showAppDrawer<String>(
+    final selected = await showAppProvincePicker(
       context: context,
-      builder: (drawerContext) => AppDrawer(
-        title: '所在地区',
-        subtitle: '用于展示本省的联考政策与资讯',
-        padding: const EdgeInsets.symmetric(vertical: AppSpace.s8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final province in result.provinces)
-              AppListRow(
-                title: province,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpace.s24,
-                  vertical: AppSpace.s12,
-                ),
-                trailing: province == current
-                    ? const Icon(
-                        Icons.check_rounded,
-                        size: 18,
-                        color: AppColors.brand,
-                      )
-                    : null,
-                onTap: () => Navigator.of(drawerContext).pop(province),
-              ),
-          ],
-        ),
-      ),
+      provinces: result.provinces,
+      selected: state.user.province.isEmpty ? null : state.user.province,
     );
-    if (selected == null || selected == current || !context.mounted) return;
+    if (selected == null || !context.mounted) return;
     final error = await onUpdateProvince(selected);
     if (!context.mounted) return;
-    if (error == null) {
-      AppToast.showSuccess(context, '所在地区已改为$selected');
-    } else {
-      AppToast.showError(context, error.isEmpty ? '修改失败，请稍后再试' : error);
-    }
+    AppToast.show(context, error ?? '修改成功！');
   }
 
   Future<void> _logout() async {
@@ -176,49 +196,6 @@ class ShellTopBar extends StatelessWidget {
     }
   }
 }
-
-// ─────────────────────── 演示版标识 ───────────────────────
-
-/// 演示版常驻标识：点开说明演示数据保存在哪里、怎么重置。
-class ShellDemoModeTag extends StatelessWidget {
-  const ShellDemoModeTag({super.key});
-
-  static const explanation = '演示数据仅保存在本机浏览器或设备，可在登录页重置';
-
-  @override
-  Widget build(BuildContext context) {
-    return AppPressable(
-      onTap: () => showAppDialog<void>(
-        context: context,
-        builder: (dialogContext) => AppDialog(
-          title: '演示版',
-          message: '当前账号、成绩、作品与消息都是演示数据，用于体验各项功能。$explanation。',
-          actions: [
-            AppButton(
-              label: '知道了',
-              onTap: () => Navigator.of(dialogContext).pop(),
-            ),
-          ],
-        ),
-      ),
-      child: const SizedBox(
-        height: ShellTopBar.height,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpace.s4),
-          child: Center(
-            child: AppTag(
-              label: '演示版',
-              tone: AppTone.info,
-              icon: Icons.info_outline_rounded,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────── 账户菜单 ───────────────────────
 
 enum _UserMenuAction { region, profile, logout }
 
@@ -247,57 +224,120 @@ class _UserMenuButtonState extends State<_UserMenuButton> {
     return name.isEmpty ? '用户' : name;
   }
 
-  Future<void> _open() async {
-    final anchor = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
-    final overlay =
-        Overlay.of(context, rootOverlay: true).context.findRenderObject()
-            as RenderBox?;
-    if (anchor == null || overlay == null) return;
-    const menuWidth = 240.0;
-    final bottomRight = anchor.localToGlobal(
-      anchor.size.bottomRight(Offset.zero),
-      ancestor: overlay,
+  Widget _buildAvatar(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final fallback = Container(
+      width: ui(36),
+      height: ui(36),
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [Color(0xFFE7ECFA), Color(0xFFD9E1F6)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.person_rounded,
+        size: ui(20),
+        color: const Color(0xFF7E879C),
+      ),
     );
-    final left = (bottomRight.dx - menuWidth)
-        .clamp(
-          AppSpace.s8,
-          math.max(AppSpace.s8, overlay.size.width - menuWidth - AppSpace.s8),
-        )
-        .toDouble();
-    final top = bottomRight.dy + AppSpace.s8;
+    final avatarWidget = widget.user.avatarUrl.isNotEmpty
+        ? CachedNetworkImage(
+            imageUrl: MediaUrl.resolve(widget.user.avatarUrl),
+            width: ui(36),
+            height: ui(36),
+            fit: BoxFit.cover,
+            placeholder: (context, url) => fallback,
+            errorWidget: (context, url, error) => fallback,
+          )
+        : fallback;
 
-    final action = await showGeneralDialog<_UserMenuAction>(
+    return Container(
+      width: ui(40),
+      height: ui(40),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: ClipOval(
+        child: SizedBox(width: ui(36), height: ui(36), child: avatarWidget),
+      ),
+    );
+  }
+
+  Future<void> _open() async {
+    final triggerBox =
+        _anchorKey.currentContext?.findRenderObject() as RenderBox?;
+    if (triggerBox == null) {
+      return;
+    }
+    final overlay = Overlay.of(context, rootOverlay: true);
+    final overlayBox = overlay.context.findRenderObject() as RenderBox;
+    // 提前抓取当前页面的 DashboardScaleScope，再透传到 root overlay 子树里，
+    // 避免菜单 builder 的 context 找不到 scope 而触发 `scope != null` 断言。
+    final scale = DashboardScaleScope.of(context);
+    final ui = scale.ui;
+    final menuWidth = ui(180);
+    final menuHeight = ui(212);
+
+    // 与 1.0 `placement="bottom-end"` 对齐：弹出在按钮右下方。
+    final triggerSize = triggerBox.size;
+    final bottomRight = triggerBox.localToGlobal(
+      triggerSize.bottomRight(Offset.zero),
+      ancestor: overlayBox,
+    );
+    final overlaySize = overlayBox.size;
+    var dx = bottomRight.dx - menuWidth;
+    var dy = bottomRight.dy + ui(8);
+    if (dx < ui(8)) {
+      dx = ui(8);
+    }
+    if (dx + menuWidth > overlaySize.width - ui(8)) {
+      dx = overlaySize.width - menuWidth - ui(8);
+    }
+    if (dy + menuHeight > overlaySize.height - ui(8)) {
+      dy = overlaySize.height - menuHeight - ui(8);
+    }
+
+    final action = await showMenu<_UserMenuAction>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: '关闭账户菜单',
-      barrierColor: const Color(0x00000000),
-      transitionDuration: AppMotion.overlay,
-      pageBuilder: (dialogContext, _, _) => Stack(
-        children: [
-          Positioned(
-            left: left,
-            top: top,
-            width: menuWidth,
-            child: _UserMenuPanel(
-              name: _name,
-              user: widget.user,
-              schoolName: widget.schoolName,
-              onSelect: (value) => Navigator.of(dialogContext).pop(value),
+      position: RelativeRect.fromLTRB(dx, dy, dx + menuWidth, dy + menuHeight),
+      color: Colors.transparent,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      menuPadding: const EdgeInsets.symmetric(vertical: 8),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(4)),
+      ),
+      constraints: BoxConstraints.tightFor(width: menuWidth),
+      items: <PopupMenuEntry<_UserMenuAction>>[
+        PopupMenuItem<_UserMenuAction>(
+          padding: EdgeInsets.zero,
+          enabled: false,
+          child: DashboardScaleScope(
+            data: scale,
+            child: Builder(
+              builder: (panelCtx) => _UserMenuPanel(
+                width: menuWidth,
+                province: widget.user.province,
+                onSelect: (value) => Navigator.of(panelCtx).pop(value),
+              ),
             ),
           ),
-        ],
-      ),
-      transitionBuilder: (context, animation, _, child) => FadeTransition(
-        opacity: CurvedAnimation(
-          parent: animation,
-          curve: AppMotion.overlayCurve,
         ),
-        child: child,
-      ),
+      ],
     );
-    if (action != null && mounted) {
-      widget.onSelect(action);
+
+    if (action == null || !context.mounted) {
+      return;
     }
+
+    widget.onSelect(action);
   }
 
   @override
@@ -311,37 +351,30 @@ class _UserMenuButtonState extends State<_UserMenuButton> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            DecoratedBox(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                shape: BoxShape.circle,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(2),
-                child: AppAvatar(
-                  name: _name,
-                  url: widget.user.avatarUrl,
-                  size: 36,
-                ),
-              ),
-            ),
+            _buildAvatar(context),
             if (widget.showName) ...[
-              const SizedBox(width: AppSpace.s8),
+              const SizedBox(width: 6),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 96),
                 child: Text(
                   _name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.body14Strong,
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1,
+                    color: const Color(0xFF1A1A1A),
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w500,
+                  ),
                 ),
               ),
             ],
             const SizedBox(width: 2),
-            const Icon(
-              Icons.expand_more_rounded,
-              size: 18,
-              color: AppColors.textTertiary,
+            const AppAssetGraphic(
+              AppAssets.leftNavBottom,
+              width: 14,
+              height: 14,
             ),
           ],
         ),
@@ -352,66 +385,132 @@ class _UserMenuButtonState extends State<_UserMenuButton> {
 
 class _UserMenuPanel extends StatelessWidget {
   const _UserMenuPanel({
-    required this.name,
-    required this.user,
-    required this.schoolName,
+    required this.width,
+    required this.province,
     required this.onSelect,
   });
 
-  final String name;
-  final ShellUser user;
-  final String schoolName;
+  final double width;
+  final String province;
   final ValueChanged<_UserMenuAction> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final identity = user.identity.trim();
-    final province = user.province.trim();
-    final note = [
-      if (identity.isNotEmpty) identity,
-      if (schoolName.trim().isNotEmpty) schoolName.trim(),
-    ].join(' · ');
-    return Material(
-      type: MaterialType.transparency,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.br12,
-          border: Border.all(color: AppColors.lineSoft),
-          boxShadow: AppShadow.popover,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: AppSpace.s8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
+    final ui = DashboardScaleScope.of(context).ui;
+    final regionText = province.trim().isEmpty ? '未设置' : province.trim();
+    // Figma：white bg + 1px #F3F2F3 border + 16px radius + 0 2 8 rgba(0,0,0,.12) shadow
+    // 内边距 16，三行间距 16；行高度 44，左侧 36 圆形占位 + 20 图标。
+    return Container(
+      width: width,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(ui(16)),
+        border: Border.all(color: const Color(0xFFF3F2F3), width: ui(1)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x1F000000), // rgba(0,0,0,0.12)
+            blurRadius: ui(8),
+            offset: Offset(0, ui(2)),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(ui(16)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _UserMenuRow(
+            iconAsset: AppAssets.homeUserMenuRegion,
+            label: '所在地区',
+            sublabel: regionText,
+            onTap: () => onSelect(_UserMenuAction.region),
+          ),
+          SizedBox(height: ui(24)),
+          _UserMenuRow(
+            iconAsset: AppAssets.homeUserMenuProfile,
+            label: '资料修改',
+            onTap: () => onSelect(_UserMenuAction.profile),
+          ),
+          SizedBox(height: ui(24)),
+          _UserMenuRow(
+            iconAsset: AppAssets.homeUserMenuLogout,
+            label: '退出登录',
+            onTap: () => onSelect(_UserMenuAction.logout),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UserMenuRow extends StatelessWidget {
+  const _UserMenuRow({
+    required this.iconAsset,
+    required this.label,
+    required this.onTap,
+    this.sublabel,
+  });
+
+  /// 行图标（PNG 资源路径）。
+  final String iconAsset;
+  final String label;
+
+  /// 副标题（仅「所在地区」用于显示当前省份）。null 时不渲染第二行。
+  final String? sublabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final hasSub = sublabel != null && sublabel!.isNotEmpty;
+    return AppPressable(
+      onTap: onTap,
+      child: SizedBox(
+        height: ui(44),
+        child: Row(
           children: [
-            AppListRow(
-              title: name,
-              subtitle: note.isEmpty ? null : note,
-              leading: AppAvatar(name: name, url: user.avatarUrl, size: 36),
-              divider: true,
+            Image.asset(
+              iconAsset,
+              width: ui(36),
+              height: ui(36),
+              fit: BoxFit.contain,
             ),
-            const SizedBox(height: AppSpace.s4),
-            AppListRow(
-              title: '所在地区',
-              leading: const _MenuIcon(Icons.place_outlined),
-              trailing: Text(
-                province.isEmpty ? '未设置' : province,
-                style: AppText.caption12,
+            SizedBox(width: ui(12)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: hasSub
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: ui(16),
+                      color: Colors.black,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w500,
+                      height: 1.2,
+                    ),
+                  ),
+                  if (hasSub) ...[
+                    SizedBox(height: ui(4)),
+                    Text(
+                      sublabel!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: ui(12),
+                        color: const Color(0xFF715EFE),
+                        fontFamily: 'PingFang SC',
+                        fontWeight: AppFont.w400,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              chevron: true,
-              onTap: () => onSelect(_UserMenuAction.region),
-            ),
-            AppListRow(
-              title: '个人信息',
-              leading: const _MenuIcon(Icons.person_outline_rounded),
-              chevron: true,
-              onTap: () => onSelect(_UserMenuAction.profile),
-            ),
-            AppListRow(
-              title: '退出登录',
-              leading: const _MenuIcon(Icons.logout_rounded),
-              onTap: () => onSelect(_UserMenuAction.logout),
             ),
           ],
         ),
@@ -419,24 +518,6 @@ class _UserMenuPanel extends StatelessWidget {
     );
   }
 }
-
-class _MenuIcon extends StatelessWidget {
-  const _MenuIcon(this.icon);
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Icon(icon, size: 20, color: AppColors.textSecondary);
-  }
-}
-
-// ─────────────────────── 全局搜索 ───────────────────────
-//
-// 输入 300ms 后并行搜索范画、资讯、视频、笔记，结果浮层挂在搜索框下方；
-// 回车立即搜索。浮层只在点外部、选中结果或清空时收起，回车导致输入框失焦时不收起。
-// 点击结果：视频 → /video-tutorial {openVideoId}，资讯 → /consultationDetail {id}，
-// 范画 → /gallery {workId}，笔记 → /my-notes。
 
 enum _SearchTab {
   gallery('范画', Icons.image_outlined),
@@ -678,12 +759,82 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
             _focusNode.unfocus();
             _hideOverlay();
           },
-          child: AppSearchField(
-            toolbar: true,
-            controller: _controller,
-            focusNode: _focusNode,
-            hint: '搜索范画、书刊、资讯、视频、笔记',
-            onSubmitted: _handleSubmitted,
+          child: _buildField(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField(BuildContext context) {
+    double ui(num value) => value.toDouble();
+    return SizedBox(
+      height: ui(40),
+      child: AppTextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        textInputAction: TextInputAction.search,
+        cursorColor: const Color(0xFF715EFE),
+        cursorWidth: 1.5,
+        cursorHeight: ui(16),
+        onSubmitted: _handleSubmitted,
+        textAlignVertical: TextAlignVertical.center,
+        style: TextStyle(
+          fontSize: ui(14),
+          color: const Color(0xFF1A1A1A),
+          fontFamily: 'PingFang SC',
+          fontWeight: AppFont.w400,
+        ),
+        decoration: InputDecoration(
+          isCollapsed: false,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.zero,
+          hintText: '搜索',
+          hintStyle: TextStyle(
+            fontSize: ui(14),
+            color: const Color(0xFFD1D1D1),
+            fontFamily: 'PingFang SC',
+            fontWeight: AppFont.w400,
+          ),
+          prefixIcon: Padding(
+            padding: EdgeInsets.only(left: ui(14), right: ui(8)),
+            child: AppAssetGraphic(
+              AppAssets.shellV2Search,
+              width: ui(16),
+              height: ui(16),
+              fit: BoxFit.contain,
+            ),
+          ),
+          prefixIconConstraints: BoxConstraints(minWidth: ui(38)),
+          suffixIcon: _query.isEmpty
+              ? null
+              : AppPressable(
+                  semanticLabel: '清空',
+                  onTap: _controller.clear,
+                  child: Padding(
+                    padding: EdgeInsets.only(right: ui(10)),
+                    child: Icon(
+                      Icons.cancel,
+                      size: ui(16),
+                      color: const Color(0xFFC6C6C6),
+                    ),
+                  ),
+                ),
+          suffixIconConstraints: BoxConstraints(minWidth: ui(28)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ui(12)),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ui(12)),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ui(12)),
+            borderSide: BorderSide(
+              color: const Color(0xFFE5DFFE),
+              width: ui(1),
+            ),
           ),
         ),
       ),
@@ -692,7 +843,7 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
 
   Widget _buildOverlay(BuildContext overlayContext) {
     final box = context.findRenderObject() as RenderBox?;
-    final width = (box?.size.width ?? 360).clamp(340.0, 420.0);
+    final width = (box?.size.width ?? 324).clamp(320.0, 420.0);
     return CompositedTransformFollower(
       link: _layerLink,
       showWhenUnlinked: false,
@@ -704,16 +855,19 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
           groupId: _searchRegion,
           child: SizedBox(
             width: width,
-            child: _SearchPanel(
-              status: _status,
-              activeTab: _activeTab,
-              results: _results,
-              onTabChanged: (tab) => setState(() => _activeTab = tab),
-              onItemTap: _openItem,
-              onRetry: () {
-                final keyword = _query.trim();
-                if (keyword.isNotEmpty) _performSearch(keyword);
-              },
+            child: Material(
+              type: MaterialType.transparency,
+              child: _SearchPanel(
+                status: _status,
+                activeTab: _activeTab,
+                results: _results,
+                onTabChanged: (tab) => setState(() => _activeTab = tab),
+                onItemTap: _openItem,
+                onRetry: () {
+                  final keyword = _query.trim();
+                  if (keyword.isNotEmpty) _performSearch(keyword);
+                },
+              ),
             ),
           ),
         ),
@@ -725,132 +879,246 @@ class _TopSearchBoxState extends ConsumerState<_TopSearchBox> {
 class _SearchPanel extends StatelessWidget {
   const _SearchPanel({
     required this.status,
+    required this.onRetry,
     required this.activeTab,
     required this.results,
     required this.onTabChanged,
     required this.onItemTap,
-    required this.onRetry,
   });
 
   final _SearchStatus status;
+  final VoidCallback onRetry;
   final _SearchTab activeTab;
   final Map<_SearchTab, List<_SearchItem>> results;
   final ValueChanged<_SearchTab> onTabChanged;
   final ValueChanged<_SearchItem> onItemTap;
-  final VoidCallback onRetry;
-
-  static const double _bodyHeight = 360;
 
   @override
   Widget build(BuildContext context) {
-    final done = status == _SearchStatus.done;
-    return Material(
-      type: MaterialType.transparency,
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.br12,
-          border: Border.all(color: AppColors.lineSoft),
-          boxShadow: AppShadow.popover,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
-              ),
-              alignment: Alignment.centerLeft,
-              child: AppTabs<_SearchTab>(
-                expand: true,
-                tabs: [
-                  for (final tab in _SearchTab.values)
-                    AppTab(
-                      value: tab,
-                      label: tab.label,
-                      count: done ? results[tab]!.length : null,
-                    ),
-                ],
-                value: activeTab,
-                onChanged: onTabChanged,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              child: SizedBox(height: _bodyHeight, child: _buildBody()),
-            ),
-          ],
-        ),
+    double ui(num value) => value.toDouble();
+    final list = results[activeTab] ?? const <_SearchItem>[];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(ui(12)),
+        border: Border.all(color: const Color(0xFFF3F2F3), width: ui(1)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x1F000000),
+            blurRadius: ui(16),
+            offset: Offset(0, ui(4)),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SearchTabBar(
+            activeTab: activeTab,
+            results: results,
+            onTabChanged: onTabChanged,
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(ui(12), ui(10), ui(12), ui(12)),
+            child: SizedBox(height: ui(360), child: _buildBody(context, list)),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBody() {
-    switch (status) {
-      case _SearchStatus.idle:
-      case _SearchStatus.loading:
-        return const _SearchSkeleton();
-      case _SearchStatus.failed:
-        return AppErrorState(
-          title: '搜索失败',
-          description: '请检查网络后重试',
-          onRetry: onRetry,
-        );
-      case _SearchStatus.done:
-        final list = results[activeTab]!;
-        if (list.isEmpty) {
-          return const AppEmptyState(
-            icon: Icons.search_off_rounded,
-            title: '没有找到相关内容',
-            description: '换个关键词试试，可搜索范画、资讯、视频和笔记',
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: AppSpace.s4),
-          itemCount: list.length,
-          itemBuilder: (context, index) => AppListRow(
-            title: list[index].title,
-            leading: Icon(
-              activeTab.icon,
-              size: 18,
-              color: AppColors.textTertiary,
-            ),
-            chevron: true,
-            minHeight: 44,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpace.s12,
-              vertical: AppSpace.s8,
-            ),
-            divider: index < list.length - 1,
-            onTap: () => onItemTap(list[index]),
-          ),
-        );
+  Widget _buildBody(BuildContext context, List<_SearchItem> list) {
+    double ui(num value) => value.toDouble();
+    if (status == _SearchStatus.idle || status == _SearchStatus.loading) {
+      return Center(child: const AppLoadingIndicator());
     }
+    if (status == _SearchStatus.failed) {
+      return AppErrorState(
+        title: '搜索失败',
+        description: '请检查网络后重试',
+        onRetry: onRetry,
+      );
+    }
+    if (list.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.search_off_rounded,
+              size: ui(40),
+              color: const Color(0xFFCECED1),
+            ),
+            SizedBox(height: ui(8)),
+            Text(
+              '暂无结果',
+              style: TextStyle(
+                fontSize: ui(13),
+                color: const Color(0xFFB6B5BB),
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 1.2,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(ui(8)),
+        border: Border.all(color: const Color(0xFFF3F3F3), width: ui(1)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ListView.separated(
+        padding: EdgeInsets.symmetric(horizontal: ui(10), vertical: ui(4)),
+        itemCount: list.length,
+        separatorBuilder: (_, _) =>
+            Container(height: ui(1), color: const Color(0xFFF3F3F3)),
+        itemBuilder: (context, index) {
+          final item = list[index];
+          return _SearchResultRow(
+            index: index,
+            item: item,
+            onTap: () => onItemTap(item),
+          );
+        },
+      ),
+    );
   }
 }
 
-class _SearchSkeleton extends StatelessWidget {
-  const _SearchSkeleton();
+class _SearchTabBar extends StatelessWidget {
+  const _SearchTabBar({
+    required this.activeTab,
+    required this.results,
+    required this.onTabChanged,
+  });
+
+  final _SearchTab activeTab;
+  final Map<_SearchTab, List<_SearchItem>> results;
+  final ValueChanged<_SearchTab> onTabChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpace.s16),
-      child: Column(
-        children: [
-          for (var i = 0; i < 5; i++) ...[
-            if (i > 0) const SizedBox(height: AppSpace.s20),
-            Row(
-              children: [
-                const AppSkeleton(width: 18, height: 18),
-                const SizedBox(width: AppSpace.s12),
-                AppSkeleton(width: i.isEven ? 240 : 160),
-              ],
+    double ui(num value) => value.toDouble();
+    return Container(
+      height: ui(44),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFF3F2F3), width: 1)),
+      ),
+      child: Row(
+        children: _SearchTab.values.map((tab) {
+          final count = results[tab]?.length ?? 0;
+          final selected = tab == activeTab;
+          return Expanded(
+            child: AppPressable(
+              onTap: () => onTabChanged(tab),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Center(
+                    child: RichText(
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontSize: ui(13),
+                          fontFamily: 'PingFang SC',
+                          fontWeight: selected ? AppFont.w500 : AppFont.w400,
+                          color: selected
+                              ? const Color(0xFF715EFE)
+                              : const Color(0xFF6D6B75),
+                          height: 1.2,
+                        ),
+                        children: [
+                          TextSpan(text: tab.label),
+                          TextSpan(text: '($count)'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (selected)
+                    Positioned(
+                      bottom: ui(0),
+                      child: Container(
+                        width: ui(28),
+                        height: ui(3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF715EFE),
+                          borderRadius: BorderRadius.circular(ui(3)),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _SearchResultRow extends StatelessWidget {
+  const _SearchResultRow({
+    required this.index,
+    required this.item,
+    required this.onTap,
+  });
+
+  final int index;
+  final _SearchItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    double ui(num value) => value.toDouble();
+    return AppPressable(
+      onTap: onTap,
+      child: SizedBox(
+        height: ui(44),
+        child: Row(
+          children: [
+            Container(
+              width: ui(20),
+              height: ui(20),
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: Color(0xFF715EFE),
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '${index + 1}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: ui(12),
+                  fontFamily: 'PingFang SC',
+                  fontWeight: AppFont.w500,
+                  height: 1,
+                ),
+              ),
+            ),
+            SizedBox(width: ui(10)),
+            Expanded(
+              child: Text(
+                item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: ui(13),
+                  color: const Color(0xFF0B081A),
+                  fontFamily: 'PingFang SC',
+                  fontWeight: AppFont.w400,
+                  height: 1.4,
+                ),
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

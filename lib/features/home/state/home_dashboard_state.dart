@@ -318,7 +318,7 @@ List<HomeQuickAction> buildQuickActions({
       route: RoutePaths.gallery,
     ),
     const HomeQuickAction(
-      name: '画室工具箱',
+      name: '工具箱',
       iconAsset: '$campusIcons/head_teacher/class_workbench.png',
       route: RoutePaths.artToolbox,
       arguments: <String, dynamic>{'returnToSource': true},

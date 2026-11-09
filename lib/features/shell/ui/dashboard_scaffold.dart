@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/ui/app_colors.dart';
 import 'shell_layout.dart';
 
 class DashboardScaffold extends StatelessWidget {
@@ -12,7 +11,7 @@ class DashboardScaffold extends StatelessWidget {
     this.floatingChild,
     this.overlayChild,
     this.sidebarWidth = 178,
-    this.backgroundColor = AppColors.page,
+    this.backgroundColor = const Color(0xFFEFF3FC),
     this.contentPadding = const EdgeInsets.all(16),
     this.contentGap = 16,
     this.resizeToAvoidBottomInset = true,
@@ -47,7 +46,7 @@ class DashboardScaffold extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final scale = DashboardScaleScope.fromSize(constraints.biggest);
-        final sidebarExtent = scale.ui(sidebarWidth);
+        final targetSidebarWidth = scale.ui(sidebarWidth);
         final scaledContentPadding = EdgeInsets.fromLTRB(
           scale.ui(contentPadding.left),
           scale.ui(contentPadding.top),
@@ -55,7 +54,7 @@ class DashboardScaffold extends StatelessWidget {
           scale.ui(contentPadding.bottom),
         );
         // 侧栏高度按「无键盘」的可用屏高计算，避免 iOS 软键盘顶起时
-        // 整个 body 收缩导致底部「意见反馈 / 收起按钮」跟着上移。
+        // 整个 body 收缩导致底部「意见反馈 / 折叠按钮」跟着上移。
         final mediaQuery = MediaQuery.of(context);
         final fixedSidebarHeight =
             mediaQuery.size.height - mediaQuery.padding.top;
@@ -73,56 +72,60 @@ class DashboardScaffold extends StatelessWidget {
               color: backgroundColor,
               child: SafeArea(
                 bottom: false,
-                // 收起 / 展开侧栏立即切换宽度，不做过渡动画。
-                child: Stack(
-                  clipBehavior: Clip.hardEdge,
-                  children: [
-                    // 主内容区仍随键盘收缩，输入框可正常上推。
-                    Padding(
-                      padding: EdgeInsets.only(left: sidebarExtent),
-                      child: Padding(
-                        padding: scaledContentPadding,
-                        child: Column(
-                          children: [
-                            topBar,
-                            SizedBox(height: scale.ui(contentGap)),
-                            Expanded(child: child),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // 侧栏脱离键盘 inset 的布局流，左边固定，右侧 1px 分隔线。
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      width: sidebarExtent,
-                      height: fixedSidebarHeight,
-                      child: MediaQuery.removeViewInsets(
-                        removeBottom: true,
-                        context: context,
-                        child: DecoratedBox(
-                          position: DecorationPosition.foreground,
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              right: BorderSide(color: AppColors.lineSoft),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: targetSidebarWidth),
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeInOutCubic,
+                  builder: (context, animatedSidebarWidth, _) {
+                    return Stack(
+                      clipBehavior: Clip.hardEdge,
+                      children: [
+                        // 主内容区仍随键盘收缩，输入框可正常上推。
+                        Padding(
+                          padding: EdgeInsets.only(left: animatedSidebarWidth),
+                          child: Padding(
+                            padding: scaledContentPadding,
+                            child: Column(
+                              children: [
+                                topBar,
+                                SizedBox(height: scale.ui(contentGap)),
+                                Expanded(child: child),
+                              ],
                             ),
                           ),
-                          child: ClipRect(child: sidebar),
                         ),
-                      ),
-                    ),
-                    if (floatingChild != null)
-                      Positioned(
-                        right: scale.ui(16),
-                        bottom: scale.ui(18),
-                        child: floatingChild!,
-                      ),
-                    // overlayChild 放在 Stack 最后，确保 z-order 在所有
-                    // 业务内容（含 floatingChild）之上，且 Positioned.fill
-                    // 能拦截所有手势——绑定学校弹窗依赖这点做「不可关闭」。
-                    if (overlayChild != null)
-                      Positioned.fill(child: overlayChild!),
-                  ],
+                        // 侧栏脱离键盘 inset 的布局流，左边固定，右边界随宽度平滑收缩/展开。
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          width: animatedSidebarWidth,
+                          height: fixedSidebarHeight,
+                          child: MediaQuery.removeViewInsets(
+                            removeBottom: true,
+                            context: context,
+                            child: ClipRect(
+                              child: SizedBox(
+                                width: animatedSidebarWidth,
+                                height: fixedSidebarHeight,
+                                child: sidebar,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (floatingChild != null)
+                          Positioned(
+                            right: scale.ui(16),
+                            bottom: scale.ui(18),
+                            child: floatingChild!,
+                          ),
+                        // overlayChild 放在 Stack 最后，确保 z-order 在所有
+                        // 业务内容（含 floatingChild）之上，且 Positioned.fill
+                        // 能拦截所有手势——绑定学校弹窗依赖这点做「不可关闭」。
+                        if (overlayChild != null)
+                          Positioned.fill(child: overlayChild!),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
