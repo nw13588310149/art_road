@@ -58,7 +58,10 @@ void main() {
       findRichText: true,
     );
     expect(targetWeek, findsOneWidget);
-    final lastSelectedDate = requestedDates.last;
+    // 两次换周请求的模拟延迟不同，按日期识别最后一次选择。
+    final lastSelectedDate = requestedDates.reduce(
+      (first, second) => first.compareTo(second) > 0 ? first : second,
+    );
     classes.complete([]);
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 200));
