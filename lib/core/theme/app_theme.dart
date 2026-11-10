@@ -13,12 +13,10 @@ class AppTheme {
   /// 业务视觉主题色（艺考网紫 #715EFE），与阅卷系统各端色板一致。
   static const Color brandColor = AppColors.brand;
 
-  // 全局默认字族回退链：iOS 上 Skia/Impeller 直接绘制 Apple 系统 "PingFang SC"
-  // 时字面率偏细（CoreText 内置了视觉补偿，Flutter 没有），所以这里强制把
-  // pubspec 中自带的 PingFang SC OTF 排在第一位 fallback——当主字族 Harmony
-  // 没有相应字形（或上层显式指定了一个不存在的字族）时，先命中我们打包进来
-  // 的 OTF 文件，避免落到系统 PingFang 上看起来"飘"。
-  static const List<String> _fontFamilyFallback = <String>['PingFang SC'];
+  // 全局默认字族与音乐之路页面参数一致：中文用 pubspec 里打包的
+  // PingFang SC OTF（w100–w600）。未写字族的 TextStyle 以前会落到 Harmony，
+  // 和原页面显式的 PingFang SC 不是同一套字面。Harmony 只作缺字回退。
+  static const List<String> _fontFamilyFallback = <String>['Harmony'];
 
   /// 透明叠色：用于去除 Material 按钮按压 / 悬停 / 聚焦时的高亮叠色。
   static const WidgetStateProperty<Color?> _kNoOverlay =
@@ -35,7 +33,7 @@ class AppTheme {
   static ThemeData get light {
     final base = ThemeData(
       useMaterial3: true,
-      fontFamily: 'Harmony',
+      fontFamily: 'PingFang SC',
       fontFamilyFallback: _fontFamilyFallback,
       scaffoldBackgroundColor: Colors.white,
       // 全局去除「点击效果」：水波纹（splash）、按压高亮（highlight）、悬停
