@@ -24,9 +24,10 @@ class HomeEbookShelfSection extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: AppSectionHeader(
                   title: '精选书刊',
+                  titleStyle: AppText.title16,
                   subtitle: '美术教辅与期刊 · 示例内容',
                 ),
               ),
