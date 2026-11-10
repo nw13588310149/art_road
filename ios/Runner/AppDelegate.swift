@@ -3,17 +3,14 @@ import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-  /// 显式 FlutterEngine：避免 implicit engine + Storyboard 在 ProMotion iPad
-  /// （iOS 18+）冷启动时 viewDidLoad 早于 engine 就绪，触发 VSyncClient 空指针闪退。
-  lazy var flutterEngine = FlutterEngine(name: "art_road_engine")
+  // 只向 SceneDelegate 提供已成功启动的显式引擎。
+  private(set) var flutterEngine: FlutterEngine?
 
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // 仅启动 engine；插件须在 SceneDelegate 中绑定到 FlutterViewController 再注册。
-    // 对 engine 直接 register 会导致 Swift 插件（如 camera）在启动期空指针崩溃。
-    flutterEngine.run()
+    flutterEngine = StartRunnerFlutterEngine()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }
