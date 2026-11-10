@@ -1,11 +1,11 @@
 {
-    "name": "美术之路",
-    "short_name": "美术之路",
+    "name": "绘画星球",
+    "short_name": "绘画星球",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#715EFE",
-    "description": "美术之路：面向美术艺考生与老师的学习与学情平台",
+    "description": "绘画星球：面向美术艺考生与老师的学习与学情平台",
     "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [

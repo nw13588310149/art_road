@@ -80,7 +80,7 @@ const sharedContent = [
   },
   {
     id: 'ai-model', route: '/personal-Ai', actions: [
-      { click: /切换模型，当前 DeepSeek/, after: 300 }, /^Doubao$/,
+      { click: /切换模型，当前 DeepSeek/, after: 300 }, { click: /^Doubao$/, role: 'menuitem' },
       { check: /切换模型，当前 Doubao/, role: 'button' },
       { click: /^联网搜索$/, after: 400 },
     ],
@@ -93,10 +93,13 @@ const sharedContent = [
   },
   {
     id: 'ai-history', route: '/personal-Ai', actions: [
-      { click: /^色彩画面发灰怎么调整？$/, after: 650 },
+      { click: /^色彩画面发灰怎么调整？$/, after: 350 },
+      { click: /^发送$/, after: 2400 },
       { check: /^复制$/, role: 'button' },
       { click: /^对话操作$/, after: 350 }, { click: /^删除$/, after: 350 },
-      { check: /^删除对话$/ },
+      { check: /^删除会话$/ },
+      { click: /^确认$/, after: 900 },
+      { check: '我是小美同学，很高兴见到你！' },
     ],
   },
   {
@@ -120,10 +123,39 @@ const sharedContent = [
   },
   { id: 'notes', route: '/', actions: [nav('我的笔记')] },
   { id: 'collection', route: '/', actions: [nav('我的收藏')] },
+  { id: 'cloud-folder', route: '/courseware', actions: [
+    { click: /石膏几何体/, role: 'group', after: 700 }, { check: '上传资料' },
+  ] },
+  { id: 'cloud-create', route: '/courseware', actions: [
+    { click: /^新建文件夹$/, after: 400 },
+    { type: '构图练习资料', into: '请输入文件夹名称' },
+    { click: /^创建$/, after: 800 }, { check: /构图练习资料/ },
+  ] },
+  { id: 'notes-create', route: '/my-notes', actions: [
+    { click: /^新建笔记$/, after: 400 },
+    { type: '构图观察记录', into: '请输入笔记标题' },
+    { click: /^确认$/, after: 500 }, { check: '请选择您的笔记样式' },
+    { click: /^白纸$/, after: 200 }, { click: /^下一步$/, after: 600 },
+    { check: /^保存$/ }, { check: '画笔粗细' },
+    { drag: [[560, 330], [700, 430]], after: 300 },
+    { check: /^撤销$/, role: 'button', enabled: true },
+    { click: /^保存$/, after: 1800 }, { check: '构图观察记录' },
+    { check: /^新建笔记$/, role: 'button' },
+    { click: /构图观察记录/, after: 900 },
+    { check: /^保存$/, role: 'button' },
+    { check: /^撤销$/, role: 'button', enabled: true },
+  ] },
+  { id: 'collection-art', route: '/my-collection', actions: [
+    { click: /^范画$/, after: 600 }, { check: /石膏像大卫/ },
+  ] },
+  { id: 'collection-books', route: '/my-collection', actions: [
+    { click: /^书刊$/, after: 600 }, { check: /色彩静物冷暖关系/ },
+  ] },
+
   { id: 'personal', route: '/', actions: [nav('个人中心')] },
-  { id: 'personal-membership', route: '/personal-center', actions: [/^会员权益与套餐$/] },
+  { id: 'personal-membership', route: '/personal-center', actions: [{ check: '年卡 365 天' }, { check: '季卡 90 天' }] },
   { id: 'personal-edit', route: '/personal-center', actions: [/^编辑资料$/, { check: '姓名' }] },
-  { id: 'personal-gender', route: '/info', actions: [/^性别/, { check: '选择性别' }] },
+  { id: 'personal-gender', route: '/info', actions: [/^性别/, { check: '请选择性别' }] },
   { id: 'info', route: '/info' },
   { id: 'feedback', route: '/', actions: [nav('意见反馈')] },
   { id: 'help', route: '/help-guide' },

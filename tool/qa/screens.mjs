@@ -93,7 +93,7 @@ async function clickByName(page, name, { role = 'button', nth = 0, attempts = 12
         return true;
       }
     }
-    const text = page.locator('flt-semantics', { hasText: matcher });
+    const text = page.getByLabel(matcher).or(page.locator('flt-semantics', { hasText: matcher }));
     if ((await text.count()) > nth) {
       await text.nth(nth).click({ timeout: 4000 });
       return true;
@@ -115,6 +115,11 @@ async function runAction(page, action) {
     }
   } else if (action.tap) {
     await page.mouse.click(action.tap[0], action.tap[1]);
+  } else if (action.drag) {
+    await page.mouse.move(...action.drag[0]);
+    await page.mouse.down();
+    await page.mouse.move(...action.drag[1], { steps: 16 });
+    await page.mouse.up();
   } else if (action.uploadText) {
     const [chooser] = await Promise.all([
       page.waitForEvent('filechooser', { timeout: 5000 }),
@@ -140,11 +145,13 @@ async function runAction(page, action) {
     const name = nameMatcher(action.check);
     const match = action.role
       ? page.getByRole(action.role, { name })
-      : page.getByText(name);
+      : page.getByText(name).or(page.getByLabel(name));
     if (action.absent) {
       await expect(match.first()).toBeHidden();
     } else {
       await expect(match.first()).toBeVisible();
+      if (action.enabled === true) await expect(match.first()).toBeEnabled();
+      if (action.enabled === false) await expect(match.first()).toBeDisabled();
     }
     return;
   } else if (action.key) {
@@ -215,6 +222,12 @@ async function runRole(browser, role, report) {
       process.stdout.write(`✓ ${role.id}/${step.id}\n`);
     } catch (e) {
       await page.screenshot({ path: file.replace(/\.png$/, '.failed.png') }).catch(() => {});
+      await page.locator('body').ariaSnapshot().then((snapshot) =>
+        writeFileSync(file.replace(/\.png$/, '.failed.aria.txt'), snapshot),
+      ).catch(() => {});
+      await page.content().then((html) =>
+        writeFileSync(file.replace(/\.png$/, '.failed.html'), html),
+      ).catch(() => {});
       report.failed.push(`${role.id}/${step.id}: ${e.message}`);
       process.stdout.write(`✗ ${role.id}/${step.id}: ${e.message.split('\n')[0]}\n`);
     }

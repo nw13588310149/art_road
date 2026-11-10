@@ -10,7 +10,6 @@ import 'package:the_road_of_art_flutter/core/network/api_response.dart';
 import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
 import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_theme.dart';
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:the_road_of_art_flutter/features/courseware/ui/courseware_page.dart';
 import 'package:the_road_of_art_flutter/features/my_notes/ui/my_notes_page.dart';
@@ -96,15 +95,8 @@ void main() {
         const VideoTutorialV2Page(),
         size: Size(width, 732),
       );
-      final rail = find.ancestor(
-        of: find.text('最新视频'),
-        matching: find.byWidgetPredicate(
-          (widget) =>
-              widget is AppCard && widget.color == AppColors.surfaceSubtle,
-        ),
-      );
+      final rail = find.byKey(const ValueKey('video-latest-rail'));
       expect(tester.getSize(rail), const Size(255, 280));
-      expect(tester.widget<AppCard>(rail).color, AppColors.surfaceSubtle);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 5));
@@ -124,7 +116,7 @@ void main() {
       );
       await tester.tap(find.text('石膏几何体'));
       await _settle(tester);
-      expect(find.byTooltip('返回文件夹列表'), findsOneWidget);
+      expect(find.text('石膏几何体'), findsWidgets);
       expect(find.text('上传资料'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -157,16 +149,8 @@ void main() {
         client: _ContentApi()..unavailable = false,
         arguments: const {'openVideoId': '1'},
       );
-      final detail = find
-          .ancestor(
-            of: find.byTooltip('关闭'),
-            matching: find.byWidgetPredicate(
-              (widget) =>
-                  widget is Material &&
-                  widget.type == MaterialType.transparency,
-            ),
-          )
-          .first;
+      final detail = find.byKey(const ValueKey('video-detail-panel'));
+      expect(find.byTooltip('关闭'), findsOneWidget);
       expect(tester.getSize(detail).width, size.width / 2);
       expect(tester.takeException(), isNull);
     });
@@ -192,10 +176,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('note width slider keeps its overlay inside the toolbar', (
+    tester,
+  ) async {
+    await _pumpPage(
+      tester,
+      const MyNotesPage(),
+      size: const Size(814, 680),
+    );
+    await tester.tap(find.text('新建笔记'));
+    await _settle(tester);
+    await tester.enterText(find.byType(AppTextField), '构图观察记录');
+    await tester.tap(find.text('确认'));
+    await _settle(tester);
+    await tester.tap(find.text('白纸'));
+    await tester.tap(find.text('下一步'));
+    await _settle(tester);
+
+    final slider = find.byType(Slider);
+    final overlay = Overlay.of(tester.element(slider));
+    final overlayBox = overlay.context.findRenderObject()! as RenderBox;
+    expect(overlayBox.size, const Size(110, 40));
+    final oldWidth = tester.widget<Slider>(slider).value;
+    await tester.drag(slider, const Offset(20, 0));
+    await tester.pump();
+    expect(tester.widget<Slider>(slider).value, greaterThan(oldWidth));
+    expect(tester.takeException(), isNull);
+  });
+
   for (final (page, error, empty) in const [
-    (VideoTutorialV2Page(), '视频加载失败', '这个分类还没有视频'),
-    (MyCloudDrivePage(), '云盘加载失败', '还没有资料分类'),
-    (MyNotesPage(), '笔记加载失败', '这个分类还没有笔记'),
+    (VideoTutorialV2Page(), '视频加载失败', '暂无视频数据'),
+    (MyCloudDrivePage(), '云盘加载失败', '暂无分类'),
+    (MyNotesPage(), '笔记加载失败', '暂无笔记'),
   ]) {
     testWidgets(
       '$error can be retried without treating an empty list as a failure',

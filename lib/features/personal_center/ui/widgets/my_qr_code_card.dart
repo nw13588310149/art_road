@@ -81,13 +81,13 @@ class MyQrCodeCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpace.s12),
           Text(
-            '扫码下载美术之路，和我一起学画',
+            '扫码下载绘画星球，和我一起学画',
             textAlign: TextAlign.center,
             style: AppText.body14Strong,
           ),
           const SizedBox(height: AppSpace.s4),
           Text(
-            '好友扫描二维码即可下载美术之路并添加你为好友',
+            '好友扫描二维码即可下载绘画星球并添加你为好友',
             textAlign: TextAlign.center,
             style: AppText.caption12,
           ),

@@ -368,7 +368,7 @@ class _GuideCover extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '美术之路 功能指南',
+                      '绘画星球 功能指南',
                       textAlign: TextAlign.center,
                       style: AppText.title20.copyWith(
                         color: AppColors.brandDeep,
