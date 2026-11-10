@@ -24,6 +24,16 @@ powershell -ExecutionPolicy Bypass -File tool\build_web.ps1
 python -m http.server 8787 --directory build/web
 ```
 
+### iPad 体验包
+
+在 macOS 或 Codemagic 上用已配置签名的 iOS 体验分支构建 Release IPA，沿用当前的导出签名选项。
+
+```sh
+flutter build ipa --release --dart-define=DEMO_MODE=true
+```
+
+Debug 包需从 Xcode 或 `flutter run` 启动。装包验证时断开调试器，从 iPad 主屏幕启动 Release 包，确认能进入登录页或首页。
+
 ## 演示模式
 
 默认开启（`DEMO_MODE` 默认为 `true`）：
