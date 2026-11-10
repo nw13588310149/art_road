@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <application
-        android:label="美术之路"
+        android:label="绘画星球"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

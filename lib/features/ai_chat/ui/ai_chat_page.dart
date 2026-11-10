@@ -1,28 +1,32 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/providers/app_providers.dart';
-import '../../../core/theme/app_font.dart';
-import '../../../core/ui/ui.dart';
+import '../../../core/widgets/action_menu.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
+import '../../../core/widgets/scaled_dialog.dart';
 import '../../../core/widgets/pdf/app_pdf_view.dart';
 import '../data/ai_chat_attachment_picker.dart';
 import '../../shell/state/shell_controller.dart';
 import '../state/ai_chat_controller.dart';
 import '../state/ai_chat_state.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const _border = AppColors.lineSoft;
+const _border = Color(0xFFF3F2F3);
 const _panelFill = Color(0xFFF4F4FF);
-const _textPrimary = AppColors.ink;
+const _textPrimary = Color(0xFF0B081A);
 const _textSecondary = Color(0xFF707790);
-const _textHint = AppColors.textPlaceholder;
-const _purple = AppColors.brand;
+const _textHint = Color(0xFFB6B5BB);
+const _purple = Color(0xFF715EFE);
+const _purpleSoft = Color(0x0D715EFE);
 
 const _historyPaneWidth = 200.0;
 const _historyItemHorizontalPadding = 12.0;
@@ -33,33 +37,36 @@ const _mainBottomPadding = 12.0;
 const _landingBottomPadding = 41.0;
 const _conversationBottomInset = 8.0;
 
+// Figma 题项编号配色：1/2 红 #EB2F2F；3 橙 #FE7B3F；4/5/6 浅灰 #CECED1
+// 注意：4/5/6 用的是 #CECED1（更淡），不是 #B6B5BB（_textHint），肉眼能看出差别。
+const Color _theoryRankDim = Color(0xFFCECED1);
+
 const _theoryPrompts = <_AiPromptQuestion>[
-  _AiPromptQuestion('1', '素描起形总是不准怎么办？'),
-  _AiPromptQuestion('2', '明暗五大调子分别是什么？'),
-  _AiPromptQuestion('3', '色彩画面发灰怎么调整？'),
-  _AiPromptQuestion('4', '速写人体比例和动态怎么抓？'),
-  _AiPromptQuestion('5', '联考评分 A–E 档怎么划分？'),
-  _AiPromptQuestion('6', '静物构图有哪些常用法则？'),
+  _AiPromptQuestion('1', '素描起形总是不准怎么办？', Color(0xFFEB2F2F)),
+  _AiPromptQuestion('2', '明暗五大调子分别是什么？', Color(0xFFEB2F2F)),
+  _AiPromptQuestion('3', '色彩画面发灰怎么调整？', Color(0xFFFE7B3F)),
+  _AiPromptQuestion('4', '速写人体比例和动态怎么抓？', _theoryRankDim),
+  _AiPromptQuestion('5', '联考评分 A–E 档怎么划分？', _theoryRankDim),
+  _AiPromptQuestion('6', '静物构图有哪些常用法则？', _theoryRankDim),
 ];
 
 const _toolShortcuts = <_AiToolShortcut>[
   _AiToolShortcut(
-    title: '报考院校梳理',
+    title: '报考院校分析',
     subtitle: '按成绩梳理可报院校',
-    prompt: '请根据我的成绩帮我梳理适合我的报考院校',
-    kind: _AiToolKind.school,
+    prompt: '请根据我的成绩帮我分析适合我的报考志愿',
+    asset: AppAssets.aiChatToolAnalyze,
   ),
   _AiToolShortcut(
-    title: '练习建议',
+    title: '提供练习建议',
     subtitle: '按薄弱科目安排练习',
-    prompt: '请结合我的成绩，帮我安排一份素描、色彩、速写的练习建议。',
-    kind: _AiToolKind.practice,
+    prompt: '请根据美术艺考训练场景，帮我制定一份更高效的练习建议。',
+    asset: AppAssets.aiChatSuggest,
   ),
   _AiToolShortcut(
-    title: '备考计划',
+    title: '制定考试计划',
     subtitle: '生成分阶段备考计划',
-    prompt: '请帮我制定一份美术联考备考计划，分阶段说明每日练习重点。',
-    kind: _AiToolKind.plan,
+    prompt: '请帮我制定一份美术艺考备考计划，分阶段说明每日练习重点。',
   ),
 ];
 
@@ -84,6 +91,15 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   /// `jumpTo` / `animateTo`，否则会把用户的 DragScrollActivity 替换成
   /// DrivenScrollActivity，第一次滑动直接被吃掉。
   bool _userTouchingList = false;
+
+  /// 每个会话条目「⋯」按钮的 GlobalKey，用于把删除悬浮菜单
+  /// （[showItemActionMenu]）锚定到正确的位置。按 sessionId 缓存一次创建，
+  /// 这样同一个会话切换 active 状态后菜单仍能找到旧 RenderBox。
+  /// 不做主动清理：用户一辈子的会话数量有限，几个 GlobalKey 的成本可以忽略。
+  final Map<String, GlobalKey> _moreTriggerKeys = <String, GlobalKey>{};
+
+  GlobalKey _moreTriggerKeyFor(String sessionId) =>
+      _moreTriggerKeys.putIfAbsent(sessionId, GlobalKey.new);
 
   @override
   void initState() {
@@ -119,65 +135,64 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     final controller = ref.read(aiChatControllerProvider.notifier);
     _scheduleScrollIfNeeded(state);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: _border),
-        borderRadius: AppRadius.br16,
-        color: state.isNewConversation ? null : AppColors.surface,
-        gradient: state.isNewConversation
-            ? const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFEFEEFD),
-                  AppColors.surface,
-                  AppColors.surface,
-                ],
-                stops: [0, 0.34, 1],
-              )
-            : null,
-      ),
-      child: ClipRRect(
-        borderRadius: AppRadius.br16,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              width: _historyPaneWidth,
-              child: _buildHistoryPane(state, controller),
-            ),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final mainWidth =
-                      constraints.maxWidth - _mainHorizontalPadding * 2;
-                  final composerWidth = mainWidth > 0
-                      ? mainWidth
-                      : constraints.maxWidth;
-                  final userBubbleWidth = (mainWidth * 0.62)
-                      .clamp(220.0, 420.0)
-                      .toDouble();
-                  // AI 回复气泡占满对话主列宽度（最小 320 兜底）。
-                  final aiBubbleWidth = mainWidth > 320 ? mainWidth : 320.0;
+    return SizedBox.expand(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: _border),
+          borderRadius: BorderRadius.circular(16),
+          color: state.isNewConversation ? null : Colors.white,
+          // Figma: linear-gradient(180deg, #EFEEFD 0%, white 34%, white 100%)
+          gradient: state.isNewConversation
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFFEFEEFD), Colors.white, Colors.white],
+                  stops: [0, 0.34, 1],
+                )
+              : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: _historyPaneWidth,
+                child: _buildHistoryPane(state, controller),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final mainWidth =
+                        constraints.maxWidth - _mainHorizontalPadding * 2;
+                    final composerWidth = mainWidth > 0
+                        ? mainWidth
+                        : constraints.maxWidth;
+                    final userBubbleWidth = (mainWidth * 0.62)
+                        .clamp(220.0, 420.0)
+                        .toDouble();
+                    // AI 回复气泡占满对话主列宽度（最小 320 兜底）。
+                    final aiBubbleWidth = mainWidth > 320 ? mainWidth : 320.0;
 
-                  if (state.isNewConversation) {
-                    return _buildLanding(
+                    if (state.isNewConversation) {
+                      return _buildLanding(
+                        state: state,
+                        controller: controller,
+                        composerWidth: composerWidth,
+                      );
+                    }
+                    return _buildConversation(
                       state: state,
                       controller: controller,
                       composerWidth: composerWidth,
+                      userBubbleMaxWidth: userBubbleWidth,
+                      aiBubbleMaxWidth: aiBubbleWidth,
                     );
-                  }
-                  return _buildConversation(
-                    state: state,
-                    controller: controller,
-                    composerWidth: composerWidth,
-                    userBubbleMaxWidth: userBubbleWidth,
-                    aiBubbleMaxWidth: aiBubbleWidth,
-                  );
-                },
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -186,122 +201,195 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   Widget _buildHistoryPane(AiChatState state, AiChatController controller) {
     final groups = groupSessionsByTime(state.sessions);
 
-    void startNew() {
-      controller.startNewChat();
-      _inputCtrl.clear();
-      setState(() {});
-    }
-
     return DecoratedBox(
       decoration: const BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         border: Border(right: BorderSide(color: _border)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          24,
-          16,
-          _historyPaneBottomPadding,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppPressable(
-              onTap: startNew,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            // 取消左侧栏所有点击效果：用 GestureDetector + Container 替代
+            // Material + InkWell，避免水波纹/高亮覆盖按钮原有视觉。
+            child: GestureDetector(
+              onTap: () {
+                controller.startNewChat();
+                _inputCtrl.clear();
+                setState(() {});
+              },
+              behavior: HitTestBehavior.opaque,
               child: Container(
+                width: 199,
                 height: 36,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: _panelFill,
-                  borderRadius: AppRadius.brPill,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const AppAssetGraphic(
-                      AppAssets.aiChatNew,
-                      width: 16,
-                      height: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '开启新对话',
-                      style: AppText.body14Strong.copyWith(color: _purple),
-                    ),
-                  ],
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppAssetGraphic(
+                        AppAssets.aiChatNew,
+                        width: 16,
+                        height: 16,
+                      ),
+                      SizedBox(width: 8),
+                      // Figma: 14/500 / line-height 20 / #715EFE
+                      Text(
+                        '开启新对话',
+                        style: TextStyle(
+                          color: _purple,
+                          fontSize: 14,
+                          fontFamily: 'PingFang SC',
+                          fontWeight: AppFont.w500,
+                          height: 20 / 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
+          ),
+          // Figma: 开启新对话(36 高, top 24.74) → "全部"(top 76.74) = 16px gap
+          const SizedBox(height: 16),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
               children: [
-                Text('全部', style: AppText.body14Strong),
-                const Spacer(),
-                const AppAssetGraphic(
+                // Figma: 14/500 / line-height 20 / #0B081A
+                Text(
+                  '全部',
+                  style: TextStyle(
+                    color: _textPrimary,
+                    fontSize: 14,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w500,
+                    height: 20 / 14,
+                  ),
+                ),
+                Spacer(),
+                AppAssetGraphic(
                   AppAssets.aiChatHistoryFilter,
                   width: 16,
                   height: 16,
                 ),
               ],
             ),
-            const SizedBox(height: 22),
-            Expanded(
+          ),
+          // Figma: "全部" 文字底(96.74) → "历史对话" group 顶(184.74) ≈ 88px。
+          // 这里实际上 88 ≈ 16(gap) + 72(顶部空) 或者拆分。当前显示就保持 16，
+          // 后续历史对话 label 与列表内部的间距由 ListView 内部 SizedBox 决定。
+          const SizedBox(height: 16),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
+                  // Figma: 历史对话 label  12/500 / line-height 18 / #B6B5BB
                   Text(
                     '历史对话',
-                    style: AppText.caption12Strong.copyWith(color: _textHint),
+                    style: TextStyle(
+                      color: _textHint,
+                      fontSize: 12,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w500,
+                      height: 18 / 12,
+                    ),
                   ),
+                  // Figma: label → 第一个 tile gap = 6
                   const SizedBox(height: 6),
                   if (state.sessionsLoading && state.sessions.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Text('加载中…', style: AppText.caption12),
-                    )
-                  else ...[
-                    if (state.isNewConversation)
-                      _historyTile(title: '新对话', active: true, onTap: startNew),
-                    for (final group in groups) ...[
-                      const SizedBox(height: 6),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: _historyItemHorizontalPadding,
-                        ),
-                        child: Text(
-                          group.label,
-                          style: AppText.caption12Strong,
+                      child: Text(
+                        '加载中…',
+                        style: TextStyle(
+                          color: _textHint,
+                          fontSize: 12,
+                          fontFamily: 'PingFang SC',
+                          fontWeight: AppFont.w400,
+                          height: 18 / 12,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      for (var i = 0; i < group.items.length; i++) ...[
-                        if (i > 0) const SizedBox(height: 2),
-                        _historyTile(
-                          title: group.items[i].title,
-                          active:
-                              !state.isNewConversation &&
-                              state.activeSessionId == group.items[i].id,
-                          onTap: () async {
-                            final error = await controller.selectSession(
-                              group.items[i].id,
-                            );
-                            if (error != null && mounted) _showInfo(error);
-                          },
-                          onMoreTap: (anchor) => _showSessionMoreMenu(
-                            anchor,
-                            controller,
-                            group.items[i],
+                    )
+                  else ...[
+                    if (state.isNewConversation) ...[
+                      _historyTile(
+                        title: '新对话',
+                        active: true,
+                        showMore: true,
+                        onTap: () {
+                          controller.startNewChat();
+                          _inputCtrl.clear();
+                          setState(() {});
+                        },
+                      ),
+                      // Figma: tile 之间 gap ≈ 2（sub-group 内紧排）
+                      const SizedBox(height: 2),
+                    ],
+                    for (final group in groups)
+                      if (group.items.isNotEmpty) ...[
+                        // Figma: 上一组结束 → 下一组 group label gap = 6
+                        const SizedBox(height: 6),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: _historyItemHorizontalPadding,
+                          ),
+                          // Figma: 12/500 / line-height 18 / #CECED1
+                          child: Text(
+                            group.label,
+                            style: TextStyle(
+                              color: Color(0xFFCECED1),
+                              fontSize: 12,
+                              fontFamily: 'PingFang SC',
+                              fontWeight: AppFont.w500,
+                              height: 18 / 12,
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 6),
+                        for (var i = 0; i < group.items.length; i++) ...[
+                          if (i > 0) const SizedBox(height: 2),
+                          _historyTile(
+                            title: group.items[i].title,
+                            active:
+                                !state.isNewConversation &&
+                                state.activeSessionId == group.items[i].id,
+                            showMore:
+                                !state.isNewConversation &&
+                                state.activeSessionId == group.items[i].id,
+                            onTap: () async {
+                              final error = await controller.selectSession(
+                                group.items[i].id,
+                              );
+                              if (error != null && mounted) {
+                                _showInfo(error);
+                              }
+                            },
+                            moreTriggerKey: _moreTriggerKeyFor(
+                              group.items[i].id,
+                            ),
+                            onMoreTap: () => _showSessionMoreMenu(
+                              controller,
+                              group.items[i],
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
                   ],
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: _historyPaneBottomPadding),
+        ],
       ),
     );
   }
@@ -310,54 +398,72 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     required String title,
     required bool active,
     required VoidCallback onTap,
-    ValueChanged<BuildContext>? onMoreTap,
+    bool showMore = false,
+    VoidCallback? onMoreTap,
+    GlobalKey? moreTriggerKey,
   }) {
-    const more = SizedBox(
-      width: 28,
-      height: 32,
-      child: Center(
-        child: AppAssetGraphic(AppAssets.aiChatMore, width: 14, height: 4),
-      ),
-    );
-    return AppPressable(
+    // 历史会话条目同样去掉点击水波纹/高亮：
+    // 用 GestureDetector + Container 替代 Material + InkWell。
+    return GestureDetector(
       onTap: onTap,
-      selected: active,
+      behavior: HitTestBehavior.opaque,
       child: Container(
+        width: double.infinity,
         height: 40,
-        padding: const EdgeInsets.symmetric(
-          horizontal: _historyItemHorizontalPadding,
-        ),
         decoration: BoxDecoration(
-          color: active ? _panelFill : null,
+          color: active ? _panelFill : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.body14.copyWith(height: 20 / 14),
-              ),
-            ),
-            if (active)
-              if (onMoreTap == null)
-                more
-              else
-                Builder(
-                  builder: (anchor) => AppPressable(
-                    semanticLabel: '对话操作',
-                    onTap: () => onMoreTap(anchor),
-                    child: more,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: _historyItemHorizontalPadding,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                // Figma: 14/400 / line-height 20 / #0B081A
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _textPrimary,
+                    fontSize: 14,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w400,
+                    height: 20 / 14,
                   ),
                 ),
-          ],
+              ),
+              if (showMore)
+                Semantics(
+                  button: true,
+                  label: '对话操作',
+                  child: GestureDetector(
+                    // GlobalKey 必须挂在「实际可命中」的那个 GestureDetector
+                    // 上，因为 showItemActionMenu 通过 currentContext.findRenderObject()
+                    // 拿位置来锚定悬浮菜单。
+                    key: moreTriggerKey,
+                    onTap: onMoreTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: AppAssetGraphic(
+                        AppAssets.aiChatMore,
+                        width: 13.3,
+                        height: 3.1,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  /// composer 外框高度：无附件 124 / 有附件 154。
   double _composerHeight(AiChatState state) =>
       state.pendingAttachments.isEmpty ? 124.0 : 154.0;
 
@@ -366,63 +472,95 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     required AiChatController controller,
     required double composerWidth,
   }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxHeight < 600;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            _mainHorizontalPadding,
-            compact ? 16 : 94,
-            _mainHorizontalPadding,
-            compact ? 12 : _landingBottomPadding,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildWelcomeSection(),
-                      const SizedBox(height: 11),
-                      SizedBox(
-                        height: 265,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(child: _buildTheoryCard()),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildToolCard()),
-                          ],
-                        ),
-                      ),
-                    ],
+    // Figma content 区高 730：welcome + cards 固定，composer 高度见 [_composerHeight]，
+    // 上半区放进 Expanded + SingleChildScrollView，让软键盘收缩页面时优先保留
+    // 底部 composer 可见，表现与群聊底部输入栏一致。
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        _mainHorizontalPadding,
+        94,
+        _mainHorizontalPadding,
+        _landingBottomPadding,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.zero,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildWelcomeSection(),
+                  const SizedBox(height: 11),
+                  SizedBox(
+                    height: 265,
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildTheoryCard()),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildToolCard()),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
-              _buildComposer(state, controller, composerWidth),
-              const SizedBox(height: 13),
-              _buildDisclaimer(),
-            ],
+            ),
           ),
-        );
-      },
+          _buildComposer(state, controller, composerWidth),
+          const SizedBox(height: 13),
+          _buildDisclaimer(),
+        ],
+      ),
     );
   }
 
+  // Welcome 头像视觉调节：
+  // - logoSlot：布局占位尺寸，严格等于 Figma 的 52，保证周围排版不受影响。
+  // - logoVisualSize：图片实际渲染尺寸。icon.png 自带阴影留白，
+  //   主体在图内只占 ~60-75%，按 52 渲染时视觉 LOGO 偏小。
+  //   把它放大到 logoVisualSize，靠 OverflowBox 让多出来的部分
+  //   在 4 个方向均匀溢出而不撑大 Row 的布局空间。
+  // - logoVerticalNudge：图片自带的阴影并非上下对称（阴影偏下方），
+  //   居中渲染会让 LOGO 主体视觉偏上；用 Transform.translate 把图片单独
+  //   下移指定像素，仅改变绘制位置，不影响布局占位。
+  // 调整顺序：先调 _logoVisualSize 让 LOGO 大小满意，再调 _logoVerticalNudge
+  // 让 LOGO 视觉中心对齐文字基线。
+  static const double _logoSlot = 52;
+  static const double _logoVisualSize = 90;
+  static const double _logoVerticalNudge = 0;
+
   Widget _buildWelcomeSection() {
+    // Figma: 整个 welcome row 高度 76（设计稿副标题 2 行 → 76）。
+    // 由于副标题被强制单行（用户偏好），文字组实际只有 54 高；
+    // 用 SizedBox 把 row 锁死到 76，副标题贴顶部显示、下方自然留 22 空隙，
+    // 保证 cards 顶部位置仍然严格落在 Figma 设计的 content top:181。
     return SizedBox(
       height: 76,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox.square(
-            dimension: 52,
+          // 布局占位 52×52（与 Figma 一致），但允许图片实际渲染尺寸大于占位、
+          // 让 PNG 自带的阴影留白被"溢出"到布局之外，从而把 LOGO 主体视觉补回到 52；
+          // 再用 Transform.translate 单独把图片下移 _logoVerticalNudge 像素，
+          // 抵消 PNG 阴影偏下导致的视觉上移，但不影响 Row 的布局占位。
+          SizedBox(
+            width: _logoSlot,
+            height: _logoSlot,
             child: OverflowBox(
-              maxWidth: 90,
-              maxHeight: 90,
-              child: Image.asset(AppAssets.aiChatMascot, width: 90, height: 90),
+              maxWidth: double.infinity,
+              maxHeight: double.infinity,
+              child: Transform.translate(
+                offset: const Offset(0, _logoVerticalNudge),
+                child: Image.asset(
+                  AppAssets.aiChatMascot,
+                  width: _logoVisualSize,
+                  height: _logoVisualSize,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -430,18 +568,31 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 2),
+                // Figma: 20/500 / line-height 28 / #0B081A
                 Text(
                   '我是小美同学，很高兴见到你！',
-                  style: AppText.title20.copyWith(fontWeight: AppFont.w500),
+                  style: TextStyle(
+                    color: _textPrimary,
+                    fontSize: 20,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w500,
+                    height: 28 / 20,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 4),
+                // Figma: 13/400 / line-height 22 / #707790；强制单行不换行。
+                // 41 个字符 × 13px ≈ 533px，与 Expanded 宽度 ~544px 是临界点，
+                // PingFang OTF 字宽稍大就会换行；softWrap:false 直接禁止换行。
                 Text(
-                  '可以和我聊素描、色彩、速写和备考安排，回答仅供参考。',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.body13.copyWith(
+                  '美术学习答疑助手，梳理造型、色彩与速写知识，陪伴日常练习与备考。',
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.visible,
+                  style: TextStyle(
                     color: _textSecondary,
+                    fontSize: 13,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w400,
                     height: 22 / 13,
                   ),
                 ),
@@ -454,172 +605,245 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   }
 
   Widget _buildTheoryCard() {
-    return AppCard(
-      color: _panelFill,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-      bordered: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '常见问题',
-            style: AppText.title16.copyWith(
-              fontWeight: AppFont.w500,
-              height: 22 / 16,
+    return Container(
+      height: 265,
+      decoration: BoxDecoration(
+        color: _panelFill,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Figma: 16/500 / line-height 22 / #0B081A
+            Text(
+              '美术常见问题',
+              style: TextStyle(
+                color: _textPrimary,
+                fontSize: 16,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w500,
+                height: 22 / 16,
+              ),
             ),
-          ),
-          Text('点一下直接提问', style: AppText.caption12.copyWith(height: 22 / 12)),
-          const SizedBox(height: 19),
-          Expanded(
-            child: ListView.separated(
-              padding: EdgeInsets.zero,
-              itemCount: _theoryPrompts.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final item = _theoryPrompts[index];
-                final numberColor = switch (index) {
-                  0 || 1 => const Color(0xFFEB2F2F),
-                  2 => const Color(0xFFFE7B3F),
-                  _ => const Color(0xFFCECED1),
-                };
-                return AppPressable(
-                  onTap: () => _handlePromptTap(item.text),
-                  child: Row(
-                    children: [
-                      Text(
-                        item.indexLabel,
-                        style:
-                            AppText.displayNumber(
-                              size: 16,
-                              color: numberColor,
-                            ).copyWith(
-                              fontStyle: FontStyle.italic,
-                              height: 22 / 16,
-                            ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          item.text,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.caption12.copyWith(
-                            color: _textPrimary,
-                            height: 22 / 12,
+            // Figma: 副标题紧跟标题（line-height 内紧排），不再额外间距
+            const SizedBox(height: 0),
+            // Figma: 12/400 / line-height 22 / #B6B5BB
+            Text(
+              '让你的艺考之路更加顺畅~',
+              style: TextStyle(
+                color: _textHint,
+                fontSize: 12,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 22 / 12,
+              ),
+            ),
+            // Figma: 副标题底（top:295 + 22 line-height = 317） → 列表起点 326，差 ~9
+            const SizedBox(height: 13),
+            Expanded(
+              child: ListView.separated(
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: _theoryPrompts.length,
+                // 题项之间间距：Figma 6 → 改为 10 让上下两题之间更通透
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final item = _theoryPrompts[index];
+                  return InkWell(
+                    onTap: () => _handlePromptTap(item.text),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Row(
+                      // 数字（16/Barlow italic）与文字（12/PingFang）字号不同，
+                      // 顶部对齐时视觉上偏离基线；改为中线对齐让两者垂直居中。
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Figma: 16/600 italic / Barlow / line-height 22
+                        Text(
+                          item.indexLabel,
+                          style: TextStyle(
+                            color: item.indexColor,
+                            fontSize: 16,
+                            fontFamily: 'Barlow',
+                            fontWeight: FontWeight.w600,
+                            fontStyle: FontStyle.italic,
+                            height: 22 / 16,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                        const SizedBox(width: 6),
+                        // Figma: 12/400 / PingFang / line-height 22
+                        Expanded(
+                          child: Text(
+                            item.text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: _textPrimary,
+                              fontSize: 12,
+                              fontFamily: 'PingFang SC',
+                              fontWeight: AppFont.w400,
+                              height: 22 / 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildToolCard() {
-    return AppCard(
-      color: _panelFill,
-      backgroundImage: const DecorationImage(
-        image: AssetImage(AppAssets.aiChatToolBg),
-        fit: BoxFit.cover,
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-      bordered: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '备考助手',
-            style: AppText.title16.copyWith(
-              fontWeight: AppFont.w500,
-              height: 22 / 16,
-            ),
-          ),
-          Text('点一下直接提问', style: AppText.caption12.copyWith(height: 22 / 12)),
-          const SizedBox(height: 19),
-          Expanded(
-            child: ListView.separated(
-              padding: EdgeInsets.zero,
-              itemCount: _toolShortcuts.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final tool = _toolShortcuts[index];
-                return AppPressable(
-                  onTap: () => _handlePromptTap(tool.prompt),
-                  child: Container(
-                    height: 50,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: AppRadius.br8,
-                    ),
-                    child: Row(
-                      children: [
-                        _buildToolIcon(tool.kind),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tool.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppText.caption12Strong.copyWith(
-                                  color: _textPrimary,
-                                ),
-                              ),
-                              Text(
-                                tool.subtitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppText.caption12,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+    // 效率工具卡使用背景图 aibg.png（已自带与原渐变一致的色调），
+    // 用 ClipRRect 裁出 16px 圆角，再用 Image 作为底层 + 内容叠在上方。
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        height: 265,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(AppAssets.aiChatToolBg, fit: BoxFit.cover),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 标题/副标题间距与左侧"美术常见问题"卡保持一致，
+                  // 确保第一行内容（"分析范画"按钮顶）与左卡第一题项顶严格对齐。
+                  // Figma: 16/500 / line-height 22 / #0B081A
+                  Text(
+                    '效率工具',
+                    style: TextStyle(
+                      color: _textPrimary,
+                      fontSize: 16,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w500,
+                      height: 22 / 16,
                     ),
                   ),
-                );
-              },
+                  // 与左卡一致：标题与副标题不额外加间距（line-height 内紧排）
+                  const SizedBox(height: 0),
+                  // Figma: 12/400 / line-height 22 / #B6B5BB
+                  Text(
+                    '美术学习就用小美同学',
+                    style: TextStyle(
+                      color: _textHint,
+                      fontSize: 12,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w400,
+                      height: 22 / 12,
+                    ),
+                  ),
+                  // 与左卡一致：副标题底 → 第一行内容 = 9
+                  const SizedBox(height: 13),
+                  Expanded(
+                    child: ListView.separated(
+                      padding: EdgeInsets.zero,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _toolShortcuts.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final tool = _toolShortcuts[index];
+                        return Material(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () => _handlePromptTap(tool.prompt),
+                            child: SizedBox(
+                              height: 50,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                child: Row(
+                                  children: [
+                                    _buildToolIcon(tool),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            tool.title,
+                                            style: TextStyle(
+                                              color: _textPrimary,
+                                              fontSize: 12,
+                                              fontFamily: 'PingFang SC',
+                                              fontWeight: AppFont.w500,
+                                              height: 1.35,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 1),
+                                          Text(
+                                            tool.subtitle,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: _textHint,
+                                              fontSize: 10,
+                                              fontFamily: 'PingFang SC',
+                                              fontWeight: AppFont.w400,
+                                              height: 1.35,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildToolIcon(_AiToolKind kind) {
-    return switch (kind) {
-      _AiToolKind.practice => const AppAssetGraphic(
-        AppAssets.aiChatSuggest,
-        width: 30,
-        height: 30,
-      ),
-      _AiToolKind.school => const _AiToolBadge(
-        colors: [AppColors.brandSoft, AppColors.brandDeep],
-        child: Icon(
-          Icons.insights_outlined,
-          color: AppColors.onBrand,
-          size: 19,
+  Widget _buildToolIcon(_AiToolShortcut tool) {
+    if (tool.asset != null) {
+      return AppAssetGraphic(tool.asset!, width: 30, height: 30);
+    }
+
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        gradient: const LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [Color(0xFFFFBEE9), Color(0xFFFF73D0)],
         ),
       ),
-      _AiToolKind.plan => const _AiToolBadge(
-        colors: [Color(0xFFFFBEE9), Color(0xFFFF73D0)],
+      child: Center(
         child: Stack(
-          children: [
-            AppAssetGraphic(AppAssets.aiChatPlanBook, width: 14, height: 14),
+          children: const [
+            AppAssetGraphic(AppAssets.aiChatPlanVector1, width: 14, height: 14),
             Positioned(
               right: 1,
               top: 1,
               child: AppAssetGraphic(
-                AppAssets.aiChatPlanMark,
+                AppAssets.aiChatPlanVector2,
                 width: 10,
                 height: 10,
               ),
@@ -627,7 +851,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           ],
         ),
       ),
-    };
+    );
   }
 
   Widget _buildConversation({
@@ -650,15 +874,19 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           Container(
             height: _conversationHeaderHeight,
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpace.s16),
             decoration: const BoxDecoration(
+              color: Colors.white,
               border: Border(bottom: BorderSide(color: _border)),
             ),
             child: Text(
               _activeTitle(state),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.title16.copyWith(fontWeight: AppFont.w500),
+              style: TextStyle(
+                color: Color(0xFF000000),
+                fontSize: 15,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w500,
+                height: 1.45,
+              ),
             ),
           ),
           Expanded(
@@ -687,11 +915,16 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                           (showWaitingAssistant ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index == state.messages.length) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 14),
                             child: Text(
-                              '小美同学正在思考…',
-                              style: AppText.body13.copyWith(color: _textHint),
+                              '小美同学正在思考中…',
+                              style: TextStyle(
+                                color: _textHint,
+                                fontSize: 13,
+                                fontFamily: 'PingFang SC',
+                                height: 1.5,
+                              ),
                             ),
                           );
                         }
@@ -743,16 +976,24 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _panelFill,
-                borderRadius: AppRadius.br12,
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpace.s16,
-                  vertical: AppSpace.s8,
+                  horizontal: 16,
+                  vertical: 9,
                 ),
-                child: Text(message.text, style: AppText.body14),
+                child: Text(
+                  message.text,
+                  style: const TextStyle(
+                    color: _textPrimary,
+                    fontSize: 14,
+                    fontFamily: 'PingFang SC',
+                    height: 1.55,
+                  ),
+                ),
               ),
             ),
             if (message.attachments.isNotEmpty) ...[
@@ -771,25 +1012,24 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                 ],
               ),
             ],
-            const SizedBox(height: AppSpace.s4),
+            const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _actionIcon(
+                _actionAssetIcon(
                   asset: AppAssets.aiChatCopy,
-                  label: '复制',
                   onTap: () => _copyText(message.text),
                 ),
-                _actionIcon(
+                const SizedBox(width: 10),
+                _actionAssetIcon(
                   asset: AppAssets.aiChatEdit,
-                  label: '重新编辑',
                   onTap: () => _reuseText(message.text),
                 ),
-                if (message.status == AiChatMessageStatus.failed)
+                if (message.status == AiChatMessageStatus.failed) ...[
+                  const SizedBox(width: 10),
                   _actionIcon(
                     icon: Icons.refresh_rounded,
-                    label: '重新发送',
-                    color: AppColors.warning,
+                    color: const Color(0xFFF59E0B),
                     onTap: () async {
                       final error = await controller.resendMessage(message);
                       if (error != null && mounted) {
@@ -797,6 +1037,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                       }
                     },
                   ),
+                ],
               ],
             ),
           ],
@@ -821,10 +1062,14 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (message.reasoning.isNotEmpty || message.reasoningStreaming) ...[
-              AppPressable(
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
                 onTap: () => controller.toggleReasoningExpanded(message.id),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpace.s4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 4,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -833,17 +1078,20 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                         width: 25,
                         height: 25,
                       ),
-                      const SizedBox(width: AppSpace.s4),
+                      const SizedBox(width: 4),
                       Text(
                         message.reasoningStreaming
                             ? '深度思考中'
                             : message.reasoningExpanded
                             ? '思考过程（点击收起）'
                             : '思考过程（点击展开）',
-                        style: AppText.body13.copyWith(
+                        style: TextStyle(
                           color: message.reasoningStreaming
                               ? _purple
-                              : _textSecondary,
+                              : _textPrimary,
+                          fontSize: 13,
+                          fontFamily: 'PingFang SC',
+                          fontWeight: AppFont.w500,
                         ),
                       ),
                     ],
@@ -851,52 +1099,71 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                 ),
               ),
               if (message.reasoningExpanded) ...[
-                const SizedBox(height: AppSpace.s4),
-                Container(
+                const SizedBox(height: 6),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
                   width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceSubtle,
-                    borderRadius: AppRadius.br12,
+                    color: _panelFill,
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: message.reasoningStreaming
-                          ? AppColors.brandTint
+                          ? const Color(0x33715EFE)
                           : _border,
                     ),
                   ),
-                  child: _MessageText(
-                    message.reasoning,
-                    streaming: message.reasoningStreaming,
-                    placeholder: '正在思考',
-                    muted: true,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+                    child: _MessageText(
+                      message.reasoning,
+                      streaming: message.reasoningStreaming,
+                      placeholder: '正在思考',
+                      muted: true,
+                    ),
                   ),
                 ),
-                const SizedBox(height: AppSpace.s8),
+                const SizedBox(height: 8),
               ],
             ],
             if (showAnswer)
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: AppRadius.br12,
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: answerStreaming ? AppColors.brandTint : _border,
+                    color: answerStreaming ? const Color(0x33715EFE) : _border,
+                  ),
+                  boxShadow: answerStreaming
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x0F715EFE),
+                            blurRadius: 18,
+                            offset: Offset(0, 8),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: _MessageText(
+                    message.text,
+                    streaming: answerStreaming,
+                    placeholder: '正在回复',
                   ),
                 ),
-                child: _MessageText(
-                  message.text,
-                  streaming: answerStreaming,
-                  placeholder: '正在回复',
-                ),
               ),
-            const SizedBox(height: AppSpace.s4),
+            const SizedBox(height: 4),
             if (message.text.isNotEmpty && !message.streaming)
-              _actionIcon(
-                asset: AppAssets.aiChatCopy,
-                label: '复制',
-                onTap: () => _copyText(message.text),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _actionAssetIcon(
+                    asset: AppAssets.aiChatCopy,
+                    onTap: () => _copyText(message.text),
+                  ),
+                ],
               ),
           ],
         ),
@@ -905,22 +1172,34 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   }
 
   Widget _actionIcon({
-    IconData? icon,
-    String? asset,
-    required String label,
+    required IconData icon,
     required VoidCallback onTap,
-    Color color = AppColors.textTertiary,
+    Color color = const Color(0xFF99A1AF),
   }) {
-    return AppPressable(
-      semanticLabel: label,
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
-      child: SizedBox(
-        width: 28,
-        height: 28,
-        child: Center(
-          child: asset == null
-              ? Icon(icon, size: 16, color: color)
-              : AppAssetGraphic(asset, width: 16, height: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: Icon(icon, size: 14, color: color),
+      ),
+    );
+  }
+
+  Widget _actionAssetIcon({
+    required String asset,
+    required VoidCallback onTap,
+    double size = 18,
+  }) {
+    return Semantics(
+      button: true,
+      label: asset == AppAssets.aiChatCopy ? '复制' : '重新编辑',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: AppAssetGraphic(asset, width: size, height: size),
         ),
       ),
     );
@@ -936,16 +1215,24 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         !state.uploadingAttachment &&
         (_inputCtrl.text.trim().isNotEmpty ||
             state.pendingAttachments.isNotEmpty);
+    final composerHeight = _composerHeight(state);
     final hasAttachments = state.pendingAttachments.isNotEmpty;
-    final inputInset = hasAttachments ? 4.0 : 8.0;
-    return SizedBox(
-      width: width,
-      height: _composerHeight(state),
-      child: DecoratedBox(
+    // 有附件时纵向更紧，略减 textarea 上下 padding，避免 Column 在 154 高度内溢出。
+    final textVerticalPadding = hasAttachments ? 4.0 : 8.0;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: width),
+      child: Container(
+        width: double.infinity,
+        height: composerHeight,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.br12,
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _border),
+          // Figma 复合阴影：
+          // 1) 0 0 1 rgba(11,8,26,0.02)         —— 最近的 1px 浮起
+          // 2) 0 12 40 rgba(11,8,26,0.06)       —— 主投影
+          // 3) 0 12 24 -16 rgba(11,8,26,0.02)   —— 收紧的轻阴影（Flutter 用 spread:-16 模拟）
           boxShadow: const [
             BoxShadow(color: Color(0x050B081A), blurRadius: 1),
             BoxShadow(
@@ -953,187 +1240,206 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
               blurRadius: 40,
               offset: Offset(0, 12),
             ),
+            BoxShadow(
+              color: Color(0x050B081A),
+              blurRadius: 24,
+              spreadRadius: -16,
+              offset: Offset(0, 12),
+            ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: AppRadius.br12,
-          child: Column(
-            children: [
-              if (hasAttachments)
-                SizedBox(
-                  height: 50,
-                  child: _buildAttachmentTray(state, controller),
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            if (hasAttachments)
+              SizedBox(
+                height: 50,
+                child: ClipRect(child: _buildAttachmentTray(state, controller)),
+              ),
+            // 输入区改为多行 textarea：占满输入框中剩余的纵向空间，
+            // 内容超出时内部可滚动。Enter 换行；通过右下角发送按钮提交。
+            // padding：左/右 16，顶部 12（首行文字距顶 12px），底部 8 留白。
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  textVerticalPadding,
+                  16,
+                  textVerticalPadding,
                 ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: inputInset,
+                child: AppTextField(
+                  controller: _inputCtrl,
+                  maxLines: null,
+                  minLines: null,
+                  expands: true,
+                  keyboardType: TextInputType.multiline,
+                  textAlignVertical: TextAlignVertical.top,
+                  cursorColor: _purple,
+                  cursorWidth: 1.5,
+                  cursorHeight: 16,
+                  style: TextStyle(
+                    color: _textPrimary,
+                    fontSize: 14,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w400,
+                    height: 1.6,
                   ),
-                  child: AppTextField(
-                    controller: _inputCtrl,
-                    maxLines: null,
-                    expands: true,
-                    keyboardType: TextInputType.multiline,
-                    textAlignVertical: TextAlignVertical.top,
-                    cursorColor: _purple,
-                    cursorWidth: 1.5,
-                    cursorHeight: 16,
-                    style: AppText.body14.copyWith(height: 1.6),
-                    decoration: InputDecoration.collapsed(
-                      hintText: '石膏头像的明暗交界线怎么画才有体积感？',
-                      hintStyle: AppText.body14.copyWith(
-                        color: _textHint,
-                        height: 1.6,
-                      ),
+                  decoration: InputDecoration(
+                    isCollapsed: true,
+                    border: InputBorder.none,
+                    hintText: '素描中常见的构图方式有哪些？',
+                    hintStyle: TextStyle(
+                      color: Color(0x7326244C),
+                      fontSize: 14,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w400,
+                      height: 1.6,
                     ),
-                    textInputAction: TextInputAction.newline,
-                    onChanged: (_) => setState(() {}),
                   ),
+                  textInputAction: TextInputAction.newline,
+                  onChanged: (_) => setState(() {}),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(8),
+            ),
+            // 底部工具栏：固定 48 高度（padding 8+8 + 内容 32）。
+            // 不再需要中间分隔线；textarea 与工具栏视觉上合并为一个白底盒子。
+            SizedBox(
+              height: 48,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildModelSelector(state, controller),
-                            const SizedBox(width: 8),
-                            _AiFeatureButton(
-                              label: '深度思考',
-                              asset: state.isDeepThinking
-                                  ? AppAssets.aiChatThinkSelected
-                                  : AppAssets.aiChatThink,
-                              selected: state.isDeepThinking,
-                              onTap: state.selectedModel.supportsDeepThinking
-                                  ? controller.toggleDeepThinking
-                                  : null,
-                            ),
-                            const SizedBox(width: 8),
-                            _AiFeatureButton(
-                              label: '联网搜索',
-                              asset: state.isWebSearching
-                                  ? AppAssets.aiChatSearchSelected
-                                  : AppAssets.aiChatSearch,
-                              iconSize: 15,
-                              selected: state.isWebSearching,
-                              onTap: state.selectedModel.supportsWebSearch
-                                  ? controller.toggleWebSearching
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      ),
+                    _modelSelector(state, controller),
+                    const SizedBox(width: 8),
+                    _featureChip(
+                      icon: state.isDeepThinking
+                          ? AppAssets.aiChatThinkSelected
+                          : AppAssets.aiChatThink,
+                      label: '深度思考',
+                      active: state.isDeepThinking,
+                      onTap: state.selectedModel.supportsDeepThinking
+                          ? controller.toggleDeepThinking
+                          : null,
+                      activeTextColor: _purple,
+                      activeBg: _purpleSoft,
+                      iconSize: 20,
                     ),
                     const SizedBox(width: 8),
-                    AppPressable(
-                      semanticLabel: '添加附件',
+                    _featureChip(
+                      // 与「深度思考」一致：按 active 状态切图标资源。
+                      // idle = aichat2.png（灰）/ active = aichat2_active.png（紫）。
+                      icon: state.isWebSearching
+                          ? AppAssets.aiChatSearchSelected
+                          : AppAssets.aiChatSearch,
+                      label: '联网搜索',
+                      active: state.isWebSearching,
+                      onTap: state.selectedModel.supportsWebSearch
+                          ? controller.toggleWebSearching
+                          : null,
+                      // 文字色 + 背景色与深度思考完全一致（紫色 #715EFE）。
+                      activeTextColor: _purple,
+                      activeBg: _purpleSoft,
+                      iconSize: 15,
+                      iconLabelGap: 4,
+                    ),
+                    const Spacer(),
+                    _iconButton(
+                      iconAsset: AppAssets.aiChatAttach,
                       onTap: state.uploadingAttachment
                           ? null
                           : () => _pickAndUploadAttachment(controller),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: _border),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        alignment: Alignment.center,
-                        child: state.uploadingAttachment
-                            ? const AppLoadingIndicator(size: 18)
-                            : const AppAssetGraphic(
-                                AppAssets.aiChatAttach,
-                                width: 20,
-                                height: 20,
-                              ),
-                      ),
+                      background: Colors.transparent,
+                      borderColor: _border,
+                      loading: state.uploadingAttachment,
                     ),
                     const SizedBox(width: 8),
-                    AppPressable(
-                      semanticLabel: '发送',
+                    _sendButton(
+                      enabled: canSend,
                       onTap: canSend ? () => _handleSend(controller) : null,
-                      child: canSend
-                          ? Container(
-                              width: 32,
-                              height: 32,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: AppColors.brand,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const AppAssetGraphic(
-                                AppAssets.aiChatSendArrow,
-                                width: 12,
-                                height: 12,
-                              ),
-                            )
-                          : const AppAssetGraphic(
-                              AppAssets.aiChatSendDisabled,
-                              width: 32,
-                              height: 32,
-                            ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildModelSelector(AiChatState state, AiChatController controller) {
-    return Builder(
-      builder: (anchor) => AppPressable(
-        semanticLabel: '切换模型，当前 ${state.selectedModel.label}',
-        onTap: state.sending
-            ? null
-            : () async {
-                final model = await showAppMenu<AiChatModel>(
-                  context: anchor,
-                  width: 132,
-                  items: [
-                    for (final model in AiChatModel.values)
-                      AppMenuItem(
-                        value: model,
-                        label: model.label,
-                        icon: model == state.selectedModel
-                            ? Icons.check_rounded
-                            : null,
-                      ),
-                  ],
-                );
-                if (!mounted || model == null) return;
-                final error = await controller.selectModel(model);
-                if (error != null && mounted) _showInfo(error);
-              },
-        child: Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 11),
-          decoration: BoxDecoration(
-            border: Border.all(color: _border),
-            borderRadius: AppRadius.br8,
-          ),
+  Widget _modelSelector(AiChatState state, AiChatController controller) {
+    return PopupMenuButton<AiChatModel>(
+      enabled: !state.sending,
+      tooltip: '切换模型，当前 ${state.selectedModel.label}',
+      // 菜单仅剩两个模型；向上紧贴按钮展开，避免使用旧三项菜单的固定偏移。
+      offset: const Offset(0, -96),
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      elevation: 8,
+      popUpAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 150),
+        reverseDuration: Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      onSelected: (model) async {
+        final error = await controller.selectModel(model);
+        if (error != null && mounted) {
+          AppToast.show(context, error);
+        }
+      },
+      itemBuilder: (context) => AiChatModel.values.map((model) {
+        final selected = model == state.selectedModel;
+        return PopupMenuItem<AiChatModel>(
+          value: model,
+          height: 40,
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                state.selectedModel.label,
-                style: AppText.caption12Strong.copyWith(color: _textPrimary),
+              Expanded(
+                child: Text(
+                  model.label,
+                  style: TextStyle(
+                    color: selected ? _purple : _textPrimary,
+                    fontSize: 13,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: selected ? AppFont.w500 : AppFont.w400,
+                  ),
+                ),
               ),
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 17,
-                color: _textSecondary,
-              ),
+              if (selected)
+                const Icon(Icons.check_rounded, size: 17, color: _purple),
             ],
           ),
+        );
+      }).toList(),
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 11),
+        decoration: BoxDecoration(
+          border: Border.all(color: _border),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              state.selectedModel.label,
+              style: TextStyle(
+                color: _textPrimary,
+                fontSize: 12,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w500,
+                height: 1.17,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 17,
+              color: _textSecondary,
+            ),
+          ],
         ),
       ),
     );
@@ -1156,14 +1462,132 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     );
   }
 
+  Widget _featureChip({
+    required String icon,
+    required String label,
+    required bool active,
+    required VoidCallback? onTap,
+    required Color activeTextColor,
+    required Color activeBg,
+    required double iconSize,
+
+    /// 图标右边缘与文案左侧的间距（逻辑像素）。深度思考默认 2；
+    /// 「联网搜索」设计稿为 5。
+    double iconLabelGap = 2,
+  }) {
+    final enabled = onTap != null;
+    final textColor = active
+        ? activeTextColor
+        : (enabled ? _textHint : _textHint.withValues(alpha: 0.5));
+    final bgColor = active ? activeBg : Colors.transparent;
+
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          decoration: BoxDecoration(
+            border: Border.all(color: _border),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Opacity(
+                opacity: enabled ? 1 : 0.5,
+                child: AppAssetGraphic(icon, width: iconSize, height: iconSize),
+              ),
+              SizedBox(width: iconLabelGap),
+              Text(
+                label,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 12,
+                  fontFamily: 'PingFang SC',
+                  fontWeight: AppFont.w500,
+                  height: 1.17,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _iconButton({
+    required String iconAsset,
+    required VoidCallback? onTap,
+    required Color background,
+    required Color borderColor,
+    bool loading = false,
+  }) {
+    // 上传按钮去掉 Material + InkWell 的水波纹/高亮，保持图标原有视觉。
+    return Semantics(
+      button: true,
+      label: '添加附件',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: borderColor),
+          ),
+          child: Center(
+            child: loading
+                ? const AppLoadingIndicator()
+                : AppAssetGraphic(iconAsset, width: 20, height: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sendButton({required bool enabled, required VoidCallback? onTap}) {
+    // 直接使用 aichat/Button*.png 当按钮本体：图自身已经包含背景色（紫
+    // [aiChatSendButtonEnabled] / 浅灰 [aiChatSendButtonDisabled]）、圆角
+    // 与上箭头，不需要再叠加 Container / Icon。disabled 时把 onTap 设为
+    // null，InkWell 自带的禁用态命中行为已经足够（无 ripple、不可点）。
+    final asset = enabled
+        ? AppAssets.aiChatSendEnabled
+        : AppAssets.aiChatSendDisabled;
+    return Semantics(
+      button: true,
+      label: '发送',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: AppAssetGraphic(asset, width: 32, height: 32),
+      ),
+    );
+  }
+
   Widget _buildDisclaimer() {
+    // Figma: 10/400 / line-height 16 / #99A1AF；single line。
+    // 用 Center 包裹让 Text 取自身内在宽度，并在父容器中水平居中显示，
+    // 避免 softWrap:false 时文字从左侧起绘导致视觉上不居中的问题。
     return Center(
       child: Text(
-        '内容由模型生成，仅供参考；作品评价请以任课老师的意见为准',
+        '服务生成的所有内容均由人工智能模型生成，其生成内容的准确性和完整性无法保证，不代表我们的态度或观点',
         textAlign: TextAlign.center,
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: AppText.caption12,
+        softWrap: false,
+        overflow: TextOverflow.visible,
+        style: TextStyle(
+          color: Color(0xFF99A1AF),
+          fontSize: 10,
+          fontFamily: 'PingFang SC',
+          fontWeight: AppFont.w400,
+          height: 16 / 10,
+        ),
       ),
     );
   }
@@ -1237,10 +1661,15 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     }
 
     final token = ref.read(appStorageProvider).token;
-    showAppDialog<void>(
+    showDialog<void>(
       context: context,
-      builder: (context) =>
-          _AttachmentPreviewDialog(attachment: attachment, authToken: token),
+      barrierColor: Colors.black.withValues(alpha: 0.22),
+      builder: (context) {
+        return _AttachmentPreviewDialog(
+          attachment: attachment,
+          authToken: token,
+        );
+      },
     );
   }
 
@@ -1284,33 +1713,77 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     setState(() {});
   }
 
+  /// 会话条目「⋯」弹出的悬浮菜单。视觉与「我的云盘」左侧类目卡片完全
+  /// 一致——共用 [showItemActionMenu]（白底 / 12 圆角 / 1.11px 浅边 /
+  /// 三层柔和阴影 / 36 高 row）。当前只暴露「删除」一项。
   Future<void> _showSessionMoreMenu(
-    BuildContext anchor,
     AiChatController controller,
     AiChatSession session,
   ) async {
-    final action = await showAppMenu<String>(
-      context: anchor,
-      width: 142,
-      items: const [
-        AppMenuItem(
-          value: 'delete',
-          label: '删除',
-          iconAsset: AppAssets.coursewareActionDelete,
-          danger: true,
-        ),
-      ],
-    );
-    if (!mounted || action != 'delete') return;
-    final confirmed = await showAppConfirm(
-      context: context,
-      title: '删除对话',
-      message: '「${session.title}」的全部消息会被删除，且不可恢复。',
-      danger: true,
-    );
-    if (!mounted || !confirmed) {
+    final triggerKey = _moreTriggerKeys[session.id];
+    if (triggerKey == null) {
       return;
     }
+    final action = await showItemActionMenu(
+      context: context,
+      triggerKey: triggerKey,
+      actions: const <ItemMenuAction>[ItemMenuAction.delete],
+    );
+    if (!mounted) return;
+    if (action != ItemMenuAction.delete) return;
+    await _confirmDeleteSession(controller, session);
+  }
+
+  /// 「删除会话」二次确认弹窗。完全按 Figma 视觉还原：
+  /// • 428 宽圆角 24 卡片，顶部 D8CCFF→白渐变 + 装饰图（共用
+  ///   [GradientHeaderDialog]，与个人中心 / 智慧校园所有同款弹窗一致）。
+  /// • 标题「删除会话」20/500 居中，#0B081A。
+  /// • 提问行 16/400 / line-height 20 / #0B081A，左对齐放在 8 圆角的
+  ///   透明容器里（图里那个看不见背景的 380×48 框就是 padding 容器）。
+  /// • 底部 取消（白）/ 确认（紫渐变）双按钮，复用 [AppDialogActionBar]
+  ///   即可拿到 figma 一致的阴影和颜色。
+  Future<void> _confirmDeleteSession(
+    AiChatController controller,
+    AiChatSession session,
+  ) async {
+    final shouldDelete = await showScaledDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.8),
+      builder: (dialogContext) {
+        return GradientHeaderDialog(
+          title: '删除会话',
+          titlePaddingTop: 25,
+          width: 428,
+          actionBar: AppDialogActionBar(
+            cancelLabel: '取消',
+            confirmLabel: '确认',
+            onCancel: () => Navigator.of(dialogContext).pop(false),
+            onConfirm: () => Navigator.of(dialogContext).pop(true),
+          ),
+          child: Padding(
+            // Figma: 380×48 容器内 padding-left/right:16，padding-top/bottom:12。
+            // GradientHeaderDialog 的 contentPadding 默认是 LRTB(20,25,20,20)，
+            // 已经撑出 380 的可用宽度；这里只补内层 16/12 的内边距即可。
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Text(
+              '确定删除「${session.title}」吗？',
+              style: TextStyle(
+                color: _textPrimary,
+                fontSize: 16,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 20 / 16,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted || shouldDelete != true) {
+      return;
+    }
+
     final error = await controller.deleteSession(session);
     if (error != null && mounted) {
       _showInfo(error);
@@ -1379,10 +1852,11 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
 }
 
 class _AiPromptQuestion {
-  const _AiPromptQuestion(this.indexLabel, this.text);
+  const _AiPromptQuestion(this.indexLabel, this.text, this.indexColor);
 
   final String indexLabel;
   final String text;
+  final Color indexColor;
 }
 
 class _AttachmentChip extends StatelessWidget {
@@ -1400,65 +1874,89 @@ class _AttachmentChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final remove = onRemove;
-    return AppPressable(
-      onTap: onTap,
-      semanticLabel: '预览附件 ${attachment.name}',
-      child: Container(
-        constraints: BoxConstraints(maxWidth: compact ? 220 : 260),
-        padding: const EdgeInsets.fromLTRB(10, 5, 8, 5),
-        decoration: BoxDecoration(
-          color: compact ? AppColors.surface : const Color(0xFFF8F7FF),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.brandTint),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircleAvatar(
-              radius: 11,
-              backgroundColor: AppColors.brandTint,
-              child: Icon(
-                Icons.insert_drive_file_outlined,
-                size: 14,
-                color: _purple,
-              ),
+    final content = Container(
+      constraints: BoxConstraints(maxWidth: compact ? 220 : 260),
+      padding: EdgeInsets.fromLTRB(10, compact ? 5 : 5, 8, compact ? 5 : 5),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: const BoxDecoration(
+              color: Color(0x1A715EFE),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: AppSpace.s8),
-            Flexible(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: const Icon(
+              Icons.insert_drive_file_outlined,
+              size: 14,
+              color: _purple,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  attachment.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _textPrimary,
+                    fontSize: 11,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w500,
+                    height: 1.1,
+                  ),
+                ),
+                if (!compact && attachment.size > 0)
                   Text(
-                    attachment.name,
+                    _formatFileSize(attachment.size),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.caption12Strong.copyWith(
-                      color: _textPrimary,
+                    style: const TextStyle(
+                      color: _textHint,
+                      fontSize: 9,
+                      fontFamily: 'PingFang SC',
+                      height: 1.1,
                     ),
                   ),
-                  if (!compact && attachment.size > 0)
-                    Text(
-                      _formatFileSize(attachment.size),
-                      maxLines: 1,
-                      style: AppText.caption12,
-                    ),
-                ],
+              ],
+            ),
+          ),
+          if (onRemove != null) ...[
+            const SizedBox(width: 6),
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: onRemove,
+              child: const Padding(
+                padding: EdgeInsets.all(2),
+                child: Icon(Icons.close_rounded, size: 14, color: _textHint),
               ),
             ),
-            if (remove != null)
-              AppPressable(
-                semanticLabel: '移除附件',
-                onTap: remove,
-                child: const SizedBox.square(
-                  dimension: 26,
-                  child: Icon(Icons.close_rounded, size: 14, color: _textHint),
-                ),
-              )
-            else
-              const SizedBox(width: AppSpace.s4),
           ],
+        ],
+      ),
+    );
+
+    return Semantics(
+      button: true,
+      label: '预览附件 ${attachment.name}',
+      child: Material(
+        color: compact ? Colors.white : const Color(0xFFF8F7FF),
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE8E4FF)),
+            ),
+            child: content,
+          ),
         ),
       ),
     );
@@ -1490,93 +1988,89 @@ class _AttachmentPreviewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final ext = _extension(attachment);
     final canPreviewPdf = ext == 'pdf';
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 40),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 760,
-            maxHeight: 620,
-            minHeight: 420,
-          ),
-          child: Material(
-            type: MaterialType.transparency,
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.all(Radius.circular(14)),
-                boxShadow: AppShadow.overlay,
-              ),
-              child: Column(
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 56, vertical: 40),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: 760,
+          maxHeight: 620,
+          minHeight: 420,
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 12, 12),
+              child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 14, 12, 12),
-                    child: Row(
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: Color(0x1A715EFE),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      canPreviewPdf
+                          ? Icons.picture_as_pdf_outlined
+                          : Icons.insert_drive_file_outlined,
+                      color: _purple,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: AppColors.brandTint,
-                          child: Icon(
-                            canPreviewPdf
-                                ? Icons.picture_as_pdf_outlined
-                                : Icons.insert_drive_file_outlined,
-                            color: _purple,
-                            size: 18,
+                        Text(
+                          attachment.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _textPrimary,
+                            fontSize: 14,
+                            fontFamily: 'PingFang SC',
+                            fontWeight: AppFont.w600,
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                attachment.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppText.body14.copyWith(
-                                  fontWeight: AppFont.w600,
-                                ),
-                              ),
-                              if (attachment.size > 0)
-                                Text(
-                                  _AttachmentChip._formatFileSize(
-                                    attachment.size,
-                                  ),
-                                  style: AppText.caption12,
-                                ),
-                            ],
+                        if (attachment.size > 0)
+                          Text(
+                            _AttachmentChip._formatFileSize(attachment.size),
+                            style: const TextStyle(
+                              color: _textHint,
+                              fontSize: 11,
+                              fontFamily: 'PingFang SC',
+                            ),
                           ),
-                        ),
-                        AppIconButton(
-                          icon: Icons.close_rounded,
-                          semanticLabel: '关闭',
-                          size: AppButtonSize.sm,
-                          filled: false,
-                          color: _textSecondary,
-                          onTap: () => Navigator.of(context).maybePop(),
-                        ),
                       ],
                     ),
                   ),
-                  const Divider(height: 1, color: _border),
-                  Expanded(
-                    child: canPreviewPdf
-                        ? ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              bottom: Radius.circular(14),
-                            ),
-                            child: AppPdfView(
-                              url: attachment.url,
-                              authToken: authToken,
-                            ),
-                          )
-                        : _UnsupportedAttachmentPreview(attachment: attachment),
+                  IconButton(
+                    tooltip: '关闭',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.close_rounded, size: 20),
                   ),
                 ],
               ),
             ),
-          ),
+            const Divider(height: 1, color: _border),
+            Expanded(
+              child: canPreviewPdf
+                  ? ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(14),
+                      ),
+                      child: AppPdfView(
+                        url: attachment.url,
+                        authToken: authToken,
+                      ),
+                    )
+                  : _UnsupportedAttachmentPreview(attachment: attachment),
+            ),
+          ],
         ),
       ),
     );
@@ -1603,7 +2097,7 @@ class _UnsupportedAttachmentPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: SingleChildScrollView(
+      child: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1611,11 +2105,10 @@ class _UnsupportedAttachmentPreview extends StatelessWidget {
             Container(
               width: 68,
               height: 68,
-              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F7FF),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.brandTint),
+                border: Border.all(color: const Color(0xFFE8E4FF)),
               ),
               child: const Icon(
                 Icons.insert_drive_file_outlined,
@@ -1629,26 +2122,44 @@ class _UnsupportedAttachmentPreview extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: AppText.body14Strong,
+              style: TextStyle(
+                color: _textPrimary,
+                fontSize: 15,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w600,
+              ),
             ),
             const SizedBox(height: 8),
-            Text('当前文件类型暂不支持在线预览', style: AppText.body13),
+            Semantics(
+              container: true,
+              label: '当前文件类型暂不支持在线预览',
+              excludeSemantics: true,
+              child: const Text(
+                '当前文件类型暂不支持在线预览',
+                style: TextStyle(
+                  color: _textSecondary,
+                  fontSize: 13,
+                  fontFamily: 'PingFang SC',
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             SelectableText(
               attachment.url,
               textAlign: TextAlign.center,
-              style: AppText.caption12.copyWith(color: _purple),
+              style: const TextStyle(
+                color: _purple,
+                fontSize: 11,
+                fontFamily: 'Manrope',
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 16),
-            AppButton(
-              label: '复制文件地址',
-              icon: Icons.content_copy_outlined,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onTap: () async {
-                await Clipboard.setData(ClipboardData(text: attachment.url));
-                if (context.mounted) AppToast.showSuccess(context, '已复制文件地址');
-              },
+            OutlinedButton.icon(
+              onPressed: () =>
+                  Clipboard.setData(ClipboardData(text: attachment.url)),
+              icon: const Icon(Icons.content_copy_outlined, size: 16),
+              label: const Text('复制文件地址'),
             ),
           ],
         ),
@@ -1656,93 +2167,19 @@ class _UnsupportedAttachmentPreview extends StatelessWidget {
     );
   }
 }
-
-enum _AiToolKind { school, practice, plan }
 
 class _AiToolShortcut {
   const _AiToolShortcut({
     required this.title,
     required this.subtitle,
     required this.prompt,
-    required this.kind,
+    this.asset,
   });
 
   final String title;
   final String subtitle;
   final String prompt;
-  final _AiToolKind kind;
-}
-
-class _AiToolBadge extends StatelessWidget {
-  const _AiToolBadge({required this.colors, required this.child});
-
-  final List<Color> colors;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 30,
-      height: 30,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: colors,
-        ),
-      ),
-      child: child,
-    );
-  }
-}
-
-class _AiFeatureButton extends StatelessWidget {
-  const _AiFeatureButton({
-    required this.label,
-    required this.asset,
-    required this.selected,
-    required this.onTap,
-    this.iconSize = 20,
-  });
-
-  final String label;
-  final String asset;
-  final bool selected;
-  final VoidCallback? onTap;
-  final double iconSize;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppPressable(
-      onTap: onTap,
-      enabled: onTap != null,
-      selected: selected,
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 11),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.brandWash : AppColors.surface,
-          border: Border.all(color: _border),
-          borderRadius: AppRadius.br8,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppAssetGraphic(asset, width: iconSize, height: iconSize),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: AppText.caption12Strong.copyWith(
-                color: selected ? _purple : _textHint,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  final String? asset;
 }
 
 enum _MessageBlockKind { paragraph, heading, list, quote }
@@ -1794,8 +2231,11 @@ class _MessageText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final blocks = _parseBlocks(text);
-    final baseStyle = AppText.body14.copyWith(
+    final baseStyle = TextStyle(
       color: muted ? _textSecondary : _textPrimary,
+      fontSize: 14,
+      fontFamily: 'PingFang SC',
+      fontWeight: AppFont.w400,
       height: 1.7,
     );
 
@@ -1833,8 +2273,10 @@ class _MessageText extends StatelessWidget {
       case _MessageBlockKind.heading:
         return _InlineMessageText(
           block.text,
-          style: AppText.title16.copyWith(
-            color: muted ? _textSecondary : _textPrimary,
+          style: baseStyle.copyWith(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            height: 1.55,
           ),
           streaming: showCursor,
         );
@@ -1852,7 +2294,10 @@ class _MessageText extends StatelessWidget {
                       width: 22,
                       child: Text(
                         block.items[index].marker,
-                        style: baseStyle.copyWith(color: _textSecondary),
+                        style: baseStyle.copyWith(
+                          color: _purple,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     Expanded(
@@ -1873,7 +2318,7 @@ class _MessageText extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
           decoration: const BoxDecoration(
             border: Border(
-              left: BorderSide(color: AppColors.brandTint, width: 3),
+              left: BorderSide(color: Color(0x33715EFE), width: 3),
             ),
           ),
           child: _InlineMessageText(
@@ -2047,8 +2492,11 @@ class _TypingPlaceholder extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppText.body14.copyWith(
+          style: TextStyle(
             color: muted ? _textSecondary : _textPrimary,
+            fontSize: 14,
+            fontFamily: 'PingFang SC',
+            height: 1.7,
           ),
         ),
         const SizedBox(width: 6),

@@ -52,7 +52,7 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
       children: [
         AppPageHeader(
           title: '组件库',
-          subtitle: '美术之路统一组件与设计规范 · 演示页面',
+          subtitle: '绘画星球统一组件与设计规范 · 演示页面',
           onBack: _back,
           actions: [
             AppButton(
@@ -213,7 +213,7 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
 
   Widget _typography() {
     final rows = <(String, TextStyle, String)>[
-      ('display32 · 32 / 40 · 600', AppText.display32, '美术之路 2026 届'),
+      ('display32 · 32 / 40 · 600', AppText.display32, '绘画星球 2026 届'),
       ('title24 · 24 / 32 · 600', AppText.title24, '我的学情'),
       ('title20 · 20 / 28 · 600', AppText.title20, '作品档案'),
       ('title16 · 16 / 24 · 600', AppText.title16, '本周课程'),

@@ -1,4 +1,17 @@
 abstract final class AppAssets {
+  static const videoV2Collapse = 'assets/images/video/17.png';
+  static const videoV2RelatedPlay = 'assets/images/video/18.png';
+  static const homeComingSoon = 'assets/images/home/sx.jpg';
+  static const homeDialogClose = 'assets/images/home/bg_close.jpg';
+  static const schoolColorCardBg = 'assets/images/home/school_color_bg.png';
+  static const schoolSketchCardBg = 'assets/images/home/school_sketch_bg.png';
+  static const cloudBreadcrumbArrowLast = 'assets/images/yunpan/right.png';
+  static const cloudBreadcrumbArrow = 'assets/images/yunpan/right1.png';
+  static const profileAnnualVipBadge = 'assets/images/info/1.png';
+  static const aiChatSendEnabled = 'assets/images/aichat/Button.png';
+  static const aiChatPlanVector2 = 'assets/images/aichat/v2/ai_tool_plan_v2.svg';
+  static const aiChatPlanVector1 = 'assets/images/aichat/v2/ai_tool_plan_v1.svg';
+  static const aiChatToolAnalyze = 'assets/images/aichat/v2/ai_tool_analyze.svg';
   static const homeUserMenuLogout = 'assets/images/home/3.png';
   static const homeUserMenuProfile = 'assets/images/home/2.png';
   static const homeUserMenuRegion = 'assets/images/home/1.png';
