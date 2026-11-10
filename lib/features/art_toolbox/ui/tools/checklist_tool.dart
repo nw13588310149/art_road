@@ -69,7 +69,8 @@ class ChecklistTool extends ConsumerWidget {
           label: '恢复默认清单',
           variant: AppButtonVariant.secondary,
           size: AppButtonSize.sm,
-          onTap: state.loading ||
+          onTap:
+              state.loading ||
                   (checklist.checkedCount == 0 && checklist.custom.isEmpty)
               ? null
               : () => _restore(context, ref),
@@ -245,10 +246,13 @@ class _GroupCardState extends State<_GroupCard> {
     return AppCard(
       title: widget.group.label,
       subtitle: '$done / ${items.length}',
+      bordered: false,
+      padding: const EdgeInsets.symmetric(vertical: AppSpace.s8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final item in items)
+          for (final item in items) ...[
+            const Divider(height: 1, color: AppColors.lineSoft),
             Row(
               children: [
                 Expanded(
@@ -269,6 +273,7 @@ class _GroupCardState extends State<_GroupCard> {
                   ),
               ],
             ),
+          ],
           const SizedBox(height: AppSpace.s8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,

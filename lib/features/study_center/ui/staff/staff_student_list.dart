@@ -72,9 +72,6 @@ class StaffStudentListSliver extends StatelessWidget {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: _ListHead(wide: wide, showGrade: subjectName.isNotEmpty),
-              ),
               if (rows.isEmpty)
                 SliverToBoxAdapter(
                   child: SizedBox(
@@ -94,7 +91,13 @@ class StaffStudentListSliver extends StatelessWidget {
                           ),
                   ),
                 )
-              else
+              else ...[
+                SliverToBoxAdapter(
+                  child: _ListHead(
+                    wide: wide,
+                    showGrade: subjectName.isNotEmpty,
+                  ),
+                ),
                 SliverList.builder(
                   itemCount: rows.length,
                   itemBuilder: (context, index) => _StudentRow(
@@ -105,6 +108,7 @@ class StaffStudentListSliver extends StatelessWidget {
                     onTap: () => onOpen(rows[index]),
                   ),
                 ),
+              ],
               const SliverToBoxAdapter(child: SizedBox(height: AppSpace.s12)),
             ],
           ),
@@ -153,14 +157,11 @@ class _ListHead extends StatelessWidget {
             width: _scoreWidth,
             child: Text('成绩', textAlign: TextAlign.right, style: style),
           ),
-          SizedBox(
-            width: _gradeWidth,
-            child: Text(
-              showGrade ? '档位' : '',
-              textAlign: TextAlign.center,
-              style: style,
+          if (showGrade)
+            SizedBox(
+              width: _gradeWidth,
+              child: Text('档位', textAlign: TextAlign.center, style: style),
             ),
-          ),
           const SizedBox(width: _chevronWidth),
         ],
       ),
@@ -191,6 +192,10 @@ class _StudentRow extends StatelessWidget {
         ? ''
         : row.subjectNamed(subjectName)?.grade ?? '';
     final organizationRank = row.organizationRanking;
+    final studentMeta = [
+      if (!wide && row.organizationName.isNotEmpty) row.organizationName,
+      if (row.admissionNo.isNotEmpty) '准考证号 ${row.admissionNo}',
+    ].join(' · ');
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -228,14 +233,13 @@ class _StudentRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: AppText.body14Strong,
                       ),
-                      Text(
-                        wide || row.organizationName.isEmpty
-                            ? '准考证号 ${row.admissionNo}'
-                            : row.organizationName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.caption12,
-                      ),
+                      if (studentMeta.isNotEmpty)
+                        Text(
+                          studentMeta,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption12,
+                        ),
                     ],
                   ),
                 ),
@@ -270,10 +274,11 @@ class _StudentRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                SizedBox(
-                  width: _gradeWidth,
-                  child: Center(child: StudyGradeTag(grade: grade)),
-                ),
+                if (subjectName.isNotEmpty)
+                  SizedBox(
+                    width: _gradeWidth,
+                    child: Center(child: StudyGradeTag(grade: grade)),
+                  ),
                 const SizedBox(
                   width: _chevronWidth,
                   child: Icon(

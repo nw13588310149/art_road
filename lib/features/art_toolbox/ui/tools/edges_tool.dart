@@ -59,16 +59,15 @@ class _EdgesBodyState extends State<_EdgesBody>
   @override
   Widget build(BuildContext context) {
     return ImageToolLayout(
-      stage: (context, wide) => CompareStage(
+      stage: (context) => CompareStage(
         original: widget.image.image,
         processed: result?.image,
         label: '轮廓线稿',
         compare: _compare,
-        wide: wide,
         failed: failed,
         onRetry: reprocess,
       ),
-      panel: (context, wide) => Column(
+      panel: (context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ToolSliderRow(
@@ -97,12 +96,11 @@ class _EdgesBodyState extends State<_EdgesBody>
               reprocess();
             },
           ),
-          if (wide)
-            ToolSwitchRow(
-              label: '与原图并排对比',
-              value: _compare,
-              onChanged: (v) => setState(() => _compare = v),
-            ),
+          ToolSwitchRow(
+            label: '与原图并排对比',
+            value: _compare,
+            onChanged: (v) => setState(() => _compare = v),
+          ),
           const ToolTipCard(
             title: '用线稿检查结构',
             text:

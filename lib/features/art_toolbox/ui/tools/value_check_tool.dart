@@ -224,12 +224,11 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
   @override
   Widget build(BuildContext context) {
     return ImageToolLayout(
-      stage: (context, wide) => CompareStage(
+      stage: (context) => CompareStage(
         original: widget.image.image,
         processed: _processed,
         label: _processedLabel,
         compare: _compare && _view != _ValueView.original,
-        wide: wide,
         failed: _failed,
         onRetry: _retry,
       ),
@@ -237,7 +236,7 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
     );
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     final distribution = _view == _ValueView.levels
         ? _posterized[_levels]?.distribution
         : null;
@@ -317,12 +316,11 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
               }),
             ),
           ),
-        if (wide)
-          ToolSwitchRow(
-            label: '与原图并排对比',
-            value: _compare,
-            onChanged: (v) => _update(() => _compare = v),
-          ),
+        ToolSwitchRow(
+          label: '与原图并排对比',
+          value: _compare,
+          onChanged: (v) => _update(() => _compare = v),
+        ),
         if (distribution != null)
           ToolPanelSection(
             title: '明度分布',

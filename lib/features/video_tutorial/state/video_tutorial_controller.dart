@@ -33,7 +33,9 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
        _repository = repository,
        _storage = storage,
        _args = args,
-       super(VideoTutorialState(checkStatusEnabled: storage.showMemberContent)) {
+       super(
+         VideoTutorialState(checkStatusEnabled: storage.showMemberContent),
+       ) {
     _myInfoReady ??= Completer<void>();
     unawaited(refresh());
   }
@@ -83,7 +85,10 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
       final menus = _parseMenus(responses[1].data);
       final vipExpireDate = _parseVipExpireDate(responses[2].data);
 
-      final selectedMenuId = _resolveSelectedMenuId(menus, state.selectedMenuId);
+      final selectedMenuId = _resolveSelectedMenuId(
+        menus,
+        state.selectedMenuId,
+      );
       final selectedChildId = _resolveSelectedChildId(
         menus,
         selectedMenuId,
@@ -119,11 +124,8 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
     }
 
     final nextChildId = _resolveSelectedChildId(state.menus, menuId, null);
-    final cached = _listCache[_cacheKey(
-      menuId,
-      nextChildId,
-      state.searchKeyword,
-    )];
+    final cached =
+        _listCache[_cacheKey(menuId, nextChildId, state.searchKeyword)];
     // ⚠️ "全部" tab 的 id 是 null，但 copyWith(selectedMenuId: null) 会被当成
     // "未传"而保留旧值。必须用 clearSelectedMenuId 显式清空，UI 才能切回"全部"。
     if (cached != null) {
@@ -158,11 +160,12 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
       return;
     }
 
-    final cached = _listCache[_cacheKey(
-      state.selectedMenuId,
-      childId,
-      state.searchKeyword,
-    )];
+    final cached =
+        _listCache[_cacheKey(
+          state.selectedMenuId,
+          childId,
+          state.searchKeyword,
+        )];
     if (cached != null) {
       state = state.copyWith(
         selectedChildId: childId,
@@ -217,11 +220,12 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
       return;
     }
 
-    final cached = _listCache[_cacheKey(
-      state.selectedMenuId,
-      state.selectedChildId,
-      keyword,
-    )];
+    final cached =
+        _listCache[_cacheKey(
+          state.selectedMenuId,
+          state.selectedChildId,
+          keyword,
+        )];
     if (cached != null) {
       state = state.copyWith(
         searchKeyword: keyword,
@@ -505,7 +509,9 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
       state = state.copyWith(
         loading: false,
         loadingMore: false,
-        errorMessage: response.displayMsg,
+        errorMessage: response.displayMsg.isEmpty
+            ? '请检查网络连接后重试'
+            : response.displayMsg,
       );
       return;
     }
@@ -531,7 +537,7 @@ class VideoTutorialController extends StateNotifier<VideoTutorialState> {
       videoList: merged,
       currentPage: page,
       hasMore: hasMore,
-      errorMessage: merged.isEmpty ? '暂无视频数据' : '',
+      errorMessage: '',
     );
   }
 

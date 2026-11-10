@@ -62,6 +62,7 @@ import 'widgets/schedule_color_swatch_picker.dart';
 import 'widgets/schedule_course_card.dart';
 import 'widgets/schedule_grid_shell.dart';
 import 'widgets/schedule_idle_slot.dart';
+import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 通用配色（与学生 / 管理员端 schedule 保持一致）----------------------
@@ -225,6 +226,8 @@ class _TeacherLessonScheduleViewState
 
   /// 当前周的网格数据，[7 天][N 节] → 多张课卡。
   late List<List<List<_ScheduleCardData>>> _serverCells;
+  // 请求中的教学周可能早于画面提交。首屏资料加载完成后继续使用最后一次选择。
+  ({DateTime start, int number})? _requestedWeek;
   int _scheduleLoadGeneration = 0;
 
   String _isoDate(DateTime d) => campusDate(d);
@@ -240,8 +243,10 @@ class _TeacherLessonScheduleViewState
   void _gotoPrev() {
     unawaited(
       _loadSchedule(
-        weekStart: _weekStart.subtract(const Duration(days: 7)),
-        weekNumber: _currentWeek - 1,
+        weekStart: (_requestedWeek?.start ?? _weekStart).subtract(
+          const Duration(days: 7),
+        ),
+        weekNumber: (_requestedWeek?.number ?? _currentWeek) - 1,
       ),
     );
   }
@@ -249,8 +254,10 @@ class _TeacherLessonScheduleViewState
   void _gotoNext() {
     unawaited(
       _loadSchedule(
-        weekStart: _weekStart.add(const Duration(days: 7)),
-        weekNumber: _currentWeek + 1,
+        weekStart: (_requestedWeek?.start ?? _weekStart).add(
+          const Duration(days: 7),
+        ),
+        weekNumber: (_requestedWeek?.number ?? _currentWeek) + 1,
       ),
     );
   }
@@ -291,11 +298,9 @@ class _TeacherLessonScheduleViewState
       final focus = ref
           .read(smartCampusControllerProvider)
           .teacherScheduleFocus;
-      DateTime weekStart = _weekStart;
-      var weekNumber = _currentWeek;
       if (focus != null) {
-        weekStart = scheduleMondayOf(focus.courseDate);
-        weekNumber = scheduleTeachingWeekOf(weekStart);
+        final weekStart = scheduleMondayOf(focus.courseDate);
+        final weekNumber = scheduleTeachingWeekOf(weekStart);
         if (mounted) {
           setState(() {
             _weekStart = weekStart;
@@ -310,7 +315,7 @@ class _TeacherLessonScheduleViewState
       if (!mounted) return;
       await Future.wait([_loadTimeConfig(), _loadDirectories()]);
       if (!mounted) return;
-      await _loadSchedule(weekStart: weekStart, weekNumber: weekNumber);
+      await _loadSchedule();
     });
   }
 
@@ -462,8 +467,10 @@ class _TeacherLessonScheduleViewState
   }
 
   Future<void> _loadSchedule({DateTime? weekStart, int? weekNumber}) async {
-    final targetWeekStart = weekStart ?? _weekStart;
-    final targetWeekNumber = weekNumber ?? _currentWeek;
+    final targetWeekStart = weekStart ?? _requestedWeek?.start ?? _weekStart;
+    final targetWeekNumber =
+        weekNumber ?? _requestedWeek?.number ?? _currentWeek;
+    _requestedWeek = (start: targetWeekStart, number: targetWeekNumber);
     final generation = ++_scheduleLoadGeneration;
     final repo = ref.read(teacherRepositoryProvider);
     final start = targetWeekStart;
@@ -817,18 +824,19 @@ class _TeacherLessonScheduleViewState
     int slotIdx,
     List<List<List<_ScheduleCardData>>> cells,
   ) {
-    var maxCards = 1;
+    var maxHeight = ScheduleIdleSlot.designSlotHeight;
     for (var d = 0; d < cells.length; d++) {
       if (slotIdx < cells[d].length) {
-        final n = cells[d][slotIdx].length;
-        if (n > maxCards) maxCards = n;
+        final height = scheduleCourseCellHeight(
+          cells[d][slotIdx].map((card) => card.display),
+        );
+        if (height > maxHeight) maxHeight = height;
       }
     }
-    // N 张课卡：上下各 6 留白，卡片之间 6。
-    final base = maxCards * (kScheduleCourseCardHeight + 6) + 6;
-    // 编辑模式下在卡片下方挂「申请小课」按钮（34 高 + 6 间距）。
-    if (_mode == _ScheduleMode.edit) return base + 40;
-    return base;
+    if (_mode == _ScheduleMode.edit) {
+      return maxHeight + AppSpace.s8 + ScheduleCourseCellAction.height;
+    }
+    return maxHeight;
   }
 
   /// 把后端返回的日期字符串归一化到当前周内的 [0..6]，否则返回 -1。
@@ -1110,13 +1118,14 @@ class _TeacherLessonScheduleViewState
     final slots = _buildSlots(cells);
     final days = _buildDayHeaders();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
+    return SmartCampusSchedulePageShell(
+      bodyScrollable: false,
+      header: SmartCampusScheduleTopBar(
+        child: AppPageHeader(
           title: '授课课表',
           subtitle: _subtitle,
           onBack: widget.onBack,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s20),
           actions: [
             AppButton(
               label: '申请记录',
@@ -1135,38 +1144,53 @@ class _TeacherLessonScheduleViewState
               onChanged: (m) => setState(() => _mode = m),
             ),
           ],
-          bottom: _TeacherScheduleControlBar(
-            weekStart: _weekStart,
-            isCurrentWeek: _currentWeek == kScheduleCurrentTeachingWeek,
-            onPrev: _gotoPrev,
-            onCurrent: _gotoCurrent,
-            onNext: _gotoNext,
-            onPickDate: _pickDate,
-          ),
         ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              AppSpace.page,
-            ),
-            child: ScheduleGridShell(
-              key: _scheduleGridKey,
-              slots: slots,
-              days: days,
-              body: _DaysBodyArea(
-                mode: _mode,
-                slots: slots,
-                days: days,
-                cells: cells,
-                onApplySmallLesson: _onApplySmallLesson,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.page,
+          0,
+          AppSpace.page,
+          AppSpace.page,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppCard(
+              color: AppColors.surfaceSubtle,
+              bordered: false,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpace.s12,
+                vertical: AppSpace.s8,
+              ),
+              child: _TeacherScheduleControlBar(
+                weekStart: _weekStart,
+                week: _currentWeek,
+                isCurrentWeek: _currentWeek == kScheduleCurrentTeachingWeek,
+                onPrev: _gotoPrev,
+                onCurrent: _gotoCurrent,
+                onNext: _gotoNext,
+                onPickDate: _pickDate,
               ),
             ),
-          ),
+            const SizedBox(height: AppSpace.s12),
+            Expanded(
+              child: ScheduleGridShell(
+                key: _scheduleGridKey,
+                slots: slots,
+                days: days,
+                body: _DaysBodyArea(
+                  mode: _mode,
+                  slots: slots,
+                  days: days,
+                  cells: cells,
+                  onApplySmallLesson: _onApplySmallLesson,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -1178,6 +1202,7 @@ class _TeacherLessonScheduleViewState
 class _TeacherScheduleControlBar extends StatelessWidget {
   const _TeacherScheduleControlBar({
     required this.weekStart,
+    required this.week,
     required this.isCurrentWeek,
     required this.onPrev,
     required this.onCurrent,
@@ -1186,6 +1211,7 @@ class _TeacherScheduleControlBar extends StatelessWidget {
   });
 
   final DateTime weekStart;
+  final int week;
   final bool isCurrentWeek;
   final VoidCallback onPrev;
   final VoidCallback onCurrent;
@@ -1196,38 +1222,45 @@ class _TeacherScheduleControlBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const AppTag(label: '大课', dotColor: _kStatusPurple),
-        const SizedBox(width: AppSpace.s8),
-        const AppTag(label: '小课', dotColor: _kStatusGreen),
-        const Spacer(),
-        AppIconButton(
-          icon: Icons.chevron_left_rounded,
-          semanticLabel: '上一周',
-          size: AppButtonSize.sm,
-          onTap: onPrev,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  text: '教学周第 ',
+                  children: [
+                    TextSpan(
+                      text: '$week',
+                      style: const TextStyle(color: AppColors.brand),
+                    ),
+                    const TextSpan(text: ' 周'),
+                  ],
+                ),
+                style: AppText.title16.copyWith(height: 1),
+              ),
+              const SizedBox(height: AppSpace.s8),
+              Wrap(
+                spacing: AppSpace.s8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const AppTag(label: '大课', dotColor: _kStatusPurple),
+                  Text('不可编辑', style: AppText.caption12),
+                  const AppTag(label: '小课', dotColor: _kStatusGreen),
+                  Text('编辑模式下可申请', style: AppText.caption12),
+                ],
+              ),
+            ],
+          ),
+        ),
+        ScheduleGridWeekSwitcher(
+          onPrev: onPrev,
+          onCurrent: isCurrentWeek ? null : onCurrent,
+          onNext: onNext,
+          grouped: false,
         ),
         const SizedBox(width: AppSpace.s8),
-        AppButton(
-          label: '本周',
-          variant: AppButtonVariant.secondary,
-          size: AppButtonSize.sm,
-          onTap: isCurrentWeek ? null : onCurrent,
-        ),
-        const SizedBox(width: AppSpace.s8),
-        AppIconButton(
-          icon: Icons.chevron_right_rounded,
-          semanticLabel: '下一周',
-          size: AppButtonSize.sm,
-          onTap: onNext,
-        ),
-        const SizedBox(width: AppSpace.s8),
-        AppButton(
-          label: campusDate(weekStart),
-          icon: Icons.calendar_today_outlined,
-          variant: AppButtonVariant.secondary,
-          size: AppButtonSize.sm,
-          onTap: onPickDate,
-        ),
+        ScheduleGridDateButton(label: campusDate(weekStart), onTap: onPickDate),
       ],
     );
   }
@@ -1364,16 +1397,17 @@ class _CellContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     final isEditing = mode == _ScheduleMode.edit;
     if (cards.isEmpty) {
-      // 查看模式空格留白；编辑模式放「申请小课」按钮。
       if (isEditing) {
         return Padding(
-          padding: EdgeInsets.all(ui(6)),
+          padding: const EdgeInsets.all(kScheduleCourseCellInset),
           child: Align(
             alignment: Alignment.topCenter,
-            child: _ApplySmallLessonButton(onTap: onApplySmallLesson),
+            child: ScheduleCourseCellAction(
+              label: '申请小课',
+              onTap: onApplySmallLesson,
+            ),
           ),
         );
       }
@@ -1381,27 +1415,33 @@ class _CellContent extends StatelessWidget {
     }
     // 编辑模式：无论本格当前是大课还是小课，都允许在卡片下方继续申请小课。
     final isPast = isScheduleSlotPast(slotDate: slotDate, endHm: slotEnd);
-    return Padding(
-      padding: EdgeInsets.all(ui(6)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < cards.length; i++) ...[
-            if (i > 0) SizedBox(height: ui(6)),
-            ScheduleCourseCard(
-              data: cards[i].display,
-              editable: isEditing && _isSmall(cards[i].kind),
-              isPast: isPast,
-              topRightBadge: cards[i].applyStatus != null
-                  ? _ApplyStatusBadge(status: cards[i].applyStatus!)
-                  : null,
-            ),
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: const EdgeInsets.all(kScheduleCourseCellInset),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < cards.length; i++) ...[
+              if (i > 0) const SizedBox(height: kScheduleCourseCardGap),
+              ScheduleCourseCard(
+                data: cards[i].display,
+                editable: isEditing && _isSmall(cards[i].kind),
+                isPast: isPast,
+                topRightBadge: cards[i].applyStatus != null
+                    ? _ApplyStatusBadge(status: cards[i].applyStatus!)
+                    : null,
+              ),
+            ],
+            if (isEditing) ...[
+              const SizedBox(height: AppSpace.s8),
+              ScheduleCourseCellAction(
+                label: '申请小课',
+                onTap: onApplySmallLesson,
+              ),
+            ],
           ],
-          if (isEditing) ...[
-            SizedBox(height: ui(6)),
-            _ApplySmallLessonButton(onTap: onApplySmallLesson),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -1409,24 +1449,6 @@ class _CellContent extends StatelessWidget {
   bool _isSmall(ScheduleCourseCardKind k) =>
       k == ScheduleCourseCardKind.smallOrange ||
       k == ScheduleCourseCardKind.smallBlue;
-}
-
-class _ApplySmallLessonButton extends StatelessWidget {
-  const _ApplySmallLessonButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppButton(
-      label: '申请小课',
-      icon: Icons.add_rounded,
-      variant: AppButtonVariant.quiet,
-      size: AppButtonSize.sm,
-      expand: true,
-      onTap: onTap,
-    );
-  }
 }
 
 // =============================================================================
@@ -1447,18 +1469,9 @@ class _ApplyStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (status) {
-      _ApplyStatus.pending => const AppTag(
-        label: '待审核',
-        tone: AppTone.warning,
-      ),
-      _ApplyStatus.rejected => const AppTag(
-        label: '已驳回',
-        tone: AppTone.danger,
-      ),
-      _ApplyStatus.passed => const AppTag(
-        label: '已通过',
-        tone: AppTone.success,
-      ),
+      _ApplyStatus.pending => const AppTag(label: '待审核', tone: AppTone.warning),
+      _ApplyStatus.rejected => const AppTag(label: '已驳回', tone: AppTone.danger),
+      _ApplyStatus.passed => const AppTag(label: '已通过', tone: AppTone.success),
     };
   }
 }

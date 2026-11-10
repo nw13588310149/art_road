@@ -318,7 +318,7 @@ class _ArtworkReviewWorkspaceState
           AppSpace.page,
           AppSpace.s16,
         );
-        if (constraints.maxWidth >= 820) {
+        if (constraints.maxWidth >= 800) {
           return Padding(
             padding: padding,
             child: Row(
@@ -569,14 +569,19 @@ class _ArtworkReviewWorkspaceState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AppSectionHeader(title: '评分', subtitle: '可以只写评语、不打分'),
-            const SizedBox(height: AppSpace.s12),
+            AppSectionHeader(
+              title: '评分',
+              subtitle: '可以只写评语、不打分',
+              titleStyle: AppText.title16,
+            ),
+            const SizedBox(height: AppSpace.s8),
             _buildScoreInputs(detail),
-            const SizedBox(height: AppSpace.s20),
+            const SizedBox(height: AppSpace.s16),
             AppSectionHeader(
               title: '点评标签',
               subtitle:
                   '已选 ${_tagIds.length} 个，最多 ${ArtworkRules.tagsPerReview} 个',
+              titleStyle: AppText.title16,
               trailing: AppButton(
                 label: '管理标签',
                 variant: AppButtonVariant.text,
@@ -586,9 +591,9 @@ class _ArtworkReviewWorkspaceState
             ),
             const SizedBox(height: AppSpace.s8),
             _buildTagPicker(detail, tagsState),
-            const SizedBox(height: AppSpace.s20),
-            const AppSectionHeader(title: '评语'),
-            const SizedBox(height: AppSpace.s12),
+            const SizedBox(height: AppSpace.s16),
+            AppSectionHeader(title: '评语', titleStyle: AppText.title16),
+            const SizedBox(height: AppSpace.s8),
             AppInputField(
               controller: _comment,
               hint: '写下这张画的优点和需要改进的地方',
@@ -773,6 +778,7 @@ class _StudentCard extends StatelessWidget {
     final myId = detail.myReview?.teacherId;
     final finalScore = work.finalScore;
     return AppCard(
+      title: work.title,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

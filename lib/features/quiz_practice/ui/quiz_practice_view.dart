@@ -7,6 +7,7 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/ui/ui.dart';
 import '../state/quiz_practice_controller.dart';
 import '../state/quiz_practice_state.dart';
+import 'quiz_stats.dart';
 
 /// 题库首页（公开题库与画室题库共用）：统计 + 四种练习方式。
 class QuizPracticeView extends ConsumerWidget {
@@ -56,16 +57,20 @@ class QuizPracticeView extends ConsumerWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: title,
-          subtitle: subtitle,
-          onBack: navigator.canPop() ? navigator.pop : null,
-        ),
-        Expanded(child: body),
-      ],
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            title: title,
+            subtitle: subtitle,
+            onBack: navigator.canPop() ? navigator.pop : null,
+          ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 
@@ -115,62 +120,26 @@ class _QuizContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final overall = _summaryOf(QuizPracticeType.sequence);
     final wrong = _summaryOf(QuizPracticeType.error);
-    final accuracyLow = overall.doneCount > 0 && overall.accuracyPercent < 60;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
-        AppSpace.page,
+        AppSpace.s24,
         AppSpace.s4,
-        AppSpace.page,
+        AppSpace.s24,
         AppSpace.s24,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppCard(
+          AppSectionHeader(
             title: '美术常识',
             subtitle: '美术史、名作鉴赏与联考常识，共 ${overall.allCount} 题',
-            child: Row(
-              children: [
-                Expanded(
-                  child: AppStatTile(
-                    label: '未做',
-                    value: '${overall.notDoneCount}',
-                    unit: '题',
-                    boxed: true,
-                  ),
-                ),
-                const SizedBox(width: AppSpace.s12),
-                Expanded(
-                  child: AppStatTile(
-                    label: '已做',
-                    value: '${overall.doneCount}',
-                    unit: '题',
-                    boxed: true,
-                  ),
-                ),
-                const SizedBox(width: AppSpace.s12),
-                Expanded(
-                  child: AppStatTile(
-                    label: '错题本',
-                    value: '${wrong.allCount}',
-                    unit: '题',
-                    boxed: true,
-                  ),
-                ),
-                const SizedBox(width: AppSpace.s12),
-                Expanded(
-                  child: AppStatTile(
-                    label: '正确率',
-                    value: overall.doneCount > 0
-                        ? '${overall.accuracyPercent}'
-                        : '--',
-                    unit: overall.doneCount > 0 ? '%' : null,
-                    valueColor: accuracyLow ? AppColors.danger : AppColors.ink,
-                    boxed: true,
-                  ),
-                ),
-              ],
-            ),
+          ),
+          const SizedBox(height: AppSpace.s12),
+          QuizStats(
+            notDone: overall.notDoneCount,
+            done: overall.doneCount,
+            wrong: wrong.allCount,
+            accuracyPercent: overall.accuracyPercent,
           ),
           const SizedBox(height: AppSpace.s24),
           const AppSectionHeader(title: '练习方式'),
@@ -224,53 +193,89 @@ class _PracticeModeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = summary.type;
     final isError = type == QuizPracticeType.error;
-    return AppCard(
+    final caption = AppText.caption12;
+    final descriptionHeight =
+        MediaQuery.textScalerOf(context).scale(caption.fontSize!) *
+        caption.height! *
+        2;
+    return AppPressable(
       onTap: onTap,
-      child: Column(
-        children: [
-          SizedBox(
-            width: 112,
-            height: 112,
-            child: CustomPaint(
-              painter: _RingPainter(
-                progress: summary.progress,
-                color: type.accentColor,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpace.s16),
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.br12,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.surfaceSubtle,
+              Color.alphaBlend(
+                type.accentColor.withValues(alpha: 0.12),
+                AppColors.surface,
               ),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      isError
-                          ? '${summary.allCount}'
-                          : '${summary.progressPercent}%',
-                      style: AppText.number(size: 24),
+            ],
+          ),
+        ),
+        child: Column(
+          children: [
+            SizedBox(
+              width: 140,
+              height: 140,
+              child: CustomPaint(
+                painter: _RingPainter(
+                  progress: summary.progress,
+                  color: type.accentColor,
+                ),
+                child: Center(
+                  child: Container(
+                    width: 98,
+                    height: 98,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.surface,
                     ),
-                    const SizedBox(height: 2),
-                    Text(isError ? '道错题' : '学习进度', style: AppText.caption12),
-                  ],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          isError
+                              ? '${summary.allCount}'
+                              : '${summary.progressPercent}%',
+                          style: AppText.displayNumber(size: 24),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isError ? '道错题' : '学习进度',
+                          style: AppText.caption12,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: AppSpace.s12),
-          Text(type.label, style: AppText.title16),
-          const SizedBox(height: AppSpace.s4),
-          Text(
-            type.description,
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.caption12,
-          ),
-          const SizedBox(height: AppSpace.s8),
-          Text(
-            isError
-                ? '已复习 ${summary.doneCount} / ${summary.allCount}'
-                : '已做 ${summary.doneCount} / ${summary.allCount}',
-            style: AppText.number(size: 13, color: AppColors.textSecondary),
-          ),
-        ],
+            const SizedBox(height: AppSpace.s12),
+            Text(type.label, style: AppText.title16),
+            const SizedBox(height: AppSpace.s4),
+            SizedBox(
+              height: descriptionHeight,
+              child: Text(
+                type.description,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: caption,
+              ),
+            ),
+            const SizedBox(height: AppSpace.s8),
+            Text(
+              isError
+                  ? '已复习 ${summary.doneCount} / ${summary.allCount}'
+                  : '已做 ${summary.doneCount} / ${summary.allCount}',
+              style: AppText.number(size: 13, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -318,6 +323,8 @@ class _RingPainter extends CustomPainter {
   final Color color;
 
   static const double _stroke = 8;
+  static const double _startAngle = 3 * math.pi / 4;
+  static const double _sweepAngle = 3 * math.pi / 2;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -325,20 +332,25 @@ class _RingPainter extends CustomPainter {
         const Offset(_stroke / 2, _stroke / 2) &
         Size(size.width - _stroke, size.height - _stroke);
     final track = Paint()
-      ..color = AppColors.surfaceSubtle
+      ..color = AppColors.surface
       ..strokeWidth = _stroke
-      ..style = PaintingStyle.stroke;
-    canvas.drawArc(rect, 0, math.pi * 2, false, track);
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, _startAngle, _sweepAngle, false, track);
     if (progress <= 0) return;
     final fg = Paint()
-      ..color = color
+      ..shader = LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [color, color.withValues(alpha: 0.48)],
+      ).createShader(rect)
       ..strokeWidth = _stroke
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     canvas.drawArc(
       rect,
-      -math.pi / 2,
-      math.pi * 2 * progress.clamp(0.0, 1.0),
+      _startAngle,
+      _sweepAngle * progress.clamp(0.0, 1.0),
       false,
       fg,
     );

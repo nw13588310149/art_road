@@ -65,7 +65,9 @@ class HomeStudySnapshot {
 /// 首页「学情速览」：学生看最近一次已出分考试，教职工看最近一次已发布考试的全画室概况。
 final homeStudySnapshotProvider =
     FutureProvider.autoDispose<HomeStudySnapshot?>((ref) async {
-      final role = ref.watch(shellControllerProvider.select((s) => s.user.role));
+      final role = ref.watch(
+        shellControllerProvider.select((s) => s.user.role),
+      );
       final effectiveRole = role.isNotEmpty
           ? role
           : DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
@@ -223,56 +225,40 @@ class _SnapshotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (data.staff) {
+      return _StudioSnapshotCard(data: data, onOpen: onOpen);
+    }
+
     final full = data.maxScore;
     final tiles = <(int, Widget)>[
-      if (data.staff) ...[
-        (
-          5,
-          AppStatTile(
-            label: '平均分',
-            value: formatScore(data.totalScore),
-            unit: full == null ? null : '/ ${formatScore(full)}',
-            boxed: true,
-          ),
+      (
+        6,
+        AppStatTile(
+          label: '总分',
+          value: formatScore(data.totalScore),
+          unit: full == null ? null : '/ ${formatScore(full)}',
+          delta: data.scoreChange,
+          deltaSuffix: ' 分',
+          valueColor: AppColors.brand,
+          boxed: true,
         ),
-        (
-          4,
-          AppStatTile(
-            label: '最高分',
-            value: formatScore(data.topScore),
-            boxed: true,
-          ),
+      ),
+      (
+        5,
+        AppStatTile(
+          label: '总排名',
+          value: data.ranking?.toString() ?? '—',
+          unit: data.participants == null ? null : '/ ${data.participants}',
+          delta: data.rankingChange,
+          deltaSuffix: ' 名',
+          boxed: true,
         ),
-      ] else ...[
-        (
-          6,
-          AppStatTile(
-            label: '总分',
-            value: formatScore(data.totalScore),
-            unit: full == null ? null : '/ ${formatScore(full)}',
-            delta: data.scoreChange,
-            deltaSuffix: ' 分',
-            valueColor: AppColors.brand,
-            boxed: true,
-          ),
-        ),
-        (
-          5,
-          AppStatTile(
-            label: '总排名',
-            value: data.ranking?.toString() ?? '—',
-            unit: data.participants == null ? null : '/ ${data.participants}',
-            delta: data.rankingChange,
-            deltaSuffix: ' 名',
-            boxed: true,
-          ),
-        ),
-      ],
+      ),
       for (final subject in data.subjects)
         (
           4,
           AppStatTile(
-            label: data.staff ? '${subject.name}均分' : subject.name,
+            label: subject.name,
             value: formatScore(subject.score),
             unit: subject.grade.isEmpty ? null : '${subject.grade} 档',
             boxed: true,
@@ -298,6 +284,188 @@ class _SnapshotCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _StudioSnapshotCard extends StatelessWidget {
+  const _StudioSnapshotCard({required this.data, required this.onOpen});
+
+  final HomeStudySnapshot data;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final full = data.maxScore;
+    final metadata = [
+      if (data.examDate.isNotEmpty) data.examDate,
+      if (data.participants case final count?) '全画室 $count 人',
+    ].join(' · ');
+
+    return AppCard(
+      onTap: onOpen,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppSectionHeader(
+                title: data.title,
+                titleStyle: AppText.title16,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '查看学情',
+                      style: AppText.body13.copyWith(
+                        color: AppColors.brandDeep,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpace.s4),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: AppColors.brandDeep,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpace.s8),
+              Wrap(
+                spacing: AppSpace.s12,
+                runSpacing: AppSpace.s4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (data.examName.isNotEmpty)
+                    Text(data.examName, style: AppText.body14Strong),
+                  if (metadata.isNotEmpty)
+                    Text(metadata, style: AppText.body13),
+                ],
+              ),
+              const SizedBox(height: AppSpace.s12),
+              const Divider(height: 1, color: AppColors.lineSoft),
+            ],
+          ),
+          const SizedBox(height: AppSpace.s12),
+          Row(
+            children: [
+              Expanded(
+                flex: 5,
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: AppColors.brandWash,
+                    borderRadius: AppRadius.br12,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpace.s12,
+                      vertical: AppSpace.s8,
+                    ),
+                    child: _StudioMetric(
+                      label: '平均分',
+                      score: data.totalScore,
+                      unit: full == null ? null : '/ ${formatScore(full)}',
+                      primary: true,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpace.s16),
+              Expanded(
+                flex: 3,
+                child: _StudioMetric(label: '最高分', score: data.topScore),
+              ),
+              if (data.subjects.isNotEmpty) ...[
+                const SizedBox(
+                  height: 42,
+                  child: VerticalDivider(width: 16, color: AppColors.line),
+                ),
+                for (final subject in data.subjects)
+                  Expanded(
+                    flex: 3,
+                    child: _StudioMetric(
+                      label: '${subject.name}均分',
+                      score: subject.score,
+                      accent: ArtSubject.tryParse(subject.name)?.accent,
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StudioMetric extends StatelessWidget {
+  const _StudioMetric({
+    required this.label,
+    required this.score,
+    this.unit,
+    this.accent,
+    this.primary = false,
+  });
+
+  final String label;
+  final double? score;
+  final String? unit;
+  final Color? accent;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            if (accent case final color?) ...[
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: AppSpace.s4),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption12Strong,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpace.s4),
+        SizedBox(
+          height: 36,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.bottomLeft,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: formatScore(score),
+                    style: AppText.displayNumber(
+                      size: primary ? 32 : 24,
+                      color: primary ? AppColors.brandDeep : AppColors.ink,
+                    ),
+                  ),
+                  if (unit case final unitLabel?)
+                    TextSpan(text: ' $unitLabel', style: AppText.caption12),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

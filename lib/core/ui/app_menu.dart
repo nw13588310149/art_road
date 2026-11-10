@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../widgets/app_asset_graphic.dart';
 import 'app_colors.dart';
 import 'app_motion.dart';
 import 'app_pressable.dart';
@@ -15,13 +16,15 @@ class AppMenuItem<T> {
     required this.value,
     required this.label,
     this.icon,
+    this.iconAsset,
     this.danger = false,
     this.enabled = true,
-  });
+  }) : assert(icon == null || iconAsset == null);
 
   final T value;
   final String label;
   final IconData? icon;
+  final String? iconAsset;
   final bool danger;
   final bool enabled;
 }
@@ -155,6 +158,7 @@ class _AppMenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = item.danger ? AppColors.danger : AppColors.ink;
     final icon = item.icon;
+    final iconAsset = item.iconAsset;
     return AppPressable(
       onTap: onTap,
       enabled: item.enabled,
@@ -163,8 +167,11 @@ class _AppMenuRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Row(
           children: [
-            if (icon != null) ...[
-              Icon(icon, size: 18, color: color),
+            if (iconAsset != null || icon != null) ...[
+              if (iconAsset != null)
+                AppAssetGraphic(iconAsset, width: 18, height: 18)
+              else
+                Icon(icon, size: 18, color: color),
               const SizedBox(width: AppSpace.s8),
             ],
             Expanded(

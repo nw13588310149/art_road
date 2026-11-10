@@ -1,5 +1,15 @@
 abstract final class AppAssets {
+  static const homeUserMenuLogout = 'assets/images/home/3.png';
+  static const homeUserMenuProfile = 'assets/images/home/2.png';
+  static const homeUserMenuRegion = 'assets/images/home/1.png';
+  static const leftNavScale = 'assets/images/shell/leftNav/sf.png';
+  static const leftNavActiveBg = 'assets/images/home/active.png';
+  static const leftNavBottom = 'assets/images/shell/leftNav/bottom.png';
+
   static const authBg = 'assets/images/auth/bg_art.jpg';
+  static const authPhone = 'assets/images/auth/phone.png';
+  static const authPassword = 'assets/images/auth/pass.png';
+  static const authSms = 'assets/images/auth/code.png';
 
   /// 艺考网标识（来自艺考网品牌库 yikao-marketing/brand/logo）。
   static const shellLogo = 'assets/images/brand/yikaowang_logo.svg';
@@ -21,6 +31,11 @@ abstract final class AppAssets {
   static const leftNavShukan = 'assets/images/shell/leftNav/shukan.png';
 
   static const shellV2Search = 'assets/images/shell/topbar_v2/search.png';
+  static const shellV2Help = 'assets/images/shell/topbar_v2/help.png';
+  static const shellV2Notice = 'assets/images/shell/topbar_v2/notice.png';
+  static const shellV2Setting = 'assets/images/shell/topbar_v2/setting.png';
+  static const shellV2MoreArrow =
+      'assets/images/shell/topbar_v2/more_arrow.png';
 
   /// 全局页面 loading / 下拉刷新动画。
   static const homeLoading = 'assets/images/home/loading.gif';
@@ -35,8 +50,7 @@ abstract final class AppAssets {
   static const homeRili = 'assets/images/home/rili.png';
 
   /// 课表页控制条 · 日期选择 pill 日历图标。
-  static const iconScheduleCalendar =
-      'assets/images/new/0图标/课表-日历.png';
+  static const iconScheduleCalendar = 'assets/images/new/0图标/课表-日历.png';
 
   /// 学生列表 · 性别图标（男 / 女）。个人信息页性别选择仍用 [infoGenderMale] 等。
   static const iconGenderMale = 'assets/images/new/0图标/男生.png';
@@ -51,8 +65,13 @@ abstract final class AppAssets {
       'assets/images/new/0图标/Frame 1912057261.png';
 
   // 首页九宫格通用图标
+  static const homeQuickNews = 'assets/images/home/home4.png';
+  static const homeQuickQuestionBank = 'assets/images/home/home5.png';
+  static const homeQuickGroupChat = 'assets/images/home/home7.png';
+  static const homeQuickSchoolCircle = 'assets/images/home/home9.png';
+  static const schoolQuickVideo = 'assets/images/home/schoolVideo.png';
+  static const campusHomeActions = 'assets/images/smartCampus/home_actions';
 
-  // 我的云盘 / 我的笔记 左侧分类 —— 选中 / 未选中 icon。
   /// 左侧导航选中态背景图：深色（≈ #202020）圆角矩形 PNG，替代原本写死的纯色。
   /// 在 [_NavTile] 展开/折叠两态都通过 `BoxFit.cover` 铺满命中区，外层
   /// `BorderRadius.circular(12)` 仍保留，把图本身边缘渐变的透明像素裁掉。
@@ -60,7 +79,28 @@ abstract final class AppAssets {
   /// 顶到底的紫渐变，自带 12 圆角）。替代 [_WeekCard] 中写死的 LinearGradient。
   /// 侧栏底部「需求反馈」入口图标。
   static const homeFeedbackIcon = 'assets/images/home/yj.png';
+  static const newsViews = 'assets/images/home/eye.png';
+  static const profileQr = 'assets/images/info/icon1.png';
+  static const profileRecommend = 'assets/images/info/icon2.png';
+  static const profileFeedback = 'assets/images/info/icon3.png';
+  static const profileService = 'assets/images/info/icon4.png';
+  static const profileRedeem = 'assets/images/info/icon5.png';
+  static const profileHeroBg = 'assets/images/info/bg.png';
+  static const profilePlanBg = 'assets/images/info/card.png';
+  static const profileVipMark = 'assets/images/info/vip.png';
+  static const profileVipActivated = 'assets/images/info/2.png';
+  static const profileFeedbackBg = 'assets/images/info/topBg.png';
+  static const profileGenderBg = 'assets/images/info/g.png';
+  static const profileGenderMale = 'assets/images/info/man.png';
+  static const profileGenderMaleSelected = 'assets/images/info/man1.png';
+  static const profileGenderFemale = 'assets/images/info/women.png';
+  static const profileGenderFemaleSelected = 'assets/images/info/women1.png';
+  static const listChevron = 'assets/images/info/y.png';
   static const emptyCoursePlaceholder = 'assets/images/404/kc.png';
+  static const emptyCollectionPlaceholder = 'assets/images/404/sc.png';
+  static const emptyCloudPlaceholder = 'assets/images/404/wx.png';
+  static const emptyNotesPlaceholder = 'assets/images/404/kj.png';
+
   /// 我的收藏页空状态插图。
   /// 考评 / 批改类空状态插图（执笔评卷）。
   /// 考试 / 成绩类空状态插图（翻开的书本）。
@@ -70,9 +110,31 @@ abstract final class AppAssets {
   /// 联网搜索 chip——开启态：紫色描边的地球 PNG，与深度思考激活态色系
   /// （#715EFE）保持一致。
   // 小美同学欢迎区头像：单图自带渐变背景与阴影，直接铺成 52×52
-  static const aiChatXiaoYiIcon = 'assets/images/aichat/qiu.gif';
+  static const aiChatMascot = 'assets/images/aichat/qiu.gif';
+  static const aiChatToolBg = 'assets/images/home/aibg.png';
+  static const homeTodayBg = 'assets/images/home/bgc.png';
+  static const aiChatNew = 'assets/images/aichat/v2/ai_new_chat_plus.svg';
+  static const aiChatMore = 'assets/images/aichat/v2/ai_history_more.svg';
+  static const aiChatHistoryFilter =
+      'assets/images/aichat/v2/ai_history_filter.svg';
+  static const aiChatAttach = 'assets/images/aichat/v2/ai_attach.svg';
+  static const aiChatSendArrow = 'assets/images/aichat/v2/ai_send.svg';
+  static const aiChatSendDisabled = 'assets/images/aichat/Button1.png';
+  static const aiChatSearch = 'assets/images/aichat/aichat2.png';
+  static const aiChatSearchSelected = 'assets/images/aichat/aichat2_active.png';
+  static const aiChatCopy = 'assets/images/aichat/copy.png';
+  static const aiChatEdit = 'assets/images/aichat/remove.png';
+  static const aiChatThink = 'assets/images/aichat/v2/ai_chip_think_idle.svg';
+  static const aiChatThinkSelected =
+      'assets/images/aichat/v2/ai_chip_think_active.svg';
+  static const aiChatSuggest = 'assets/images/aichat/v2/ai_tool_suggest.svg';
+  static const aiChatPlanBook =
+      'assets/images/aichat/ai_v2_tool_plan_vector_1.svg';
+  static const aiChatPlanMark =
+      'assets/images/aichat/ai_v2_tool_plan_vector_2.svg';
   // 效率工具卡背景图（与原渐变同色调，直接平铺即可）
 
+  static const videoV2CardViews = 'assets/images/video/1.png';
   static const videoV2Back = 'assets/images/video/2.png';
   static const videoV2CenterPlay = 'assets/images/video/3.png';
   static const videoV2CenterPause = 'assets/images/video/4.png';
@@ -84,15 +146,33 @@ abstract final class AppAssets {
   static const videoV2Setting = 'assets/images/video/10.png';
   static const videoV2FullscreenExit = 'assets/images/video/11.png';
   static const videoV2Fullscreen = 'assets/images/video/12.png';
+  static const videoV2Share = 'assets/images/video/13.png';
+  static const videoV2Star = 'assets/images/video/14.png';
+  static const videoV2StarFilled = 'assets/images/video/15.png';
   static const videoV2SeekForward15 = 'assets/images/video/16.png';
 
+  static const cloudCategorySelected = 'assets/images/home/nav4.png';
+  static const cloudCategoryIdle = 'assets/images/home/nav5.png';
+  static const cloudFolderIcon = 'assets/images/yunpan/yp1.png';
   static const cloudActionMore = 'assets/images/yunpan/yp2.png';
   static const cloudFolderFilledBg = 'assets/images/yunpan/yp8.png';
   static const cloudFolderEmptyBg = 'assets/images/yunpan/yp9.png';
+  static const addCategory = 'assets/images/yunpan/yp6.png';
 
   /// 我的云盘 / 课件中心 2.0 资产
   /// 1.png 上传弹窗顶部装饰图（含纸张、结构素描）
   static const coursewareUploadHeader = 'assets/images/courseware/1.png';
+  static const coursewareSort = 'assets/images/courseware/4.png';
+  static const coursewareRefresh = 'assets/images/courseware/5.png';
+  static const coursewareUploadFab = 'assets/images/courseware/6.png';
+  static const coursewareNewFolder = 'assets/images/courseware/13.png';
+  static const noteCard = 'assets/images/sound/bg.png';
+  static const noteMore = 'assets/images/note/1.png';
+  static const noteStar = 'assets/images/note/2.png';
+  static const noteCreate = 'assets/images/note/3.png';
+  static const noteBack = 'assets/images/note/5.png';
+  static const noteTemplateSelected = 'assets/images/note/6.png';
+  static const noteTemplateIdle = 'assets/images/note/7.png';
   static const coursewareFileTypePdf = 'assets/images/courseware/7.png';
   static const coursewareFileTypeImage = 'assets/images/courseware/8.png';
   static const coursewareFileTypeDoc = 'assets/images/courseware/9.png';
@@ -108,6 +188,16 @@ abstract final class AppAssets {
 
   /// 校圈（社区动态）
   static const xiaoquanHeaderBg = 'assets/images/xiaoquan/bg.png';
+  static const circlePublish = 'assets/images/home/add.png';
+  static const circleLike = 'assets/images/circle/fav2.png';
+  static const circleLiked = 'assets/images/circle/fav1.png';
+  static const circleComment = 'assets/images/circle/msg1.png';
+  static const circleSave = 'assets/images/circle/sc2.png';
+  static const circleSaved = 'assets/images/circle/sc1.png';
+  static const circleLikeOnImage = 'assets/images/circle/fav.png';
+  static const circleCommentOnImage = 'assets/images/circle/msg.png';
+  static const circleSaveOnImage = 'assets/images/circle/sc.png';
+
   /// 课表页顶栏背景（auth 模块 bgtop，白→淡紫渐变 + 顶圆角）
   static const authBgTop = 'assets/images/auth/bgtop.png';
 
@@ -163,8 +253,7 @@ abstract final class AppAssets {
       'assets/images/smartCampus/schedule_edit/repeat.png';
 
   /// 管理员 · 排课与课表 · 小课申请审核列表卡片 · 班级图标。
-  static const adminSmallCourseApplyCardClass =
-      'assets/images/new/01/xk.png';
+  static const adminSmallCourseApplyCardClass = 'assets/images/new/01/xk.png';
 
   /// 宿管 · 查寝（按宿舍 / 历史）· 顶部统计卡背景（从左到右）。
   static const dormCheckStatCard1 =
@@ -275,6 +364,12 @@ abstract final class AppAssets {
   /// 作业与批改 · 发布作业截止时间 / 学生我的作业截止时间。
   static const homeworkDeadlineIcon =
       'assets/images/smartCampus/teacher/homework/deadline_icon.png';
+  static const homeworkHistoryIcon =
+      'assets/images/smartCampus/teacher/homework/history_icon.png';
+  static const homeworkPublishIcon =
+      'assets/images/smartCampus/teacher/homework/publish_icon.png';
+  static const teacherExamHistoryIcon =
+      'assets/images/smartCampus/teacher/exam/history_icon.png';
 
   /// 作业点评抽屉 · 附件下载 / 在线预览 / 语音点评 / 删除语音。
   static const homeworkReviewDownloadIcon =
@@ -298,8 +393,7 @@ abstract final class AppAssets {
   static const groupChatSet = 'assets/images/groupChat/set.png';
   static const groupChatInfo = 'assets/images/new/群聊/群聊-群公告.png';
   static const groupChatMessage = 'assets/images/new/群聊/群聊-消息.png';
-  static const groupChatMessageMuted =
-      'assets/images/new/群聊/群聊-消息免打扰0.png';
+  static const groupChatMessageMuted = 'assets/images/new/群聊/群聊-消息免打扰0.png';
   static const groupChatVoice = 'assets/images/groupChat/voice.png';
   static const groupChatVoiceMode = 'assets/images/groupChat/voice1.png';
   static const groupChatMsg = 'assets/images/groupChat/msg.png';

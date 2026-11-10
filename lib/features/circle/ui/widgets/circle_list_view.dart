@@ -98,11 +98,11 @@ class CircleListView extends StatelessWidget {
             physics: const AlwaysScrollableScrollPhysics(
               parent: ClampingScrollPhysics(),
             ),
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
               AppSpace.page,
               AppSpace.s4,
               AppSpace.page,
-              AppSpace.s24,
+              onPublish == null ? AppSpace.s24 : 72,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,

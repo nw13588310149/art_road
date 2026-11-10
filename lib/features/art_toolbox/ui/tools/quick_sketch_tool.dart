@@ -47,43 +47,19 @@ class _QuickSketchToolState extends State<QuickSketchTool> {
     return ToolPageScaffold(
       tool: ArtTool.quickSketch,
       onBack: widget.onBack,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final settings = _buildSettings();
-          final preview = _ReferencePreview(set: _set);
-          const padding = EdgeInsets.fromLTRB(
-            AppSpace.page,
-            0,
-            AppSpace.page,
-            AppSpace.s24,
-          );
-          if (constraints.maxWidth >= 760) {
-            return SingleChildScrollView(
-              padding: padding,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: settings),
-                  const SizedBox(width: AppSpace.s16),
-                  SizedBox(width: 320, child: preview),
-                ],
-              ),
-            );
-          }
-          return SingleChildScrollView(
-            padding: padding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [settings, const SizedBox(height: AppSpace.s16), preview],
-            ),
-          );
-        },
+      bodyTopInset: 0,
+      body: ImageToolLayout(
+        stage: (_) =>
+            SingleChildScrollView(primary: false, child: _buildSettings()),
+        panel: (_) => _ReferencePreview(set: _set),
       ),
     );
   }
 
   Widget _buildSettings() {
     return AppCard(
+      bordered: false,
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -171,6 +147,8 @@ class _ReferencePreview extends StatelessWidget {
     final assets = set.assets.take(9).toList();
     return AppCard(
       title: '「${set.label}」参考图',
+      bordered: false,
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

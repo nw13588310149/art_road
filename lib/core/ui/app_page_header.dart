@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'app_icon_button.dart';
 import 'app_spacing.dart';
-import 'app_text.dart';
 
-/// 页头：可选返回按钮 + 标题 + 副标题 + 右侧操作，[bottom] 放筛选条或页签。
-///
-/// 多个操作之间自动留 8px 间距；主操作放在最右侧。
+/// 页面工具栏：只呈现返回、操作和筛选。页面名称和说明用于无障碍导航。
 class AppPageHeader extends StatelessWidget {
   const AppPageHeader({
     required this.title,
@@ -16,7 +13,7 @@ class AppPageHeader extends StatelessWidget {
     this.bottom,
     this.padding = const EdgeInsets.fromLTRB(
       AppSpace.page,
-      AppSpace.s16,
+      AppSpace.s12,
       AppSpace.page,
       AppSpace.s12,
     ),
@@ -32,58 +29,45 @@ class AppPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final note = subtitle;
-    return Padding(
-      padding: padding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              if (onBack != null) ...[
-                AppIconButton(
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  semanticLabel: '返回',
-                  size: AppButtonSize.sm,
-                  onTap: onBack,
-                ),
-                const SizedBox(width: AppSpace.s12),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.title20,
-                    ),
-                    if (note != null && note.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        note,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.body13,
-                      ),
-                    ],
+    final hasActions = onBack != null || actions.isNotEmpty;
+    final filters = bottom;
+    if (!hasActions && filters == null) return const SizedBox.shrink();
+
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: title,
+      hint: subtitle,
+      child: Padding(
+        padding: padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (hasActions)
+              Row(
+                children: [
+                  if (onBack != null) ...[
+                    AppIconButton.back(onTap: onBack),
+                    const SizedBox(width: AppSpace.s12),
                   ],
-                ),
+                  if (actions.isNotEmpty)
+                    Expanded(
+                      child: Wrap(
+                        alignment: WrapAlignment.end,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: AppSpace.s8,
+                        runSpacing: AppSpace.s8,
+                        children: actions,
+                      ),
+                    ),
+                ],
               ),
-              for (var i = 0; i < actions.length; i++) ...[
-                SizedBox(width: i == 0 ? AppSpace.s12 : AppSpace.s8),
-                actions[i],
-              ],
-            ],
-          ),
-          if (bottom != null) ...[
-            const SizedBox(height: AppSpace.s12),
-            bottom!,
+            if (hasActions && filters != null)
+              const SizedBox(height: AppSpace.s12),
+            ?filters,
           ],
-        ],
+        ),
       ),
     );
   }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart' show IconData, Icons;
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 
 class HomeBannerItem {
-  const HomeBannerItem({required this.imageUrl});
+  const HomeBannerItem({required this.imageUrl, this.title = ''});
 
   final String imageUrl;
+  final String title;
 }
 
 /// 打开智慧校园里的某个视图（宿管、管理员首页的工作入口）。
@@ -33,14 +35,16 @@ enum HomeCampusTarget {
 class HomeQuickAction {
   const HomeQuickAction({
     required this.name,
-    required this.icon,
+    this.icon,
+    this.iconAsset,
     this.route = RoutePaths.smartCampus,
     this.arguments,
     this.campus,
-  });
+  }) : assert((icon == null) != (iconAsset == null));
 
   final String name;
-  final IconData icon;
+  final IconData? icon;
+  final String? iconAsset;
   final String route;
   final Map<String, dynamic>? arguments;
 
@@ -197,47 +201,51 @@ class HomeDashboardState {
 /// 作品点评」），宿管是查寝与值班工具，管理员是教务管理工具（名称与智慧校园工作台一致）。
 ///
 /// 数量不固定，首页按条目数排列，新增入口直接追加。
-List<HomeQuickAction> buildQuickActions({bool isStaff = false, String role = ''}) {
+List<HomeQuickAction> buildQuickActions({
+  bool isStaff = false,
+  String role = '',
+}) {
+  const campusIcons = AppAssets.campusHomeActions;
   if (role == 'dormManager') {
     return const <HomeQuickAction>[
       HomeQuickAction(
         name: '按宿舍查寝',
-        icon: Icons.king_bed_outlined,
+        iconAsset: '$campusIcons/dorm_manager/dorm_check_by_room.png',
         campus: HomeCampusTarget.dormCheckByRoom,
       ),
       HomeQuickAction(
         name: '查寝动态',
-        icon: Icons.fact_check_outlined,
+        iconAsset: '$campusIcons/head_teacher/dorm_dynamic.png',
         campus: HomeCampusTarget.dormDynamic,
       ),
       HomeQuickAction(
         name: '查寝历史',
-        icon: Icons.history_rounded,
+        iconAsset: '$campusIcons/dorm_manager/dorm_history.png',
         campus: HomeCampusTarget.dormHistory,
       ),
       HomeQuickAction(
         name: '到岗打卡',
-        icon: Icons.how_to_reg_outlined,
+        iconAsset: '$campusIcons/dorm_manager/punch_management.png',
         campus: HomeCampusTarget.dormCheckIn,
       ),
       HomeQuickAction(
         name: '宿管请假',
-        icon: Icons.edit_note_rounded,
+        iconAsset: '$campusIcons/dorm_manager/dorm_leave.png',
         campus: HomeCampusTarget.myLeave,
       ),
       HomeQuickAction(
         name: '校圈',
-        icon: Icons.forum_outlined,
+        iconAsset: '$campusIcons/dorm_manager/school_circle.png',
         campus: HomeCampusTarget.schoolCircle,
       ),
       HomeQuickAction(
         name: '群聊',
-        icon: Icons.chat_outlined,
+        iconAsset: '$campusIcons/dorm_manager/group_chat.png',
         campus: HomeCampusTarget.groupChat,
       ),
       HomeQuickAction(
         name: '校长信箱',
-        icon: Icons.markunread_mailbox_outlined,
+        iconAsset: '$campusIcons/dorm_manager/principal_mailbox.png',
         campus: HomeCampusTarget.principalMailbox,
       ),
     ];
@@ -246,47 +254,47 @@ List<HomeQuickAction> buildQuickActions({bool isStaff = false, String role = ''}
     return const <HomeQuickAction>[
       HomeQuickAction(
         name: '学生管理',
-        icon: Icons.groups_outlined,
+        iconAsset: '$campusIcons/admin/student_management.png',
         campus: HomeCampusTarget.studentManagement,
       ),
       HomeQuickAction(
         name: '教师管理',
-        icon: Icons.badge_outlined,
+        iconAsset: '$campusIcons/admin/teacher_management.png',
         campus: HomeCampusTarget.teacherManagement,
       ),
       HomeQuickAction(
         name: '班级管理',
-        icon: Icons.class_outlined,
+        iconAsset: '$campusIcons/admin/class_management.png',
         campus: HomeCampusTarget.classManagement,
       ),
       HomeQuickAction(
         name: '排课与课表',
-        icon: Icons.calendar_month_outlined,
+        iconAsset: '$campusIcons/admin/schedule_management.png',
         campus: HomeCampusTarget.scheduleManagement,
       ),
       HomeQuickAction(
         name: '签课管理',
-        icon: Icons.how_to_reg_outlined,
+        iconAsset: '$campusIcons/admin/schedule_management.png',
         campus: HomeCampusTarget.signManagement,
       ),
       HomeQuickAction(
         name: '教师请假审批',
-        icon: Icons.approval_outlined,
+        iconAsset: '$campusIcons/admin/dorm_leave_approval.png',
         campus: HomeCampusTarget.leaveApproval,
       ),
       HomeQuickAction(
         name: '人脸库',
-        icon: Icons.face_outlined,
+        iconAsset: '$campusIcons/admin/face_library.png',
         campus: HomeCampusTarget.faceLibrary,
       ),
       HomeQuickAction(
         name: '通知管理',
-        icon: Icons.campaign_outlined,
+        iconAsset: '$campusIcons/admin/notification_management.png',
         campus: HomeCampusTarget.notificationManagement,
       ),
       HomeQuickAction(
         name: '班级学情',
-        icon: Icons.insights_rounded,
+        iconAsset: '$campusIcons/student/my_grades.png',
         route: RoutePaths.studyCenter,
       ),
     ];
@@ -294,48 +302,51 @@ List<HomeQuickAction> buildQuickActions({bool isStaff = false, String role = ''}
   return <HomeQuickAction>[
     HomeQuickAction(
       name: isStaff ? '班级学情' : '我的学情',
-      icon: Icons.insights_rounded,
+      iconAsset: '$campusIcons/student/my_grades.png',
       route: RoutePaths.studyCenter,
     ),
     HomeQuickAction(
       name: isStaff ? '作品点评' : '作品档案',
-      icon: isStaff ? Icons.rate_review_outlined : Icons.collections_outlined,
+      iconAsset: isStaff
+          ? '$campusIcons/teacher/homework_review.png'
+          : '$campusIcons/student/my_homework.png',
       route: RoutePaths.artworks,
     ),
     const HomeQuickAction(
       name: '范画库',
-      icon: Icons.photo_library_outlined,
+      iconAsset: '$campusIcons/admin/class_management.png',
       route: RoutePaths.gallery,
     ),
     const HomeQuickAction(
-      name: '画室工具箱',
-      icon: Icons.palette_outlined,
+      name: '工具箱',
+      iconAsset: '$campusIcons/head_teacher/class_workbench.png',
       route: RoutePaths.artToolbox,
+      arguments: <String, dynamic>{'returnToSource': true},
     ),
     const HomeQuickAction(
       name: '速写计时练习',
-      icon: Icons.timer_outlined,
+      icon: Icons.timer_rounded,
       route: RoutePaths.artToolbox,
       arguments: <String, dynamic>{'tool': 'quickSketch'},
     ),
     const HomeQuickAction(
       name: '题库',
-      icon: Icons.quiz_outlined,
+      iconAsset: AppAssets.homeQuickQuestionBank,
       route: RoutePaths.camp,
     ),
     const HomeQuickAction(
       name: '资讯',
-      icon: Icons.article_outlined,
+      iconAsset: AppAssets.homeQuickNews,
       route: RoutePaths.consultation,
     ),
     const HomeQuickAction(
       name: '校圈',
-      icon: Icons.forum_outlined,
+      iconAsset: AppAssets.homeQuickSchoolCircle,
       route: RoutePaths.circle,
     ),
     const HomeQuickAction(
       name: '群聊',
-      icon: Icons.chat_outlined,
+      iconAsset: AppAssets.homeQuickGroupChat,
       campus: HomeCampusTarget.groupChat,
     ),
   ];

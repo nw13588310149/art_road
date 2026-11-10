@@ -282,6 +282,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
               AppSegment(value: subject, label: subject),
           ],
           value: _subject,
+          expand: true,
           enabled: enabled,
           onChanged: (subject) => setState(() => _subject = subject),
         ),

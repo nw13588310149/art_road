@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/demo/demo_accounts.dart';
 import '../../../core/demo/demo_config.dart';
 import '../../../core/demo/demo_store.dart';
@@ -35,10 +36,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return AuthPageFrame(
       card: AuthCard(
         title: '账号登录',
-        subtitle: '使用手机号和密码登录美术之路',
         children: [
           AppIconInputField(
-            icon: Icons.phone_iphone_rounded,
+            iconAsset: AppAssets.authPhone,
             hint: '请输入手机号',
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
@@ -49,9 +49,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             errorText: state.errorOf(AuthField.mobile),
             onChanged: controller.setMobile,
           ),
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: AppSpace.s20),
           AppIconInputField(
-            icon: Icons.lock_outline_rounded,
+            iconAsset: AppAssets.authPassword,
             hint: '请输入密码',
             obscureText: true,
             textInputAction: TextInputAction.done,
@@ -68,20 +68,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               onTap: () => Navigator.pushNamed(context, RoutePaths.forget),
             ),
           ),
-          const SizedBox(height: AppSpace.s4),
+          const SizedBox(height: AppSpace.s20),
           AppButton(
             label: '立即登录',
             expand: true,
             loading: state.isSubmitting,
             onTap: _onLogin,
           ),
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: AppSpace.s24),
           AuthAgreementRow(
             checked: state.agreeTerms,
             onChanged: controller.setAgreeTerms,
             onOpenTerms: _openTerms,
           ),
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: AppSpace.s24),
           AuthSwitchLine(
             prompt: '没有账号？',
             action: '立即注册',

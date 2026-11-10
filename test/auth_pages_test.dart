@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:the_road_of_art_flutter/core/config/app_config_repository.dart';
@@ -147,6 +148,32 @@ void main() {
     expect(_agreed(tester), isFalse);
   });
 
+  testWidgets('registration keeps the SMS input and button on one centerline', (
+    tester,
+  ) async {
+    await _pumpPage(tester, const RegisterPage());
+    final field = find.byType(AppIconInputField).at(1);
+    final text = find.text('获取验证码');
+    final button = find.ancestor(of: text, matching: find.byType(AppPressable));
+    final editor = find.descendant(
+      of: field,
+      matching: find.byType(EditableText),
+    );
+
+    expect(tester.getSize(button), const Size(117, 45));
+    expect(tester.getSize(field).height, 45);
+    expect(
+      tester.getCenter(button).dy,
+      closeTo(tester.getCenter(editor).dy, 1),
+    );
+    expect(tester.getCenter(button).dy, closeTo(tester.getCenter(text).dy, 1));
+    expect(tester.widget<Text>(text).style?.fontSize, 14);
+    expect(
+      tester.renderObject<RenderParagraph>(text).didExceedMaxLines,
+      isFalse,
+    );
+  });
+
   testWidgets('ForgetPasswordPage shows steps and a way back', (tester) async {
     await _pumpPage(tester, const ForgetPasswordPage());
     expect(find.text('第 1 步（共 3 步）：验证手机号'), findsOneWidget);
@@ -162,7 +189,10 @@ void main() {
     await tester.tap(find.text('上一步'));
     await tester.pump();
     expect(
-      tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
+      tester
+          .widget<EditableText>(find.byType(EditableText).first)
+          .controller
+          .text,
       '13809310001',
     );
   });

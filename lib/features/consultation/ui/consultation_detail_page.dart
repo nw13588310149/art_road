@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/class_share_drawer.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -40,7 +41,9 @@ class _ConsultationDetailPageState
 
     ref.listen<ConsultationDetailState>(provider, (previous, next) {
       final msg = next.errorMessage;
-      if (msg.isNotEmpty && msg != previous?.errorMessage && next.detail != null) {
+      if (msg.isNotEmpty &&
+          msg != previous?.errorMessage &&
+          next.detail != null) {
         AppToast.showError(context, msg);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) controller.clearError();
@@ -71,25 +74,29 @@ class _ConsultationDetailPageState
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '资讯',
-          subtitle: detail?.source,
-          onBack: () => GroupChatReturnNavigator.pop(context, ref: ref),
-          actions: [
-            AppButton(
-              label: '分享',
-              icon: Icons.share_outlined,
-              variant: AppButtonVariant.quiet,
-              size: AppButtonSize.sm,
-              onTap: detail == null ? null : controller.openShareDialog,
-            ),
-          ],
-        ),
-        Expanded(child: body),
-      ],
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            title: '资讯',
+            subtitle: detail?.source,
+            onBack: () => GroupChatReturnNavigator.pop(context, ref: ref),
+            actions: [
+              AppButton(
+                label: '分享',
+                iconAsset: AppAssets.videoV2Share,
+                variant: AppButtonVariant.quiet,
+                size: AppButtonSize.sm,
+                onTap: detail == null ? null : controller.openShareDialog,
+              ),
+            ],
+          ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 

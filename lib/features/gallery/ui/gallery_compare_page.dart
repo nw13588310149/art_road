@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/ui.dart';
@@ -9,10 +8,6 @@ import '../data/gallery_models.dart';
 import '../data/gallery_repository.dart';
 
 enum _CompareMode { sideBySide, reveal }
-
-/// 深色对比页上的次级文字与分栏底色。
-final _onDarkMuted = AppColors.onBrand.withValues(alpha: 0.64);
-final _paneColor = AppColors.onBrand.withValues(alpha: 0.06);
 
 /// 全屏对比：左侧范画、右侧本人最近一次同科原卷（或相册照片），中间分隔条可拖动。
 class GalleryComparePage extends ConsumerStatefulWidget {
@@ -96,7 +91,11 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
     if (width <= 0) {
       return;
     }
-    setState(() => _split = (_split + dx / width).clamp(0.15, 0.85));
+    _setSplit(_split + dx / width);
+  }
+
+  void _setSplit(double value) {
+    setState(() => _split = value.clamp(0.15, 0.85));
   }
 
   Widget _filtered(Widget child) => _grayscale
@@ -133,7 +132,7 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.ink,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -163,12 +162,18 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(bottom: AppSpace.s12),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.s16,
+                0,
+                AppSpace.s16,
+                AppSpace.s12,
+              ),
               child: Text(
                 _mode == _CompareMode.sideBySide
                     ? '拖动中间分隔条调整两侧大小，双指可分别缩放；双击分隔条复位'
                     : '左右拖动分隔条，在同一画框内对照两幅作品；双击分隔条复位',
-                style: AppText.caption12.copyWith(color: _onDarkMuted),
+                textAlign: TextAlign.center,
+                style: AppText.caption12,
               ),
             ),
           ],
@@ -196,13 +201,14 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
           child: _ComparePane(label: _mineLabel, child: _mineImage()),
         ),
         Positioned(
-          left: left - 20,
+          left: left - 22,
           top: 0,
           bottom: 0,
-          width: 40,
+          width: 44,
           child: _DividerHandle(
             onDrag: (dx) => _dragDivider(dx, width),
-            onReset: () => setState(() => _split = 0.5),
+            value: _split,
+            onChanged: _setSplit,
           ),
         ),
       ],
@@ -214,14 +220,17 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
     return ClipRRect(
       borderRadius: AppRadius.br12,
       child: ColoredBox(
-        color: _paneColor,
+        color: AppColors.surfaceSubtle,
         child: Stack(
           fit: StackFit.expand,
           children: [
             _mineImage(),
             ClipRect(
               clipper: _LeftClipper(x),
-              child: ColoredBox(color: AppColors.ink, child: _workImage()),
+              child: ColoredBox(
+                color: AppColors.surfaceSubtle,
+                child: _workImage(),
+              ),
             ),
             const Positioned(
               left: AppSpace.s8,
@@ -234,13 +243,14 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
               child: _PaneLabel(_mineLabel),
             ),
             Positioned(
-              left: x - 20,
+              left: x - 22,
               top: 0,
               bottom: 0,
-              width: 40,
+              width: 44,
               child: _DividerHandle(
                 onDrag: (dx) => _dragDivider(dx, width),
-                onReset: () => setState(() => _split = 0.5),
+                value: _split,
+                onChanged: _setSplit,
               ),
             ),
           ],
@@ -284,70 +294,37 @@ class _CompareTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s12,
-        AppSpace.s8,
-        AppSpace.s16,
-        AppSpace.s12,
-      ),
-      child: Row(
-        children: [
-          AppIconButton(
-            icon: Icons.close_rounded,
-            semanticLabel: '关闭',
-            size: AppButtonSize.sm,
-            filled: false,
-            color: AppColors.onBrand,
-            onTap: onClose,
-          ),
-          const SizedBox(width: AppSpace.s8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '对比我的原卷',
-                  style: AppText.title16.copyWith(color: AppColors.onBrand),
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.caption12.copyWith(color: _onDarkMuted),
-                ),
-              ],
-            ),
-          ),
-          AppSegmented<_CompareMode>(
-            size: AppControlSize.sm,
-            segments: const [
-              AppSegment(value: _CompareMode.sideBySide, label: '并排'),
-              AppSegment(value: _CompareMode.reveal, label: '滑动'),
-            ],
-            value: mode,
-            onChanged: onModeChanged,
-          ),
-          const SizedBox(width: AppSpace.s8),
-          AppSegmented<bool>(
-            size: AppControlSize.sm,
-            segments: const [
-              AppSegment(value: false, label: '彩色'),
-              AppSegment(value: true, label: '灰度'),
-            ],
-            value: grayscale,
-            onChanged: onGrayscaleChanged,
-          ),
-          const SizedBox(width: AppSpace.s8),
-          AppButton(
-            label: '选择照片',
-            icon: Icons.photo_library_outlined,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
-            onTap: onPickPhoto,
-          ),
-        ],
-      ),
+    return AppPageHeader(
+      title: '对比我的原卷',
+      subtitle: subtitle,
+      onBack: onClose,
+      actions: [
+        AppSegmented<_CompareMode>(
+          size: AppControlSize.sm,
+          segments: const [
+            AppSegment(value: _CompareMode.sideBySide, label: '并排'),
+            AppSegment(value: _CompareMode.reveal, label: '滑动'),
+          ],
+          value: mode,
+          onChanged: onModeChanged,
+        ),
+        AppSegmented<bool>(
+          size: AppControlSize.sm,
+          segments: const [
+            AppSegment(value: false, label: '彩色'),
+            AppSegment(value: true, label: '灰度'),
+          ],
+          value: grayscale,
+          onChanged: onGrayscaleChanged,
+        ),
+        AppButton(
+          label: '选择照片',
+          icon: Icons.photo_library_outlined,
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.sm,
+          onTap: onPickPhoto,
+        ),
+      ],
     );
   }
 }
@@ -363,7 +340,7 @@ class _ComparePane extends StatelessWidget {
     return ClipRRect(
       borderRadius: AppRadius.br12,
       child: ColoredBox(
-        color: _paneColor,
+        color: AppColors.surfaceSubtle,
         child: Stack(
           children: [
             Positioned.fill(
@@ -399,14 +376,14 @@ class _PaneLabel extends StatelessWidget {
           vertical: AppSpace.s4,
         ),
         decoration: BoxDecoration(
-          color: AppColors.ink.withValues(alpha: 0.72),
+          color: AppColors.surface,
           borderRadius: AppRadius.brPill,
         ),
         child: Text(
           text,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: AppText.caption12Strong.copyWith(color: AppColors.onBrand),
+          style: AppText.caption12Strong.copyWith(color: AppColors.ink),
         ),
       ),
     );
@@ -414,44 +391,83 @@ class _PaneLabel extends StatelessWidget {
 }
 
 class _DividerHandle extends StatelessWidget {
-  const _DividerHandle({required this.onDrag, required this.onReset});
+  const _DividerHandle({
+    required this.value,
+    required this.onDrag,
+    required this.onChanged,
+  });
 
+  final double value;
   final ValueChanged<double> onDrag;
-  final VoidCallback onReset;
+  final ValueChanged<double> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.resizeColumn,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onHorizontalDragUpdate: (details) => onDrag(details.delta.dx),
-        onDoubleTap: onReset,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 3,
-              decoration: BoxDecoration(
-                color: AppColors.onBrand.withValues(alpha: 0.85),
-                borderRadius: AppRadius.brPill,
+    final decreased = (value - 0.05).clamp(0.15, 0.85);
+    final increased = (value + 0.05).clamp(0.15, 0.85);
+    String percent(double fraction) => '${(fraction * 100).round()}%';
+    void decrease() => onChanged(decreased);
+    void increase() => onChanged(increased);
+    void reset() => onChanged(0.5);
+
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): decrease,
+        const SingleActivator(LogicalKeyboardKey.arrowRight): increase,
+        const SingleActivator(LogicalKeyboardKey.home): reset,
+      },
+      child: Focus(
+        child: Semantics(
+          slider: true,
+          label: '对比分隔线',
+          value: percent(value),
+          decreasedValue: value > 0.15 ? percent(decreased) : null,
+          increasedValue: value < 0.85 ? percent(increased) : null,
+          onDecrease: value > 0.15 ? decrease : null,
+          onIncrease: value < 0.85 ? increase : null,
+          onTap: reset,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeColumn,
+            child: GestureDetector(
+              excludeFromSemantics: true,
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragUpdate: (details) => onDrag(details.delta.dx),
+              onDoubleTap: reset,
+              child: Builder(
+                builder: (context) {
+                  final focused = Focus.of(context).hasFocus;
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 2,
+                        decoration: const BoxDecoration(
+                          color: AppColors.textSecondary,
+                          borderRadius: AppRadius.brPill,
+                        ),
+                      ),
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: focused ? AppColors.brand : AppColors.line,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.compare_arrows_rounded,
+                          size: 20,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                shape: BoxShape.circle,
-                boxShadow: AppShadow.thumb,
-              ),
-              child: const Icon(
-                Icons.compare_arrows_rounded,
-                size: 20,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -480,8 +496,13 @@ class _BrokenImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Icon(Icons.broken_image_outlined, size: 36, color: _onDarkMuted),
+    return const Center(
+      child: Icon(
+        Icons.broken_image_outlined,
+        size: 36,
+        color: AppColors.textSecondary,
+        semanticLabel: '图片加载失败',
+      ),
     );
   }
 }
@@ -494,35 +515,12 @@ class _MissingPaper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpace.s20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.image_search_rounded, size: 40, color: _onDarkMuted),
-            const SizedBox(height: AppSpace.s12),
-            Text(
-              '暂无可对比的$subject原卷',
-              textAlign: TextAlign.center,
-              style: AppText.body14Strong.copyWith(color: AppColors.onBrand),
-            ),
-            const SizedBox(height: AppSpace.s4),
-            Text(
-              '阅卷完成后会自动显示最近一次考试的原卷，也可以拍下自己的作品进行对比',
-              textAlign: TextAlign.center,
-              style: AppText.caption12.copyWith(color: _onDarkMuted),
-            ),
-            const SizedBox(height: AppSpace.s16),
-            AppButton(
-              label: '从相册选择',
-              icon: Icons.photo_library_outlined,
-              size: AppButtonSize.sm,
-              onTap: onPick,
-            ),
-          ],
-        ),
-      ),
+    return AppEmptyState(
+      icon: Icons.image_search_rounded,
+      title: '暂无可对比的$subject原卷',
+      description: '阅卷完成后会显示最近一次考试的原卷，也可以选择照片进行对比',
+      actionLabel: '从相册选择',
+      onAction: onPick,
     );
   }
 }

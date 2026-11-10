@@ -121,7 +121,7 @@ class _GridBodyState extends State<_GridBody> {
     return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
   }
 
-  Widget _buildStage(BuildContext context, bool wide) {
+  Widget _buildStage(BuildContext context) {
     final image = widget.image;
     return ToolStage(
       child: LayoutBuilder(
@@ -160,8 +160,7 @@ class _GridBodyState extends State<_GridBody> {
                               golden: _golden,
                               diagonal: _diagonal,
                               grid: _gridCount,
-                              squareCells:
-                                  _grid == _GridMode.custom && _square
+                              squareCells: _grid == _GridMode.custom && _square
                                   ? _cells
                                   : null,
                               labels: _labels && _grid != _GridMode.none,
@@ -222,7 +221,7 @@ class _GridBodyState extends State<_GridBody> {
         '${count.cols} 列 × ${count.rows} 行，每格约 ${cell.width.round()}×${cell.height.round()}mm。';
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -311,33 +310,25 @@ class _GridBodyState extends State<_GridBody> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AppSegmented<ExamPaper?>(
-                segments: [
-                  const AppSegment<ExamPaper?>(value: null, label: '不裁切'),
-                  for (final paper in ExamPaper.values)
-                    AppSegment<ExamPaper?>(value: paper, label: paper.label),
-                ],
+              ToolSegmented<ExamPaper?>(
+                values: const [null, ...ExamPaper.values],
                 value: _paper,
+                labelOf: (paper) => paper?.label ?? '不裁切',
                 onChanged: (p) => setState(() {
                   _paper = p;
                   _shift = 0.5;
                 }),
-                expand: true,
               ),
               if (_paper != null) ...[
                 const SizedBox(height: AppSpace.s8),
-                AppSegmented<bool>(
-                  segments: const [
-                    AppSegment(value: true, label: '横向'),
-                    AppSegment(value: false, label: '竖向'),
-                  ],
+                ToolSegmented<bool>(
+                  values: const [true, false],
                   value: _landscape,
+                  labelOf: (landscape) => landscape ? '横向' : '竖向',
                   onChanged: (v) => setState(() {
                     _landscape = v;
                     _shift = 0.5;
                   }),
-                  size: AppControlSize.sm,
-                  expand: true,
                 ),
                 const SizedBox(height: AppSpace.s8),
                 Text(

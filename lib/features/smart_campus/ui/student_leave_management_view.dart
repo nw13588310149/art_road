@@ -57,7 +57,6 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kBoardBg = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kBorderHair = AppColors.line;
@@ -284,20 +283,11 @@ class _StudentLeaveManagementViewState
     final ui = DashboardScaleScope.of(context).ui;
     final pageLoading = _loading && _records.isEmpty;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
         title: '我的请假',
         subtitle: '先由家长确认，再由班主任审批；已和家长沟通好的可直接交班主任审批',
         onBack: widget.onBack,
-        actions: [
-          AppButton(
-            label: '发起请假',
-            icon: Icons.add_rounded,
-            size: AppButtonSize.sm,
-            onTap: _submitting ? null : _showApplyDrawer,
-          ),
-        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,13 +304,29 @@ class _StudentLeaveManagementViewState
                   rejected: _countOf(_LeaveStatus.rejected),
                 ),
                 SizedBox(height: ui(12)),
-                AppTabs<_StatusTab>(
-                  tabs: [
-                    for (final t in _StatusTab.values)
-                      AppTab(value: t, label: t.label, count: _countOfTab(t)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SmartCampusStatusTabs<_StatusTab>(
+                        segments: [
+                          for (final t in _StatusTab.values)
+                            AppSegment(
+                              value: t,
+                              label: '${t.label}（${_countOfTab(t)}）',
+                            ),
+                        ],
+                        value: _tab,
+                        onChanged: (t) => setState(() => _tab = t),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpace.s12),
+                    AppButton(
+                      label: '发起请假',
+                      icon: Icons.add_rounded,
+                      size: AppButtonSize.sm,
+                      onTap: _submitting ? null : _showApplyDrawer,
+                    ),
                   ],
-                  value: _tab,
-                  onChanged: (t) => setState(() => _tab = t),
                 ),
                 SizedBox(height: ui(12)),
                 if (_loadError != null)

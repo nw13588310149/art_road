@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_assets.dart';
+import '../widgets/app_asset_graphic.dart';
 import '../widgets/app_text_field.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
 import 'app_spacing.dart';
 import 'app_text.dart';
 
-/// 搜索框：34 高浅灰底，左侧放大镜，有内容时右侧出现清空按钮。
+/// 搜索框：白底圆角 12，左侧放大镜，有内容时右侧出现清空按钮。
 ///
 /// 聚焦时描边立即转为品牌紫，没有过渡动画。
 class AppSearchField extends StatefulWidget {
@@ -17,6 +19,7 @@ class AppSearchField extends StatefulWidget {
     this.onSubmitted,
     this.onCleared,
     this.size = AppControlSize.md,
+    this.toolbar = false,
     this.autofocus = false,
     this.focusNode,
     this.enabled = true,
@@ -31,6 +34,7 @@ class AppSearchField extends StatefulWidget {
   /// 点击清空按钮后回调（[onChanged] 也会收到空字符串）。
   final VoidCallback? onCleared;
   final AppControlSize size;
+  final bool toolbar;
   final bool autofocus;
   final FocusNode? focusNode;
   final bool enabled;
@@ -97,25 +101,28 @@ class _AppSearchFieldState extends State<AppSearchField> {
       color: AppColors.ink,
     );
     final field = Container(
-      height: md ? AppSize.control : AppSize.controlSm,
-      padding: EdgeInsets.only(left: 10, right: showClear ? 2 : 10),
+      height: widget.toolbar
+          ? AppSize.iconButton
+          : (md ? 36 : AppSize.controlSm),
+      padding: EdgeInsets.only(left: md ? 14 : 10, right: showClear ? 2 : 12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSubtle,
-        borderRadius: AppRadius.br8,
+        color: AppColors.surface,
+        borderRadius: AppRadius.br12,
         border: Border.all(
           color: _focusNode.hasFocus
               ? AppColors.brand
-              : AppColors.surfaceSubtle,
+              : (widget.toolbar ? AppColors.surface : AppColors.lineSoft),
         ),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.search_rounded,
-            size: md ? 18 : 16,
-            color: AppColors.textTertiary,
+          const AppAssetGraphic(
+            AppAssets.shellV2Search,
+            width: 16,
+            height: 16,
+            fit: BoxFit.contain,
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: widget.toolbar ? AppSpace.s8 : 6),
           Expanded(
             child: AppTextField(
               controller: _controller,

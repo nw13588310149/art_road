@@ -7,8 +7,27 @@ import '../../../shell/ui/shell_layout.dart';
 import '../../data/schedule_color_palette.dart';
 import '../../data/schedule_course_card_builder.dart';
 
-/// 课表课程卡高度（课程名 + 老师或班级 + 教室 + 大课 / 小课标签）。
-const double kScheduleCourseCardHeight = 100;
+const double kScheduleCourseCardWidth = 176;
+const double kScheduleCourseCardHeight = 96;
+const double kScheduleCourseCellInset = 12;
+const double kScheduleCourseCardGap = 6;
+
+double scheduleCourseCardHeight(ScheduleCourseCardKind kind) =>
+    kind == ScheduleCourseCardKind.bigExtended
+    ? 120
+    : kScheduleCourseCardHeight;
+
+double scheduleCourseCellHeight(Iterable<ScheduleCourseCardData> cards) {
+  var height = 2 * kScheduleCourseCellInset;
+  for (final card in cards) {
+    if (height > 2 * kScheduleCourseCellInset) height += kScheduleCourseCardGap;
+    height += scheduleCourseCardHeight(card.kind);
+  }
+  return height.clamp(
+    kScheduleCourseCardHeight + 2 * kScheduleCourseCellInset,
+    double.infinity,
+  );
+}
 
 /// 课程卡的科目色：素描 / 色彩 / 速写取科目色，其他课程用品牌紫。
 Color scheduleSubjectAccent(String courseName) {
@@ -20,8 +39,7 @@ Color scheduleSubjectAccent(String courseName) {
   return AppColors.brand;
 }
 
-/// 课表网格课程卡：宽度随列宽，左侧科目色条；已结束的课只把底色和标签转灰，
-/// 文字对比度不变。
+/// 课表课程卡：上方展示教室和课型，下方用白底展示课程信息。
 class ScheduleCourseCard extends StatelessWidget {
   const ScheduleCourseCard({
     super.key,
@@ -38,85 +56,146 @@ class ScheduleCourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
     final accent = scheduleSubjectAccent(data.name);
+    final background = isPast
+        ? AppColors.surfaceSubtle
+        : data.bgColor ?? AppColors.tint(accent, 0.13);
+    final locationColor = isPast
+        ? AppColors.textSecondary
+        : scheduleTitleColorForBackground(background);
     final isSmall = scheduleIsSmallKind(scheduleCourseCardThemeKind(data.kind));
-    final capacity = data.capacity;
+    final extended = data.kind == ScheduleCourseCardKind.bigExtended;
+    final capacity = isSmall ? data.capacity : null;
+    final kindTag = ScheduleClassKindTag(
+      isSmall: isSmall,
+      outlined: extended,
+      muted: isPast,
+    );
     return SizedBox(
-      height: ui(kScheduleCourseCardHeight),
-      child: ClipRRect(
-        borderRadius: AppRadius.br8,
-        child: ColoredBox(
-          color: isPast ? AppColors.surfaceSubtle : AppColors.tint(accent, 0.08),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      width: kScheduleCourseCardWidth,
+      height: scheduleCourseCardHeight(data.kind),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: AppRadius.br8,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpace.s4),
+          child: Column(
             children: [
-              Container(
-                width: 3,
-                color: isPast ? AppColors.textPlaceholder : accent,
+              SizedBox(
+                height: 28,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          data.location,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption12Strong.copyWith(
+                            color: locationColor,
+                          ),
+                        ),
+                      ),
+                      if (!extended) ...[
+                        const SizedBox(width: AppSpace.s4),
+                        topRightBadge ?? kindTag,
+                      ],
+                    ],
+                  ),
+                ),
               ),
               Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(ui(8), ui(6), ui(6), ui(6)),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.all(Radius.circular(6)),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        data.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body14Strong.copyWith(height: 16 / 14),
+                      ),
+                      const SizedBox(height: AppSpace.s4),
                       Row(
                         children: [
                           Expanded(
                             child: Text(
-                              data.name,
+                              data.subline,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: AppText.body14Strong,
+                              style: AppText.caption12.copyWith(
+                                color: AppColors.textSecondary,
+                                height: 16 / 12,
+                              ),
                             ),
-                          ),
-                          ?topRightBadge,
-                        ],
-                      ),
-                      if (data.subline.isNotEmpty)
-                        Text(
-                          data.subline,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.caption12.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      if (data.location.isNotEmpty)
-                        Text(
-                          data.location,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.caption12,
-                        ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          ScheduleClassKindTag(
-                            isSmall: isSmall,
-                            outlined: false,
-                            muted: isPast,
                           ),
                           if (capacity != null) ...[
                             const SizedBox(width: AppSpace.s4),
-                            Flexible(
-                              child: Text(
-                                capacity,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppText.caption12,
-                              ),
-                            ),
+                            Text(capacity, style: AppText.caption12),
                           ],
                         ],
                       ),
+                      if (extended) ...[
+                        const Spacer(),
+                        topRightBadge ?? kindTag,
+                      ],
                     ],
                   ),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 原版 176×48 的格内编辑入口，申请和排课使用相同图标与行高。
+class ScheduleCourseCellAction extends StatelessWidget {
+  const ScheduleCourseCellAction({
+    required this.label,
+    required this.onTap,
+    super.key,
+  });
+
+  static const double height = 48;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        width: kScheduleCourseCardWidth,
+        height: height,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSubtle,
+          borderRadius: AppRadius.br8,
+          border: Border.all(color: AppColors.lineSoft),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/smartCampus/schedule_edit/apply_course.png',
+              width: 14,
+              height: 14,
+              excludeFromSemantics: true,
+            ),
+            const SizedBox(width: kScheduleCourseCardGap),
+            Text(label, style: AppText.caption12Strong),
+          ],
         ),
       ),
     );

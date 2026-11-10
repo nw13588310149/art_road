@@ -134,6 +134,7 @@ class ShellPageSurface extends StatelessWidget {
     this.borderRadius,
     this.boxShadow,
     this.alignment,
+    this.clipBehavior = Clip.none,
     super.key,
   });
 
@@ -147,6 +148,7 @@ class ShellPageSurface extends StatelessWidget {
   final BorderRadius? borderRadius;
   final List<BoxShadow>? boxShadow;
   final AlignmentGeometry? alignment;
+  final Clip clipBehavior;
 
   @override
   Widget build(BuildContext context) {
@@ -156,6 +158,7 @@ class ShellPageSurface extends StatelessWidget {
       height: height,
       padding: padding,
       alignment: alignment,
+      clipBehavior: clipBehavior,
       decoration: BoxDecoration(
         color: gradient == null ? color : null,
         gradient: gradient,
@@ -170,7 +173,7 @@ class ShellPageSurface extends StatelessWidget {
   }
 }
 
-/// 区块标题旧组件：样式已与组件库 [AppSectionHeader] 一致（title16 +「更多 ›」）。
+/// 区块标题通过通用 [AppSectionHeader] 呈现。
 class ShellSectionTitleBar extends StatelessWidget {
   const ShellSectionTitleBar({
     required this.title,

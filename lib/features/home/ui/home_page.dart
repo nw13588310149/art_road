@@ -1,11 +1,19 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/art/art_subject.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/theme/app_font.dart';
+import '../../../core/widgets/smooth_circle_network_avatar.dart';
+import '../../shell/ui/shell_layout.dart';
+import 'widgets/home_course_notice_card.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/art_subject_card.dart';
 import '../../../core/widgets/dashboard_course_notice_card.dart';
 import '../../../core/widgets/seamless_banner_carousel.dart';
@@ -157,9 +165,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    if (!state.loading &&
-        !state.hasContent &&
-        state.errorMessage.isNotEmpty) {
+    if (!state.loading && !state.hasContent && state.errorMessage.isNotEmpty) {
       return AppErrorState(
         title: '首页加载失败',
         description: state.errorMessage,
@@ -309,12 +315,12 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
       ],
       const SizedBox(height: _gap),
       const HomeEbookShelfSection(),
-      const SizedBox(height: AppSpace.s24),
-      AppSectionHeader(
-        title: '最新资讯',
-        onMore: () => Navigator.pushNamed(context, RoutePaths.consultation),
+      const SizedBox(height: 14),
+      _HomeLatestHeader(
+        title: '最新',
+        onMoreTap: () => Navigator.pushNamed(context, RoutePaths.consultation),
       ),
-      const SizedBox(height: AppSpace.s12),
+      const SizedBox(height: 10),
       _NewsGrid(
         loading: firstLoad,
         items: widget.state.newsItems,
@@ -345,13 +351,13 @@ class _HomeBannerState extends State<_HomeBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final images = [
+    final slides = [
       for (final item in widget.items)
-        if (MediaUrl.resolve(item.imageUrl).isNotEmpty)
-          MediaUrl.resolve(item.imageUrl),
+        if (item.imageUrl.trim().isNotEmpty)
+          (url: MediaUrl.resolve(item.imageUrl), title: item.title),
     ];
     return ClipRRect(
-      borderRadius: AppRadius.br12,
+      borderRadius: AppRadius.br16,
       child: Stack(
         children: [
           const Positioned.fill(
@@ -359,9 +365,11 @@ class _HomeBannerState extends State<_HomeBanner> {
           ),
           Positioned.fill(
             child: SeamlessBannerCarousel(
-              imageUrls: images,
-              placeholder: const ColoredBox(color: AppColors.surfaceSubtle),
+              imageUrls: [for (final slide in slides) slide.url],
+              placeholder: const AppSkeleton(radius: 16),
               empty: const ColoredBox(color: AppColors.surfaceSubtle),
+              animationDuration: const Duration(milliseconds: 420),
+              animationCurve: Curves.easeInOutCubic,
               onPageChanged: (index) {
                 if (mounted && _index != index) {
                   setState(() => _index = index);
@@ -369,20 +377,20 @@ class _HomeBannerState extends State<_HomeBanner> {
               },
             ),
           ),
-          if (images.length > 1)
+          if (slides.length > 1)
             Positioned(
               right: AppSpace.s16,
               bottom: AppSpace.s12,
               child: Row(
                 children: [
-                  for (var i = 0; i < images.length; i++)
+                  for (var i = 0; i < slides.length; i++)
                     Container(
                       margin: EdgeInsets.only(left: i == 0 ? 0 : AppSpace.s4),
-                      width: i == _index ? 20 : 6,
+                      width: i == _index ? 21 : 4,
                       height: 4,
                       decoration: BoxDecoration(
                         color: AppColors.onBrand.withValues(
-                          alpha: i == _index ? 1 : 0.6,
+                          alpha: i == _index ? 1 : 0.85,
                         ),
                         borderRadius: AppRadius.brPill,
                       ),
@@ -415,31 +423,52 @@ class _QuickActionBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     final columns = actions.length > 9 || (wide && actions.length == 8) ? 4 : 3;
     final rows = (actions.length / columns).ceil();
-    return AppCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpace.s12,
-        vertical: AppSpace.s16,
-      ),
-      child: Column(
-        children: [
-          for (var row = 0; row < rows; row++)
-            Expanded(
-              child: Row(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: ColoredBox(
+        color: Colors.white,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const itemWidth = 44.0;
+            const idealGap = 105.0;
+            const idealOuterPad = 66.0;
+            final idealExtra = (columns - 1) * idealGap + 2 * idealOuterPad;
+            final extra = (constraints.maxWidth - columns * itemWidth).clamp(
+              0.0,
+              double.infinity,
+            );
+            final factor = math.min(1.0, extra / idealExtra);
+            final gap = math.max(8.0, idealGap * factor);
+            final outerPad = math.max(12.0, idealOuterPad * factor);
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: outerPad, vertical: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  for (var col = 0; col < columns; col++)
-                    Expanded(
-                      child: row * columns + col < actions.length
-                          ? _QuickActionItem(
-                              action: actions[row * columns + col],
-                              onTap: () =>
-                                  onTap(actions[row * columns + col]),
-                            )
-                          : const SizedBox.shrink(),
+                  for (var row = 0; row < rows; row++)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (var col = 0; col < columns; col++) ...[
+                          if (col > 0) SizedBox(width: gap),
+                          SizedBox(
+                            width: itemWidth,
+                            child: row * columns + col < actions.length
+                                ? _QuickActionItem(
+                                    action: actions[row * columns + col],
+                                    onTap: () =>
+                                        onTap(actions[row * columns + col]),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ],
                     ),
                 ],
               ),
-            ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -456,15 +485,29 @@ class _QuickActionItem extends StatelessWidget {
     return AppPressable(
       onTap: onTap,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AppIconTile(icon: action.icon),
-          const SizedBox(height: AppSpace.s8),
-          Text(
-            action.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.body14,
+          if (action.iconAsset case final asset?)
+            AppAssetGraphic(asset, width: 44, height: 44)
+          else
+            AppIconTile(icon: action.icon!),
+          const SizedBox(height: 6),
+          OverflowBox(
+            fit: OverflowBoxFit.deferToChild,
+            minWidth: 0,
+            maxWidth: 112,
+            child: Text(
+              action.name,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: const Color(0xFF1A1A1A),
+                fontWeight: AppFont.w500,
+                fontFamily: 'PingFang SC',
+                height: 1,
+              ),
+            ),
           ),
         ],
       ),
@@ -521,11 +564,11 @@ class _CoursePanel extends StatefulWidget {
 }
 
 class _CoursePanelState extends State<_CoursePanel> {
-  static const double _dayWidth = 56;
   static const double _dayGap = AppSpace.s8;
+  static const int _visibleDays = 4;
 
   final _weekScroll = ScrollController();
-  String _scrolledFor = '';
+  (int, int, double)? _scrolledFor;
 
   @override
   void dispose() {
@@ -533,61 +576,35 @@ class _CoursePanelState extends State<_CoursePanel> {
     super.dispose();
   }
 
-  /// 周条默认把今天放在可视区第二格，周末也不会被挡在屏幕外。
-  void _scrollToToday() {
+  /// 周一至周四显示前四格，周五起显示末四格，每格完整可见。
+  void _scrollToToday(double dayWidth) {
     final todayIndex = widget.weekItems.indexWhere((day) => day.isToday);
-    final key = '${widget.weekItems.length}-$todayIndex';
-    if (todayIndex < 0 || _scrolledFor == key) return;
+    final count = widget.weekItems.length;
+    final key = (count, todayIndex, dayWidth);
+    if (_scrolledFor == key) return;
+    _scrolledFor = key;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_weekScroll.hasClients) return;
-      final target = (todayIndex - 1) * (_dayWidth + _dayGap);
+      if (!mounted || !_weekScroll.hasClients || _scrolledFor != key) return;
+      final first = todayIndex < _visibleDays ? 0 : count - _visibleDays;
+      final target = first * (dayWidth + _dayGap);
       _weekScroll.jumpTo(
         target.clamp(0.0, _weekScroll.position.maxScrollExtent),
       );
-      _scrolledFor = key;
     });
-  }
-
-  static String _weekdayOf(String date) {
-    final parsed = DateTime.tryParse(date);
-    if (parsed == null) return '';
-    return const ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][parsed
-            .weekday -
-        1];
   }
 
   @override
   Widget build(BuildContext context) {
     final courses = widget.courses;
-    final now = DateTime.now();
-    final today =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final courseDate = courses.isEmpty ? '' : courses.first.date;
-    final isToday = courseDate.isEmpty || courseDate == today;
-    final title = isToday ? '今日课程' : '下次课程';
-    final subtitle = isToday || courseDate.length < 10
-        ? null
-        : '${courseDate.substring(5)} ${_weekdayOf(courseDate)}';
-    if (widget.weekItems.isNotEmpty) {
-      _scrollToToday();
-    }
-
     return AppCard(
+      bordered: false,
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          AppSectionHeader(
-            title: title,
-            subtitle: subtitle,
-            trailing: AppButton(
-              label: '完整课表',
-              variant: AppButtonVariant.text,
-              size: AppButtonSize.sm,
-              onTap: widget.onOpenSchedule,
-            ),
-          ),
-          const SizedBox(height: AppSpace.s8),
+          Text('课表', style: _courseHeading),
+          const SizedBox(height: 6),
           if (widget.loading) ...[
             const AppSkeleton(height: 88, radius: AppRadius.card),
             const SizedBox(height: AppSpace.s12),
@@ -596,41 +613,54 @@ class _CoursePanelState extends State<_CoursePanel> {
             if (widget.weekItems.isNotEmpty) ...[
               SizedBox(
                 height: 88,
-                child: ListView.separated(
-                  controller: _weekScroll,
-                  scrollDirection: Axis.horizontal,
-                  physics: const ClampingScrollPhysics(),
-                  itemCount: widget.weekItems.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: _dayGap),
-                  itemBuilder: (context, index) => _WeekDayChip(
-                    item: widget.weekItems[index],
-                    width: _dayWidth,
-                    onTap: widget.onOpenSchedule,
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    const dayWidth = 64.0;
+                    _scrollToToday(dayWidth);
+                    return ListView.separated(
+                      controller: _weekScroll,
+                      padding: EdgeInsets.zero,
+                      scrollDirection: Axis.horizontal,
+                      physics: const ClampingScrollPhysics(),
+                      itemCount: widget.weekItems.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(width: _dayGap),
+                      itemBuilder: (context, index) => _WeekDayChip(
+                        item: widget.weekItems[index],
+                        width: dayWidth,
+                        onTap: widget.onOpenSchedule,
+                      ),
+                    );
+                  },
                 ),
               ),
-              const SizedBox(height: AppSpace.s12),
+              const SizedBox(height: 14),
             ],
+            Text('课程', style: _courseHeading),
+            const SizedBox(height: 6),
             if (courses.isEmpty)
-              const SizedBox(
-                height: 168,
-                child: AppEmptyState(
-                  icon: Icons.event_available_outlined,
-                  title: '今天没有课程',
-                  description: '排课后会在这里显示上课时间和任课老师',
+              Expanded(
+                child: Center(
+                  child: Text(
+                    '今日暂无排课',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: const Color(0xFFB6B5BB),
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w400,
+                    ),
+                  ),
                 ),
               )
             else
-              Flexible(
+              Expanded(
                 child: ListView.separated(
                   shrinkWrap: true,
                   padding: EdgeInsets.zero,
                   physics: const ClampingScrollPhysics(),
                   itemCount: courses.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSpace.s8),
-                  itemBuilder: (context, index) =>
-                      _courseCard(courses[index]),
+                  separatorBuilder: (_, _) => const SizedBox(height: 11),
+                  itemBuilder: (context, index) => _courseCard(courses[index]),
                 ),
               ),
           ],
@@ -639,28 +669,37 @@ class _CoursePanelState extends State<_CoursePanel> {
     );
   }
 
-  Widget _courseCard(HomeCourseNotice course) {
-    final ended = course.status == HomeCourseStatus.ended;
-    return AppCourseCard(
+  TextStyle get _courseHeading => TextStyle(
+    fontSize: 18,
+    color: const Color(0xFF1A1A1A),
+    fontWeight: AppFont.w500,
+    fontFamily: 'PingFang SC',
+  );
+
+  Widget _courseCard(HomeCourseNotice course) => AppPressable(
+    onTap: widget.onOpenSchedule,
+    child: HomeCourseNoticeCard(
       startTime: course.startTime,
       endTime: course.endTime,
-      subject: course.subjectName,
-      teacherName: course.teacherName,
+      subjectName: course.subjectName,
+      displayName: course.teacherName,
       subtitle: course.description,
       isSmallCourse: course.isSmallCourse,
-      avatarUrl: course.teacherAvatar,
-      status: switch (course.status) {
-        HomeCourseStatus.ended => AppCourseStatus.ended,
-        HomeCourseStatus.inProgress => AppCourseStatus.inProgress,
-        HomeCourseStatus.upcoming => AppCourseStatus.upcoming,
-      },
-      classKindDotColor: DashboardCourseNoticeCard.dotColorFromHex(
-        course.cardColorHex,
-        ended: ended,
+      avatar: SmoothCircleNetworkAvatar(
+        url: MediaUrl.resolve(course.teacherAvatar),
+        size: 40,
       ),
-      onTap: widget.onOpenSchedule,
-    );
-  }
+      runState: switch (course.status) {
+        HomeCourseStatus.ended => DashboardCourseRunState.ended,
+        HomeCourseStatus.inProgress => DashboardCourseRunState.inProgress,
+        HomeCourseStatus.upcoming => DashboardCourseRunState.upcoming,
+      },
+      tagDotColor: DashboardCourseNoticeCard.dotColorFromHex(
+        course.cardColorHex,
+        ended: course.status == HomeCourseStatus.ended,
+      ),
+    ),
+  );
 }
 
 class _WeekDayChip extends StatelessWidget {
@@ -669,45 +708,99 @@ class _WeekDayChip extends StatelessWidget {
     required this.width,
     required this.onTap,
   });
-
-  final HomeWeekDayItem item;
   final double width;
   final VoidCallback onTap;
 
+  final HomeWeekDayItem item;
+
   @override
   Widget build(BuildContext context) {
-    final today = item.isToday;
+    final active = item.isToday;
+
     return AppPressable(
       onTap: onTap,
-      selected: today,
+      selected: active,
       child: Container(
         width: width,
-        padding: const EdgeInsets.symmetric(vertical: AppSpace.s8),
+        height: 88,
         decoration: BoxDecoration(
-          color: today ? AppColors.brand : AppColors.surfaceSubtle,
-          borderRadius: AppRadius.br12,
+          // 「今日」高亮背景：从代码渐变改为预设 PNG（[AppAssets.homeTodayBg]
+          // = bgc.png，64×88 顶紫底浅渐变，自带 12 圆角）。BoxFit.cover 让位图
+          // 撑满整个卡片；外层 borderRadius 仍保留 12，与图本身的圆角对齐时
+          // 顺便裁掉 PNG 边缘可能的透明像素，避免在白底上露出锯齿。
+          image: active
+              ? const DecorationImage(
+                  image: AssetImage(AppAssets.homeTodayBg),
+                  fit: BoxFit.cover,
+                )
+              : null,
+          // Figma：非今天卡片底色为 white（与右侧面板同色，仅 chip/文本可见）
+          color: active ? null : Colors.white,
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Text(
-              item.weekText,
-              style: AppText.caption12.copyWith(
-                color: today ? AppColors.onBrand : AppColors.textTertiary,
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 6,
+              child: Text(
+                item.weekText,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: active
+                      ? const Color(0xFFBBB5F3)
+                      : const Color(0xFFA9A9A9),
+                  fontFamily: 'PingFang SC',
+                  fontWeight: AppFont.w400,
+                  height: 1.43,
+                ),
               ),
             ),
-            Text(
-              item.dayText,
-              style: AppText.number(
-                size: 20,
-                color: today ? AppColors.onBrand : AppColors.ink,
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 27,
+              child: Text(
+                item.dayText,
+                textAlign: TextAlign.center,
+                // 设计稿要求：周课表日期数字 = Manrope Medium（w500）。
+                // 字体文件 [assets/fonts/Manrope Medium.ttf] 在 pubspec 里以
+                // weight: 500 注册到 Manrope family，下面 w500 直接命中。
+                style: TextStyle(
+                  fontSize: 20,
+                  color: active ? Colors.white : const Color(0xFF1A1A1A),
+                  fontWeight: FontWeight.w500,
+                  height: 1.35,
+                  fontFamily: 'Manrope',
+                ),
               ),
             ),
-            const SizedBox(height: AppSpace.s4),
-            AppTag(
-              label: '${item.courseCount} 节',
-              color: today ? AppColors.brandDeep : AppColors.textSecondary,
-              background: AppColors.surface,
+            Positioned(
+              left: 6,
+              top: 61,
+              child: Container(
+                width: 52,
+                height: 20,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: active ? Colors.white : const Color(0xFFF1F2F7),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${item.courseCount}节',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: active
+                        ? const Color(0xFF715EFE)
+                        : const Color(0xFFA9A9A9),
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w400,
+                    height: 1.43,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -731,144 +824,172 @@ class _NewsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!loading && items.isEmpty) {
-      return const AppCard(
-        child: SizedBox(
-          height: 168,
-          child: AppEmptyState(
-            icon: Icons.article_outlined,
-            title: '暂无资讯',
-            description: '联考政策、校考简章和备考经验发布后会显示在这里',
-          ),
-        ),
-      );
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 880
-            ? 4
-            : (constraints.maxWidth >= 600 ? 3 : 2);
-        if (loading) {
-          return Row(
-            children: [
-              for (var col = 0; col < columns; col++) ...[
-                if (col > 0) const SizedBox(width: AppSpace.s16),
-                const Expanded(child: _NewsSkeleton()),
-              ],
-            ],
-          );
-        }
-        final rows = (items.length / columns).ceil();
-        // 同一行的卡片等高：卡片高度随内容，不固定。
-        return Column(
-          children: [
-            for (var row = 0; row < rows; row++) ...[
-              if (row > 0) const SizedBox(height: AppSpace.s16),
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var col = 0; col < columns; col++) ...[
-                      if (col > 0) const SizedBox(width: AppSpace.s16),
-                      Expanded(child: _cell(row * columns + col)),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _cell(int index) {
-    if (index >= items.length) {
-      return const SizedBox.shrink();
-    }
-    final item = items[index];
-    return _NewsCard(item: item, onTap: () => onOpen(item));
-  }
-}
-
-class _NewsSkeleton extends StatelessWidget {
-  const _NewsSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return const AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppSkeleton(width: 120, height: 20),
-          SizedBox(height: AppSpace.s12),
-          AppSkeleton(),
-          SizedBox(height: AppSpace.s8),
-          AppSkeleton(width: 140),
-          SizedBox(height: AppSpace.s24),
-          AppSkeleton(width: 64, height: 22, radius: AppRadius.pill),
-          SizedBox(height: AppSpace.s12),
-          AppSkeleton(width: 56, height: 12),
-        ],
+    if (!loading && items.isEmpty) return const SizedBox.shrink();
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        mainAxisExtent: 138,
       ),
+      itemCount: loading ? 4 : items.length,
+      itemBuilder: (context, index) => loading
+          ? const AppSkeleton(height: 138, radius: 16)
+          : AppPressable(
+              onTap: () => onOpen(items[index]),
+              child: _NewsCard(item: items[index]),
+            ),
     );
   }
 }
 
 class _NewsCard extends StatelessWidget {
-  const _NewsCard({required this.item, required this.onTap});
+  const _NewsCard({required this.item});
 
   final HomeNewsItem item;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final created = item.createTime;
-    final fresh =
-        created != null && now.difference(created) < const Duration(days: 1);
-    return AppCard(
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (fresh) ...[
-                const AppTag(label: '最新', tone: AppTone.brand),
-                const SizedBox(width: AppSpace.s8),
-              ],
-              Expanded(
-                child: Text(
-                  item.shortTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.title16,
+    final tags = item.tags.take(3).toList();
+
+    return RepaintBoundary(
+      child: Container(
+        height: 138,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Stack(
+          children: [
+            const Positioned(left: 16, top: 17.5, child: _NewsBadge()),
+            Positioned(
+              left: 55,
+              top: 15,
+              right: 14,
+              child: Text(
+                item.shortTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF0B081A),
+                  fontWeight: AppFont.w500,
+                  fontFamily: 'PingFang SC',
+                  height: 1.375,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpace.s4),
-          Text(
-            item.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.body13,
-          ),
-          const SizedBox(height: AppSpace.s12),
-          const Spacer(),
-          if (item.tags.isNotEmpty) ...[
-            Wrap(
-              spacing: AppSpace.s4,
-              runSpacing: AppSpace.s4,
-              children: [
-                for (final tag in item.tags.take(2)) AppTag(label: tag),
-              ],
             ),
-            const SizedBox(height: AppSpace.s8),
+            Positioned(
+              left: 16,
+              top: 44.5,
+              right: 16,
+              child: Text(
+                item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6D6B75),
+                  fontFamily: 'PingFang SC',
+                  fontWeight: AppFont.w400,
+                  height: 1.43,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 16,
+              top: 72.5,
+              right: 16,
+              height: 18,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  for (int i = 0; i < tags.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 4),
+                    Container(
+                      height: 18,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F4FF),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        tags[i],
+                        style: TextStyle(
+                          fontSize: 9.52,
+                          color: Color(0xFF6D6B75),
+                          fontWeight: AppFont.w400,
+                          height: 1,
+                          fontFamily: 'PingFang SC',
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Positioned(
+              left: 16,
+              top: 110.5,
+              child: Opacity(
+                opacity: 0.8,
+                child: Text(
+                  _formatTime(item.createTime),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF788698),
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w400,
+                    height: 1.36,
+                  ),
+                ),
+              ),
+            ),
           ],
-          Text(formatHomeNewsTime(created, now), style: AppText.caption12),
-        ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime? time) {
+    if (time == null) return '刚刚';
+    final diff = DateTime.now().difference(time);
+    if (diff.inSeconds < 60) return '刚刚';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
+    if (diff.inHours < 24) return '${diff.inHours}小时前';
+    final days = diff.inDays;
+    if (days < 30) return '$days天前';
+    if (days < 365) return '${(days / 30).floor()}月前';
+    return '${(days / 365).floor()}年前';
+  }
+}
+
+class _NewsBadge extends StatelessWidget {
+  const _NewsBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 17,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFF715EFE),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Text(
+        'NEW',
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.white,
+          height: 1,
+          fontWeight: FontWeight.w500,
+          fontFamily: 'Gilroy',
+        ),
       ),
     );
   }
@@ -887,4 +1008,72 @@ String formatHomeNewsTime(DateTime? time, DateTime now) {
   final month = time.month.toString().padLeft(2, '0');
   final day = time.day.toString().padLeft(2, '0');
   return '${time.year}-$month-$day';
+}
+
+class _HomeLatestHeader extends StatelessWidget {
+  const _HomeLatestHeader({required this.title, required this.onMoreTap});
+
+  final String title;
+  final VoidCallback onMoreTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = DashboardScaleScope.of(context);
+    final ui = scale.ui;
+    return SizedBox(
+      width: double.infinity,
+      height: ui(30),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: ui(20),
+                color: Color(0xFF1A1A1A),
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w500,
+                height: 1,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: onMoreTap,
+            child: Container(
+              width: ui(58),
+              height: ui(26),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(
+                  ui(ShellLayoutSpec.smallRadius),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '更多',
+                    style: TextStyle(
+                      fontSize: ui(14),
+                      color: const Color(0xFFA9A9A9),
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w400,
+                      height: 1,
+                    ),
+                  ),
+                  SizedBox(width: ui(2)),
+                  AppAssetGraphic(
+                    AppAssets.shellV2MoreArrow,
+                    width: ui(10),
+                    height: ui(10),
+                    fit: BoxFit.contain,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

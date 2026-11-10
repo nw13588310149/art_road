@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_assets.dart';
+import '../widgets/app_asset_graphic.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
 import 'app_spacing.dart';
@@ -13,11 +15,13 @@ class AppSectionHeader extends StatelessWidget {
     this.onMore,
     this.moreLabel = '更多',
     this.trailing,
+    this.titleStyle,
     super.key,
   });
 
   final String title;
   final String? subtitle;
+  final TextStyle? titleStyle;
 
   /// 传入后右侧显示「更多 ›」。
   final VoidCallback? onMore;
@@ -35,23 +39,38 @@ class AppSectionHeader extends StatelessWidget {
             ? null
             : AppPressable(
                 onTap: onMore,
-                child: SizedBox(
-                  height: 32,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        moreLabel,
-                        style: AppText.body13.copyWith(
-                          color: AppColors.textTertiary,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 58,
+                      minHeight: 26,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpace.s8,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppRadius.br12,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          moreLabel,
+                          style: AppText.body14.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
                         ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        size: 16,
-                        color: AppColors.textTertiary,
-                      ),
-                    ],
+                        const SizedBox(width: 2),
+                        const AppAssetGraphic(
+                          AppAssets.shellV2MoreArrow,
+                          width: 10,
+                          height: 10,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ));
@@ -67,7 +86,7 @@ class AppSectionHeader extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.title16,
+                  style: titleStyle ?? AppText.title20,
                 ),
               ),
               if (note != null && note.isNotEmpty) ...[

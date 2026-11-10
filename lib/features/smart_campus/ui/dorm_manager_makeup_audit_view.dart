@@ -7,11 +7,8 @@ import '../../shell/ui/shell_layout.dart';
 import '../data/dormitory_check_data.dart';
 import '../state/dormitory_manager_controller.dart';
 import 'widgets/dormitory_detail_dialog.dart';
-import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPageBg = AppColors.page;
-const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
 const Color _kTextSecondary = AppColors.textSecondary;
 const Color _kTextHint = AppColors.textPlaceholder;
@@ -94,13 +91,13 @@ class _DormManagerMakeupAuditViewState
     final ui = DashboardScaleScope.of(context).ui;
     final state = ref.watch(dormitoryManagerControllerProvider);
     return Container(
-      color: _kPageBg,
+      color: AppColors.surface,
       child: SingleChildScrollView(
         padding: EdgeInsets.only(bottom: ui(20)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Banner(onBack: widget.onBack),
+            AppPageHeader(title: '补卡审核', onBack: widget.onBack),
             SizedBox(height: ui(16)),
             _MakeupFilters(
               buildings: state.managedBuildings,
@@ -247,55 +244,6 @@ class _MakeupFilters extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      padding: EdgeInsets.symmetric(horizontal: ui(12)),
-      decoration: smartCampusPageBannerDecoration(ui),
-      child: Row(
-        children: [
-          InkWell(
-            onTap: onBack,
-            borderRadius: BorderRadius.circular(ui(8)),
-            child: Container(
-              width: ui(32),
-              height: ui(32),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(ui(8)),
-                border: Border.all(color: _kBorderSoft),
-              ),
-              child: Icon(Icons.chevron_left_rounded, size: ui(20)),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              '补卡审核',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: ui(16),
-                fontWeight: AppFont.w600,
-                color: _kTextDark,
-              ),
-            ),
-          ),
-          SizedBox(width: ui(32)),
         ],
       ),
     );

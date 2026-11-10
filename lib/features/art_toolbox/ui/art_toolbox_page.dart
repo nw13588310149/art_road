@@ -24,10 +24,11 @@ import 'tools/temperature_tool.dart';
 import 'tools/value_check_tool.dart';
 import 'tools/value_order_tool.dart';
 import 'widgets/image_tool_frame.dart';
+import 'widgets/tool_panel.dart';
 
 /// 画室工具箱：看画分析、练习训练、备考助手三组共 17 个工具。
 ///
-/// 路由参数（均可选）：`{'tool': String, 'imageUrl': String, 'title': String}`。
+/// 路由参数（均可选）：`{'tool': String, 'imageUrl': String, 'title': String, 'returnToSource': bool}`。
 /// `tool` 接受 [ArtTool.tryParse] 能识别的 key、中文名或简称（如 `grid`、`明度`、`三庭五眼`），
 /// 带 `tool` 时直接打开该工具，返回即关闭本页；`imageUrl` 会预先载入给图片类工具使用
 /// （如范画库「临摹网格」），`title` 为图片名称。
@@ -40,7 +41,9 @@ class ArtToolboxPage extends ConsumerStatefulWidget {
 
 class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
   ArtTool? _tool;
-  ArtTool? _entryTool;
+  bool _directEntry = false;
+  bool _returnToSource = false;
+  ArtToolGroup _group = ArtToolGroup.analysis;
   bool _argsApplied = false;
   bool _imagePending = false;
 
@@ -57,7 +60,9 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
     }
     final tool = ArtTool.tryParse(args['tool']?.toString());
     _tool = tool;
-    _entryTool = tool;
+    _directEntry = tool != null;
+    _returnToSource = args['returnToSource'] == true;
+    _group = tool?.group ?? _group;
     final imageUrl = args['imageUrl']?.toString().trim() ?? '';
     final title = args['title']?.toString().trim() ?? '';
     if (imageUrl.isEmpty) {
@@ -79,9 +84,8 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
 
   /// 由路由参数直达的工具，返回时关闭整页回到来源页。
   void _back() {
-    final tool = _tool;
-    if (tool != null && tool == _entryTool) {
-      _entryTool = null;
+    if (_directEntry) {
+      _directEntry = false;
       final navigator = Navigator.of(context);
       if (navigator.canPop()) {
         navigator.pop();
@@ -136,14 +140,19 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
       padding: EdgeInsets.zero,
       child: ClipRRect(
         borderRadius: AppRadius.br16,
-        child: ToolboxImagePending(
+        child: ToolboxWorkspaceScope(
           pending: _imagePending,
+          onSwitchTool: _open,
           child: KeyedSubtree(
             key: ValueKey<ArtTool?>(tool),
             child: tool == null
                 ? _ToolboxHome(
+                    group: _group,
+                    onGroupChanged: (group) => setState(() => _group = group),
                     onOpen: _open,
-                    onBack: canPop ? () => Navigator.of(context).pop() : null,
+                    onBack: _returnToSource && canPop
+                        ? () => Navigator.of(context).pop()
+                        : null,
                   )
                 : _buildTool(tool),
           ),
@@ -154,8 +163,15 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
 }
 
 class _ToolboxHome extends ConsumerWidget {
-  const _ToolboxHome({required this.onOpen, required this.onBack});
+  const _ToolboxHome({
+    required this.group,
+    required this.onGroupChanged,
+    required this.onOpen,
+    required this.onBack,
+  });
 
+  final ArtToolGroup group;
+  final ValueChanged<ArtToolGroup> onGroupChanged;
   final ValueChanged<ArtTool> onOpen;
   final VoidCallback? onBack;
 
@@ -166,7 +182,6 @@ class _ToolboxHome extends ConsumerWidget {
     String descriptionOf(ArtTool tool) {
       if (tool == ArtTool.countdown && next != null) {
         final days = next.daysLeftFrom(now);
-        // 卡片描述只有一行，天数放在最前，考试名过长时只截断名称。
         return days == 0 ? '今天 · ${next.name}' : '还有 $days 天 · ${next.name}';
       }
       return tool.description;
@@ -175,64 +190,160 @@ class _ToolboxHome extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppPageHeader(
-          title: '画室工具箱',
-          subtitle: '离线可用 · 图片只在本机处理，不会上传',
-          onBack: onBack,
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              AppSpace.s24,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final group in ArtToolGroup.values) ...[
-                  AppSectionHeader(
-                    title: group.label,
-                    subtitle: group.description,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  primary: false,
+                  child: AppSegmented<ArtToolGroup>(
+                    segments: [
+                      for (final category in ArtToolGroup.values)
+                        AppSegment(value: category, label: category.label),
+                    ],
+                    value: group,
+                    onChanged: onGroupChanged,
+                    neutral: true,
                   ),
-                  const SizedBox(height: AppSpace.s12),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      const gap = AppSpace.s12;
-                      final width = constraints.maxWidth;
-                      final columns = width >= 840 ? 3 : (width >= 520 ? 2 : 1);
-                      final itemWidth = (width - gap * (columns - 1)) / columns;
-                      return Wrap(
-                        spacing: gap,
-                        runSpacing: gap,
-                        children: [
-                          for (final tool in group.tools)
-                            SizedBox(
-                              width: itemWidth,
-                              child: _ToolCard(
-                                tool: tool,
-                                description: descriptionOf(tool),
-                                onTap: () => onOpen(tool),
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppSpace.s24),
-                ],
+                ),
+              ),
+              if (onBack != null) ...[
+                const SizedBox(width: AppSpace.s8),
+                AppIconButton.back(onTap: onBack),
               ],
-            ),
+            ],
           ),
+        ),
+        const SizedBox(height: 18),
+        Expanded(
+          child: group == ArtToolGroup.analysis
+              ? _AnalysisWorkspace(onOpen: onOpen)
+              : SingleChildScrollView(
+                  key: PageStorageKey(group),
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(group.description, style: AppText.body13),
+                      const SizedBox(height: AppSpace.s8),
+                      for (final tool in group.tools)
+                        _ToolRow(
+                          tool: tool,
+                          description: descriptionOf(tool),
+                          onTap: () => onOpen(tool),
+                        ),
+                    ],
+                  ),
+                ),
         ),
       ],
     );
   }
 }
 
-class _ToolCard extends StatelessWidget {
-  const _ToolCard({
+class _AnalysisWorkspace extends ConsumerWidget {
+  const _AnalysisWorkspace({required this.onOpen});
+
+  final ValueChanged<ArtTool> onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(toolboxImageControllerProvider);
+    final controller = ref.read(toolboxImageControllerProvider.notifier);
+    final image = state.image;
+
+    Future<void> pickSample() async {
+      final sample = await showToolboxSamplePicker(context);
+      if (sample != null && context.mounted) {
+        await controller.loadSample(sample);
+      }
+    }
+
+    final actions = Wrap(
+      alignment: WrapAlignment.center,
+      spacing: AppSpace.s8,
+      runSpacing: AppSpace.s8,
+      children: [
+        AppButton(
+          label: '上传图片',
+          icon: Icons.upload_rounded,
+          onTap: state.loading ? null : controller.pickFromAlbum,
+        ),
+        AppButton(
+          label: '使用示例画作',
+          variant: AppButtonVariant.secondary,
+          onTap: state.loading ? null : pickSample,
+        ),
+      ],
+    );
+    return ImageToolLayout(
+      stage: (_) => ToolStage(
+        child: image == null
+            ? state.loading
+                  ? const Center(child: AppLoadingIndicator(size: 40))
+                  : AppEmptyState(
+                      title: '先选一张要分析的画作',
+                      description: '同一张图可在各工具中继续使用，图片只在本机处理。',
+                      icon: Icons.image_outlined,
+                      action: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          actions,
+                          const SizedBox(height: AppSpace.s24),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: AppSpace.s12,
+                            runSpacing: AppSpace.s8,
+                            children: [
+                              for (final sample in toolboxSamples)
+                                if (sample.featured)
+                                  SampleThumb(
+                                    sample: sample,
+                                    size: 82,
+                                    showLabel: true,
+                                    onTap: () => controller.loadSample(sample),
+                                  ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
+            : Column(
+                children: [
+                  Expanded(
+                    child: StageImagePane(
+                      image: image.image,
+                      label: image.label,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpace.s16),
+                    child: actions,
+                  ),
+                ],
+              ),
+      ),
+      panel: (_) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('分析工具', style: AppText.title16),
+          const SizedBox(height: AppSpace.s4),
+          for (final tool in ArtToolGroup.analysis.tools)
+            _ToolRow(
+              tool: tool,
+              description: tool.description,
+              onTap: () => onOpen(tool),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolRow extends StatelessWidget {
+  const _ToolRow({
     required this.tool,
     required this.description,
     required this.onTap,
@@ -244,52 +355,15 @@ class _ToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return AppListRow(
+      title: tool.label,
+      subtitle: description,
+      leading: AppIconTile(icon: tool.icon, size: 32),
+      minHeight: 48,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      chevron: true,
+      divider: true,
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpace.s16,
-        vertical: AppSpace.s12,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.tint(tool.accent),
-              borderRadius: AppRadius.br8,
-            ),
-            child: Icon(tool.icon, color: tool.accent, size: 22),
-          ),
-          const SizedBox(width: AppSpace.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tool.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.title16,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.caption12,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpace.s8),
-          const Icon(
-            Icons.chevron_right_rounded,
-            size: 20,
-            color: AppColors.textPlaceholder,
-          ),
-        ],
-      ),
     );
   }
 }

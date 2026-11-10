@@ -47,7 +47,6 @@ import 'widgets/smart_campus_stripe_bar_chart.dart';
 import 'widgets/homework_voice_comment.dart';
 
 const Color _kCardBg = AppColors.surface;
-const Color _kPageBg = AppColors.page;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kBorderHair = AppColors.line;
@@ -383,7 +382,6 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
     final ui = DashboardScaleScope.of(context).ui;
     final pageLoading = _initialLoad && _loadingList;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       bodyScrollable: false,
       header: AppPageHeader(
@@ -641,7 +639,7 @@ class _AverageBarChartCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSegmented<_ChartGroup>(
-            size: AppControlSize.sm,
+            neutral: true,
             segments: const [
               AppSegment(value: _ChartGroup.bySubject, label: '按科目'),
               AppSegment(value: _ChartGroup.byTeacher, label: '按老师'),
@@ -900,10 +898,16 @@ class _StatusTabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppTabs<_StatusTab>(
-      tabs: [
+    return SmartCampusStatusTabs<_StatusTab>(
+      segments: [
         for (final o in _options)
-          AppTab(value: o.$1, label: o.$2, count: _countOf(o.$1)),
+          AppSegment(
+            value: o.$1,
+            label: switch (_countOf(o.$1)) {
+              final int count => '${o.$2} ($count)',
+              null => o.$2,
+            },
+          ),
       ],
       value: selected,
       onChanged: onSelected,

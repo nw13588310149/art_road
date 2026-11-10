@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +14,7 @@ import 'package:the_road_of_art_flutter/features/home/state/home_dashboard_contr
 import 'package:the_road_of_art_flutter/features/home/state/home_dashboard_state.dart';
 import 'package:the_road_of_art_flutter/features/home/state/home_student_cards.dart';
 import 'package:the_road_of_art_flutter/features/home/ui/home_page.dart';
+import 'package:the_road_of_art_flutter/features/home/ui/widgets/home_course_notice_card.dart';
 import 'package:the_road_of_art_flutter/features/home/ui/widgets/home_study_snapshot.dart';
 
 String _date(DateTime d) =>
@@ -119,12 +121,18 @@ HomeCourseNotice _notice(String date) => HomeCourseNotice(
 );
 
 void main() {
+  setUpAll(() async {
+    for (final font in {
+      'Barlow': 'assets/fonts/Barlow-SemiBold.ttf',
+      'Manrope': 'assets/fonts/Manrope Medium.ttf',
+      'PingFang SC': 'assets/fonts/ttf/PingFangSC-Regular.otf',
+    }.entries) {
+      await (FontLoader(font.key)..addFont(rootBundle.load(font.value))).load();
+    }
+  });
   group('alignWeekWithCourses', () {
     test('the listed day shows the same count as the course list', () {
-      final week = [
-        _day('2026-11-06', 3),
-        _day('2026-11-07', 5, today: true),
-      ];
+      final week = [_day('2026-11-06', 3), _day('2026-11-07', 5, today: true)];
       final aligned = alignWeekWithCourses(week, [
         _notice('2026-11-07'),
         _notice('2026-11-07'),
@@ -153,7 +161,7 @@ void main() {
 
   test('quick actions use the same names as the navigation', () {
     final student = buildQuickActions().map((a) => a.name).toList();
-    expect(student, containsAll(['我的学情', '作品档案', '范画库', '画室工具箱', '速写计时练习']));
+    expect(student, containsAll(['我的学情', '作品档案', '范画库', '工具箱', '速写计时练习']));
     final staff = buildQuickActions(isStaff: true).map((a) => a.name).toList();
     expect(staff, containsAll(['班级学情', '作品点评']));
     expect(staff, isNot(contains('我的学情')));
@@ -245,7 +253,9 @@ void main() {
               ],
             ),
           ),
-          homePracticeProvider.overrideWith((ref) async => buildHomePractices()),
+          homePracticeProvider.overrideWith(
+            (ref) async => buildHomePractices(),
+          ),
           homeLatestReviewProvider.overrideWith((ref) async => null),
           homeEbookShelfProvider.overrideWith(
             (ref) async => const HomeEbookShelfData(picks: [], reading: []),
@@ -266,25 +276,24 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('今日课程'), findsOneWidget);
+    expect(find.text('课程'), findsOneWidget);
     // 周条里今天的节数与课程列表一致（接口给 5，列表 2 门）。
-    expect(find.text('2 节'), findsOneWidget);
-    expect(find.text('5 节'), findsNothing);
-    expect(find.byType(AppCourseCard), findsNWidgets(2));
+    expect(find.text('2节'), findsOneWidget);
+    expect(find.text('5节'), findsNothing);
+    expect(find.byType(HomeCourseNoticeCard), findsNWidgets(2));
     expect(find.text('我的学情'), findsOneWidget);
     expect(find.text('速写计时练习'), findsOneWidget);
     expect(find.textContaining('学情速览'), findsOneWidget);
     expect(find.text('↑9 分'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('最新资讯'),
+      find.text('最新'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('更多'), findsOneWidget);
-    expect(find.text('NEW'), findsNothing);
-    expect(find.widgetWithText(AppTag, '最新'), findsOneWidget);
-    expect(find.text('5 天前'), findsOneWidget);
+    expect(find.text('NEW'), findsNWidgets(2));
+    expect(find.text('5天前'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

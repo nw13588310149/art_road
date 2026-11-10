@@ -226,19 +226,21 @@ class _DormManagerCheckByRoomViewState
         title: '按宿舍查寝',
         subtitle: '按楼栋、楼层逐间查寝，可标记全员到寝或单独修改状态',
         onBack: widget.onBack,
-        bottom: _FilterRow(
-          buildingOptions: state.managedBuildings,
-          floorOptions: state.floorOptions,
-          selectedBuilding: _selectedBuilding,
-          selectedFloor: _selectedFloor,
-          floorEnabled: _selectedBuilding.id.isNotEmpty && !state.loadingFloors,
-          onBuildingChanged: (v) => unawaited(_onBuildingChanged(v)),
-          onFloorChanged: (v) => unawaited(_onFloorChanged(v)),
-        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _FilterRow(
+            buildingOptions: state.managedBuildings,
+            floorOptions: state.floorOptions,
+            selectedBuilding: _selectedBuilding,
+            selectedFloor: _selectedFloor,
+            floorEnabled:
+                _selectedBuilding.id.isNotEmpty && !state.loadingFloors,
+            onBuildingChanged: (v) => unawaited(_onBuildingChanged(v)),
+            onFloorChanged: (v) => unawaited(_onFloorChanged(v)),
+          ),
+          SizedBox(height: ui(16)),
           Padding(
             padding: EdgeInsets.only(left: ui(4)),
             child: Text(

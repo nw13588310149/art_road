@@ -34,7 +34,7 @@ class EbooksController extends StateNotifier<EbooksState> {
       _loadCategories(),
       _loadFeatured(),
       _loadPage(reset: true),
-      _loadShelf(),
+      refreshShelf(),
       if (bookId.isNotEmpty) _loadDetail(bookId),
     ]);
   }
@@ -44,7 +44,7 @@ class EbooksController extends StateNotifier<EbooksState> {
       _loadCategories(),
       _loadFeatured(),
       _loadPage(reset: true),
-      _loadShelf(),
+      refreshShelf(),
     ]);
   }
 
@@ -94,7 +94,7 @@ class EbooksController extends StateNotifier<EbooksState> {
     }
     state = state.copyWith(view: view);
     if (view == EbooksView.shelf) {
-      unawaited(_loadShelf());
+      unawaited(refreshShelf());
     }
   }
 
@@ -189,9 +189,9 @@ class EbooksController extends StateNotifier<EbooksState> {
     );
   }
 
-  Future<void> _loadShelf() async {
+  Future<void> refreshShelf() async {
     final token = ++_shelfToken;
-    state = state.copyWith(shelfLoading: true);
+    state = state.copyWith(shelfLoading: true, shelfError: '');
     final response = await _repository.getShelf();
     if (!mounted || token != _shelfToken) {
       return;
@@ -199,6 +199,9 @@ class EbooksController extends StateNotifier<EbooksState> {
     state = state.copyWith(
       shelfLoading: false,
       shelf: response.isSuccess ? EbookShelf.fromJson(response.data) : null,
+      shelfError: response.isSuccess
+          ? ''
+          : (response.displayMsg.isEmpty ? '请稍后重试' : response.displayMsg),
     );
   }
 
@@ -273,7 +276,9 @@ class EbooksController extends StateNotifier<EbooksState> {
       details: {...state.details, id: detail},
       books: [
         for (final b in state.books)
-          b.id == id ? b.copyWith(favorite: book.favorite, progress: book.progress) : b,
+          b.id == id
+              ? b.copyWith(favorite: book.favorite, progress: book.progress)
+              : b,
       ],
     );
   }
@@ -323,7 +328,7 @@ class EbooksController extends StateNotifier<EbooksState> {
       );
     }
     await Future.wait<void>([
-      _loadShelf(),
+      refreshShelf(),
       if (state.details.containsKey(bookId)) _loadDetail(bookId, silent: true),
     ]);
   }

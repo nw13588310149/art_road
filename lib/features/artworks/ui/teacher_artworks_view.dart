@@ -161,53 +161,72 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
         AppPageHeader(
           title: '作品点评',
           subtitle: '多位老师独立点评，保存自己的点评后可查看其他老师的意见',
-          actions: [
-            AppButton(
-              label: '点评标签',
-              icon: Icons.sell_outlined,
-              variant: AppButtonVariant.quiet,
-              size: AppButtonSize.sm,
-              onTap: () => showArtworkTagManager(context),
-            ),
-            AppButton(
-              label: '开始点评',
-              icon: Icons.rate_review_outlined,
-              size: AppButtonSize.sm,
-              loading: _starting,
-              onTap: _startReview,
-            ),
-          ],
-          bottom: Row(
+          bottom: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpace.s12,
+            runSpacing: AppSpace.s8,
             children: [
-              AppSegmented<ArtworkStatusFilter>(
-                segments: [
-                  for (final filter in _filters)
-                    AppSegment(
-                      value: filter,
-                      label: filter.label,
-                      badge:
-                          filter == ArtworkStatusFilter.pending && pending > 0
-                          ? '$pending'
-                          : null,
-                    ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppSegmented<ArtworkStatusFilter>(
+                    segments: [
+                      for (final filter in _filters)
+                        AppSegment(
+                          value: filter,
+                          label: filter.label,
+                          badge:
+                              filter == ArtworkStatusFilter.pending &&
+                                  pending > 0
+                              ? '$pending'
+                              : null,
+                        ),
+                    ],
+                    value: state.filter,
+                    onChanged: (f) => unawaited(_controller.setFilter(f)),
+                  ),
+                  if (state.loaded &&
+                      !state.loadingList &&
+                      !state.listFailed) ...[
+                    const SizedBox(width: AppSpace.s12),
+                    Text('共 ${state.total} 件', style: AppText.caption12),
+                  ],
                 ],
-                value: state.filter,
-                onChanged: (f) => unawaited(_controller.setFilter(f)),
               ),
-              const SizedBox(width: AppSpace.s12),
-              Text('共 ${state.total} 件', style: AppText.caption12),
-              const Spacer(),
-              SizedBox(
-                width: 280,
-                child: AppSearchField(
-                  controller: _search,
-                  hint: '搜索学生、校区或作品',
-                  onChanged: _onSearchChanged,
-                  onSubmitted: (value) {
-                    _searchDebounce?.cancel();
-                    unawaited(_controller.setKeyword(value));
-                  },
-                ),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpace.s8,
+                runSpacing: AppSpace.s8,
+                children: [
+                  SizedBox(
+                    width: 230,
+                    child: AppSearchField(
+                      controller: _search,
+                      hint: '搜索学生、校区或作品',
+                      onChanged: _onSearchChanged,
+                      onCleared: _clearSearch,
+                      onSubmitted: (value) {
+                        _searchDebounce?.cancel();
+                        unawaited(_controller.setKeyword(value));
+                      },
+                    ),
+                  ),
+                  AppButton(
+                    label: '点评标签',
+                    icon: Icons.sell_outlined,
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.sm,
+                    onTap: () => showArtworkTagManager(context),
+                  ),
+                  AppButton(
+                    label: '开始点评',
+                    icon: Icons.rate_review_outlined,
+                    size: AppButtonSize.sm,
+                    loading: _starting,
+                    onTap: _startReview,
+                  ),
+                ],
               ),
             ],
           ),
@@ -295,9 +314,7 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
                       ArtworkStatusFilter.reviewed => '还没有点评过的作品',
                       ArtworkStatusFilter.all => '暂时没有分配给你的作品',
                     },
-              description: searching
-                  ? '换个学生姓名、校区或作品名称试试'
-                  : '学生提交作品后会出现在这里',
+              description: searching ? '换个学生姓名、校区或作品名称试试' : '学生提交作品后会出现在这里',
               actionLabel: searching ? '清除搜索' : null,
               onAction: searching ? _clearSearch : null,
             ),

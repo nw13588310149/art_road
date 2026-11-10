@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
 import '../../state/auth_state.dart';
 
@@ -21,13 +22,14 @@ class AuthSmsCodeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enabled = !state.isSendingSms;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: AppIconInputField(
             controller: controller,
-            icon: Icons.sms_outlined,
+            iconAsset: AppAssets.authSms,
             hint: '请输入短信验证码',
             keyboardType: TextInputType.number,
             textInputAction: TextInputAction.next,
@@ -40,13 +42,24 @@ class AuthSmsCodeRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpace.s12),
-        SizedBox(
-          width: 120,
-          child: AppButton(
-            label: state.smsButtonText,
-            variant: AppButtonVariant.secondary,
-            expand: true,
-            onTap: state.isSendingSms ? null : onSend,
+        AppPressable(
+          enabled: enabled,
+          onTap: onSend,
+          child: Container(
+            width: 117,
+            height: AppSize.buttonMd,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Color(0xFF0D1535),
+              borderRadius: AppRadius.br12,
+            ),
+            child: Text(
+              state.smsButtonText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body14.copyWith(color: AppColors.onBrand),
+            ),
           ),
         ),
       ],

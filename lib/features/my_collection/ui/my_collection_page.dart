@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/class_share_drawer.dart';
 import '../../ebooks/data/ebook_collection.dart';
 import '../navigation/collection_return.dart';
@@ -52,7 +54,7 @@ String _allSourcesText() {
 /// 群聊暂不能打开的分享类型（书刊分享卡还没有对应的打开方式）。
 const Set<int> _unshareableTypes = {CollectionType.ebook};
 
-/// 我的收藏：页头 + 类型筛选 + 收藏卡片网格（整卡可点，右下角分享 / 取消收藏）。
+/// 我的收藏：类型筛选和收藏卡片网格。
 class MyCollectionPage extends ConsumerWidget {
   const MyCollectionPage({super.key});
 
@@ -60,7 +62,6 @@ class MyCollectionPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(myCollectionControllerProvider);
     final controller = ref.read(myCollectionControllerProvider.notifier);
-    final navigator = Navigator.of(context);
     final loadingItems =
         (state.loading || state.fetchingItems) && state.items.isEmpty;
     final label = CollectionType.labelOf(state.activeType);
@@ -79,7 +80,7 @@ class MyCollectionPage extends ConsumerWidget {
     } else if (state.items.isEmpty) {
       final source = _collectSources[state.activeType];
       body = AppEmptyState(
-        icon: Icons.bookmark_border_rounded,
+        illustration: AppAssets.emptyCollectionPlaceholder,
         title: source == null ? '还没有收藏内容' : '还没有收藏的$label',
         description: '在${source ?? _allSourcesText()}里点击收藏，内容会出现在这里',
       );
@@ -87,6 +88,7 @@ class MyCollectionPage extends ConsumerWidget {
       body = _CollectionGrid(
         items: state.items,
         showTypeTag: state.activeType == CollectionType.all,
+        videoLayout: state.activeType == CollectionType.video,
         onOpen: (item) => _openItem(context, item),
         onShare: (item) => _openShare(context, ref, item),
         onRemove: (item) => _removeItem(context, ref, item),
@@ -94,43 +96,36 @@ class MyCollectionPage extends ConsumerWidget {
     }
 
     final tabs = state.tabs;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '我的收藏',
-          subtitle: loadingItems || state.items.isEmpty
-              ? '范画、视频、资讯与书刊收藏'
-              : '共 ${state.items.length} 条收藏',
-          onBack: navigator.canPop() ? navigator.pop : null,
-          bottom: tabs.length < 2
-              ? null
-              : Align(
-                  alignment: Alignment.centerLeft,
-                  child: tabs.length <= 5
-                      ? AppSegmented<int>(
-                          segments: [
-                            for (final tab in tabs)
-                              AppSegment(value: tab.type, label: tab.label),
-                          ],
-                          value: state.activeType,
-                          onChanged: controller.selectType,
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: AppTabs<int>(
-                            tabs: [
-                              for (final tab in tabs)
-                                AppTab(value: tab.type, label: tab.label),
-                            ],
-                            value: state.activeType,
-                            onChanged: controller.selectType,
-                          ),
-                        ),
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (tabs.length >= 2)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.page,
+                AppSpace.s20,
+                AppSpace.page,
+                AppSpace.s12,
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: AppSegmented<int>(
+                  neutral: true,
+                  segments: [
+                    for (final tab in tabs)
+                      AppSegment(value: tab.type, label: tab.label),
+                  ],
+                  value: state.activeType,
+                  onChanged: controller.selectType,
                 ),
-        ),
-        Expanded(child: body),
-      ],
+              ),
+            ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 
@@ -204,11 +199,13 @@ int _columnsFor(double width) => width >= 840 ? 3 : (width >= 520 ? 2 : 1);
 
 const _cardExtent = 112.0;
 const _coverSize = 88.0;
+const _videoDetailsHeight = 72.0;
 
 class _CollectionGrid extends StatelessWidget {
   const _CollectionGrid({
     required this.items,
     required this.showTypeTag,
+    required this.videoLayout,
     required this.onOpen,
     required this.onShare,
     required this.onRemove,
@@ -216,6 +213,7 @@ class _CollectionGrid extends StatelessWidget {
 
   final List<CollectionEntry> items;
   final bool showTypeTag;
+  final bool videoLayout;
   final ValueChanged<CollectionEntry> onOpen;
   final ValueChanged<CollectionEntry> onShare;
   final ValueChanged<CollectionEntry> onRemove;
@@ -224,6 +222,18 @@ class _CollectionGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final width = constraints.maxWidth - AppSpace.page * 2;
+        final columns = videoLayout
+            ? (width >= 880
+                  ? 4
+                  : width >= 610
+                  ? 3
+                  : width >= 365
+                  ? 2
+                  : 1)
+            : _columnsFor(width);
+        final cardWidth = (width - AppSpace.s16 * (columns - 1)) / columns;
+        final videoCoverHeight = (cardWidth - AppSpace.s12 * 2) * 9 / 16;
         return GridView.builder(
           padding: const EdgeInsets.fromLTRB(
             AppSpace.page,
@@ -232,12 +242,15 @@ class _CollectionGrid extends StatelessWidget {
             AppSpace.s24,
           ),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: _columnsFor(
-              constraints.maxWidth - AppSpace.page * 2,
-            ),
+            crossAxisCount: columns,
             crossAxisSpacing: AppSpace.s16,
             mainAxisSpacing: AppSpace.s16,
-            mainAxisExtent: _cardExtent,
+            mainAxisExtent: videoLayout
+                ? videoCoverHeight +
+                      AppSpace.s12 * 2 +
+                      AppSpace.s8 +
+                      _videoDetailsHeight
+                : _cardExtent,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -245,6 +258,7 @@ class _CollectionGrid extends StatelessWidget {
             return _CollectionCard(
               item: item,
               showTypeTag: showTypeTag,
+              videoLayout: videoLayout,
               onTap: () => onOpen(item),
               onShare: () => onShare(item),
               onRemove: () => onRemove(item),
@@ -260,6 +274,7 @@ class _CollectionCard extends StatelessWidget {
   const _CollectionCard({
     required this.item,
     required this.showTypeTag,
+    required this.videoLayout,
     required this.onTap,
     required this.onShare,
     required this.onRemove,
@@ -267,6 +282,7 @@ class _CollectionCard extends StatelessWidget {
 
   final CollectionEntry item;
   final bool showTypeTag;
+  final bool videoLayout;
   final VoidCallback onTap;
   final VoidCallback onShare;
   final VoidCallback onRemove;
@@ -277,106 +293,120 @@ class _CollectionCard extends StatelessWidget {
     final pages = item.isEbook
         ? int.tryParse('${item.rawPayload['pageCount'] ?? ''}') ?? 0
         : 0;
+    final cover = _CollectionCover(item: item, wide: videoLayout);
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          item.title,
+          maxLines: videoLayout ? 1 : 2,
+          overflow: TextOverflow.ellipsis,
+          style: AppText.body14Strong,
+        ),
+        if (item.subtitle.isNotEmpty)
+          Text(
+            item.subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.caption12,
+          ),
+        const Spacer(),
+        Row(
+          children: [
+            if (showTypeTag) ...[
+              AppTag(
+                label: CollectionType.labelOf(item.type),
+                tone: AppTone.brand,
+              ),
+              const SizedBox(width: AppSpace.s8),
+            ],
+            if (pages > 0) Text('$pages 页', style: AppText.caption12),
+            if (views > 0 && !item.isArtwork && !item.isEbook) ...[
+              AppAssetGraphic(
+                item.isVideo ? AppAssets.videoV2CardViews : AppAssets.newsViews,
+                width: 14,
+                height: 14,
+              ),
+              const SizedBox(width: AppSpace.s4),
+              Expanded(
+                child: Text(
+                  '$views',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption12,
+                ),
+              ),
+            ] else
+              const Spacer(),
+            Builder(
+              builder: (anchor) => AppIconButton.asset(
+                asset: AppAssets.cloudActionMore,
+                assetSize: 20,
+                semanticLabel: '收藏操作',
+                size: AppButtonSize.sm,
+                filled: false,
+                onTap: () => _openMenu(anchor),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
     return AppCard(
       padding: const EdgeInsets.all(AppSpace.s12),
       onTap: onTap,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _CollectionCover(item: item),
-          const SizedBox(width: AppSpace.s12),
-          Expanded(
-            child: Column(
+      child: videoLayout
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: cover),
+                const SizedBox(height: AppSpace.s8),
+                SizedBox(height: _videoDetailsHeight, child: details),
+              ],
+            )
+          : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.body14Strong,
-                ),
-                if (item.subtitle.isNotEmpty)
-                  Text(
-                    item.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.caption12,
-                  ),
-                const Spacer(),
-                Row(
-                  children: [
-                    if (showTypeTag) ...[
-                      AppTag(
-                        label: CollectionType.labelOf(item.type),
-                        tone: AppTone.brand,
-                      ),
-                      const SizedBox(width: AppSpace.s8),
-                    ],
-                    if (pages > 0)
-                      Text(
-                        '$pages 页',
-                        style: AppText.number(
-                          size: 12,
-                          color: AppColors.textTertiary,
-                        ),
-                      ),
-                    if (views > 0 && !item.isArtwork && !item.isEbook)
-                      Flexible(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.visibility_outlined,
-                              size: 14,
-                              color: AppColors.textTertiary,
-                            ),
-                            const SizedBox(width: AppSpace.s4),
-                            Flexible(
-                              child: Text(
-                                '$views',
-                                maxLines: 1,
-                                style: AppText.number(
-                                  size: 12,
-                                  color: AppColors.textTertiary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const Spacer(),
-                    if (!_unshareableTypes.contains(item.type))
-                      AppIconButton(
-                        icon: Icons.share_outlined,
-                        semanticLabel: '分享给班级',
-                        size: AppButtonSize.sm,
-                        filled: false,
-                        color: AppColors.textSecondary,
-                        onTap: onShare,
-                      ),
-                    AppIconButton(
-                      icon: Icons.bookmark_remove_outlined,
-                      semanticLabel: '取消收藏',
-                      size: AppButtonSize.sm,
-                      filled: false,
-                      color: AppColors.textSecondary,
-                      onTap: onRemove,
-                    ),
-                  ],
-                ),
+                cover,
+                const SizedBox(width: AppSpace.s12),
+                Expanded(child: details),
               ],
             ),
-          ),
-        ],
-      ),
     );
+  }
+
+  Future<void> _openMenu(BuildContext anchor) async {
+    final action = await showAppMenu<_CollectionMenuAction>(
+      context: anchor,
+      width: 144,
+      items: [
+        if (!_unshareableTypes.contains(item.type))
+          const AppMenuItem(
+            value: _CollectionMenuAction.share,
+            label: '分享给班级',
+            iconAsset: AppAssets.coursewareActionShare,
+          ),
+        const AppMenuItem(
+          value: _CollectionMenuAction.remove,
+          label: '取消收藏',
+          iconAsset: AppAssets.coursewareActionDelete,
+          danger: true,
+        ),
+      ],
+    );
+    if (action == _CollectionMenuAction.share) onShare();
+    if (action == _CollectionMenuAction.remove) onRemove();
   }
 }
 
+enum _CollectionMenuAction { share, remove }
+
 class _CollectionCover extends StatelessWidget {
-  const _CollectionCover({required this.item});
+  const _CollectionCover({required this.item, this.wide = false});
 
   final CollectionEntry item;
+  final bool wide;
 
   @override
   Widget build(BuildContext context) {
@@ -387,8 +417,10 @@ class _CollectionCover extends StatelessWidget {
     final duration = item.durationText.trim();
     return SizedBox(
       // 书刊封面是 3:4 竖版，其它类型裁成方图。
-      width: item.isEbook ? _coverSize * 3 / 4 : _coverSize,
-      height: _coverSize,
+      width: wide
+          ? double.infinity
+          : (item.isEbook ? _coverSize * 3 / 4 : _coverSize),
+      height: wide ? null : _coverSize,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -426,16 +458,13 @@ class _CollectionCover extends StatelessWidget {
         borderRadius: AppRadius.br8,
       ),
       alignment: Alignment.center,
-      child: Icon(
-        switch (item.type) {
-          CollectionType.video => Icons.play_circle_outline_rounded,
-          CollectionType.news => Icons.feed_outlined,
-          CollectionType.artwork => Icons.palette_outlined,
-          CollectionType.ebook => Icons.menu_book_outlined,
-          _ => Icons.bookmark_border_rounded,
-        },
-        color: AppColors.textPlaceholder,
-      ),
+      child: Icon(switch (item.type) {
+        CollectionType.video => Icons.play_circle_outline_rounded,
+        CollectionType.news => Icons.feed_outlined,
+        CollectionType.artwork => Icons.palette_outlined,
+        CollectionType.ebook => Icons.menu_book_outlined,
+        _ => Icons.bookmark_border_rounded,
+      }, color: AppColors.textPlaceholder),
     );
   }
 }

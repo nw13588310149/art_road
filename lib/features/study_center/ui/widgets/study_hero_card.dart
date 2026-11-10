@@ -10,6 +10,8 @@ import 'study_score_ring.dart';
 class StudyHeroCard extends StatelessWidget {
   const StudyHeroCard({
     required this.exam,
+    this.studentLabel = '',
+    this.studentName = '',
     this.scoreChange,
     this.rankingChange,
     this.surpassedPercent,
@@ -19,6 +21,8 @@ class StudyHeroCard extends StatelessWidget {
   });
 
   final StudyExamRecord exam;
+  final String studentLabel;
+  final String studentName;
   final double? scoreChange;
 
   /// 正数表示名次上升。
@@ -51,6 +55,7 @@ class StudyHeroCard extends StatelessWidget {
                   Expanded(
                     child: _HeroInfo(
                       exam: exam,
+                      studentName: studentName,
                       scoreChange: scoreChange,
                       rankingChange: rankingChange,
                       surpassedPercent:
@@ -66,6 +71,10 @@ class StudyHeroCard extends StatelessWidget {
               );
             },
           ),
+          if (studentLabel.isNotEmpty) ...[
+            const SizedBox(height: AppSpace.s12),
+            Text(studentLabel, style: AppText.caption12),
+          ],
           if (stats != null) ...[
             const SizedBox(height: AppSpace.s20),
             _HeroStats(statistics: stats),
@@ -97,6 +106,7 @@ class StudyExamStatusTag extends StatelessWidget {
 class _HeroInfo extends StatelessWidget {
   const _HeroInfo({
     required this.exam,
+    required this.studentName,
     required this.scoreChange,
     required this.rankingChange,
     required this.surpassedPercent,
@@ -104,6 +114,7 @@ class _HeroInfo extends StatelessWidget {
   });
 
   final StudyExamRecord exam;
+  final String studentName;
   final double? scoreChange;
   final int? rankingChange;
   final int? surpassedPercent;
@@ -113,6 +124,7 @@ class _HeroInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     final scored = exam.isPublished && exam.hasScore;
     final meta = [
+      if (studentName.isNotEmpty) studentName,
       studyDateText(exam.examTime),
       if (exam.admissionNo.isNotEmpty) '准考证号 ${exam.admissionNo}',
       if (exam.organizationName.isNotEmpty) exam.organizationName,
@@ -199,10 +211,7 @@ class _HeroInfo extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (percent != null)
-                AppTag(
-                  label: '超过全画室 $percent% 的考生',
-                  tone: AppTone.brand,
-                ),
+                AppTag(label: '超过全画室 $percent% 的考生', tone: AppTone.brand),
               if (openReport != null)
                 AppButton(
                   label: '查看完整报告',
@@ -233,7 +242,14 @@ class _HeroMetric extends StatelessWidget {
       children: [
         Text(label, style: AppText.caption12),
         const SizedBox(height: AppSpace.s4),
-        SizedBox(height: 26, child: Align(alignment: Alignment.centerLeft, child: child)),
+        SizedBox(
+          height: 26,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            widthFactor: 1,
+            child: child,
+          ),
+        ),
       ],
     );
   }

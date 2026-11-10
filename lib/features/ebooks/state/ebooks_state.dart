@@ -70,6 +70,7 @@ class EbooksState {
     required this.view,
     required this.shelf,
     required this.shelfLoading,
+    this.shelfError = '',
     required this.shelfFilter,
     required this.detailStack,
     required this.details,
@@ -121,6 +122,7 @@ class EbooksState {
   final EbooksView view;
   final EbookShelf shelf;
   final bool shelfLoading;
+  final String shelfError;
   final EbookShelfFilter shelfFilter;
 
   /// 详情页栈：从相关书刊继续打开时逐层返回。
@@ -131,8 +133,7 @@ class EbooksState {
 
   String? get openBookId => detailStack.isEmpty ? null : detailStack.last;
 
-  bool get hasFilters =>
-      keyword.isNotEmpty || category != EbookCategory.allKey;
+  bool get hasFilters => keyword.isNotEmpty || category != EbookCategory.allKey;
 
   List<EbookSummary> get shelfItems => switch (shelfFilter) {
     EbookShelfFilter.all => shelf.records,
@@ -165,6 +166,7 @@ class EbooksState {
     EbooksView? view,
     EbookShelf? shelf,
     bool? shelfLoading,
+    String? shelfError,
     EbookShelfFilter? shelfFilter,
     List<String>? detailStack,
     Map<String, EbookDetail>? details,
@@ -187,6 +189,7 @@ class EbooksState {
       view: view ?? this.view,
       shelf: shelf ?? this.shelf,
       shelfLoading: shelfLoading ?? this.shelfLoading,
+      shelfError: shelfError ?? this.shelfError,
       shelfFilter: shelfFilter ?? this.shelfFilter,
       detailStack: detailStack ?? this.detailStack,
       details: details ?? this.details,

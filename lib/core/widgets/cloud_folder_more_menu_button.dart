@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../constants/app_assets.dart';
+import '../ui/app_pressable.dart';
 import '../../features/shell/ui/shell_layout.dart';
 
 /// 云盘 / 录音等「文件夹卡片」右上角的 ⋯ 菜单按钮。
@@ -31,9 +32,9 @@ class CloudFolderMoreMenuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final icon = ui(iconLogicalSize);
-    return GestureDetector(
+    return AppPressable(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
+      semanticLabel: '文件夹操作',
       child: SizedBox(
         width: ui(hitLogicalExtent),
         height: ui(hitLogicalExtent),

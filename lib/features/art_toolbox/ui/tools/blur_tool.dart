@@ -67,7 +67,7 @@ class _BlurBodyState extends State<_BlurBody>
   @override
   Widget build(BuildContext context) {
     return ImageToolLayout(
-      stage: (context, wide) => GestureDetector(
+      stage: (context) => GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => setState(() => _peek = true),
         onTapUp: (_) => setState(() => _peek = false),
@@ -77,12 +77,11 @@ class _BlurBodyState extends State<_BlurBody>
           processed: _peek ? widget.image.image : result?.image,
           label: _peek ? '原图' : (_grayscale ? '模糊 · 去色' : '模糊'),
           compare: _compare,
-          wide: wide,
           failed: failed,
           onRetry: reprocess,
         ),
       ),
-      panel: (context, wide) => Column(
+      panel: (context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ToolSliderRow(
@@ -107,12 +106,11 @@ class _BlurBodyState extends State<_BlurBody>
               reprocess();
             },
           ),
-          if (wide)
-            ToolSwitchRow(
-              label: '与原图并排对比',
-              value: _compare,
-              onChanged: (v) => setState(() => _compare = v),
-            ),
+          ToolSwitchRow(
+            label: '与原图并排对比',
+            value: _compare,
+            onChanged: (v) => setState(() => _compare = v),
+          ),
           Text('按住画面可临时查看原图', style: AppText.caption12),
           const SizedBox(height: AppSpace.s16),
           const ToolTipCard(

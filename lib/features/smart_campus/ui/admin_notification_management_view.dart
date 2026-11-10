@@ -65,7 +65,6 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kHairline = AppColors.lineSoft;
@@ -509,7 +508,6 @@ class _AdminNotificationManagementViewState
     final ui = DashboardScaleScope.of(context).ui;
     final list = _filtered;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
         title: '通知管理',
@@ -855,6 +853,12 @@ class _NotificationTable extends StatelessWidget {
   }
 }
 
+const _typeColumnWidth = 56.0;
+const _priorityColumnWidth = 60.0;
+const _statusColumnWidth = 60.0;
+const _timeColumnWidth = 120.0;
+const _actionColumnWidth = 120.0;
+
 class _TableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -868,19 +872,19 @@ class _TableHeader extends StatelessWidget {
       ),
       child: Row(
         children: const [
-          _HeaderCell(width: 200, text: '标题'),
+          Expanded(flex: 2, child: _HeaderCell(text: '标题')),
           _HeaderGap(),
-          Expanded(child: _HeaderCell(text: '类型')),
+          _HeaderCell(width: _typeColumnWidth, text: '类型'),
           _HeaderGap(),
-          Expanded(child: _HeaderCell(text: '优先级')),
+          _HeaderCell(width: _priorityColumnWidth, text: '优先级'),
           _HeaderGap(),
-          _HeaderCell(width: 120, text: '范围'),
+          Expanded(child: _HeaderCell(text: '范围')),
           _HeaderGap(),
-          Expanded(child: _HeaderCell(text: '状态')),
+          _HeaderCell(width: _statusColumnWidth, text: '状态'),
           _HeaderGap(),
-          _HeaderCell(width: 120, text: '时间'),
+          _HeaderCell(width: _timeColumnWidth, text: '时间'),
           _HeaderGap(),
-          _HeaderCell(width: 120, text: '操作'),
+          _HeaderCell(width: _actionColumnWidth, text: '操作'),
         ],
       ),
     );
@@ -947,34 +951,40 @@ class _TableRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            SizedBox(
-              width: ui(200),
+            Expanded(
+              flex: 2,
               child: _TitleCell(title: record.title, author: record.author),
             ),
             const _HeaderGap(),
-            Expanded(
+            SizedBox(
+              width: ui(_typeColumnWidth),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: AppTag(label: record.type),
               ),
             ),
             const _HeaderGap(),
-            Expanded(child: _PriorityCell(priority: record.priority)),
-            const _HeaderGap(),
             SizedBox(
-              width: ui(120),
+              width: ui(_priorityColumnWidth),
+              child: _PriorityCell(priority: record.priority),
+            ),
+            const _HeaderGap(),
+            Expanded(
               child: _TextCell(text: record.scopeLabel, maxLines: 2),
             ),
             const _HeaderGap(),
-            Expanded(child: _StatusCell(status: record.status)),
+            SizedBox(
+              width: ui(_statusColumnWidth),
+              child: _StatusCell(status: record.status),
+            ),
             const _HeaderGap(),
             SizedBox(
-              width: ui(120),
+              width: ui(_timeColumnWidth),
               child: _TextCell(text: record.time),
             ),
             const _HeaderGap(),
             SizedBox(
-              width: ui(120),
+              width: ui(_actionColumnWidth),
               child: _ActionCell(
                 status: record.status,
                 onView: onTap,

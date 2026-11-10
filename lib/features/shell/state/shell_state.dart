@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show IconData, Icons;
+import 'package:flutter/material.dart' show IconData;
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
@@ -13,6 +13,7 @@ class ShellNavItem {
     required this.activeIcon,
     this.badge = 0,
     this.badgeColor = 0xFFE61F62,
+
     /// 导航 icon 边长（设计稿逻辑 px）；未指定时默认 24。
     this.iconSize,
     this.iconData,
@@ -286,8 +287,6 @@ List<ShellNavItem> buildDefaultNavItems({
       route: RoutePaths.personalAi,
       icon: AppAssets.leftNavAi,
       activeIcon: AppAssets.leftNavAi,
-      // 旧图片里写着「AI」，改用对话气泡图标。
-      iconData: Icons.chat_bubble_outline_rounded,
     ),
     if (academic) ...[
       ShellNavItem(
@@ -316,7 +315,7 @@ List<ShellNavItem> buildDefaultNavItems({
       activeIcon: AppAssets.leftNavShukan,
     ),
     const ShellNavItem(
-      label: '画室工具箱',
+      label: '工具箱',
       route: RoutePaths.artToolbox,
       icon: AppAssets.leftNavGongju,
       activeIcon: AppAssets.leftNavGongju,

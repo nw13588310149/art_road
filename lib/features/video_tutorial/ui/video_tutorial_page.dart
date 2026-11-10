@@ -17,6 +17,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import '../../../core/audio/mpv_player_smooth.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
+import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
 import '../../../core/widgets/class_share_drawer.dart';
@@ -65,7 +66,6 @@ class _VideoTutorialV2PageState extends ConsumerState<VideoTutorialV2Page> {
     super.initState();
     _searchController = TextEditingController();
     _searchController.addListener(_handleSearchChanged);
-    MediaKit.ensureInitialized();
     _scrollController.addListener(_handleScroll);
   }
 
@@ -267,7 +267,6 @@ class _VideoTutorialV2PageState extends ConsumerState<VideoTutorialV2Page> {
     });
     _preloadImages(state);
     final navigator = Navigator.of(context);
-    final schoolMode = _pageArgs.schoolMode;
     final menus = state.menus;
     final selectedMenu = state.selectedMenu;
     final searching = state.searchKeyword.trim().isNotEmpty;
@@ -275,199 +274,219 @@ class _VideoTutorialV2PageState extends ConsumerState<VideoTutorialV2Page> {
     final showFeatured =
         !searching && state.selectedChildId == null && videos.length >= 4;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: schoolMode ? '课程视频' : '视频中心',
-          subtitle: schoolMode
-              ? '画室老师录制的讲评与示范'
-              : '素描、色彩、速写专项课程与老师示范',
-          onBack: navigator.canPop() ? navigator.pop : null,
-          actions: [
-            SizedBox(
-              width: 240,
-              child: AppSearchField(
-                controller: _searchController,
-                hint: (selectedMenu?.id != null && selectedMenu!.name.isNotEmpty)
-                    ? '搜索${selectedMenu.name}视频'
-                    : '搜索视频',
-                onSubmitted: (_) => _submitSearch(),
-              ),
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s16,
+              AppSpace.s12,
             ),
-          ],
-          bottom: menus.length < 2
-              ? null
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: AppTabs<String>(
-                    tabs: [
-                      for (final menu in menus)
-                        AppTab(value: menu.id ?? '', label: menu.name),
-                    ],
-                    value: state.selectedMenuId ?? '',
-                    onChanged: (id) => _selectMenu(id.isEmpty ? null : id),
+            child: Row(
+              children: [
+                if (navigator.canPop()) ...[
+                  AppIconButton.back(onTap: navigator.pop),
+                  const SizedBox(width: AppSpace.s8),
+                ],
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: AppTabs<String>(
+                      textOnly: true,
+                      gap: 20,
+                      tabs: [
+                        for (final menu in menus)
+                          AppTab(value: menu.id ?? '', label: menu.name),
+                      ],
+                      value: state.selectedMenuId ?? '',
+                      onChanged: (id) => _selectMenu(id.isEmpty ? null : id),
+                    ),
                   ),
                 ),
-        ),
-        Expanded(
-          child: AppRefreshIndicator(
-            onRefresh: controller.refresh,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = _videoColumnsFor(
-                  constraints.maxWidth - AppSpace.page * 2,
-                );
-                final cardWidth =
-                    (constraints.maxWidth -
-                        AppSpace.page * 2 -
-                        AppSpace.s16 * (columns - 1)) /
-                    columns;
-                return CustomScrollView(
-                  key: const PageStorageKey<String>('video_tutorial_scroll'),
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  scrollCacheExtent: const ScrollCacheExtent.pixels(420),
-                  slivers: [
-                    if (showFeatured)
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpace.page,
-                          AppSpace.s4,
-                          AppSpace.page,
-                          AppSpace.s16,
-                        ),
-                        sliver: SliverToBoxAdapter(
-                          child: _FeaturedVideoSection(
-                            featured: videos.first,
-                            latest: videos.skip(1).take(3).toList(),
-                            resolveUrl: _resolveUrl,
-                            onOpenVideo: _openVideoDetail,
-                          ),
-                        ),
-                      ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpace.page,
-                        AppSpace.s4,
-                        AppSpace.page,
-                        AppSpace.s16,
-                      ),
-                      sliver: SliverToBoxAdapter(
-                        child: _SubCategoryChips(
-                          items: selectedMenu?.children ?? const [],
-                          selectedId: state.selectedChildId,
-                          onSelect: _selectChildMenu,
-                        ),
-                      ),
-                    ),
-                    if (videos.isEmpty && state.loading)
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpace.page,
-                        ),
-                        sliver: SliverToBoxAdapter(
-                          child: _VideoGridSkeleton(columns: columns),
-                        ),
-                      )
-                    else if (videos.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: searching
-                            ? AppEmptyState(
-                                icon: Icons.search_off_rounded,
-                                title: '没有找到相关视频',
-                                description: '换个关键词，或切换到「全部」分类试试',
-                                actionLabel: '清除搜索',
-                                onAction: _searchController.clear,
-                              )
-                            : state.errorMessage.isNotEmpty
-                            ? AppErrorState(
-                                title: '视频加载失败',
-                                description: state.errorMessage,
-                                onRetry: controller.refresh,
-                              )
-                            : const AppEmptyState(
-                                icon: Icons.video_library_outlined,
-                                title: '这个分类还没有视频',
-                                description: '老师上传课程后会显示在这里',
-                              ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpace.page,
-                        ),
-                        sliver: SliverGrid(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: columns,
-                                mainAxisSpacing: AppSpace.s16,
-                                crossAxisSpacing: AppSpace.s16,
-                                mainAxisExtent:
-                                    cardWidth * 10 / 16 +
-                                    _kVideoCardInfoHeight,
-                              ),
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final item = videos[index];
-                              return _VideoGridCard(
-                                key: ValueKey<String>('video_grid_${item.id}'),
-                                item: item,
-                                resolveUrl: _resolveUrl,
-                                onTap: () => _openVideoDetail(item),
-                              );
-                            },
-                            childCount: videos.length,
-                            findChildIndexCallback: (key) {
-                              if (key is! ValueKey<String>) return null;
-                              final value = key.value;
-                              if (!value.startsWith('video_grid_')) {
-                                return null;
-                              }
-                              final id = value.substring('video_grid_'.length);
-                              final index = videos.indexWhere(
-                                (item) => item.id == id,
-                              );
-                              return index < 0 ? null : index;
-                            },
-                          ),
-                        ),
-                      ),
-                    if (state.loadingMore)
-                      const SliverPadding(
-                        padding: EdgeInsets.symmetric(vertical: AppSpace.s16),
-                        sliver: SliverToBoxAdapter(
-                          child: Center(child: AppLoadingIndicator()),
-                        ),
-                      ),
-                    if (!state.loadingMore &&
-                        !state.hasMore &&
-                        videos.isNotEmpty)
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(
-                          0,
-                          AppSpace.s16,
-                          0,
-                          AppSpace.s24,
-                        ),
-                        sliver: SliverToBoxAdapter(
-                          child: Center(
-                            child: Text('没有更多了', style: AppText.caption12),
-                          ),
-                        ),
-                      )
-                    else
-                      const SliverToBoxAdapter(
-                        child: SizedBox(height: AppSpace.s24),
-                      ),
-                  ],
-                );
-              },
+                const SizedBox(width: AppSpace.s12),
+                SizedBox(
+                  width: 254,
+                  child: AppSearchField(
+                    controller: _searchController,
+                    hint:
+                        selectedMenu?.id != null &&
+                            selectedMenu!.name.isNotEmpty
+                        ? '搜索${selectedMenu.name}视频'
+                        : '搜索视频',
+                    onSubmitted: (_) => _submitSearch(),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          Expanded(
+            child: AppRefreshIndicator(
+              onRefresh: controller.refresh,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = _videoColumnsFor(
+                    constraints.maxWidth - AppSpace.s16 * 2,
+                  );
+                  final cardWidth =
+                      (constraints.maxWidth -
+                          AppSpace.s16 * 2 -
+                          AppSpace.s16 * (columns - 1)) /
+                      columns;
+                  return CustomScrollView(
+                    key: const PageStorageKey<String>('video_tutorial_scroll'),
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(420),
+                    slivers: [
+                      if (showFeatured)
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpace.s16,
+                            0,
+                            AppSpace.s16,
+                            AppSpace.s16,
+                          ),
+                          sliver: SliverToBoxAdapter(
+                            child: _FeaturedVideoSection(
+                              featured: videos.first,
+                              latest: videos.skip(1).take(3).toList(),
+                              resolveUrl: _resolveUrl,
+                              onOpenVideo: _openVideoDetail,
+                            ),
+                          ),
+                        ),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpace.s16,
+                          0,
+                          AppSpace.s16,
+                          AppSpace.s16,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: _SubCategoryChips(
+                            items: selectedMenu?.children ?? const [],
+                            selectedId: state.selectedChildId,
+                            onSelect: _selectChildMenu,
+                          ),
+                        ),
+                      ),
+                      if (videos.isEmpty && state.loading)
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpace.s16,
+                          ),
+                          sliver: SliverToBoxAdapter(
+                            child: _VideoGridSkeleton(columns: columns),
+                          ),
+                        )
+                      else if (videos.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: state.errorMessage.isNotEmpty
+                              ? AppErrorState(
+                                  title: '视频加载失败',
+                                  description: state.errorMessage,
+                                  onRetry: controller.refresh,
+                                )
+                              : searching
+                              ? AppEmptyState(
+                                  icon: Icons.search_off_rounded,
+                                  title: '没有找到相关视频',
+                                  description: '换个关键词，或切换到「全部」分类试试',
+                                  actionLabel: '清除搜索',
+                                  onAction: _searchController.clear,
+                                )
+                              : const AppEmptyState(
+                                  icon: Icons.video_library_outlined,
+                                  title: '这个分类还没有视频',
+                                  description: '老师上传课程后会显示在这里',
+                                ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpace.s16,
+                          ),
+                          sliver: SliverGrid(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  mainAxisSpacing: AppSpace.s16,
+                                  crossAxisSpacing: AppSpace.s16,
+                                  mainAxisExtent:
+                                      cardWidth * 10 / 16 +
+                                      _kVideoCardInfoHeight,
+                                ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final item = videos[index];
+                                return _VideoGridCard(
+                                  key: ValueKey<String>(
+                                    'video_grid_${item.id}',
+                                  ),
+                                  item: item,
+                                  resolveUrl: _resolveUrl,
+                                  onTap: () => _openVideoDetail(item),
+                                );
+                              },
+                              childCount: videos.length,
+                              findChildIndexCallback: (key) {
+                                if (key is! ValueKey<String>) return null;
+                                final value = key.value;
+                                if (!value.startsWith('video_grid_')) {
+                                  return null;
+                                }
+                                final id = value.substring(
+                                  'video_grid_'.length,
+                                );
+                                final index = videos.indexWhere(
+                                  (item) => item.id == id,
+                                );
+                                return index < 0 ? null : index;
+                              },
+                            ),
+                          ),
+                        ),
+                      if (state.loadingMore)
+                        const SliverPadding(
+                          padding: EdgeInsets.symmetric(vertical: AppSpace.s16),
+                          sliver: SliverToBoxAdapter(
+                            child: Center(child: AppLoadingIndicator()),
+                          ),
+                        ),
+                      if (!state.loadingMore &&
+                          !state.hasMore &&
+                          videos.isNotEmpty)
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(
+                            0,
+                            AppSpace.s16,
+                            0,
+                            AppSpace.s24,
+                          ),
+                          sliver: SliverToBoxAdapter(
+                            child: Center(
+                              child: Text('没有更多了', style: AppText.caption12),
+                            ),
+                          ),
+                        )
+                      else
+                        const SliverToBoxAdapter(
+                          child: SizedBox(height: AppSpace.s24),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -619,6 +638,8 @@ class _VideoDetailOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final sheetWidth = math.min(viewportWidth, math.max(420.0, viewportWidth / 2));
     return Stack(
       children: [
         FadeTransition(
@@ -642,7 +663,7 @@ class _VideoDetailOverlay extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerRight,
             child: Container(
-              width: AppSize.drawerWide,
+              width: sheetWidth,
               height: double.infinity,
               clipBehavior: Clip.antiAlias,
               decoration: const BoxDecoration(
@@ -755,6 +776,7 @@ class _VideoDetailSheetState extends ConsumerState<_VideoDetailSheet>
     _playingUrl = '';
 
     try {
+      MediaKit.ensureInitialized();
       final player = Player();
       final ctrl = VideoController(player);
       await MpvPlayerSmooth.openSmooth(player, Media(resolved), play: false);
@@ -3355,16 +3377,18 @@ class _DetailActionBar extends StatelessWidget {
           ),
           AppButton(
             label: '分享',
-            icon: Icons.share_outlined,
-            variant: AppButtonVariant.quiet,
+            iconAsset: AppAssets.videoV2Share,
+            variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
             onTap: onShare,
           ),
           const SizedBox(width: AppSpace.s8),
           AppButton(
             label: isFavorite ? '已收藏' : '收藏',
-            icon: isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-            variant: AppButtonVariant.quiet,
+            iconAsset: isFavorite
+                ? AppAssets.videoV2StarFilled
+                : AppAssets.videoV2Star,
+            variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
             onTap: onFavorite,
           ),
@@ -3500,9 +3524,7 @@ class _StepImagesTab extends StatelessWidget {
               fit: BoxFit.contain,
               fallback: SizedBox(
                 height: 120,
-                child: Center(
-                  child: Text('图片加载失败', style: AppText.caption12),
-                ),
+                child: Center(child: Text('图片加载失败', style: AppText.caption12)),
               ),
             ),
           ),
@@ -3604,8 +3626,7 @@ class _SeriesCard extends StatelessWidget {
 // I. 主列表 UI 组件
 // ─────────────────────────────────────────────────────────────────────────────
 
-int _videoColumnsFor(double width) =>
-    width >= 840 ? 4 : (width >= 600 ? 3 : 2);
+int _videoColumnsFor(double width) => width >= 840 ? 4 : (width >= 600 ? 3 : 2);
 
 /// 卡片封面下方信息区高度：内边距 + 两行标题 + 讲师行。
 const double _kVideoCardInfoHeight = 92;
@@ -3621,11 +3642,7 @@ class _ViewCount extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(
-          Icons.visibility_outlined,
-          size: 14,
-          color: AppColors.textTertiary,
-        ),
+        Image.asset(AppAssets.videoV2CardViews, width: 14, height: 14),
         const SizedBox(width: AppSpace.s4),
         Text(
           '$count',
@@ -3673,11 +3690,7 @@ class _VideoTeacherRow extends StatelessWidget {
     );
     return Row(
       children: [
-        AppAvatar(
-          name: publisher.nickname,
-          url: publisher.avatarUrl,
-          size: 18,
-        ),
+        AppAvatar(name: publisher.nickname, url: publisher.avatarUrl, size: 18),
         const SizedBox(width: AppSpace.s4),
         Expanded(
           child: Text(
@@ -3707,6 +3720,8 @@ class _FeaturedVideoSection extends StatelessWidget {
   final String Function(String) resolveUrl;
   final ValueChanged<VideoListItem> onOpenVideo;
 
+  static const _height = 280.0;
+
   @override
   Widget build(BuildContext context) {
     final publisher = videoPublisherFor(
@@ -3718,9 +3733,9 @@ class _FeaturedVideoSection extends StatelessWidget {
       onTap: () => onOpenVideo(featured),
       semanticLabel: '播放 ${featured.name}',
       child: ClipRRect(
-        borderRadius: AppRadius.br12,
+        borderRadius: AppRadius.br16,
         child: SizedBox(
-          height: 260,
+          height: _height,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -3796,14 +3811,26 @@ class _FeaturedVideoSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: hero),
-            const SizedBox(width: AppSpace.s16),
+            const SizedBox(width: AppSpace.s12),
             SizedBox(
-              width: 300,
-              height: 260,
+              width: 255,
+              height: _height,
               child: AppCard(
-                title: '最新视频',
+                color: AppColors.surfaceSubtle,
+                bordered: false,
+                radius: 12,
+                padding: const EdgeInsets.fromLTRB(12.5, AppSpace.s12, 12.5, 6),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Text(
+                      '最新视频',
+                      style: AppText.body13.copyWith(
+                        color: AppColors.ink,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpace.s8),
                     for (var i = 0; i < latest.length; i++) ...[
                       if (i > 0) const SizedBox(height: AppSpace.s12),
                       _LatestVideoRow(
@@ -3840,30 +3867,33 @@ class _LatestVideoRow extends StatelessWidget {
       onTap: onTap,
       semanticLabel: item.name,
       child: SizedBox(
-        height: 54,
+        height: 68,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppImage(
               src: coverUrl,
-              width: 86,
-              height: 54,
-              borderRadius: AppRadius.br8,
+              width: 68,
+              height: 68,
+              borderRadius: AppRadius.br4,
             ),
             const SizedBox(width: AppSpace.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     item.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.caption12Strong.copyWith(
+                    style: AppText.body13.copyWith(
                       color: AppColors.ink,
+                      fontWeight: AppFont.w500,
+                      height: 1.3,
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: AppSpace.s8),
                   Text(
                     item.duration,
                     style: AppText.number(

@@ -223,6 +223,7 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
               hint: '搜索书名、编者、知识点',
               onChanged: _onKeywordChanged,
               onSubmitted: _onKeywordSubmitted,
+              onCleared: () => _onKeywordSubmitted(''),
             ),
           ),
         AppSegmented<EbooksView>(
@@ -257,24 +258,36 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
                   _applyFilter(() => _controller.setCategory(key)),
             ),
           );
+    final sortControl = AppSegmented<EbookSort>(
+      segments: [
+        for (final sort in EbookSort.values)
+          AppSegment(value: sort, label: sort.label),
+      ],
+      value: state.sort,
+      size: AppControlSize.sm,
+      onChanged: (sort) => _applyFilter(() => _controller.setSort(sort)),
+    );
     return DecoratedBox(
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
       ),
-      child: Row(
-        children: [
-          Expanded(child: SizedBox(height: 44, child: tabs)),
-          const SizedBox(width: AppSpace.s16),
-          AppSegmented<EbookSort>(
-            segments: [
-              for (final sort in EbookSort.values)
-                AppSegment(value: sort, label: sort.label),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final categoryTabs = SizedBox(height: 44, child: tabs);
+          if (constraints.maxWidth < 560) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [sortControl, categoryTabs],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: categoryTabs),
+              const SizedBox(width: AppSpace.s16),
+              sortControl,
             ],
-            value: state.sort,
-            size: AppControlSize.sm,
-            onChanged: (sort) => _applyFilter(() => _controller.setSort(sort)),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -286,27 +299,25 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
       EbookShelfFilter.reading => shelf.reading.length,
       EbookShelfFilter.favorite => shelf.favorites.length,
     };
-    return Row(
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpace.s16,
+      runSpacing: AppSpace.s8,
       children: [
         AppSegmented<EbookShelfFilter>(
           segments: [
             for (final filter in EbookShelfFilter.values)
-              AppSegment(value: filter, label: '${filter.label} ${countOf(filter)}'),
+              AppSegment(
+                value: filter,
+                label: '${filter.label} ${countOf(filter)}',
+              ),
           ],
           value: state.shelfFilter,
           size: AppControlSize.sm,
           onChanged: _controller.setShelfFilter,
         ),
-        const SizedBox(width: AppSpace.s16),
-        Expanded(
-          child: Text(
-            '收藏与读过的书刊都在这里，阅读进度自动保存',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.right,
-            style: AppText.caption12,
-          ),
-        ),
+        Text('阅读进度自动保存', style: AppText.caption12),
       ],
     );
   }
@@ -337,7 +348,9 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
     final label = state.categoryLabelOf(state.category);
     final title = state.keyword.isNotEmpty
         ? '搜索结果'
-        : (showFeatured || label.isEmpty || state.category == EbookCategory.allKey
+        : (showFeatured ||
+                  label.isEmpty ||
+                  state.category == EbookCategory.allKey
               ? '全部书刊'
               : label);
     return CustomScrollView(
@@ -374,7 +387,10 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
             AppSpace.s12,
           ),
           sliver: SliverToBoxAdapter(
-            child: AppSectionHeader(title: title, subtitle: '共 ${state.total} 本'),
+            child: AppSectionHeader(
+              title: title,
+              subtitle: '共 ${state.total} 本',
+            ),
           ),
         ),
         SliverPadding(
@@ -398,22 +414,23 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
   Widget _buildFeatured(List<EbookSummary> featured) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final count = constraints.maxWidth >= 720 ? 3 : 2;
-        final items = featured.take(count).toList();
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        const gap = AppSpace.s16;
+        final columns = constraints.maxWidth >= 720
+            ? 3
+            : (constraints.maxWidth >= 500 ? 2 : 1);
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
           children: [
-            for (var i = 0; i < count; i++) ...[
-              if (i > 0) const SizedBox(width: AppSpace.s16),
-              Expanded(
-                child: i < items.length
-                    ? EbookFeaturedCard(
-                        book: items[i],
-                        onTap: () => _controller.openDetail(items[i].id),
-                      )
-                    : const SizedBox.shrink(),
+            for (final book in featured)
+              SizedBox(
+                width: width,
+                child: EbookFeaturedCard(
+                  book: book,
+                  onTap: () => _controller.openDetail(book.id),
+                ),
               ),
-            ],
           ],
         );
       },
@@ -425,6 +442,13 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
     if (items.isEmpty) {
       if (state.shelfLoading) {
         return const _GridSkeleton(withAction: true);
+      }
+      if (state.shelfError.isNotEmpty) {
+        return AppErrorState(
+          title: '书架加载失败',
+          description: state.shelfError,
+          onRetry: () => unawaited(_controller.refreshShelf()),
+        );
       }
       return AppEmptyState(
         icon: Icons.collections_bookmark_outlined,

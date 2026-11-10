@@ -25,7 +25,6 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 // 颜色常量
 // ============================================================================
 
-const Color _kBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kTextPrimary = AppColors.ink;
 const Color _kTextHint = AppColors.textPlaceholder;
@@ -678,7 +677,6 @@ class _AdminStudentManagementViewState
     final total = _sumTotal >= 0 ? _sumTotal : 0;
 
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
         title: '学生管理',
@@ -834,8 +832,11 @@ class _FilterRowState extends State<_FilterRow> {
       ..._StudentStatus.values.map((s) => (s.label, s)),
     ];
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: ui(12),
+      runSpacing: ui(12),
       children: [
         Container(
           height: ui(44),
@@ -845,67 +846,75 @@ class _FilterRowState extends State<_FilterRow> {
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorder, width: 1),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final t in tabs)
-                _StatusPill(
-                  label: t.$1,
-                  active: t.$2 == widget.statusFilter,
-                  onTap: () => widget.onStatusChanged(t.$2),
-                ),
-            ],
-          ),
-        ),
-        const Spacer(),
-        _ClassFilterField(
-          options: widget.classOptions,
-          selectedClassId: widget.selectedClassId,
-          onChanged: widget.onClassChanged,
-        ),
-        SizedBox(width: ui(12)),
-        Container(
-          width: ui(324),
-          height: ui(44),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(12)),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: ui(16)),
-          child: Row(
-            children: [
-              AppAssetGraphic(
-                AppAssets.shellV2Search,
-                width: ui(16),
-                height: ui(16),
-                fit: BoxFit.contain,
-              ),
-              SizedBox(width: ui(10)),
-              Expanded(
-                child: AppTextField(
-                  controller: _searchCtrl,
-                  onChanged: widget.onSearchChanged,
-                  cursorColor: _kPurple,
-                  cursorWidth: 1.5,
-                  cursorHeight: ui(16),
-                  style: TextStyle(
-                    fontSize: ui(14),
-                    height: 1.2,
-                    color: _kTextPrimary,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final t in tabs)
+                  _StatusPill(
+                    label: t.$1,
+                    active: t.$2 == widget.statusFilter,
+                    onTap: () => widget.onStatusChanged(t.$2),
                   ),
-                  decoration: InputDecoration(
-                    isCollapsed: true,
-                    border: InputBorder.none,
-                    hintText: '搜索姓名、学号、手机、宿舍、家长',
-                    hintStyle: TextStyle(
-                      fontSize: ui(14),
-                      color: AppColors.textPlaceholder,
+              ],
+            ),
+          ),
+        ),
+        Wrap(
+          spacing: ui(12),
+          runSpacing: ui(12),
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _ClassFilterField(
+              options: widget.classOptions,
+              selectedClassId: widget.selectedClassId,
+              onChanged: widget.onClassChanged,
+            ),
+            Container(
+              width: ui(324),
+              height: ui(44),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(ui(12)),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: ui(16)),
+              child: Row(
+                children: [
+                  AppAssetGraphic(
+                    AppAssets.shellV2Search,
+                    width: ui(16),
+                    height: ui(16),
+                    fit: BoxFit.contain,
+                  ),
+                  SizedBox(width: ui(10)),
+                  Expanded(
+                    child: AppTextField(
+                      controller: _searchCtrl,
+                      onChanged: widget.onSearchChanged,
+                      cursorColor: _kPurple,
+                      cursorWidth: 1.5,
+                      cursorHeight: ui(16),
+                      style: TextStyle(
+                        fontSize: ui(14),
+                        height: 1.2,
+                        color: _kTextPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        isCollapsed: true,
+                        border: InputBorder.none,
+                        hintText: '搜索姓名、学号、手机、宿舍、家长',
+                        hintStyle: TextStyle(
+                          fontSize: ui(14),
+                          color: AppColors.textPlaceholder,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );

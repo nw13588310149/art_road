@@ -297,16 +297,6 @@ class _DormManagerCheckHistoryViewState
                 : _exportHistory,
           ),
         ],
-        bottom: _FilterRow(
-          buildingOptions: managerState.managedBuildings,
-          floorOptions: managerState.floorOptions,
-          selectedBuilding: _selectedBuilding,
-          selectedFloor: _selectedFloor,
-          floorEnabled:
-              _selectedBuilding.id.isNotEmpty && !managerState.loadingFloors,
-          onBuildingChanged: (v) => unawaited(_onBuildingChanged(v)),
-          onFloorChanged: (v) => unawaited(_onFloorChanged(v)),
-        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,6 +317,18 @@ class _DormManagerCheckHistoryViewState
                 dateText: _selectedDateText,
                 statText: '共 ${historyItems.length} 条',
                 onTapDay: _onTapDay,
+              ),
+              SizedBox(height: ui(16)),
+              _FilterRow(
+                buildingOptions: managerState.managedBuildings,
+                floorOptions: managerState.floorOptions,
+                selectedBuilding: _selectedBuilding,
+                selectedFloor: _selectedFloor,
+                floorEnabled:
+                    _selectedBuilding.id.isNotEmpty &&
+                    !managerState.loadingFloors,
+                onBuildingChanged: (v) => unawaited(_onBuildingChanged(v)),
+                onFloorChanged: (v) => unawaited(_onFloorChanged(v)),
               ),
               SizedBox(height: ui(16)),
               if (loadError.isNotEmpty)

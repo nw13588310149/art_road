@@ -13,7 +13,11 @@ import '../state/ebook_spread.dart';
 /// 全屏阅读器：宽屏双页并排、窄屏单页；点左右半屏、两侧箭头、左右滑动或方向键翻页，
 /// 翻页即时切换。底部缩略图与页码拖动条，支持跳页、目录、书签与放大查看，进度自动保存。
 class EbookReaderPage extends ConsumerStatefulWidget {
-  const EbookReaderPage({required this.bookId, this.initialPage = 0, super.key});
+  const EbookReaderPage({
+    required this.bookId,
+    this.initialPage = 0,
+    super.key,
+  });
 
   final String bookId;
 
@@ -32,7 +36,10 @@ class EbookReaderPage extends ConsumerStatefulWidget {
   static const stagePadding = 16.0;
 
   /// 全屏阅读路由（不经过外壳、没有转场动画）；关闭时返回最新的阅读进度。
-  static Route<EbookProgress> route({required String bookId, int initialPage = 0}) {
+  static Route<EbookProgress> route({
+    required String bookId,
+    int initialPage = 0,
+  }) {
     return PageRouteBuilder<EbookProgress>(
       settings: const RouteSettings(name: routeName),
       transitionDuration: Duration.zero,
@@ -106,8 +113,11 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
     }
     final position = _thumbs.position;
     const extent = _thumbWidth + _thumbGap;
-    final target = ((page - 1) * extent - (position.viewportDimension - extent) / 2)
-        .clamp(0.0, position.maxScrollExtent);
+    final target =
+        ((page - 1) * extent - (position.viewportDimension - extent) / 2).clamp(
+          0.0,
+          position.maxScrollExtent,
+        );
     if ((position.pixels - target).abs() > 1) {
       _thumbs.jumpTo(target);
     }
@@ -125,7 +135,9 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
   }
 
   Future<void> _toggleBookmark(int page) async {
-    final had = ref.read(ebookReaderControllerProvider(_args)).isBookmarked(page);
+    final had = ref
+        .read(ebookReaderControllerProvider(_args))
+        .isBookmarked(page);
     final ok = await _controller.toggleBookmark(page);
     if (!mounted) {
       return;
@@ -140,7 +152,8 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
   Future<void> _jump(EbookReaderState state) async {
     final page = await showAppDialog<int>(
       context: context,
-      builder: (_) => _JumpDialog(pageCount: state.pageCount, current: state.page),
+      builder: (_) =>
+          _JumpDialog(pageCount: state.pageCount, current: state.page),
     );
     if (page != null && mounted) {
       _goTo(page);
@@ -187,11 +200,18 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
                         EbookReaderPage.bottomBarHeight -
                         EbookReaderPage.stagePadding * 2,
                   );
-                  final spread = EbookSpread.fit(pageCount: state.pageCount, area: area);
+                  final spread = EbookSpread.fit(
+                    pageCount: state.pageCount,
+                    area: area,
+                  );
                   _spread = spread;
                   final ready =
-                      !state.loading && state.errorMessage.isEmpty && state.pageCount > 0;
-                  final bookmarked = state.isBookmarked(spread.startOf(state.page));
+                      !state.loading &&
+                      state.errorMessage.isEmpty &&
+                      state.pageCount > 0;
+                  final bookmarked = state.isBookmarked(
+                    spread.startOf(state.page),
+                  );
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -202,8 +222,9 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
                         zoom: _zoom,
                         onBack: () => unawaited(_close()),
                         onToc: () => unawaited(_openToc(state)),
-                        onBookmark: () =>
-                            unawaited(_toggleBookmark(spread.startOf(state.page))),
+                        onBookmark: () => unawaited(
+                          _toggleBookmark(spread.startOf(state.page)),
+                        ),
                         onZoom: () => setState(() => _zoom = !_zoom),
                       ),
                       Expanded(child: _buildStage(state, spread)),
@@ -240,7 +261,9 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
       );
     }
     final content = _Spread(
-      pages: [for (final page in spread.pagesAt(state.page)) state.pageAt(page)!],
+      pages: [
+        for (final page in spread.pagesAt(state.page)) state.pageAt(page)!,
+      ],
       twoPage: spread.twoPage,
       bookmarks: state.bookmarks,
     );
@@ -267,8 +290,9 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
               child: GestureDetector(
                 key: EbookReaderPage.stageKey,
                 behavior: HitTestBehavior.opaque,
-                onTapUp: (details) =>
-                    details.localPosition.dx < width / 2 ? _previous() : _next(),
+                onTapUp: (details) => details.localPosition.dx < width / 2
+                    ? _previous()
+                    : _next(),
                 onHorizontalDragEnd: (details) {
                   final velocity = details.primaryVelocity ?? 0;
                   if (velocity < -240) {
@@ -381,7 +405,9 @@ class _TopBar extends StatelessWidget {
             ),
             const SizedBox(width: AppSpace.s8),
             AppIconButton(
-              icon: bookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+              icon: bookmarked
+                  ? Icons.bookmark_rounded
+                  : Icons.bookmark_border_rounded,
               color: bookmarked ? AppColors.brand : AppColors.ink,
               semanticLabel: bookmarked ? '删除本页书签' : '为本页加书签',
               onTap: onBookmark,
@@ -402,7 +428,11 @@ class _TopBar extends StatelessWidget {
 
 /// 一屏：单页或双页并排，中缝一条细线。
 class _Spread extends StatelessWidget {
-  const _Spread({required this.pages, required this.twoPage, required this.bookmarks});
+  const _Spread({
+    required this.pages,
+    required this.twoPage,
+    required this.bookmarks,
+  });
 
   final List<EbookPage> pages;
   final bool twoPage;
@@ -424,14 +454,23 @@ class _Spread extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: _PageImage(page: left, bookmarked: bookmarks.contains(left.page)),
+                child: _PageImage(
+                  page: left,
+                  bookmarked: bookmarks.contains(left.page),
+                ),
               ),
               if (twoPage) ...[
-                const SizedBox(width: 1, child: ColoredBox(color: AppColors.lineSoft)),
+                const SizedBox(
+                  width: 1,
+                  child: ColoredBox(color: AppColors.lineSoft),
+                ),
                 Expanded(
                   child: right == null
                       ? const SizedBox.shrink()
-                      : _PageImage(page: right, bookmarked: bookmarks.contains(right.page)),
+                      : _PageImage(
+                          page: right,
+                          bookmarked: bookmarks.contains(right.page),
+                        ),
                 ),
               ],
             ],
@@ -474,7 +513,11 @@ class _PageImage extends StatelessWidget {
             const Positioned(
               top: 0,
               right: AppSpace.s12,
-              child: Icon(Icons.bookmark_rounded, size: 28, color: AppColors.brand),
+              child: Icon(
+                Icons.bookmark_rounded,
+                size: 28,
+                color: AppColors.brand,
+              ),
             ),
         ],
       ),
@@ -548,6 +591,8 @@ class _BottomBar extends StatelessWidget {
                     pageCount: state.pageCount,
                     page: visible.last,
                     onChanged: onGoTo,
+                    previous: spread.previous(state.page),
+                    next: spread.next(state.page),
                   ),
                 ),
                 const SizedBox(width: AppSpace.s16),
@@ -598,7 +643,7 @@ class _Thumb extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              height: width / page.aspectRatio,
+              height: (width / page.aspectRatio).clamp(0.0, 66.0),
               decoration: BoxDecoration(
                 borderRadius: AppRadius.br4,
                 border: Border.all(
@@ -611,13 +656,17 @@ class _Thumb extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.all(Radius.circular(3)),
-                    child: AppImage(src: page.imageUrl),
+                    child: AppImage(src: page.imageUrl, fit: BoxFit.contain),
                   ),
                   if (bookmarked)
                     const Positioned(
                       top: 0,
                       right: 2,
-                      child: Icon(Icons.bookmark_rounded, size: 14, color: AppColors.brand),
+                      child: Icon(
+                        Icons.bookmark_rounded,
+                        size: 14,
+                        color: AppColors.brand,
+                      ),
                     ),
                 ],
               ),
@@ -639,11 +688,19 @@ class _Thumb extends StatelessWidget {
 
 /// 页码拖动条：点按或拖动立即跳页，没有滑块动画。
 class _PageScrubber extends StatelessWidget {
-  const _PageScrubber({required this.pageCount, required this.page, required this.onChanged});
+  const _PageScrubber({
+    required this.pageCount,
+    required this.page,
+    required this.onChanged,
+    required this.previous,
+    required this.next,
+  });
 
   final int pageCount;
   final int page;
   final ValueChanged<int> onChanged;
+  final int? previous;
+  final int? next;
 
   @override
   Widget build(BuildContext context) {
@@ -658,14 +715,22 @@ class _PageScrubber extends StatelessWidget {
         }
 
         final fraction = pageCount <= 1 ? 0.0 : (page - 1) / (pageCount - 1);
+        final previous = this.previous;
+        final next = this.next;
+        String pageLabel(int page) => '第 $page 页，共 $pageCount 页';
         return Semantics(
           slider: true,
           label: '页码',
-          value: '第 $page 页，共 $pageCount 页',
+          value: pageLabel(page),
+          decreasedValue: previous == null ? null : pageLabel(previous),
+          increasedValue: next == null ? null : pageLabel(next),
+          onDecrease: previous == null ? null : () => onChanged(previous),
+          onIncrease: next == null ? null : () => onChanged(next),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: (details) => onChanged(pageAt(details.localPosition.dx)),
-            onHorizontalDragUpdate: (details) => onChanged(pageAt(details.localPosition.dx)),
+            onHorizontalDragUpdate: (details) =>
+                onChanged(pageAt(details.localPosition.dx)),
             child: CustomPaint(
               size: Size(width, AppSize.buttonSm),
               painter: _ScrubberPainter(fraction: fraction.clamp(0.0, 1.0)),
@@ -684,12 +749,21 @@ class _ScrubberPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const thumb = 8.0;
+    final thumb = (size.width / 2).clamp(0.0, 8.0).toDouble();
+    if (thumb < 1) {
+      return;
+    }
     final y = size.height / 2;
     final left = thumb;
     final right = size.width - thumb;
     final x = left + (right - left) * fraction;
-    final track = RRect.fromLTRBR(left, y - 2, right, y + 2, const Radius.circular(2));
+    final track = RRect.fromLTRBR(
+      left,
+      y - 2,
+      right,
+      y + 2,
+      const Radius.circular(2),
+    );
     canvas.drawRRect(track, Paint()..color = AppColors.line);
     canvas.drawRRect(
       RRect.fromLTRBR(left, y - 2, x, y + 2, const Radius.circular(2)),
@@ -707,7 +781,8 @@ class _ScrubberPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ScrubberPainter oldDelegate) => oldDelegate.fraction != fraction;
+  bool shouldRepaint(covariant _ScrubberPainter oldDelegate) =>
+      oldDelegate.fraction != fraction;
 }
 
 /// 目录与书签抽屉；点条目返回要跳转的页码。
@@ -764,7 +839,11 @@ class _TocDrawer extends StatelessWidget {
             AppListRow(
               title: '第 $page 页',
               subtitle: _chapterOf(page)?.title,
-              leading: const Icon(Icons.bookmark_rounded, size: 18, color: AppColors.brand),
+              leading: const Icon(
+                Icons.bookmark_rounded,
+                size: 18,
+                color: AppColors.brand,
+              ),
               chevron: true,
               divider: true,
               padding: const EdgeInsets.symmetric(vertical: AppSpace.s12),
@@ -787,7 +866,9 @@ class _JumpDialog extends StatefulWidget {
 }
 
 class _JumpDialogState extends State<_JumpDialog> {
-  late final TextEditingController _input = TextEditingController(text: '${widget.current}');
+  late final TextEditingController _input = TextEditingController(
+    text: '${widget.current}',
+  );
   String? _error;
 
   @override

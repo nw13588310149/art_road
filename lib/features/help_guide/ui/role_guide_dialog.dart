@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../data/role_guide_store.dart';
 import '../data/role_guides.dart';
 
@@ -92,7 +93,7 @@ class _RoleGuideDialogState extends State<RoleGuideDialog> {
             padding: const EdgeInsets.all(AppSpace.s12),
             child: Row(
               children: [
-                AppIconTile(icon: step.icon, size: 40),
+                AppAssetGraphic(step.iconAsset, width: 32, height: 32),
                 const SizedBox(width: AppSpace.s12),
                 Expanded(
                   child: Column(
@@ -121,21 +122,24 @@ class _RoleGuideDialogState extends State<RoleGuideDialog> {
                 ),
               ],
               const Spacer(),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '${guide.roleLabel}新手引导  ',
-                      style: AppText.caption12,
-                    ),
-                    TextSpan(
-                      text: '${_index + 1} / ${steps.length}',
-                      style: AppText.number(
-                        size: 12,
-                        color: AppColors.textTertiary,
+              Flexible(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '${guide.roleLabel}新手引导  ',
+                        style: AppText.caption12,
                       ),
-                    ),
-                  ],
+                      TextSpan(
+                        text: '${_index + 1} / ${steps.length}',
+                        style: AppText.number(
+                          size: 12,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.end,
                 ),
               ),
             ],

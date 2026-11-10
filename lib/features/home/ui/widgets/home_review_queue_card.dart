@@ -30,11 +30,17 @@ class HomeReviewQueueCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppSkeleton(width: 48, height: 14),
+              AppSkeleton(width: 106, height: 35),
               SizedBox(height: AppSpace.s8),
-              AppSkeleton(width: 96, height: 32),
+              AppSkeleton(height: 6),
               SizedBox(height: AppSpace.s8),
-              AppSkeleton(width: 140, height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  AppSkeleton(width: 92, height: 18),
+                  AppSkeleton(width: 56, height: 18),
+                ],
+              ),
               Spacer(),
               AppSkeleton(height: AppSize.buttonSm, radius: AppRadius.control),
             ],
@@ -49,29 +55,59 @@ class HomeReviewQueueCard extends ConsumerWidget {
         ),
         data: (data) {
           final pending = data.pending;
+          final completion = data.total > 0
+              ? (data.reviewed / data.total).clamp(0.0, 1.0)
+              : null;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('待点评', style: AppText.caption12),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '$pending',
-                      style: AppText.displayNumber(
-                        size: 32,
-                        color: pending > 0 ? AppColors.brand : AppColors.ink,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '$pending',
+                            style: AppText.displayNumber(
+                              color: pending > 0
+                                  ? AppColors.brandDeep
+                                  : AppColors.ink,
+                            ),
+                          ),
+                          TextSpan(text: ' 件待点评', style: AppText.body13),
+                        ],
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    TextSpan(text: ' 件', style: AppText.body13),
+                  ),
+                  if (completion != null) ...[
+                    const SizedBox(width: AppSpace.s8),
+                    Text(
+                      '完成 ${(completion * 100).round()}%',
+                      style: AppText.caption12Strong,
+                    ),
                   ],
-                ),
+                ],
               ),
-              const SizedBox(height: AppSpace.s4),
-              Text(
-                '已点评 ${data.reviewed} 件 · 共 ${data.total} 件',
-                style: AppText.caption12,
+              if (completion != null) ...[
+                const SizedBox(height: AppSpace.s8),
+                ExcludeSemantics(
+                  child: AppProgressBar(value: completion, height: 6),
+                ),
+              ],
+              const SizedBox(height: AppSpace.s8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('已点评 ${data.reviewed} 件', style: AppText.body13),
+                  const SizedBox(width: AppSpace.s8),
+                  Text('共 ${data.total} 件', style: AppText.body13),
+                ],
               ),
               const SizedBox(height: AppSpace.s16),
               AppButton(

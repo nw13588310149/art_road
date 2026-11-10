@@ -77,7 +77,6 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_empty_state.dart';
 
 const Color _kCardBg = AppColors.surface;
-const Color _kPageBg = AppColors.page;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kBorderHair = AppColors.line;
@@ -193,23 +192,21 @@ class _StudentMyGradesViewState extends ConsumerState<StudentMyGradesView> {
     final ui = DashboardScaleScope.of(context).ui;
     final visibleRecords = _visibleRecords;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       header: AppPageHeader(
         title: '我的考试',
         subtitle: '考试安排、考场座位与线上测评提交，成绩公布后在「我的成绩」查看',
         onBack: widget.onBack,
-        bottom: AppTabs<_MainTab>(
-          tabs: [
-            AppTab(
-              value: _MainTab.exams,
-              label: '全部考试',
-              count: _examsLoading ? null : _exams.length,
-            ),
-            const AppTab(value: _MainTab.grades, label: '我的成绩'),
-          ],
-          value: _mainTab,
-          onChanged: (v) => setState(() => _mainTab = v),
-        ),
+        actions: [
+          AppSegmented<_MainTab>(
+            segments: const [
+              AppSegment(value: _MainTab.exams, label: '全部考试'),
+              AppSegment(value: _MainTab.grades, label: '我的成绩'),
+            ],
+            value: _mainTab,
+            selectedColor: AppColors.ink,
+            onChanged: (v) => setState(() => _mainTab = v),
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2446,8 +2443,7 @@ class _ExamFilterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSegmented<_ExamFilter>(
-      size: AppControlSize.sm,
+    return SmartCampusStatusTabs<_ExamFilter>(
       segments: const [
         AppSegment(value: _ExamFilter.all, label: '全部'),
         AppSegment(value: _ExamFilter.pending, label: '待考'),

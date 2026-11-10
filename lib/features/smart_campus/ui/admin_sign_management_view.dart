@@ -98,34 +98,50 @@ class _AdminSignManagementViewState extends State<AdminSignManagementView> {
   @override
   Widget build(BuildContext context) {
     return SmartCampusSecondaryPageShell(
-      backgroundColor: Colors.transparent,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
         title: '签课管理',
         subtitle: '大课批量签到 · 小课签到审核 · 补签审核',
         onBack: widget.onBack,
         actions: [
-          AppButton(
-            label: _pendingMakeupCount > 0
-                ? '补签审核（$_pendingMakeupCount）'
-                : '补签审核',
-            icon: Icons.fact_check_outlined,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
-            onTap: _openMakeupAuditDrawer,
+          AppSegmented<_SignTab>(
+            segments: const [
+              AppSegment(value: _SignTab.large, label: '大课管理'),
+              AppSegment(value: _SignTab.small, label: '小课管理'),
+            ],
+            value: _tab,
+            selectedColor: AppColors.ink,
+            onChanged: (t) {
+              if (_tab == t) return;
+              setState(() => _tab = t);
+            },
+          ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              AppButton(
+                label: '补签审核',
+                iconAsset:
+                    'assets/images/smartCampus/admin/sign_management/icon_lishi.png',
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.sm,
+                onTap: _openMakeupAuditDrawer,
+              ),
+              if (_pendingMakeupCount > 0)
+                Positioned(
+                  top: -6,
+                  right: -6,
+                  child: IgnorePointer(
+                    child: Semantics(
+                      label: '待审核 $_pendingMakeupCount 条',
+                      excludeSemantics: true,
+                      child: AppBadge(count: _pendingMakeupCount),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
-        bottom: AppTabs<_SignTab>(
-          tabs: const [
-            AppTab(value: _SignTab.large, label: '大课管理'),
-            AppTab(value: _SignTab.small, label: '小课管理'),
-          ],
-          value: _tab,
-          onChanged: (t) {
-            if (_tab == t) return;
-            setState(() => _tab = t);
-          },
-        ),
       ),
       bodyScrollable: false,
       body: IndexedStack(

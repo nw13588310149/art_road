@@ -10,6 +10,8 @@ import 'package:the_road_of_art_flutter/features/art_toolbox/data/toolbox_image_
 import 'package:the_road_of_art_flutter/features/art_toolbox/logic/image_ops.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/state/toolbox_image_controller.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/ui/art_toolbox_page.dart';
+import 'package:the_road_of_art_flutter/features/art_toolbox/ui/widgets/image_tool_frame.dart';
+import 'package:the_road_of_art_flutter/features/art_toolbox/ui/widgets/tool_panel.dart';
 
 class _PreloadedImageController extends ToolboxImageController {
   _PreloadedImageController(ToolboxImage image) : super(ToolboxImageLoader()) {
@@ -74,7 +76,9 @@ Future<void> _pumpToolbox(
   );
   await tester.pump();
   // 让后台处理（compute）跑完，再把结果渲染出来。
-  await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 300)),
+  );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
 }
@@ -82,23 +86,29 @@ Future<void> _pumpToolbox(
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
-  for (final size in const [Size(950, 740), Size(720, 700)]) {
-    testWidgets('home lists every group and tool at ${size.width.round()}', (
-      tester,
-    ) async {
-      await _pumpToolbox(tester, size: size);
-      for (final group in ArtToolGroup.values) {
-        expect(find.text(group.label), findsOneWidget);
-      }
-      for (final tool in ArtTool.values) {
-        await tester.scrollUntilVisible(
-          find.text(tool.label),
-          120,
-          scrollable: find.byType(Scrollable).first,
-        );
-        expect(find.text(tool.label), findsOneWidget);
-      }
-    });
+  for (final size in const [Size(950, 740), Size(720, 400)]) {
+    testWidgets(
+      'home switches groups and lists their tools at ${size.width.round()}',
+      (tester) async {
+        await _pumpToolbox(tester, size: size);
+        for (final group in ArtToolGroup.values) {
+          expect(find.text(group.label), findsOneWidget);
+          await tester.tap(find.text(group.label));
+          await tester.pump();
+          for (final tool in ArtTool.values) {
+            final item = find.text(tool.label);
+            expect(item, tool.group == group ? findsOneWidget : findsNothing);
+            if (tool.group == group) await tester.ensureVisible(item);
+          }
+        }
+        await tester.tap(find.text(ArtTool.countdown.label));
+        await tester.pump();
+        await tester.tap(find.byTooltip('返回'));
+        await tester.pump();
+        expect(find.text(ArtTool.countdown.label), findsOneWidget);
+        expect(find.text(ArtTool.value.label), findsNothing);
+      },
+    );
 
     for (final tool in ArtTool.values) {
       testWidgets('${tool.key} renders at ${size.width.round()}', (
@@ -106,12 +116,123 @@ void main() {
       ) async {
         final image = tool.usesImage ? await _sampleImage(tester) : null;
         await _pumpToolbox(tester, size: size, tool: tool.key, image: image);
-        expect(find.text(tool.label), findsWidgets);
+        expect(find.byTooltip('返回'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ToolDetailHeader),
+            matching: find.text(tool.label),
+          ),
+          findsOneWidget,
+        );
+        if (size.width == 720 &&
+            const {
+              ArtTool.value,
+              ArtTool.blur,
+              ArtTool.simplify,
+              ArtTool.temperature,
+              ArtTool.edges,
+              ArtTool.mirror,
+            }.contains(tool)) {
+          final compare = find.text('与原图并排对比');
+          final labels = find.byType(StageLabel);
+          final initiallyComparing = labels.evaluate().length == 2;
+          await tester.ensureVisible(compare);
+          await tester.tap(compare);
+          await tester.pump();
+          if (initiallyComparing) {
+            expect(labels, findsOneWidget);
+            await tester.tap(compare);
+            await tester.pump();
+          }
+          expect(labels, findsNWidgets(2));
+          expect(
+            tester.getTopLeft(labels.first).dx,
+            lessThan(tester.getTopLeft(labels.last).dx),
+          );
+        }
+        expect(find.text(tool.help), findsNothing);
+        await tester.tap(find.byTooltip('工具用法'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
         expect(find.text(tool.help), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     }
   }
+
+  testWidgets('timed sketch controls fit a short landscape window', (
+    tester,
+  ) async {
+    await _pumpToolbox(
+      tester,
+      size: const Size(800, 400),
+      tool: ArtTool.quickSketch.key,
+    );
+    final start = find.text('开始练习');
+    await tester.ensureVisible(start);
+    await tester.tap(start);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      tester.getBottomRight(find.byType(Image).last).dy,
+      lessThan(tester.getTopLeft(find.text('暂停')).dy),
+    );
+    await tester.tap(find.text('暂停'));
+    await tester.pump();
+    expect(find.text('已暂停，点击继续'), findsOneWidget);
+    await tester.tap(find.text('继续'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('跳过'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('结束'));
+    await tester.pump();
+    expect(find.text('练习回顾'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the workspace retains the original across tools and back', (
+    tester,
+  ) async {
+    final image = await _sampleImage(tester);
+    await _pumpToolbox(tester, size: const Size(950, 740), image: image);
+    expect(find.text('测试图'), findsOneWidget);
+    await tester.tap(find.text(ArtTool.mirror.label));
+    await tester.pump();
+    await tester.tap(find.text('切换工具'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(ArtTool.grid.label));
+    await tester.pumpAndSettle();
+    expect(find.text(ArtTool.grid.label), findsOneWidget);
+    expect(find.text('测试图'), findsOneWidget);
+    expect(find.text('选一张画作，开始使用「构图网格」'), findsNothing);
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pumpAndSettle();
+    expect(find.text('分析工具'), findsOneWidget);
+    expect(find.text('测试图'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the grid slider supports single steps in either direction', (
+    tester,
+  ) async {
+    final image = await _sampleImage(tester);
+    await _pumpToolbox(
+      tester,
+      size: const Size(950, 740),
+      tool: ArtTool.grid.key,
+      image: image,
+    );
+    final decrease = find.byTooltip('减小不透明度');
+    final increase = find.byTooltip('增大不透明度');
+    await tester.ensureVisible(decrease);
+    expect(find.text('85%'), findsOneWidget);
+    await tester.tap(decrease);
+    await tester.pump();
+    expect(find.text('81%'), findsOneWidget);
+    await tester.tap(increase);
+    await tester.pump();
+    expect(find.text('85%'), findsOneWidget);
+  });
 
   testWidgets('image tools show the upload prompt without an image', (
     tester,
@@ -125,8 +246,12 @@ void main() {
   testWidgets('score calculator shows the Gansu worked example', (
     tester,
   ) async {
-    await _pumpToolbox(tester, size: const Size(950, 740), tool: 'score');
+    await _pumpToolbox(tester, size: const Size(814, 680), tool: 'score');
     final fields = find.byType(EditableText);
+    expect(
+      tester.getTopLeft(fields.at(0)).dy,
+      tester.getTopLeft(fields.at(1)).dy,
+    );
     await tester.enterText(fields.at(0), '500');
     await tester.enterText(fields.at(1), '240');
     await tester.pump();
@@ -134,7 +259,10 @@ void main() {
     expect(find.text('500 × 50% = 250.00'), findsOneWidget);
     expect(find.textContaining('各省以当年省教育考试院公布为准'), findsOneWidget);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('art_toolbox_score_form_v1'), contains('"culture":"500"'));
+    expect(
+      prefs.getString('art_toolbox_score_form_v1'),
+      contains('"culture":"500"'),
+    );
   });
 
   testWidgets('checklist ticks persist the progress', (tester) async {
@@ -144,7 +272,10 @@ void main() {
     await tester.pump();
     expect(find.text('1'), findsWidgets);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('art_toolbox_exam_checklist_v1'), contains('doc-admission'));
+    expect(
+      prefs.getString('art_toolbox_exam_checklist_v1'),
+      contains('doc-admission'),
+    );
   });
 
   testWidgets('value order check marks misplaced swatches', (tester) async {
@@ -184,11 +315,26 @@ void main() {
       tool: 'measure',
       image: image,
     );
-    final rect = tester.getRect(find.byType(RawImage).first);
+    final stage = tester.getRect(
+      find.byWidgetPredicate(
+        (widget) => widget is RawImage && identical(widget.image, image.image),
+      ),
+    );
+    final fit = applyBoxFit(
+      BoxFit.contain,
+      Size(image.width.toDouble(), image.height.toDouble()),
+      stage.size,
+    );
+    final rect = Alignment.center.inscribe(fit.destination, stage);
     Offset at(double x, double y) =>
         rect.topLeft + Offset(rect.width * x, rect.height * y);
-    // 图片按 contain 居中，80×60 的图在舞台里宽度撑满，取点都落在图内。
-    for (final point in [at(0.2, 0.5), at(0.4, 0.5), at(0.2, 0.3), at(0.6, 0.3)]) {
+    // 按实际 contain 结果取点，横向或纵向留白都不会影响测量比例。
+    for (final point in [
+      at(0.2, 0.5),
+      at(0.4, 0.5),
+      at(0.2, 0.3),
+      at(0.6, 0.3),
+    ]) {
       await tester.tapAt(point);
       await tester.pump(const Duration(milliseconds: 400));
     }

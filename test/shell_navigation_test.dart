@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:the_road_of_art_flutter/app/router/route_paths.dart';
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_asset_graphic.dart';
+import 'package:the_road_of_art_flutter/core/constants/app_assets.dart';
 import 'package:the_road_of_art_flutter/features/shell/navigation/shell_nav_routes.dart';
 import 'package:the_road_of_art_flutter/features/shell/state/shell_state.dart';
 import 'package:the_road_of_art_flutter/features/shell/ui/widgets/shell_left_nav.dart';
@@ -115,12 +114,13 @@ void main() {
     expect(teacher, containsAll(['班级学情', '作品点评']));
   });
 
-  test('小美同学 uses an icon without the letters AI', () {
+  test('小美同学 uses the original navigation icon', () {
     final ai = buildDefaultNavItems(
       schoolCoursewareEnabled: false,
     ).firstWhere((item) => item.route == RoutePaths.personalAi);
     expect(ai.label, '小美同学');
-    expect(ai.iconData, Icons.chat_bubble_outline_rounded);
+    expect(ai.icon, AppAssets.leftNavAi);
+    expect(ai.iconData, isNull);
   });
 
   group('ShellLeftNav', () {
@@ -128,10 +128,11 @@ void main() {
       WidgetTester tester, {
       required String route,
       bool collapsed = false,
+      double height = 820,
       VoidCallback? onToggle,
       ValueChanged<String>? onNavigate,
     }) async {
-      tester.view.physicalSize = const Size(1180, 820);
+      tester.view.physicalSize = Size(1180, height);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
@@ -139,8 +140,9 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               width: collapsed ? 56 : 178,
-              height: 820,
+              height: height,
               child: ShellLeftNav(
+                key: ValueKey(collapsed),
                 state: _state(collapsed: collapsed),
                 currentRoute: route,
                 onToggleCollapse: onToggle ?? () {},
@@ -153,27 +155,41 @@ void main() {
       await tester.pump();
     }
 
-    Color? tileColorOf(WidgetTester tester, String label) {
-      final container = tester.widget<Container>(
-        find.ancestor(of: find.text(label), matching: find.byType(Container)).first,
-      );
-      return (container.decoration as BoxDecoration?)?.color;
-    }
+    Finder activeBackground() => find.byWidgetPredicate(
+      (widget) =>
+          widget is DecoratedBox &&
+          widget.decoration is BoxDecoration &&
+          (widget.decoration as BoxDecoration).image?.image ==
+              const AssetImage(AppAssets.leftNavActiveBg),
+    );
 
-    testWidgets('only the current item uses the brand fill', (tester) async {
+    testWidgets('only the current item uses the reference background image', (
+      tester,
+    ) async {
       await pumpNav(tester, route: RoutePaths.gallery);
-      expect(tileColorOf(tester, '范画库'), AppColors.brand);
-      expect(tileColorOf(tester, '首页'), isNull);
-      expect(tileColorOf(tester, '智慧校园'), isNull);
+      expect(activeBackground(), findsOneWidget);
+      final selection = tester.getRect(activeBackground());
+      expect(selection.contains(tester.getCenter(find.text('范画库'))), isTrue);
+      expect(selection.contains(tester.getCenter(find.text('首页'))), isFalse);
+      final label = tester.widget<Text>(find.text('首页'));
+      expect(label.style?.fontSize, 15);
+      expect(label.style?.fontFamily, 'PingFang SC');
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('help page highlights nothing', (tester) async {
       await pumpNav(tester, route: RoutePaths.helpGuide);
-      for (final item in _state().navItems) {
-        expect(tileColorOf(tester, item.label), isNull, reason: item.label);
-      }
+      expect(activeBackground(), findsNothing);
     });
+
+    testWidgets(
+      'a lower navigation destination is revealed on narrow screens',
+      (tester) async {
+        await pumpNav(tester, route: RoutePaths.personalCenter, height: 650);
+        expect(find.text('个人中心').hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('feedback link and collapse button live in the footer', (
       tester,
@@ -187,10 +203,11 @@ void main() {
         onNavigate: (route) => opened = route,
       );
       final feedback = tester.widget<Text>(find.text('意见反馈'));
-      expect(feedback.style?.color, AppColors.textTertiary);
+      expect(feedback.style?.color, const Color(0xFFD1D1D1));
+      expect(feedback.style?.fontSize, 12);
       await tester.tap(find.text('意见反馈'));
       expect(opened, RoutePaths.helpFeedback);
-      await tester.tap(find.byIcon(Icons.keyboard_double_arrow_left_rounded));
+      await tester.tap(find.byKey(const ValueKey('shell-nav-toggle')));
       expect(toggles, 1);
       expect(tester.hasRunningAnimations, isFalse);
     });
@@ -207,22 +224,23 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('footer icon targets are at least 40 × 40', (tester) async {
+    testWidgets('collapse control and feedback retain reference geometry', (
+      tester,
+    ) async {
       for (final collapsed in [false, true]) {
         await pumpNav(tester, route: RoutePaths.home, collapsed: collapsed);
-        final toggle = tester.getSize(find.byType(AppIconButton));
-        expect(toggle.width, greaterThanOrEqualTo(40));
-        expect(toggle.height, greaterThanOrEqualTo(40));
-        final feedback = tester.getSize(
-          find
-              .ancestor(
-                of: find.byType(AppAssetGraphic).last,
-                matching: find.byType(AppPressable),
-              )
-              .first,
+        await tester.pumpAndSettle();
+        final toggle = tester.getRect(
+          find.byKey(const ValueKey('shell-nav-toggle')),
         );
-        expect(feedback.height, greaterThanOrEqualTo(40), reason: '$collapsed');
-        expect(feedback.width, greaterThanOrEqualTo(40), reason: '$collapsed');
+        expect(toggle.size, const Size(27, 36));
+        expect(toggle.bottom, 780);
+        expect(toggle.right, collapsed ? 56 : 178);
+        final feedback = tester.getRect(
+          find.byKey(const ValueKey('shell-nav-feedback')),
+        );
+        expect(feedback.height, 50);
+        expect(feedback.bottom, 810);
       }
       expect(tester.takeException(), isNull);
     });
@@ -272,22 +290,19 @@ void main() {
       expect(find.bySemanticsLabel('设置'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('^账户菜单')), findsOneWidget);
       semantics.dispose();
-      expect(find.text('搜索范画、书刊、资讯、视频、笔记'), findsOneWidget);
-      expect(find.byType(AppBadge), findsOneWidget);
+      expect(find.text('搜索'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('bell opens the notice drawer with a category tag', (
-      tester,
-    ) async {
+    testWidgets('bell opens the original notification drawer', (tester) async {
       await pumpBar(tester, unread: 1);
-      await tester.tap(find.byIcon(Icons.notifications_none_rounded));
+      await tester.tap(find.byTooltip('通知'));
       await tester.pumpAndSettle();
-      expect(find.byType(AppDrawer), findsOneWidget);
-      expect(find.text('1 条未读 · 学情、作品点评与系统消息'), findsOneWidget);
-      expect(find.widgetWithText(AppTag, '学情'), findsOneWidget);
-      expect(find.text('9 月月考的原卷与评分标准已上线'), findsOneWidget);
-      expect(find.text('班级与学校通知请到「智慧校园」查看'), findsOneWidget);
+      expect(find.text('通知(1)'), findsOneWidget);
+      expect(find.text('批量已读'), findsOneWidget);
+      expect(find.text('【学情】9 月月考的原卷与评分标准已上线'), findsOneWidget);
+      expect(find.text('班级与学校通知请到「智慧校园」查看'), findsNothing);
     });
 
     testWidgets('account menu lists region, profile and logout', (
@@ -298,7 +313,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('所在地区'), findsOneWidget);
       expect(find.text('甘肃'), findsOneWidget);
-      expect(find.text('个人信息'), findsOneWidget);
+      expect(find.text('资料修改'), findsOneWidget);
       expect(find.text('退出登录'), findsOneWidget);
     });
   });

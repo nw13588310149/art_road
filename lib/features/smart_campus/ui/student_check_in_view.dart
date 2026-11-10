@@ -43,9 +43,9 @@ import '../state/student_check_in_controller.dart';
 import '../state/student_check_in_state.dart';
 import 'course_sign_countdown.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPageBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
@@ -202,16 +202,16 @@ class _StudentCheckInViewState extends ConsumerState<StudentCheckInView>
     );
 
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       bodyScrollable: false,
       header: AppPageHeader(
         title: '课堂签到',
         subtitle: '小课签到、签退与课堂评价，大课由班主任统一考勤',
         onBack: widget.onBack,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
         actions: [
           AppButton(
-            label: '签到记录',
+            label: '历史记录',
             icon: Icons.history_rounded,
             variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
@@ -474,24 +474,35 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = item.value.endsWith('%')
-        ? item.value.substring(0, item.value.length - 1)
-        : item.value;
+    final ui = DashboardScaleScope.of(context).ui;
     return AppCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s16,
-        AppSpace.s12,
-        AppSpace.s12,
-        AppSpace.s12,
+      radius: 12,
+      bordered: false,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s12,
+        vertical: AppSpace.s8,
       ),
-      child: SizedBox(
-        width: double.infinity,
-        child: AppStatTile(
-          label: item.label,
-          value: value,
-          unit: item.value.endsWith('%') ? '%' : '次',
-          valueColor: item.valueColor,
-        ),
+      child: Column(
+        children: [
+          Text(
+            item.value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: smartCampusStatValueTextStyle(ui, color: item.valueColor),
+          ),
+          const SizedBox(height: AppSpace.s4),
+          Text(
+            item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: AppText.caption12.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.2,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -815,11 +826,21 @@ class _CheckInActionPanel extends StatelessWidget {
                         ),
                       ),
                       Positioned(
-                        left: ui(170),
+                        left: ui(12),
                         top: ui(89),
                         right: ui(12),
-                        child: _TeacherSignTimeline(
-                          courseSignStatus: data.courseSignStatus,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compact = constraints.maxWidth < ui(446);
+                            return Padding(
+                              padding: compact
+                                  ? EdgeInsets.only(top: ui(19))
+                                  : EdgeInsets.only(left: ui(158)),
+                              child: _TeacherSignTimeline(
+                                courseSignStatus: data.courseSignStatus,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       Positioned(
@@ -1667,14 +1688,40 @@ class _RecentCourseKindFilterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSegmented<_HistoryCourseKindFilter>(
-      size: AppControlSize.sm,
-      segments: const [
-        AppSegment(value: _HistoryCourseKindFilter.big, label: '大课'),
-        AppSegment(value: _HistoryCourseKindFilter.small, label: '小课'),
-      ],
-      value: selected,
-      onChanged: onSelected,
+    Widget pill(_HistoryCourseKindFilter kind, String label) {
+      final active = kind == selected;
+      return AppPressable(
+        onTap: () => onSelected(kind),
+        selected: active,
+        child: Container(
+          height: 32,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: active ? AppColors.ink : null,
+            borderRadius: const BorderRadius.all(Radius.circular(6)),
+          ),
+          child: Text(
+            label,
+            style: AppText.body13.copyWith(
+              color: active ? AppColors.onBrand : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return AppCard(
+      radius: 8,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4, vertical: 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          pill(_HistoryCourseKindFilter.big, '大课'),
+          const SizedBox(width: 6),
+          pill(_HistoryCourseKindFilter.small, '小课'),
+        ],
+      ),
     );
   }
 }

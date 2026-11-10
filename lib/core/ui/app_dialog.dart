@@ -9,7 +9,7 @@ import 'app_shadows.dart';
 import 'app_spacing.dart';
 import 'app_text.dart';
 
-/// 居中弹窗：白底圆角 12，标题 20 + 说明 14 + 内容 + 底部按钮。
+/// 居中弹窗：浅紫渐变页头、圆角 24、居中标题和底部按钮。
 ///
 /// 用 [showAppDialog] 打开。不依赖 `DashboardScaleScope`，登录页等外壳之外的页面也能用。
 class AppDialog extends StatelessWidget {
@@ -21,6 +21,7 @@ class AppDialog extends StatelessWidget {
     this.fillActions = true,
     this.width = AppSize.dialog,
     this.showClose,
+    this.headerAsset,
     super.key,
   });
 
@@ -39,6 +40,7 @@ class AppDialog extends StatelessWidget {
 
   /// 右上角关闭按钮；默认没有底部按钮时才显示。
   final bool? showClose;
+  final String? headerAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -61,9 +63,25 @@ class AppDialog extends StatelessWidget {
           child: Material(
             type: MaterialType.transparency,
             child: DecoratedBox(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppRadius.br12,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.brandTint,
+                    AppColors.surface,
+                    AppColors.surface,
+                  ],
+                  stops: [0, 0.21, 1],
+                ),
+                image: headerAsset == null
+                    ? null
+                    : DecorationImage(
+                        image: AssetImage(headerAsset!),
+                        fit: BoxFit.fitWidth,
+                        alignment: Alignment.topCenter,
+                      ),
+                borderRadius: AppRadius.br24,
                 boxShadow: AppShadow.overlay,
               ),
               child: Column(
@@ -73,23 +91,35 @@ class AppDialog extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.fromLTRB(
                       AppSpace.s24,
-                      closable ? AppSpace.s20 : AppSpace.s24,
-                      closable ? AppSpace.s16 : AppSpace.s24,
+                      AppSpace.s24,
+                      AppSpace.s24,
                       0,
                     ),
-                    child: Row(
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Expanded(child: Text(title, style: AppText.title20)),
-                        if (closable) ...[
-                          const SizedBox(width: AppSpace.s8),
-                          AppIconButton(
-                            icon: Icons.close_rounded,
-                            semanticLabel: '关闭',
-                            filled: false,
-                            color: AppColors.textSecondary,
-                            onTap: () => Navigator.of(context).maybePop(),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: closable ? AppSize.iconButton : 0,
+                            vertical: closable ? 6 : 0,
                           ),
-                        ],
+                          child: Text(
+                            title,
+                            style: AppText.title20,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        if (closable)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: AppIconButton(
+                              icon: Icons.close_rounded,
+                              semanticLabel: '关闭',
+                              filled: false,
+                              color: AppColors.textSecondary,
+                              onTap: () => Navigator.of(context).maybePop(),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -127,7 +157,7 @@ class AppDialog extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           for (var i = 0; i < actions.length; i++) ...[
-                            if (i > 0) const SizedBox(width: AppSpace.s12),
+                            if (i > 0) const SizedBox(width: AppSpace.s16),
                             if (fillActions)
                               Expanded(child: actions[i])
                             else

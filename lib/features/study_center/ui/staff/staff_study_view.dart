@@ -59,6 +59,7 @@ class StaffStudyView extends ConsumerWidget {
       return StudyGrowthView(
         key: ValueKey<String>('staff-trend-${student.archiveId}'),
         archiveId: student.archiveId,
+        studentName: student.studentName,
         title: '${student.studentName} · 成绩曲线',
         subtitle: [
           if (student.organizationName.isNotEmpty) student.organizationName,

@@ -12,6 +12,7 @@ abstract final class AppColors {
 
   /// 一级文字、图标。
   static const ink = Color(0xFF0B081A);
+  static const navSelection = Color(0xFF0D1535);
   static const textSecondary = Color(0xFF6D6B75);
   static const textTertiary = Color(0xFF8B8993);
 
@@ -24,6 +25,7 @@ abstract final class AppColors {
   static const page = Color(0xFFEFF3FC);
   static const surface = Color(0xFFFFFFFF);
   static const surfaceSubtle = Color(0xFFF5F6FA);
+  static const segmentTrack = Color(0xFFEFEFEF);
 
   /// 输入框、次按钮描边与分隔线。
   static const line = Color(0xFFEAEAEA);

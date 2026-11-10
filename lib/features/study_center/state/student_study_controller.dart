@@ -30,6 +30,7 @@ class StudentStudyState {
     this.exams = const <StudyExamRecord>[],
     this.examsLoading = false,
     this.examsLoadingMore = false,
+    this.examsFailed = false,
     this.examsPage = 0,
     this.examsTotal = 0,
     this.examsHasMore = false,
@@ -49,6 +50,7 @@ class StudentStudyState {
   final List<StudyExamRecord> exams;
   final bool examsLoading;
   final bool examsLoadingMore;
+  final bool examsFailed;
   final int examsPage;
   final int examsTotal;
   final bool examsHasMore;
@@ -72,6 +74,7 @@ class StudentStudyState {
     List<StudyExamRecord>? exams,
     bool? examsLoading,
     bool? examsLoadingMore,
+    bool? examsFailed,
     int? examsPage,
     int? examsTotal,
     bool? examsHasMore,
@@ -91,6 +94,7 @@ class StudentStudyState {
       exams: exams ?? this.exams,
       examsLoading: examsLoading ?? this.examsLoading,
       examsLoadingMore: examsLoadingMore ?? this.examsLoadingMore,
+      examsFailed: examsFailed ?? this.examsFailed,
       examsPage: examsPage ?? this.examsPage,
       examsTotal: examsTotal ?? this.examsTotal,
       examsHasMore: examsHasMore ?? this.examsHasMore,
@@ -204,7 +208,11 @@ class StudentStudyController extends StateNotifier<StudentStudyState> {
     }
     final serial = ++_examsSerial;
     final page = reset ? 1 : state.examsPage + 1;
-    state = state.copyWith(examsLoading: reset, examsLoadingMore: !reset);
+    state = state.copyWith(
+      examsLoading: reset,
+      examsLoadingMore: !reset,
+      examsFailed: false,
+    );
     final response = await _repository.exams(
       status: state.filter.code,
       current: page,
@@ -215,6 +223,7 @@ class StudentStudyController extends StateNotifier<StudentStudyState> {
       state = state.copyWith(
         examsLoading: false,
         examsLoadingMore: false,
+        examsFailed: state.exams.isEmpty,
         errorMessage: studyResponseMessage(response, '考试记录加载失败'),
       );
       return;

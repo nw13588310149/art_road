@@ -4,7 +4,7 @@ import '../../../../core/art/art_subject.dart';
 import '../../../../core/ui/ui.dart';
 import '../../data/study_logic.dart';
 
-/// 学情中心页面骨架：页头直接放在页面底色上，下方为内容区。
+/// 学情页面骨架：工具栏固定在白色内容面板内，下方为滚动内容区。
 class StudyPageFrame extends StatelessWidget {
   const StudyPageFrame({required this.header, required this.body, super.key});
 

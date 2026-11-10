@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
 import '../../../core/widgets/app_wheel_picker_sheet.dart';
@@ -11,7 +12,7 @@ import '../state/personal_center_controller.dart';
 import '../state/personal_center_state.dart';
 import '../state/profile_format.dart';
 
-/// 个人信息页：头像、基本资料、学籍信息与账号安全，分三张卡片限宽居中。
+/// 个人信息页：在统一白色面板内展示个人资料、学籍与账号安全。
 class InfoPage extends ConsumerWidget {
   const InfoPage({super.key});
 
@@ -33,16 +34,20 @@ class InfoPage extends ConsumerWidget {
       body = _InfoBody(state: state, controller: controller);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: '个人信息',
-          subtitle: '头像、资料与登录密码',
-          onBack: () => _backToPrev(context),
-        ),
-        Expanded(child: body),
-      ],
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            title: '个人信息',
+            subtitle: '头像、资料与登录密码',
+            onBack: () => _backToPrev(context),
+          ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 }
@@ -80,7 +85,7 @@ class _InfoBody extends StatelessWidget {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: const BoxConstraints(maxWidth: 1000),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -89,6 +94,10 @@ class _InfoBody extends StatelessWidget {
                 rows: [
                   AppListRow(
                     title: '头像',
+                    titleStyle: AppText.body14,
+                    padding: EdgeInsets.zero,
+                    minHeight: 64,
+                    chevronSize: 24,
                     trailing: AppAvatar(
                       name: name.isEmpty ? '我' : name,
                       url: field('headUrl'),
@@ -146,7 +155,7 @@ class _InfoBody extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpace.s16),
+              const SizedBox(height: AppSpace.s8),
               _FieldGroup(
                 title: isTeacher ? '任教信息' : '学籍信息',
                 rows: [
@@ -208,15 +217,11 @@ class _InfoBody extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: AppSpace.s16),
+              const SizedBox(height: AppSpace.s8),
               _FieldGroup(
                 title: '账号安全',
                 rows: [
-                  _fieldRow(
-                    '登录手机号',
-                    maskMobile(field('mobile')),
-                    null,
-                  ),
+                  _fieldRow('登录手机号', maskMobile(field('mobile')), null),
                   AppListRow(
                     title: '修改密码',
                     chevron: true,
@@ -246,15 +251,24 @@ class _InfoBody extends StatelessWidget {
     final empty = value.isEmpty;
     return AppListRow(
       title: label,
+      titleStyle: AppText.body14,
+      padding: EdgeInsets.zero,
+      minHeight: 64,
+      chevronSize: 24,
       trailing: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
-        child: Text(
-          empty ? (onTap == null ? '—' : '未填写') : value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.right,
-          style: AppText.body14.copyWith(
-            color: empty ? AppColors.textPlaceholder : AppColors.textSecondary,
+        child: Padding(
+          padding: EdgeInsets.only(right: onTap == null ? 40 : 12),
+          child: Text(
+            empty ? (onTap == null ? '—' : '未填写') : value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: AppText.body14.copyWith(
+              color: empty
+                  ? AppColors.textPlaceholder
+                  : AppColors.textSecondary,
+            ),
           ),
         ),
       ),
@@ -272,27 +286,17 @@ class _FieldGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.only(bottom: AppSpace.s4),
+    return Semantics(
+      container: true,
+      label: title,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.s16,
-              AppSpace.s16,
-              AppSpace.s16,
-              AppSpace.s4,
-            ),
-            child: Text(title, style: AppText.title16),
-          ),
           for (var i = 0; i < rows.length; i++)
             if (i < rows.length - 1)
               DecoratedBox(
                 decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: AppColors.lineSoft),
-                  ),
+                  border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
                 ),
                 child: rows[i],
               )
@@ -665,6 +669,7 @@ class _GenderDialogState extends State<_GenderDialog> {
   Widget build(BuildContext context) {
     return AppDialog(
       title: '选择性别',
+      headerAsset: AppAssets.profileGenderBg,
       actions: [
         AppButton(
           label: '取消',
@@ -676,14 +681,57 @@ class _GenderDialogState extends State<_GenderDialog> {
           onTap: () => Navigator.of(context).pop(_selected),
         ),
       ],
-      child: AppSegmented<String>(
-        segments: const [
-          AppSegment(value: '男', label: '男'),
-          AppSegment(value: '女', label: '女'),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (final (value, label, icon, selectedIcon) in const [
+            (
+              '男',
+              '男生',
+              AppAssets.profileGenderMale,
+              AppAssets.profileGenderMaleSelected,
+            ),
+            (
+              '女',
+              '女生',
+              AppAssets.profileGenderFemale,
+              AppAssets.profileGenderFemaleSelected,
+            ),
+          ]) ...[
+            if (value == '女') const SizedBox(width: AppSpace.s24),
+            Flexible(
+              child: AppPressable(
+                selected: _selected == value,
+                onTap: () => setState(() => _selected = value),
+                child: Container(
+                  width: 134,
+                  height: 134,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: AppRadius.br16,
+                    border: Border.all(
+                      color: _selected == value
+                          ? AppColors.brand
+                          : AppColors.lineSoft,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        _selected == value ? selectedIcon : icon,
+                        width: 54,
+                        height: 54,
+                      ),
+                      const SizedBox(height: AppSpace.s12),
+                      Text(label, style: AppText.title16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
-        value: _selected,
-        expand: true,
-        onChanged: (value) => setState(() => _selected = value),
       ),
     );
   }

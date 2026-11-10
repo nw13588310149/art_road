@@ -24,9 +24,10 @@ class HomeEbookShelfSection extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: AppSectionHeader(
                   title: '精选书刊',
+                  titleStyle: AppText.title16,
                   subtitle: '美术教辅与期刊 · 示例内容',
                 ),
               ),
@@ -81,7 +82,11 @@ class HomeEbookShelfSection extends ConsumerWidget {
 }
 
 class _ShelfBody extends StatelessWidget {
-  const _ShelfBody({required this.data, required this.onOpen, required this.onContinue});
+  const _ShelfBody({
+    required this.data,
+    required this.onOpen,
+    required this.onContinue,
+  });
 
   final HomeEbookShelfData data;
   final ValueChanged<EbookSummary> onOpen;
@@ -193,8 +198,14 @@ class _Picks extends StatelessWidget {
       builder: (context, constraints) {
         const gap = AppSpace.s12;
         final width = constraints.maxWidth;
-        final count = ((width + gap) / (_minItemWidth + gap)).floor().clamp(1, books.length);
-        final itemWidth = ((width - gap * (count - 1)) / count).clamp(_minItemWidth, _maxItemWidth);
+        final count = ((width + gap) / (_minItemWidth + gap)).floor().clamp(
+          1,
+          books.length,
+        );
+        final itemWidth = ((width - gap * (count - 1)) / count).clamp(
+          0.0,
+          _maxItemWidth,
+        );
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -208,7 +219,10 @@ class _Picks extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      EbookCover(url: books[i].coverUrl, favorite: books[i].favorite),
+                      EbookCover(
+                        url: books[i].coverUrl,
+                        favorite: books[i].favorite,
+                      ),
                       const SizedBox(height: AppSpace.s8),
                       Text(
                         books[i].title,
@@ -248,7 +262,9 @@ class _ShelfSkeleton extends StatelessWidget {
               ),
               const SizedBox(width: AppSpace.s16),
             ],
-            const Expanded(child: AppSkeleton(height: 160, radius: AppRadius.card)),
+            const Expanded(
+              child: AppSkeleton(height: 160, radius: AppRadius.card),
+            ),
           ],
         ),
       ),

@@ -122,6 +122,19 @@ class AppRouter {
         return const PersonalCenterPage();
       case RoutePaths.info:
         return const InfoPage();
+      case RoutePaths.xieyi:
+        return Builder(
+          builder: (context) => TermsContent(
+            onBack: () {
+              final navigator = Navigator.of(context);
+              if (navigator.canPop()) {
+                navigator.pop();
+              } else {
+                navigator.pushReplacementNamed(RoutePaths.personalCenter);
+              }
+            },
+          ),
+        );
       case RoutePaths.qrcode:
         return const MyQrCodePage();
       case RoutePaths.fankui:
@@ -188,7 +201,6 @@ class AppRouter {
       RoutePaths.noteDetail: '笔记详情',
       RoutePaths.verifie: '实名认证',
       RoutePaths.set: '设置',
-      RoutePaths.xieyi: '服务协议',
       RoutePaths.email: '邮箱绑定',
     };
     return legacyRoutes[routeName] ?? '该功能';

@@ -78,9 +78,7 @@ class CloudDriveController extends StateNotifier<CloudDriveState> {
     );
     state = state.copyWith(busy: false);
     if (!response.isSuccess) {
-      state = state.copyWith(
-        errorMessage: response.displayMsg,
-      );
+      state = state.copyWith(errorMessage: response.displayMsg);
       return null;
     }
     final result = parseUploadResult(response.data);
@@ -154,6 +152,16 @@ class CloudDriveController extends StateNotifier<CloudDriveState> {
     final categoryResponse = responses[0];
     final usageResponse = responses[1];
     final usage = _parseUsageFromResponse(usageResponse);
+
+    if (!categoryResponse.isSuccess) {
+      state = state.copyWith(
+        loading: false,
+        errorMessage: categoryResponse.displayMsg.isEmpty
+            ? '请检查网络连接后重试'
+            : categoryResponse.displayMsg,
+      );
+      return;
+    }
 
     final categories = _parseCategories(categoryResponse.data);
 

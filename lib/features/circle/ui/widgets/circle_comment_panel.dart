@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../state/circle_state.dart';
 
@@ -237,14 +239,10 @@ class _CommentTile extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                comment.liked
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-                size: 20,
-                color: comment.liked
-                    ? AppColors.brand
-                    : AppColors.textTertiary,
+              AppAssetGraphic(
+                comment.liked ? AppAssets.circleLiked : AppAssets.circleLike,
+                width: 24,
+                height: 24,
               ),
               const SizedBox(height: 2),
               Text(

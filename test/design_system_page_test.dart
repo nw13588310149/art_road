@@ -18,7 +18,7 @@ void main() {
     );
     await tester.pump();
     expect(tester.takeException(), isNull);
-    expect(find.text('组件库'), findsOneWidget);
+    expect(find.text('组件库'), findsNothing);
 
     final scrollable = find.byType(Scrollable).first;
     for (var i = 0; i < 40; i++) {
@@ -26,10 +26,7 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
     }
-    expect(
-      find.textContaining('加载、空与错误', findRichText: true),
-      findsOneWidget,
-    );
+    expect(find.textContaining('加载、空与错误', findRichText: true), findsOneWidget);
     expect(find.text('还没有作品'), findsOneWidget);
   });
 }

@@ -15,6 +15,7 @@ class StudentExamListCard extends StatelessWidget {
     required this.onFilterChanged,
     required this.onOpen,
     required this.onLoadMore,
+    required this.onRetry,
     super.key,
   });
 
@@ -22,6 +23,7 @@ class StudentExamListCard extends StatelessWidget {
   final ValueChanged<StudyExamFilter> onFilterChanged;
   final ValueChanged<StudyExamRecord> onOpen;
   final VoidCallback onLoadMore;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +31,15 @@ class StudentExamListCard extends StatelessWidget {
     final Widget body;
     if (state.examsLoading && exams.isEmpty) {
       body = const _ExamListSkeleton();
+    } else if (state.examsFailed) {
+      body = SizedBox(
+        height: 180,
+        child: AppErrorState(
+          title: '考试记录加载失败',
+          description: '请检查网络后重试',
+          onRetry: onRetry,
+        ),
+      );
     } else if (exams.isEmpty) {
       body = SizedBox(
         height: 180,
@@ -37,7 +48,11 @@ class StudentExamListCard extends StatelessWidget {
           title: state.filter == StudyExamFilter.marking
               ? '没有阅卷中的考试'
               : '暂无考试记录',
-          description: '画室组织的月考、阶段考出分后会出现在这里',
+          description: switch (state.filter) {
+            StudyExamFilter.all => '画室组织的月考、阶段考会出现在这里',
+            StudyExamFilter.published => '阅卷完成并发布成绩后会出现在这里',
+            StudyExamFilter.marking => '正在阅卷、尚未发布成绩的考试会出现在这里',
+          },
         ),
       );
     } else {
@@ -110,8 +125,7 @@ class _ExamTile extends StatelessWidget {
       final total = exam.participantCount;
       detail = [
         studyDateText(exam.examTime),
-        if (rank != null)
-          total == null ? '第 $rank 名' : '第 $rank 名 / $total 人',
+        if (rank != null) total == null ? '第 $rank 名' : '第 $rank 名 / $total 人',
       ].join(' · ');
     } else {
       detail = exam.isPublished ? '本场考试暂无你的成绩' : '阅卷中，出分后会通知你';

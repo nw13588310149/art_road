@@ -24,7 +24,7 @@ class AppSegment<T> {
   final String? badge;
 }
 
-/// iOS 风格分段控件：浅灰轨道 + 白色选中块，选中立即切换，没有滑动动画。
+/// 浅灰轨道 + 实底选中块，选中立即切换。
 ///
 /// 用于卡片内或页头的 2–5 个互斥视图切换；页面级主导航用 [AppTabs]。
 class AppSegmented<T> extends StatelessWidget {
@@ -35,6 +35,9 @@ class AppSegmented<T> extends StatelessWidget {
     this.size = AppControlSize.md,
     this.expand = false,
     this.enabled = true,
+    this.trackColor = AppColors.segmentTrack,
+    this.selectedColor = AppColors.brand,
+    this.neutral = false,
     super.key,
   });
 
@@ -46,6 +49,9 @@ class AppSegmented<T> extends StatelessWidget {
   /// 各段等分父级宽度（父级宽度必须有界）。
   final bool expand;
   final bool enabled;
+  final Color trackColor;
+  final Color selectedColor;
+  final bool neutral;
 
   @override
   Widget build(BuildContext context) {
@@ -54,22 +60,25 @@ class AppSegmented<T> extends StatelessWidget {
     for (var i = 0; i < segments.length; i++) {
       final segment = segments[i];
       if (i > 0) {
-        children.add(const SizedBox(width: 2));
+        children.add(SizedBox(width: neutral ? AppSpace.s16 : 2));
       }
       final item = _SegmentItem<T>(
         segment: segment,
         selected: segment.value == value,
         md: md,
+        neutral: neutral,
+        selectedColor: selectedColor,
         onTap: enabled ? () => onChanged(segment.value) : null,
       );
       children.add(expand ? Expanded(child: item) : item);
     }
     final track = Container(
-      height: md ? AppSize.control : AppSize.controlSm,
-      padding: const EdgeInsets.all(3),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceSubtle,
+      height: neutral ? 46 : (md ? 32 : AppSize.controlSm),
+      padding: EdgeInsets.all(neutral ? 5 : 2),
+      decoration: BoxDecoration(
+        color: neutral ? AppColors.surfaceSubtle : trackColor,
         borderRadius: AppRadius.br8,
+        border: neutral ? Border.all(color: AppColors.lineSoft) : null,
       ),
       child: Row(
         mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
@@ -88,12 +97,16 @@ class _SegmentItem<T> extends StatelessWidget {
     required this.segment,
     required this.selected,
     required this.md,
+    required this.neutral,
+    required this.selectedColor,
     required this.onTap,
   });
 
   final AppSegment<T> segment;
   final bool selected;
   final bool md;
+  final bool neutral;
+  final Color selectedColor;
   final VoidCallback? onTap;
 
   @override
@@ -105,13 +118,15 @@ class _SegmentItem<T> extends StatelessWidget {
       selected: selected,
       child: Container(
         constraints: BoxConstraints(minWidth: md ? 44 : 36),
-        padding: EdgeInsets.symmetric(horizontal: md ? 12 : 10),
+        padding: EdgeInsets.symmetric(
+          horizontal: neutral ? 16 : (md ? 14 : 10),
+        ),
         alignment: Alignment.center,
         decoration: selected
-            ? const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-                boxShadow: AppShadow.thumb,
+            ? BoxDecoration(
+                color: neutral ? AppColors.surface : selectedColor,
+                borderRadius: const BorderRadius.all(Radius.circular(6)),
+                boxShadow: neutral ? AppShadow.thumb : null,
               )
             : null,
         child: Row(
@@ -123,10 +138,12 @@ class _SegmentItem<T> extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: md ? 14 : 13,
+                  fontSize: neutral ? 14 : 13,
                   height: 1.2,
-                  fontWeight: selected ? AppFont.w500 : AppFont.w400,
-                  color: selected ? AppColors.ink : AppColors.textSecondary,
+                  fontWeight: selected || neutral ? AppFont.w500 : AppFont.w400,
+                  color: selected
+                      ? (neutral ? AppColors.ink : AppColors.onBrand)
+                      : (neutral ? AppColors.textSecondary : AppColors.ink),
                   leadingDistribution: TextLeadingDistribution.even,
                 ),
               ),

@@ -52,7 +52,6 @@ import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kBoardBg = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
@@ -253,7 +252,6 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
         : state.stat.pendingMakeupCount;
     final displayName = widget.studentName.isEmpty ? '我' : widget.studentName;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       headerGap: _kStatsBlockGap,
       header: AppPageHeader(
@@ -263,30 +261,32 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
         actions: [
           AppButton(
             label: '申请补卡',
-            icon: Icons.event_available_outlined,
+            iconAsset:
+                'assets/images/smartCampus/dorm_check/apply_makeup_icon.png',
             size: AppButtonSize.sm,
+            variant: AppButtonVariant.secondary,
             onTap: state.submittingMakeup ? null : _openApplyDialog,
           ),
+          AppSegmented<StudentDormitoryListSection>(
+            segments: [
+              const AppSegment(
+                value: StudentDormitoryListSection.checkRecords,
+                label: '查寝记录',
+              ),
+              AppSegment(
+                value: StudentDormitoryListSection.makeupApplications,
+                label: state.makeupItems.isEmpty
+                    ? '补卡申请'
+                    : '补卡申请（${state.makeupItems.length}）',
+              ),
+            ],
+            value: state.listSection,
+            selectedColor: AppColors.ink,
+            onChanged: (section) => ref
+                .read(studentDormitoryControllerProvider.notifier)
+                .selectListSection(section),
+          ),
         ],
-        bottom: AppTabs<StudentDormitoryListSection>(
-          tabs: [
-            const AppTab(
-              value: StudentDormitoryListSection.checkRecords,
-              label: '查寝记录',
-            ),
-            AppTab(
-              value: StudentDormitoryListSection.makeupApplications,
-              label: '补卡申请',
-              count: state.makeupItems.isEmpty
-                  ? null
-                  : state.makeupItems.length,
-            ),
-          ],
-          value: state.listSection,
-          onChanged: (section) => ref
-              .read(studentDormitoryControllerProvider.notifier)
-              .selectListSection(section),
-        ),
       ),
       body: PageInitLoadingShell(
         loading:
@@ -441,8 +441,7 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        AppSegmented<_DormTab>(
-          size: AppControlSize.sm,
+        SmartCampusStatusTabs<_DormTab>(
           segments: const [
             AppSegment(value: _DormTab.all, label: '全部'),
             AppSegment(value: _DormTab.abnormal, label: '异常'),

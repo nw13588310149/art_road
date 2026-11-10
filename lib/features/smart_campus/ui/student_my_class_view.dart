@@ -37,9 +37,9 @@ import '../../shell/state/shell_controller.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/student_repository.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_notice_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPageBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kTextDark = AppColors.ink;
@@ -137,15 +137,11 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
 
     final info = _classInfo;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       header: AppPageHeader(
         title: '我的班级',
         subtitle: info == null
             ? '班级信息、班级通知、师资与同学'
-            : [
-                info.name,
-                info.subtitle,
-              ].where((s) => s.isNotEmpty).join(' · '),
+            : [info.name, info.subtitle].where((s) => s.isNotEmpty).join(' · '),
         onBack: widget.onBack,
       ),
       body: Column(
@@ -701,10 +697,7 @@ class _ClassInfoCard extends StatelessWidget {
                         ),
                         Expanded(
                           flex: 2,
-                          child: _InfoPair(
-                            label: '教室',
-                            value: data.classroom,
-                          ),
+                          child: _InfoPair(label: '教室', value: data.classroom),
                         ),
                       ],
                     ),
@@ -796,12 +789,7 @@ class _StatBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 88,
-      child: AppStatTile(
-        label: label,
-        value: '$value',
-        unit: '人',
-        boxed: true,
-      ),
+      child: AppStatTile(label: label, value: '$value', unit: '人', boxed: true),
     );
   }
 }
@@ -835,22 +823,36 @@ class _AnnouncementSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpace.s12),
         AppCard(
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.all(AppSpace.s12),
           child: notices.isEmpty
               ? const AppEmptyState(
                   icon: Icons.campaign_outlined,
                   title: '暂无班级通知',
                   description: '班主任发布的通知会出现在这里',
                 )
-              : Column(
-                  children: [
-                    for (var i = 0; i < shown.length; i++)
-                      _ClassNoticeCard(
-                        item: shown[i],
-                        divider: i < shown.length - 1,
-                        onTap: () => onNoticeTap(shown[i]),
-                      ),
-                  ],
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    final columns = width >= 820 ? 3 : (width >= 560 ? 2 : 1);
+                    const gap = AppSpace.s8;
+                    final itemWidth = (width - gap * (columns - 1)) / columns;
+                    return Wrap(
+                      spacing: gap,
+                      runSpacing: gap,
+                      children: [
+                        for (final item in shown)
+                          SizedBox(
+                            width: itemWidth,
+                            child: SmartCampusNoticeCard(
+                              title: item.title,
+                              content: item.content,
+                              date: item.date,
+                              onTap: () => onNoticeTap(item),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
         ),
       ],
@@ -858,29 +860,19 @@ class _AnnouncementSection extends StatelessWidget {
   }
 }
 
-/// 班级通知列表行：白底，标题 + 正文两行 + 日期，行间细分隔线。
+/// 班级通知抽屉列表行：标题、正文和日期。
 class _ClassNoticeCard extends StatelessWidget {
-  const _ClassNoticeCard({
-    required this.item,
-    required this.onTap,
-    this.divider = false,
-  });
+  const _ClassNoticeCard({required this.item, required this.onTap});
 
   final _ClassNoticeItem item;
   final VoidCallback onTap;
-  final bool divider;
 
   @override
   Widget build(BuildContext context) {
     return AppPressable(
       onTap: onTap,
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.all(AppSpace.s16),
-        decoration: BoxDecoration(
-          border: divider
-              ? const Border(bottom: BorderSide(color: AppColors.lineSoft))
-              : null,
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1211,11 +1203,7 @@ class _FacultyCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppAvatar(
-                name: member.name,
-                url: member.avatarUrl,
-                size: ui(40),
-              ),
+              AppAvatar(name: member.name, url: member.avatarUrl, size: ui(40)),
               SizedBox(width: ui(8)),
               Expanded(
                 child: Column(

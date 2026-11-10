@@ -63,12 +63,11 @@ class _SimplifyBodyState extends State<_SimplifyBody>
   @override
   Widget build(BuildContext context) {
     return ImageToolLayout(
-      stage: (context, wide) => CompareStage(
+      stage: (context) => CompareStage(
         original: widget.image.image,
         processed: result?.image,
         label: '$_colors 色简化',
         compare: _compare,
-        wide: wide,
         failed: failed,
         onRetry: reprocess,
       ),
@@ -76,7 +75,7 @@ class _SimplifyBodyState extends State<_SimplifyBody>
     );
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     final swatches = result?.info;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -103,12 +102,11 @@ class _SimplifyBodyState extends State<_SimplifyBody>
             reprocess();
           },
         ),
-        if (wide)
-          ToolSwitchRow(
-            label: '与原图并排对比',
-            value: _compare,
-            onChanged: (v) => setState(() => _compare = v),
-          ),
+        ToolSwitchRow(
+          label: '与原图并排对比',
+          value: _compare,
+          onChanged: (v) => setState(() => _compare = v),
+        ),
         ToolPanelSection(
           title: '色块占比',
           trailing: const Text('点击复制 HEX'),

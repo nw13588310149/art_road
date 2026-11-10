@@ -49,11 +49,9 @@ import 'widgets/smart_campus_stat_card.dart';
 import '../data/home_school_chat_data.dart';
 import '../data/smart_campus_count_badge.dart';
 import '../data/teacher_repository.dart';
-import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kCardGreyBg = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
@@ -187,7 +185,7 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Container(
-      color: _kPageBg,
+      color: AppColors.surface,
       child: AppRefreshIndicator(
         onRefresh: _reloadAll,
         child: SingleChildScrollView(
@@ -196,7 +194,7 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Banner(onBack: widget.onBack),
+              AppPageHeader(title: '家校沟通', onBack: widget.onBack),
               SizedBox(height: ui(16)),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,84 +233,6 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
 }
 
 // —— Banner ————————————————————————————————————————————————————————
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: smartCampusPageBannerDecoration(ui),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(12),
-            top: ui(15),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft, width: 1),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: ui(56)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '家校沟通',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontWeight: AppFont.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: ui(2)),
-                  Text(
-                    '与本班家长就请假、成绩、心理等进行文字沟通',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextHint,
-                      fontWeight: AppFont.w400,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// —— 3 张统计卡 ————————————————————————————————————————————————
 
 class _StatsRow extends StatelessWidget {
   const _StatsRow({

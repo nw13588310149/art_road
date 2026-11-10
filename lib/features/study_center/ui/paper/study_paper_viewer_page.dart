@@ -296,9 +296,7 @@ class _SingleView extends StatelessWidget {
               imageProvider: CachedNetworkImageProvider(
                 MediaUrl.resolve(value.imageUrl),
               ),
-              backgroundDecoration: const BoxDecoration(
-                color: AppColors.ink,
-              ),
+              backgroundDecoration: const BoxDecoration(color: AppColors.ink),
               minScale: PhotoViewComputedScale.contained,
               maxScale: PhotoViewComputedScale.covered * 4,
               initialScale: PhotoViewComputedScale.contained,
@@ -361,7 +359,10 @@ class _CompareView extends StatelessWidget {
           ? Stack(
               fit: StackFit.expand,
               children: [
-                _ZoomableImage(url: value.imageUrl),
+                _ZoomableImage(
+                  key: ValueKey(value.imageUrl),
+                  url: value.imageUrl,
+                ),
                 Positioned.fill(
                   child: StudyPaperWatermark(text: value.watermarkText),
                 ),
@@ -387,7 +388,7 @@ class _CompareView extends StatelessWidget {
                 icon: Icons.image_not_supported_outlined,
                 text: '该科暂无 $sampleGrade 档样图',
               )
-            : _ZoomableImage(url: url);
+            : _ZoomableImage(key: ValueKey(url), url: url);
       },
     );
     return LayoutBuilder(
@@ -411,6 +412,7 @@ class _CompareView extends StatelessWidget {
                         0.8,
                       ),
                     ),
+              onDoubleTap: () => onSplitChanged(0.5),
               child: const MouseRegion(
                 cursor: SystemMouseCursors.resizeColumn,
                 child: SizedBox(width: handleWidth, child: _DividerHandle()),
@@ -483,7 +485,7 @@ class _DividerHandle extends StatelessWidget {
 }
 
 class _ZoomableImage extends StatelessWidget {
-  const _ZoomableImage({required this.url});
+  const _ZoomableImage({required this.url, super.key});
 
   final String url;
 
@@ -535,10 +537,7 @@ class _BandLegendBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(
-            '我的档位',
-            style: AppText.caption12.copyWith(color: _onDarkMuted),
-          ),
+          Text('我的档位', style: AppText.caption12.copyWith(color: _onDarkMuted)),
           const SizedBox(width: AppSpace.s12),
           if (subject.hasScore) ...[
             StudyGradeTag(grade: grade),
@@ -550,10 +549,7 @@ class _BandLegendBar extends StatelessWidget {
               unitColor: _onDarkMuted,
             ),
           ] else
-            Text(
-              '待出分',
-              style: AppText.body13.copyWith(color: _onDarkMuted),
-            ),
+            Text('待出分', style: AppText.body13.copyWith(color: _onDarkMuted)),
           const SizedBox(width: AppSpace.s20),
           Expanded(
             child: bands.isEmpty

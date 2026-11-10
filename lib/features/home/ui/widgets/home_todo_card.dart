@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../school/state/school_config_controller.dart';
 import '../../../shell/state/shell_controller.dart';
 import '../../state/home_staff_cards.dart';
@@ -137,7 +139,7 @@ class _TodoRow extends StatelessWidget {
             : null,
         child: Row(
           children: [
-            Icon(item.icon, size: 20, color: AppColors.textSecondary),
+            AppAssetGraphic(item.iconAsset, width: 24, height: 24),
             const SizedBox(width: AppSpace.s12),
             Expanded(
               child: Column(
@@ -163,11 +165,7 @@ class _TodoRow extends StatelessWidget {
             const SizedBox(width: AppSpace.s8),
             trailing,
             const SizedBox(width: AppSpace.s4),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: AppColors.textPlaceholder,
-            ),
+            const AppAssetGraphic(AppAssets.listChevron, width: 20, height: 20),
           ],
         ),
       ),

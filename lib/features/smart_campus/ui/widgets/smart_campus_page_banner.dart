@@ -4,15 +4,59 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../shell/ui/shell_layout.dart';
 
+/// 作业等页面独立的白色筛选条，选中项使用深色底。
+class SmartCampusStatusTabs<T> extends StatelessWidget {
+  const SmartCampusStatusTabs({
+    required this.segments,
+    required this.value,
+    required this.onChanged,
+    super.key,
+  });
+
+  final List<AppSegment<T>> segments;
+  final T value;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: AppCard(
+        padding: const EdgeInsets.all(AppSpace.s4),
+        bordered: false,
+        radius: 8,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: AppSegmented<T>(
+            segments: segments,
+            value: value,
+            onChanged: onChanged,
+            trackColor: AppColors.surface,
+            selectedColor: AppColors.ink,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// 智慧校园二级页统一顶栏背景（与请假审批页 [AppAssets.xiaoquanHeaderBg] 一致）。
 BoxDecoration smartCampusPageBannerDecoration(
   double Function(double) ui, {
   double borderRadius = 16,
 }) {
   return BoxDecoration(
-    color: AppColors.surface,
     borderRadius: BorderRadius.circular(ui(borderRadius)),
-    border: Border.all(color: AppColors.lineSoft),
+    gradient: const LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [AppColors.surface, AppColors.brandWash],
+    ),
+    image: const DecorationImage(
+      image: AssetImage(AppAssets.xiaoquanHeaderBg),
+      fit: BoxFit.cover,
+      alignment: Alignment.centerRight,
+    ),
   );
 }
 
@@ -41,16 +85,25 @@ class SmartCampusScheduleTopBar extends StatelessWidget {
           topLeft: Radius.circular(ui(borderRadius)),
           topRight: Radius.circular(ui(borderRadius)),
         ),
-        color: AppColors.surface,
+        gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [AppColors.surface, AppColors.brandWash],
+        ),
+        image: const DecorationImage(
+          image: AssetImage(AppAssets.authBgTop),
+          fit: BoxFit.cover,
+          alignment: Alignment.centerRight,
+        ),
       ),
-      child: child,
+      child: Center(child: child),
     );
   }
 }
 
 /// 学生端二级页通用壳层：
 ///
-/// 顶部 [header]（标题 + 返回栏）固定浮在灰底上，**不随内容滚动**；与下方
+/// 顶部 [header] 使用独立背景，**不随内容滚动**；与下方
 /// 主内容容器之间留 [headerGap] 间距（即「容器到顶部标题栏有间距」）。
 /// 主内容容器填满剩余高度并以 16 圆角裁切滚动内容；容器内部 **不再叠加**
 /// 任何底部 padding —— 滚动到底时由外层 dashboard 的 16px contentPadding
@@ -65,6 +118,7 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
     required this.header,
     required this.body,
     this.backgroundColor = AppColors.page,
+    this.headerMinHeight = 62,
     this.headerGap = 16,
     this.bodyBorderRadius = 16,
     this.bodyTopClipRadius,
@@ -74,6 +128,7 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
   final Widget header;
   final Widget body;
   final Color backgroundColor;
+  final double headerMinHeight;
 
   /// banner 与主内容容器之间的固定间距。
   final double headerGap;
@@ -89,38 +144,33 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
   /// 为 `false` 时由调用方自行提供滚动（如下拉刷新场景）。
   final bool bodyScrollable;
 
-  /// 页头用 [AppPageHeader]（自带左右 20 版心与底部 12 留白），主体与页头左右对齐，
-  /// 卡片直接落在页面底色上；[headerGap]、[bodyBorderRadius]、[bodyTopClipRadius]
-  /// 为旧参数，保留以兼容调用方。
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final topRadius = Radius.circular(
+      ui(bodyTopClipRadius ?? bodyBorderRadius),
+    );
+    final bottomRadius = Radius.circular(ui(bodyBorderRadius));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        header,
-        const SizedBox(height: AppSpace.s4),
+        Container(
+          constraints: BoxConstraints(minHeight: ui(headerMinHeight)),
+          alignment: Alignment.center,
+          decoration: smartCampusPageBannerDecoration(ui),
+          child: header,
+        ),
+        SizedBox(height: ui(headerGap)),
         Expanded(
-          child: ColoredBox(
-            color: backgroundColor,
-            child: bodyScrollable
-                ? SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpace.page,
-                      0,
-                      AppSpace.page,
-                      AppSpace.page,
-                    ),
-                    child: body,
-                  )
-                : Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpace.page,
-                      0,
-                      AppSpace.page,
-                      AppSpace.page,
-                    ),
-                    child: body,
-                  ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.vertical(
+              top: topRadius,
+              bottom: bottomRadius,
+            ),
+            child: ColoredBox(
+              color: backgroundColor,
+              child: bodyScrollable ? SingleChildScrollView(child: body) : body,
+            ),
           ),
         ),
       ],

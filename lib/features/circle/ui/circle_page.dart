@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_asset_graphic.dart';
 import '../state/circle_controller.dart';
 import '../state/circle_governance_controller.dart';
 import '../state/circle_governance_state.dart';
@@ -101,34 +103,52 @@ class CirclePage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AppPageHeader(
-                title: governance ? '校圈治理' : '校圈',
-                subtitle: governance
-                    ? '处理同学和老师举报的动态，删除时需写明原因'
-                    : '画室同学和老师分享的作品与日常',
-                onBack: () => _handleBack(context, controller),
-                actions: [
-                  if (showFeed)
-                    AppSegmented<CircleMode>(
-                      segments: const [
-                        AppSegment(value: CircleMode.list, label: '卡片'),
-                        AppSegment(value: CircleMode.immersive, label: '大图'),
-                      ],
-                      value: state.mode,
-                      onChanged: controller.setMode,
-                    ),
-                  if (!governance)
-                    AppButton(
-                      label: '发布动态',
-                      icon: Icons.add_rounded,
-                      size: AppButtonSize.sm,
-                      onTap: () => showCirclePublishDialog(context),
-                    ),
-                ],
-                bottom: governance
-                    ? _GovernanceTabs(onLeaveFeed: controller.stopMediaPlayback)
-                    : null,
+              AppCard(
+                padding: EdgeInsets.zero,
+                bordered: false,
+                backgroundImage: const DecorationImage(
+                  image: AssetImage(AppAssets.xiaoquanHeaderBg),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.centerRight,
+                ),
+                child: AppPageHeader(
+                  title: governance ? '校圈治理' : '校圈',
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpace.s16,
+                    vertical: 13,
+                  ),
+                  subtitle: governance
+                      ? '处理同学和老师举报的动态，删除时需写明原因'
+                      : '画室同学和老师分享的作品与日常',
+                  onBack: () => _handleBack(context, controller),
+                  actions: [
+                    if (showFeed)
+                      SizedBox(
+                        width: 116,
+                        height: 36,
+                        child: AppSegmented<CircleMode>(
+                          trackColor: AppColors.page,
+                          expand: true,
+                          segments: const [
+                            AppSegment(
+                              value: CircleMode.immersive,
+                              label: '沉浸',
+                            ),
+                            AppSegment(value: CircleMode.list, label: '列表'),
+                          ],
+                          value: state.mode,
+                          onChanged: controller.setMode,
+                        ),
+                      ),
+                  ],
+                  bottom: governance
+                      ? _GovernanceTabs(
+                          onLeaveFeed: controller.stopMediaPlayback,
+                        )
+                      : null,
+                ),
               ),
+              const SizedBox(height: AppSpace.s12),
               Expanded(
                 child: !showFeed
                     ? const CircleGovernanceView()
@@ -152,14 +172,33 @@ class CirclePage extends ConsumerWidget {
                           ),
                         ),
                       )
-                    : CircleListView(
-                        key: const ValueKey('list'),
-                        state: state,
-                        controller: controller,
-                        menuActions: menuActions,
-                        onPublish: governance
-                            ? null
-                            : () => showCirclePublishDialog(context),
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CircleListView(
+                            key: const ValueKey('list'),
+                            state: state,
+                            controller: controller,
+                            menuActions: menuActions,
+                            onPublish: governance
+                                ? null
+                                : () => showCirclePublishDialog(context),
+                          ),
+                          if (!governance && state.visiblePosts.isNotEmpty)
+                            Positioned(
+                              right: AppSpace.s20,
+                              bottom: AppSpace.s20,
+                              child: AppPressable(
+                                semanticLabel: '发布动态',
+                                onTap: () => showCirclePublishDialog(context),
+                                child: const AppAssetGraphic(
+                                  AppAssets.circlePublish,
+                                  width: 48,
+                                  height: 48,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
               ),
             ],

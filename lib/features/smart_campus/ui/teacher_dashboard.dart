@@ -29,7 +29,9 @@ import '../data/teacher_repository.dart';
 import '../state/smart_campus_controller.dart';
 import '../state/smart_campus_state.dart';
 import 'widgets/role_switcher_buttons.dart';
+import 'widgets/smart_campus_avatar_role_badge.dart';
 import 'widgets/smart_campus_home_card.dart';
+import 'widgets/smart_campus_stat_card.dart';
 import 'widgets/smart_campus_quick_action_icon.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
@@ -833,48 +835,61 @@ class _TeacherStatRow extends StatelessWidget {
     }
     return SizedBox(
       width: width.isFinite && width > 0 ? width : null,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < stats.length; i++) ...[
-              if (i > 0) const SizedBox(width: AppSpace.s12),
-              Expanded(child: _TeacherStatCard(item: stats[i])),
-            ],
+      height: 67,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < stats.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpace.s16),
+            Expanded(child: _TeacherStatCard(item: stats[i])),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// 首页指标：白底描边卡片里放 [AppStatTile]（标签在上、数字在下）；
-/// 「29天」「3.5小时」这类值拆成数字 + 中文单位。
+/// 学生与教职看板共用的居中指标，数值在上、标签在下。
 class _TeacherStatCard extends StatelessWidget {
   const _TeacherStatCard({required this.item});
 
   final SmartCampusStatCardData item;
 
-  static final RegExp _numberWithUnit = RegExp(
-    r'^(\d+(?:\.\d+)?)\s*([\u4e00-\u9fa5%]+)$',
-  );
-
   @override
   Widget build(BuildContext context) {
-    final match = _numberWithUnit.firstMatch(item.value.trim());
-    final highlight = item.label == '下一节' || item.label == '距离省统考';
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s12,
-        AppSpace.s12,
-        AppSpace.s8,
-        AppSpace.s12,
+    final ui = DashboardScaleScope.of(context).ui;
+    final countdown = item.label == '距离省统考';
+    final highlight = item.label == '下一节' || item.label == '待办';
+    return SmartCampusHomeCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s8,
+        vertical: AppSpace.s8,
       ),
-      child: AppStatTile(
-        label: item.label,
-        value: match == null ? item.value : match.group(1)!,
-        unit: match?.group(2),
-        valueColor: highlight ? AppColors.brand : AppColors.ink,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Center(
+              child: smartCampusHomeStatValue(
+                value: item.value,
+                ui: ui,
+                color: highlight ? AppColors.brand : AppColors.ink,
+                numberColor: countdown ? AppColors.brand : null,
+                suffixFontSize: countdown ? 14 : null,
+              ),
+            ),
+          ),
+          Text(
+            item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: AppText.caption12.copyWith(
+              color: AppColors.textSecondary,
+              height: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1097,11 +1112,16 @@ class _TeacherSidebar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
       children: [
-        _TeacherProfileHeader(
-          data: data,
-          shellDisplayName: shellDisplayName,
+        SmartCampusProfileHeader(
+          displayName: shellDisplayName.isNotEmpty
+              ? shellDisplayName
+              : data.profile.name,
           avatarUrl: avatarUrl,
           institutionName: institutionName,
+          role: data.role,
+          roleLabel: data.profile.badgeLabel.isNotEmpty
+              ? data.profile.badgeLabel
+              : data.role.label,
         ),
         SizedBox(height: ui(20)),
         _TeacherProfileInfoRows(
@@ -1113,18 +1133,13 @@ class _TeacherSidebar extends StatelessWidget {
           SizedBox(height: ui(20)),
           Text('身份切换', style: AppText.body14Strong),
           SizedBox(height: ui(10)),
-          // 多身份用户（admin / 跨端教师）走通用按钮组；普通「任课老师 +
-          // 班主任」仍走原 2 Tab，保留单身份教师本地预览班主任视图的体验。
-          _hasExtraRoles
-              ? RoleSwitcherButtons(
-                  availableRoles: availableRoles,
-                  selectedRole: selectedTab!,
-                  onSelectRole: onTabSelected!,
-                )
-              : _TeacherRoleTabs(
-                  selected: selectedTab!,
-                  onChanged: onTabSelected!,
-                ),
+          RoleSwitcherButtons(
+            availableRoles: _hasExtraRoles
+                ? availableRoles
+                : const [SmartCampusRole.teacher, SmartCampusRole.headTeacher],
+            selectedRole: selectedTab!,
+            onSelectRole: onTabSelected!,
+          ),
         ],
         SizedBox(height: ui(24)),
         Text('校级通知', style: AppText.title16),
@@ -1146,72 +1161,6 @@ class _TeacherSidebar extends StatelessWidget {
       child: panel,
     );
     return fillHeight ? SizedBox.expand(child: card) : card;
-  }
-}
-
-class _TeacherProfileHeader extends StatelessWidget {
-  const _TeacherProfileHeader({
-    required this.data,
-    required this.shellDisplayName,
-    required this.avatarUrl,
-    this.institutionName = '',
-  });
-
-  final SmartCampusDashboardData data;
-  final String shellDisplayName;
-  final String avatarUrl;
-  final String institutionName;
-
-  @override
-  Widget build(BuildContext context) {
-    final profile = data.profile;
-    final displayName = shellDisplayName.isNotEmpty
-        ? shellDisplayName
-        : profile.name;
-    final isStudent = data.role == SmartCampusRole.student;
-    final isHeadTeacher = data.role == SmartCampusRole.headTeacher;
-    final roleLabel = isStudent ? '学生' : (isHeadTeacher ? '班主任' : '任课老师');
-    final statusLabel = isStudent ? '在校' : '在岗';
-    final name = displayName.isEmpty ? roleLabel : displayName;
-    return Row(
-      children: [
-        AppAvatar(name: name, url: avatarUrl, size: 56),
-        const SizedBox(width: AppSpace.s12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: AppSpace.s8,
-                runSpacing: AppSpace.s4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(name, style: AppText.title16),
-                  AppTag(label: roleLabel, tone: AppTone.brand),
-                ],
-              ),
-              const SizedBox(height: AppSpace.s4),
-              Row(
-                children: [
-                  AppStatusTag(label: statusLabel, tone: AppTone.success),
-                  if (institutionName.trim().isNotEmpty) ...[
-                    const SizedBox(width: AppSpace.s8),
-                    Flexible(
-                      child: Text(
-                        institutionName.trim(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.caption12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -1332,27 +1281,6 @@ class _TeacherProfileInfoRowsState
           ),
         ],
       ],
-    );
-  }
-}
-
-class _TeacherRoleTabs extends StatelessWidget {
-  const _TeacherRoleTabs({required this.selected, required this.onChanged});
-
-  final SmartCampusRole selected;
-  final ValueChanged<SmartCampusRole> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppSegmented<SmartCampusRole>(
-      expand: true,
-      size: AppControlSize.sm,
-      segments: const [
-        AppSegment(value: SmartCampusRole.teacher, label: '任课老师'),
-        AppSegment(value: SmartCampusRole.headTeacher, label: '班主任'),
-      ],
-      value: selected,
-      onChanged: onChanged,
     );
   }
 }
@@ -1871,6 +1799,7 @@ class _TeacherScheduleSection extends ConsumerStatefulWidget {
 
 class _TeacherScheduleSectionState
     extends ConsumerState<_TeacherScheduleSection> {
+  _LessonScheduleData? _currentLesson;
   List<_LessonScheduleData> _todayLessons = const [];
   int _scheduleLoadGen = 0;
 
@@ -1901,11 +1830,13 @@ class _TeacherScheduleSectionState
       );
       if (!mounted || gen != _scheduleLoadGen) return;
       setState(() {
+        _currentLesson = built.current;
         _todayLessons = built.today;
       });
     } catch (_) {
       if (!mounted || gen != _scheduleLoadGen) return;
       setState(() {
+        _currentLesson = null;
         _todayLessons = const [];
       });
     }
@@ -1922,13 +1853,49 @@ class _TeacherScheduleSectionState
   @override
   Widget build(BuildContext context) {
     final open = widget.onOpenSchedule;
-    return _TodayLessonsBoard(
-      lessons: _todayLessons,
-      fillHeight: widget.fillRemaining,
-      onOpenAll: open == null ? null : () => open(),
-      onTapLesson: open == null
-          ? null
-          : (lesson) => open(focus: lesson.scheduleFocus),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final twoColumns = constraints.maxWidth >= 620;
+        final fill = widget.fillRemaining && twoColumns;
+        void openLesson(_LessonScheduleData lesson) =>
+            open?.call(focus: lesson.scheduleFocus);
+        final current = _TodayLessonsBoard(
+          title: '当前课程',
+          emptyLabel: '暂无当前课程',
+          lessons: [?_currentLesson],
+          fillHeight: fill,
+          onTapLesson: open == null ? null : openLesson,
+        );
+        final today = _TodayLessonsBoard(
+          lessons: _todayLessons,
+          fillHeight: fill,
+          onOpenAll: open == null ? null : () => open(),
+          onTapLesson: open == null ? null : openLesson,
+        );
+        if (twoColumns) {
+          return Row(
+            crossAxisAlignment: fill
+                ? CrossAxisAlignment.stretch
+                : CrossAxisAlignment.start,
+            children: [
+              Expanded(child: current),
+              const SizedBox(width: AppSpace.s16),
+              Expanded(child: today),
+            ],
+          );
+        }
+        final column = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            current,
+            const SizedBox(height: AppSpace.s16),
+            today,
+          ],
+        );
+        return widget.fillRemaining
+            ? SingleChildScrollView(child: column)
+            : column;
+      },
     );
   }
 }
@@ -1938,6 +1905,8 @@ class _TeacherScheduleSectionState
 class _TodayLessonsBoard extends StatelessWidget {
   const _TodayLessonsBoard({
     required this.lessons,
+    this.title = '今日课表',
+    this.emptyLabel = '今天没有课程',
     this.fillHeight = false,
     this.onOpenAll,
     this.onTapLesson,
@@ -1945,6 +1914,8 @@ class _TodayLessonsBoard extends StatelessWidget {
   });
 
   final List<_LessonScheduleData> lessons;
+  final String title;
+  final String emptyLabel;
   final bool fillHeight;
   final VoidCallback? onOpenAll;
   final void Function(_LessonScheduleData lesson)? onTapLesson;
@@ -1959,9 +1930,9 @@ class _TodayLessonsBoard extends StatelessWidget {
         ? '今天没有课'
         : '共 ${lessons.length} 节${running > 0 ? ' · $running 节进行中' : ''}';
     final Widget body = lessons.isEmpty
-        ? const AppEmptyState(
+        ? AppEmptyState(
             icon: Icons.event_available_outlined,
-            title: '今天没有课程',
+            title: emptyLabel,
             description: '可以在课表里查看本周其他安排',
           )
         : LayoutBuilder(
@@ -1998,8 +1969,8 @@ class _TodayLessonsBoard extends StatelessWidget {
       mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
       children: [
         AppSectionHeader(
-          title: '今日课表',
-          subtitle: subtitle,
+          title: title,
+          subtitle: lessons.isEmpty ? null : subtitle,
           onMore: onOpenAll,
           moreLabel: moreLabel,
         ),

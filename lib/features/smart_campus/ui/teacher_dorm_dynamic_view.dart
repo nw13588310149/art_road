@@ -570,13 +570,14 @@ class _TabsRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Flexible(
-          child: AppTabs<_TopTab>(
-            tabs: [
-              const AppTab(value: _TopTab.classRoster, label: '查寝记录'),
-              AppTab(
+          child: SmartCampusStatusTabs<_TopTab>(
+            segments: [
+              const AppSegment(value: _TopTab.classRoster, label: '查寝记录'),
+              AppSegment(
                 value: _TopTab.punchAudit,
-                label: '补卡审核',
-                count: pendingPunchCount > 0 ? pendingPunchCount : null,
+                label: pendingPunchCount > 0
+                    ? '补卡审核（$pendingPunchCount）'
+                    : '补卡审核',
               ),
             ],
             value: current,
@@ -722,8 +723,7 @@ class _FilterToolbar extends StatelessWidget {
           ),
         ),
         SizedBox(width: ui(12)),
-        AppSegmented<_FilterTab>(
-          size: AppControlSize.sm,
+        SmartCampusStatusTabs<_FilterTab>(
           segments: [
             for (final t in _FilterTab.values)
               AppSegment(value: t, label: t.label),

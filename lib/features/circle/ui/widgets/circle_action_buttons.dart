@@ -1,26 +1,25 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../state/circle_state.dart';
 
 /// 单个操作按钮（点赞 / 评论 / 收藏）：图标 + 数量。
 ///
-/// 卡片模式横排、三级灰图标；大图模式（[dark]）竖排、白色图标。激活态统一品牌紫。
-/// 大图模式的按钮可能压在浅色画面（白纸素描）上，图标和数字带一层柔和投影。
+/// 卡片模式横排，大图模式（[dark]）竖排。
 class CircleActionButton extends StatelessWidget {
   const CircleActionButton({
     super.key,
-    required this.icon,
+    required this.iconAsset,
     required this.label,
     required this.count,
     required this.onTap,
     this.active = false,
-    this.activeIcon,
     this.dark = false,
   });
 
-  final IconData icon;
-  final IconData? activeIcon;
+  final String iconAsset;
 
   /// 读屏文字，如「点赞」。
   final String label;
@@ -35,15 +34,9 @@ class CircleActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final idleColor = dark ? AppColors.onBrand : AppColors.textTertiary;
-    final color = active ? AppColors.brand : idleColor;
     final shadows = dark ? _darkShadows : null;
-    final glyph = Icon(
-      active ? (activeIcon ?? icon) : icon,
-      size: dark ? 28 : 20,
-      color: color,
-      shadows: shadows,
-    );
+    final size = dark ? 28.0 : 24.0;
+    final glyph = AppAssetGraphic(iconAsset, width: size, height: size);
     final number = Text(
       formatCircleCount(count),
       maxLines: 1,
@@ -103,8 +96,9 @@ class CircleActionRow extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerLeft,
             child: CircleActionButton(
-              icon: Icons.favorite_border_rounded,
-              activeIcon: Icons.favorite_rounded,
+              iconAsset: post.liked
+                  ? AppAssets.circleLiked
+                  : AppAssets.circleLike,
               label: post.liked ? '取消点赞' : '点赞',
               active: post.liked,
               count: post.likeCount,
@@ -116,7 +110,7 @@ class CircleActionRow extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerLeft,
             child: CircleActionButton(
-              icon: Icons.chat_bubble_outline_rounded,
+              iconAsset: AppAssets.circleComment,
               label: '评论',
               count: post.commentCount,
               onTap: onComment,
@@ -127,8 +121,9 @@ class CircleActionRow extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerLeft,
             child: CircleActionButton(
-              icon: Icons.bookmark_border_rounded,
-              activeIcon: Icons.bookmark_rounded,
+              iconAsset: post.favorited
+                  ? AppAssets.circleSaved
+                  : AppAssets.circleSave,
               label: post.favorited ? '取消收藏' : '收藏',
               active: post.favorited,
               count: post.favoriteCount,

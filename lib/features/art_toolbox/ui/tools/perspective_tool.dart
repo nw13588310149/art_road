@@ -181,7 +181,7 @@ class _PerspectiveBodyState extends State<_PerspectiveBody> {
     return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
   }
 
-  Widget _buildStage(BuildContext context, bool wide) {
+  Widget _buildStage(BuildContext context) {
     final image = widget.image;
     return ToolStage(
       child: LayoutBuilder(
@@ -227,7 +227,7 @@ class _PerspectiveBodyState extends State<_PerspectiveBody> {
     );
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

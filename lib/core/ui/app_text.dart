@@ -5,8 +5,9 @@ import 'app_colors.dart';
 
 /// 字阶：12 / 13 / 14 / 16 / 20 / 24 / 32，不小于 12。
 ///
-/// 中文样式不指定字族，跟随主题默认字体；字重走 [AppFont] 做 iOS 补偿。
-/// 数字用 [number]（Manrope 等宽数字），大号展示数字用 [displayNumber]（Barlow）。
+/// 中文用音乐之路同一套打包字体：苹方 `PingFang SC` OTF，字重走 [AppFont]
+/// （Regular 400 / Medium 500 / Semibold 600）。数字用 [number]（Manrope
+/// 等宽数字），大号展示数字用 [displayNumber]（Barlow SemiBold）。
 abstract final class AppText {
   static const _tabularFigures = <FontFeature>[FontFeature.tabularFigures()];
 
@@ -60,6 +61,7 @@ abstract final class AppText {
     FontWeight weight, [
     Color color = AppColors.ink,
   ]) => TextStyle(
+    fontFamily: 'PingFang SC',
     fontSize: size,
     height: lineHeight / size,
     fontWeight: weight,

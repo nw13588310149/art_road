@@ -10,6 +10,7 @@ import '../data/quiz_html.dart';
 import '../state/quiz_practice_state.dart';
 import '../state/quiz_session_controller.dart';
 import '../state/quiz_session_state.dart';
+import 'quiz_stats.dart';
 
 class QuizSessionPage extends ConsumerStatefulWidget {
   const QuizSessionPage({super.key, this.openCompletion = false});
@@ -85,32 +86,36 @@ class _QuizSessionPageState extends ConsumerState<QuizSessionPage> {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppPageHeader(
-          title: state.args.practiceType.label,
-          subtitle: total == 0
-              ? null
-              : '第 ${state.currentIndex + 1} / $total 题 · 已做 ${state.answeredCount} 题',
-          onBack: controller.openExitDialog,
-          actions: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('自动下一题', style: AppText.body14),
-                const SizedBox(width: AppSpace.s8),
-                AppSwitch(
-                  value: state.autoNext,
-                  onChanged: controller.setAutoNext,
-                  semanticLabel: '答完自动进入下一题',
-                ),
-              ],
-            ),
-          ],
-        ),
-        Expanded(child: body),
-      ],
+    return AppCard(
+      padding: EdgeInsets.zero,
+      bordered: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            title: state.args.practiceType.label,
+            subtitle: total == 0
+                ? null
+                : '第 ${state.currentIndex + 1} / $total 题 · 已做 ${state.answeredCount} 题',
+            onBack: controller.openExitDialog,
+            actions: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('自动下一题', style: AppText.body14),
+                  const SizedBox(width: AppSpace.s8),
+                  AppSwitch(
+                    value: state.autoNext,
+                    onChanged: controller.setAutoNext,
+                    semanticLabel: '答完自动进入下一题',
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 
@@ -178,10 +183,7 @@ class _SessionBodyState extends State<_SessionBody> {
     _maybeResetScrollOnQuestionChange(question?.itemId);
 
     if (question == null) {
-      return const AppEmptyState(
-        icon: Icons.quiz_outlined,
-        title: '这组练习还没有题目',
-      );
+      return const AppEmptyState(icon: Icons.quiz_outlined, title: '这组练习还没有题目');
     }
     final isLast =
         widget.state.currentIndex >= widget.state.questions.length - 1;
@@ -225,10 +227,7 @@ class _SessionBodyState extends State<_SessionBody> {
                 onTap: widget.onPrevious,
               ),
               const SizedBox(width: AppSpace.s12),
-              AppButton(
-                label: isLast ? '完成练习' : '下一题',
-                onTap: widget.onNext,
-              ),
+              AppButton(label: isLast ? '完成练习' : '下一题', onTap: widget.onNext),
             ],
           ),
         ],
@@ -322,7 +321,11 @@ class _OptionsGrid extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: _Option(question: question, index: first, onSelect: onSelect),
+            child: _Option(
+              question: question,
+              index: first,
+              onSelect: onSelect,
+            ),
           ),
           const SizedBox(width: AppSpace.s16),
           Expanded(
@@ -336,7 +339,11 @@ class _OptionsGrid extends StatelessWidget {
       ),
     );
     return Column(
-      children: [row(0), const SizedBox(height: AppSpace.s12), row(2)],
+      children: [
+        row(0),
+        const SizedBox(height: AppSpace.s12),
+        row(2),
+      ],
     );
   }
 }
@@ -344,11 +351,8 @@ class _OptionsGrid extends StatelessWidget {
 /// 单个选项（A/B/C/D）。key 带 itemId + index，切题时整块重建，
 /// 不会复用上一题选项里的 HtmlWidget / 图片。
 class _Option extends StatelessWidget {
-  _Option({
-    required this.question,
-    required this.index,
-    required this.onSelect,
-  }) : super(key: ValueKey<String>('opt-${question.itemId}-$index'));
+  _Option({required this.question, required this.index, required this.onSelect})
+    : super(key: ValueKey<String>('opt-${question.itemId}-$index'));
 
   final QuizQuestion question;
   final int index;
@@ -517,41 +521,17 @@ class _CompletionDialog extends ConsumerWidget {
             navigator.pop(true);
           },
         ),
-        AppButton(
-          label: '继续练习',
-          onTap: () => Navigator.of(context).pop(),
-        ),
+        AppButton(label: '继续练习', onTap: () => Navigator.of(context).pop()),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: AppStatTile(
-                  label: '未做',
-                  value: '$notDone',
-                  boxed: true,
-                ),
-              ),
-              const SizedBox(width: AppSpace.s8),
-              Expanded(
-                child: AppStatTile(label: '已做', value: '$done', boxed: true),
-              ),
-              const SizedBox(width: AppSpace.s8),
-              Expanded(
-                child: AppStatTile(label: '错题', value: '$wrong', boxed: true),
-              ),
-              const SizedBox(width: AppSpace.s8),
-              Expanded(
-                child: AppStatTile(
-                  label: '正确率',
-                  value: done > 0 ? '$accuracyPercent' : '--',
-                  unit: done > 0 ? '%' : null,
-                  boxed: true,
-                ),
-              ),
-            ],
+          QuizStats(
+            notDone: notDone,
+            done: done,
+            wrong: wrong,
+            accuracyPercent: accuracyPercent,
+            spacing: AppSpace.s8,
           ),
           if (showRecommended) ...[
             const SizedBox(height: AppSpace.s16),
@@ -592,10 +572,7 @@ class _CompletionDialog extends ConsumerWidget {
                           style: AppText.body14Strong,
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          recommended.description,
-                          style: AppText.caption12,
-                        ),
+                        Text(recommended.description, style: AppText.caption12),
                       ],
                     ),
                   ),
@@ -866,8 +843,7 @@ List<InlineSpan> _parseInlineSpans(String html, TextStyle textStyle) {
   flushText();
 
   // 去掉首尾的纯空白 TextSpan（包括首尾 "\n"）。
-  bool isBlank(InlineSpan s) =>
-      s is TextSpan && (s.text ?? '').trim().isEmpty;
+  bool isBlank(InlineSpan s) => s is TextSpan && (s.text ?? '').trim().isEmpty;
   while (spans.isNotEmpty && isBlank(spans.first)) {
     spans.removeAt(0);
   }
@@ -902,8 +878,7 @@ class _InlineNetworkImage extends StatelessWidget {
       fit: BoxFit.contain,
       fadeInDuration: Duration.zero,
       fadeOutDuration: Duration.zero,
-      placeholder: (context, _) =>
-          SizedBox(width: w ?? 40, height: h ?? 40),
+      placeholder: (context, _) => SizedBox(width: w ?? 40, height: h ?? 40),
       errorWidget: (context, _, _) => Container(
         width: w ?? 60,
         height: h ?? 60,
@@ -912,10 +887,7 @@ class _InlineNetworkImage extends StatelessWidget {
           color: const Color(0xFFF5F6FA),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: const Icon(
-          Icons.broken_image_rounded,
-          color: Color(0xFFC9C6D8),
-        ),
+        child: const Icon(Icons.broken_image_rounded, color: Color(0xFFC9C6D8)),
       ),
     );
   }
@@ -960,10 +932,7 @@ class _ResponsiveNetworkImage extends StatelessWidget {
       fit: BoxFit.contain,
       fadeInDuration: Duration.zero,
       fadeOutDuration: Duration.zero,
-      placeholder: (context, _) => SizedBox(
-        width: w ?? 40,
-        height: h ?? 40,
-      ),
+      placeholder: (context, _) => SizedBox(width: w ?? 40, height: h ?? 40),
       errorWidget: (context, _, _) => Container(
         width: w ?? 60,
         height: h ?? 60,
@@ -972,10 +941,7 @@ class _ResponsiveNetworkImage extends StatelessWidget {
           color: const Color(0xFFF5F6FA),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: const Icon(
-          Icons.broken_image_rounded,
-          color: Color(0xFFC9C6D8),
-        ),
+        child: const Icon(Icons.broken_image_rounded, color: Color(0xFFC9C6D8)),
       ),
     );
 

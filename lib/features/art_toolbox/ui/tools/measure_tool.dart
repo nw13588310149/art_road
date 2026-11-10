@@ -92,7 +92,7 @@ class _MeasureBodyState extends State<_MeasureBody> {
     return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
   }
 
-  Widget _buildStage(BuildContext context, bool wide) {
+  Widget _buildStage(BuildContext context) {
     final image = widget.image;
     return ToolStage(
       child: Padding(
@@ -155,7 +155,7 @@ class _MeasureBodyState extends State<_MeasureBody> {
     );
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     final segments = segmentsOf(_points);
     final unit = segments.isEmpty
         ? 0.0

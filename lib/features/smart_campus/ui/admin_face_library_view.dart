@@ -27,7 +27,6 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kPanelBg = AppColors.surfaceSubtle;
 const Color _kBorderHair = AppColors.line;
 const Color _kTextDark = AppColors.ink;
@@ -972,19 +971,23 @@ class _AdminFaceLibraryViewState extends ConsumerState<AdminFaceLibraryView> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       bodyScrollable: false,
-      header: _Banner(
+      header: AppPageHeader(
+        title: '人脸库',
         onBack: widget.onBack,
-        currentTab: _tab,
-        onSelectTab: (t) {
-          setState(() => _tab = t);
-          if (t == _FaceTab.library) {
-            unawaited(_loadFaceSum());
-            unawaited(_loadFaceList());
-          }
-        },
+        actions: [
+          _BannerSegment(
+            currentTab: _tab,
+            onSelectTab: (t) {
+              setState(() => _tab = t);
+              if (t == _FaceTab.library) {
+                unawaited(_loadFaceSum());
+                unawaited(_loadFaceList());
+              }
+            },
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1121,115 +1124,6 @@ class _AdminFaceLibraryViewState extends ConsumerState<AdminFaceLibraryView> {
 }
 
 // —— Banner（含右上角分段）————————————————————————————————————————————
-
-class _Banner extends StatelessWidget {
-  const _Banner({
-    required this.onBack,
-    required this.currentTab,
-    required this.onSelectTab,
-  });
-
-  final VoidCallback onBack;
-  final _FaceTab currentTab;
-  final ValueChanged<_FaceTab> onSelectTab;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      height: ui(62),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(ui(16)),
-        image: const DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // 标题区占满整条 banner，相对整栏居中；左右按钮不参与占位。
-          Positioned.fill(
-            child: Center(
-              child: Padding(
-                // 对称留白仅用于副标题省略，不影响相对整栏的水平居中。
-                padding: EdgeInsets.symmetric(horizontal: ui(180)),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '人脸库',
-                      style: TextStyle(
-                        fontSize: ui(16),
-                        color: _kTextDark,
-                        fontWeight: AppFont.w600,
-                        height: 1.2,
-                      ),
-                    ),
-                    SizedBox(height: ui(2)),
-                    Text(
-                      '智慧校园人脸信息档案库，联动校园门禁安全通行管控。',
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        color: _kTextHint,
-                        fontWeight: AppFont.w400,
-                        height: 1.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: ui(12),
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: InkWell(
-                onTap: onBack,
-                borderRadius: BorderRadius.circular(ui(8)),
-                child: Container(
-                  width: ui(32),
-                  height: ui(32),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(ui(8)),
-                    border: Border.all(color: _kBorderSoft, width: 1),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.chevron_left_rounded,
-                    size: ui(20),
-                    color: AppColors.ink,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: ui(12),
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: _BannerSegment(
-                currentTab: currentTab,
-                onSelectTab: onSelectTab,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _BannerSegment extends StatelessWidget {
   const _BannerSegment({required this.currentTab, required this.onSelectTab});
@@ -1370,8 +1264,8 @@ class _EnrollCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSteps(
-            labels: const ['选择人员', '上传照片', '确认提交'],
+          _EnrollmentSteps(
+            personType: personType,
             current: selectedPerson == null
                 ? 0
                 : photoBytes == null
@@ -1429,6 +1323,91 @@ class _EnrollCard extends StatelessWidget {
 // —— 步骤进度条 ————————————————————————————————————————————————————
 
 // —— 行政班 + 录入对象（学生 / 老师）——————————————————————————————————
+
+class _EnrollmentSteps extends StatelessWidget {
+  const _EnrollmentSteps({required this.personType, required this.current});
+
+  final _EnrollPersonType personType;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = ['选择班级和${personType.label}', '上传照片或使用摄像头截取正脸', '确认录入规范后提交'];
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 60),
+      child: Stack(
+        children: [
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 9,
+            height: 12,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.brandWash,
+                borderRadius: AppRadius.br12,
+              ),
+            ),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var index = 0; index < labels.length; index++)
+                Expanded(
+                  child: Semantics(
+                    selected: index == current,
+                    label:
+                        '第 ${index + 1} 步：${labels[index]}'
+                        '${index < current ? '，已完成' : ''}',
+                    excludeSemantics: true,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 3, 4, 0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.brand,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.surface,
+                                width: 2,
+                              ),
+                            ),
+                            child: Image.asset(
+                              'assets/images/face/${index + 1}.png',
+                              width: 16,
+                              height: 16,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpace.s4),
+                          Text(
+                            labels[index],
+                            textAlign: TextAlign.center,
+                            style:
+                                (index == current
+                                        ? AppText.caption12Strong
+                                        : AppText.caption12)
+                                    .copyWith(
+                                      color: AppColors.textSecondary,
+                                      height: 1.2,
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _PickerRow extends StatelessWidget {
   const _PickerRow({
@@ -2141,42 +2120,49 @@ class _StandardPanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(ui(8)),
               border: Border.all(color: _kPanelBg, width: 1),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SampleThumb(
-                        asset: AppAssets.adminFaceLibraryStandardSample1,
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SampleThumb(
+                              asset: AppAssets.adminFaceLibraryStandardSample1,
+                            ),
+                          ),
+                          SizedBox(width: ui(10)),
+                          Expanded(
+                            child: _SampleThumb(
+                              asset: AppAssets.adminFaceLibraryStandardSample2,
+                            ),
+                          ),
+                          SizedBox(width: ui(10)),
+                          Expanded(
+                            child: _SampleThumb(
+                              asset: AppAssets.adminFaceLibraryStandardSample3,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(width: ui(10)),
-                    Expanded(
-                      child: _SampleThumb(
-                        asset: AppAssets.adminFaceLibraryStandardSample2,
+                      SizedBox(height: ui(10)),
+                      Text(
+                        '背景尽量简洁，避免强逆光或过暗。\n双眼平视镜头，双耳可见为宜。\n手机拍摄建议与他人协助，保持手臂稳定。',
+                        style: TextStyle(
+                          fontSize: ui(14),
+                          color: _kTextDark,
+                          fontWeight: AppFont.w400,
+                          height: 32 / 14,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: ui(10)),
-                    Expanded(
-                      child: _SampleThumb(
-                        asset: AppAssets.adminFaceLibraryStandardSample3,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: ui(10)),
-                Text(
-                  '背景尽量简洁，避免强逆光或过暗。\n双眼平视镜头，双耳可见为宜。\n手机拍摄建议与他人协助，保持手臂稳定。',
-                  style: TextStyle(
-                    fontSize: ui(14),
-                    color: _kTextDark,
-                    fontWeight: AppFont.w400,
-                    height: 32 / 14,
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

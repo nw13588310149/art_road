@@ -10,12 +10,10 @@ import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart'
 
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
-import '../../../core/constants/app_assets.dart';
 import '../data/principal_inbox_data.dart';
 import '../data/principal_mailbox_repository.dart';
 import 'mailbox_attachment_widgets.dart';
 
-const Color _kPageBg = AppColors.page;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kTextDark = AppColors.ink;
@@ -144,14 +142,14 @@ class _PrincipalInboxViewState extends ConsumerState<PrincipalInboxView> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Container(
-      color: _kPageBg,
+      color: AppColors.surface,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(ui(16)),
         child: Container(
           color: AppColors.surface,
           child: Column(
             children: [
-              _Banner(onBack: widget.onBack),
+              AppPageHeader(title: '校长信箱', onBack: widget.onBack),
               Padding(
                 padding: EdgeInsets.fromLTRB(ui(16), ui(14), ui(16), ui(12)),
                 child: _StatusFilterRow(
@@ -203,75 +201,6 @@ class _PrincipalInboxViewState extends ConsumerState<PrincipalInboxView> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(82),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(AppAssets.xiaoquanHeaderBg),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: ui(20),
-            top: ui(20),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: Container(
-                width: ui(32),
-                height: ui(32),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(ui(8)),
-                  border: Border.all(color: _kBorderSoft),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: ui(20),
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '校长信箱',
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    color: _kTextDark,
-                    fontWeight: AppFont.w600,
-                  ),
-                ),
-                SizedBox(height: ui(4)),
-                Text(
-                  '查看师生来信，按状态筛选并回复',
-                  style: TextStyle(fontSize: ui(12), color: _kTextHint),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

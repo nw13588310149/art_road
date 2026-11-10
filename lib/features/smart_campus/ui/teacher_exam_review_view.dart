@@ -57,7 +57,6 @@ import 'widgets/smart_campus_empty_state.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 配色 -------------------------------------------------------------------
-const Color _kPageBg = AppColors.page;
 const Color _kCardBg = AppColors.surface;
 const Color _kPageGrey = AppColors.surfaceSubtle;
 const Color _kPickGrey = AppColors.brandWash;
@@ -152,7 +151,6 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
     final active = visibleItems.isEmpty ? null : visibleItems[activeIdx];
 
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyScrollable: false,
       bodyBorderRadius: 8,
       header: AppPageHeader(
@@ -162,7 +160,7 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
         actions: [
           AppButton(
             label: '历史月考',
-            icon: Icons.history_rounded,
+            iconAsset: AppAssets.teacherExamHistoryIcon,
             variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
             onTap: _openHistoryDrawer,
@@ -745,9 +743,9 @@ class _ExamListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final bg = active ? _kPickGrey : _kPageGrey;
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(12)),
+      selected: active,
       child: Stack(
         children: [
           Container(
@@ -762,41 +760,87 @@ class _ExamListCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Padding(
-                  padding: EdgeInsets.only(right: ui(72)),
-                  child: Text(
-                    item.title,
+                if (item.publishedRatio.total > 0)
+                  Semantics(
+                    label:
+                        '已提交 ${item.publishedRatio.submitted} 人，共 ${item.publishedRatio.total} 人',
+                    excludeSemantics: true,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '${item.publishedRatio.submitted}',
+                          style: AppText.displayNumber(size: 24),
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '/${item.publishedRatio.total}',
+                          style: AppText.number(
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Semantics(
+                    label: '暂无提交统计',
+                    excludeSemantics: true,
+                    child: Text(
+                      '—',
+                      style: AppText.displayNumber(
+                        size: 24,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ),
+                if (item.deadline.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '截止 ${campusListTimeOf(item.deadline, fallback: item.deadline)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.title16.copyWith(color: _kTextBlack),
+                    style: AppText.caption12,
                   ),
-                ),
-                SizedBox(height: ui(4)),
-                Text(
-                  [
-                    if (item.classLabel.isNotEmpty) item.classLabel,
-                    if (item.deadline.isNotEmpty)
-                      '截止 ${campusListTimeOf(item.deadline, fallback: item.deadline)}',
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.caption12.copyWith(
-                    color: AppColors.textTertiary,
+                ],
+                if (item.classLabel.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    item.classLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption12.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-                SizedBox(height: ui(8)),
-                Row(
+                ],
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: AppSpace.s4,
+                  runSpacing: AppSpace.s4,
                   children: [
-                    _SubjectTag(label: item.subject),
-                    const Spacer(),
-                    if (item.publishedRatio.total > 0)
-                      Text(
-                        '已提交 ${item.publishedRatio.submitted}/${item.publishedRatio.total} 人',
-                        style: AppText.caption12.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                    if (item.examLabel.isNotEmpty)
+                      AppTag(label: item.examLabel),
+                    if (item.subject.isNotEmpty)
+                      _SubjectTag(label: item.subject),
+                    if (item.pendingReview > 0)
+                      AppTag(
+                        label: '待评 ${item.pendingReview}',
+                        tone: AppTone.warning,
                       ),
                   ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body16.copyWith(
+                    fontWeight: AppFont.w500,
+                    height: 1.2,
+                  ),
                 ),
               ],
             ),

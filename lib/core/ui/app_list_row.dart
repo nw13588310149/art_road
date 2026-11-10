@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_assets.dart';
+import '../widgets/app_asset_graphic.dart';
 import 'app_colors.dart';
 import 'app_pressable.dart';
 import 'app_spacing.dart';
@@ -18,6 +20,9 @@ class AppListRow extends StatelessWidget {
     this.onTap,
     this.enabled = true,
     this.divider = false,
+    this.minHeight = 48,
+    this.titleStyle,
+    this.chevronSize = 20,
     this.padding = const EdgeInsets.symmetric(
       horizontal: AppSpace.s16,
       vertical: AppSpace.s12,
@@ -36,6 +41,9 @@ class AppListRow extends StatelessWidget {
   final bool enabled;
   final bool divider;
   final EdgeInsetsGeometry padding;
+  final double minHeight;
+  final TextStyle? titleStyle;
+  final double chevronSize;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +65,7 @@ class AppListRow extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.body14Strong,
+                  style: titleStyle ?? AppText.body14Strong,
                 ),
                 if (note != null && note.isNotEmpty) ...[
                   const SizedBox(height: 2),
@@ -77,10 +85,10 @@ class AppListRow extends StatelessWidget {
           ],
           if (chevron) ...[
             const SizedBox(width: AppSpace.s4),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: AppColors.textPlaceholder,
+            AppAssetGraphic(
+              AppAssets.listChevron,
+              width: chevronSize,
+              height: chevronSize,
             ),
           ],
         ],
@@ -96,7 +104,7 @@ class AppListRow extends StatelessWidget {
     }
     if (onTap == null && enabled) {
       return ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
+        constraints: BoxConstraints(minHeight: minHeight),
         child: row,
       );
     }
@@ -104,7 +112,7 @@ class AppListRow extends StatelessWidget {
       onTap: onTap,
       enabled: enabled,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
+        constraints: BoxConstraints(minHeight: minHeight),
         child: row,
       ),
     );

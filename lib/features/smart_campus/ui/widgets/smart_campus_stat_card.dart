@@ -126,10 +126,7 @@ Widget smartCampusHomeStatValue({
   );
 }
 
-/// 智慧校园二级页顶部指标卡：白底描边卡 + [AppStatTile]（标签在上、数字在下）。
-///
-/// [backgroundAsset] 为旧参数，已不再绘制背景图、渐变或装饰图标；状态色只体现在
-/// 列表里的状态标签上。
+/// 智慧校园二级页指标卡。背景插图在右侧，标题与数值在左侧。
 class SmartCampusStatCard extends StatelessWidget {
   const SmartCampusStatCard({
     super.key,
@@ -174,51 +171,87 @@ class SmartCampusStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final custom = child;
-    if (custom != null) {
-      final ui = DashboardScaleScope.of(context).ui;
-      return AppCard(
-        padding: contentPadding ?? const EdgeInsets.all(AppSpace.s16),
-        onTap: onTap,
-        child: SizedBox(height: ui(100) - 2, child: custom),
-      );
-    }
+    final ui = DashboardScaleScope.of(context).ui;
     final display = valueLabel ?? '$value';
-    final Widget content = valueIsText
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.caption12,
+    final suffix = valueSuffix;
+    final valueText = Text(
+      display,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: valueIsText
+          ? AppText.body16.copyWith(
+              fontSize: ui(18),
+              fontWeight: AppFont.w500,
+              height: 1,
+              color: valueColor,
+            )
+          : smartCampusStatValueTextStyle(ui, color: valueColor),
+    );
+    final content =
+        child ??
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body14Strong.copyWith(height: 1),
+            ),
+            const SizedBox(height: AppSpace.s8),
+            if (suffix == null || suffix.isEmpty)
+              valueText
+            else
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Flexible(child: valueText),
+                  const SizedBox(width: AppSpace.s8),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(suffix, style: AppText.caption12),
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                display,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.title16.copyWith(color: valueColor),
+          ],
+        );
+    final card = SizedBox(
+      height: ui(100),
+      width: double.infinity,
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.br12,
+          border: Border.all(color: AppColors.surface),
+        ),
+        child: ClipRRect(
+          borderRadius: AppRadius.br12,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const ColoredBox(color: AppColors.surface),
+              Align(
+                alignment: Alignment.topRight,
+                child: Image.asset(
+                  backgroundAsset,
+                  height: double.infinity,
+                  fit: BoxFit.fitHeight,
+                  filterQuality: FilterQuality.low,
+                ),
+              ),
+              Padding(
+                padding:
+                    contentPadding ??
+                    EdgeInsets.fromLTRB(16, 14, rightPadding, 14),
+                child: Align(alignment: Alignment.centerLeft, child: content),
               ),
             ],
-          )
-        : AppStatTile(
-            label: label,
-            value: display,
-            unit: valueSuffix,
-            valueColor: valueColor,
-          );
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s16,
-        AppSpace.s12,
-        AppSpace.s12,
-        AppSpace.s12,
+          ),
+        ),
       ),
-      onTap: onTap,
-      child: SizedBox(width: double.infinity, child: content),
     );
+    return onTap == null ? card : AppPressable(onTap: onTap, child: card);
   }
 }

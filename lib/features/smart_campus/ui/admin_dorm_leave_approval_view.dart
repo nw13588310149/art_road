@@ -48,7 +48,6 @@ import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // —— 颜色 ————————————————————————————————————————————————————————
-const Color _kPageBg = AppColors.page;
 const Color _kBoardBg = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
@@ -172,8 +171,8 @@ class _AdminDormLeaveApprovalViewState
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
+    final error = _loadError;
     return SmartCampusSecondaryPageShell(
-      backgroundColor: _kPageBg,
       bodyTopClipRadius: 8,
       header: AppPageHeader(
         title: '教职工请假审批',
@@ -188,20 +187,26 @@ class _AdminDormLeaveApprovalViewState
             approvedCount: _approvedCount,
             rejectedCount: _rejectedCount,
           ),
+          Padding(
+            padding: const EdgeInsets.only(left: AppSpace.s8, top: AppSpace.s8),
+            child: Text('审批结果将同步至教师端。', style: AppText.caption12),
+          ),
           SizedBox(height: ui(16)),
-          AppTabs<_StatusTab>(
-            tabs: [
-              for (final t in _StatusTab.values)
-                AppTab(
-                  value: t,
-                  label: t.label,
-                  count: switch (t) {
-                    _StatusTab.all => null,
-                    _StatusTab.pending => _pendingCount,
-                    _StatusTab.approved => _approvedCount,
-                    _StatusTab.rejected => _rejectedCount,
-                  },
-                ),
+          SmartCampusStatusTabs<_StatusTab>(
+            segments: [
+              const AppSegment(value: _StatusTab.all, label: '全部'),
+              AppSegment(
+                value: _StatusTab.pending,
+                label: '${_StatusTab.pending.label}（$_pendingCount）',
+              ),
+              AppSegment(
+                value: _StatusTab.approved,
+                label: '${_StatusTab.approved.label}（$_approvedCount）',
+              ),
+              AppSegment(
+                value: _StatusTab.rejected,
+                label: '${_StatusTab.rejected.label}（$_rejectedCount）',
+              ),
             ],
             value: _tab,
             onChanged: (t) {
@@ -214,12 +219,17 @@ class _AdminDormLeaveApprovalViewState
           MainContentLoadingShell(
             loading: _loading && _requests.isEmpty,
             minHeight: ui(200),
-            child: _CardsGrid(
-              records: _requests,
-              emptyMessage: _loadError ?? '暂无相关申请',
-              onApprove: _onApprove,
-              onReject: _onReject,
-            ),
+            child: error != null
+                ? AppErrorState(
+                    title: '请假申请加载失败',
+                    description: error,
+                    onRetry: _reloadAll,
+                  )
+                : _CardsGrid(
+                    records: _requests,
+                    onApprove: _onApprove,
+                    onReject: _onReject,
+                  ),
           ),
         ],
       ),
@@ -314,13 +324,11 @@ class _StatsRow extends StatelessWidget {
 class _CardsGrid extends StatelessWidget {
   const _CardsGrid({
     required this.records,
-    required this.emptyMessage,
     required this.onApprove,
     required this.onReject,
   });
 
   final List<TeacherLeaveRecord> records;
-  final String emptyMessage;
   final ValueChanged<TeacherLeaveRecord> onApprove;
   final ValueChanged<TeacherLeaveRecord> onReject;
 
@@ -328,11 +336,8 @@ class _CardsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     if (records.isEmpty) {
-      return AppCard(
-        child: AppEmptyState(
-          icon: Icons.event_note_outlined,
-          title: emptyMessage,
-        ),
+      return const AppCard(
+        child: AppEmptyState(icon: Icons.event_note_outlined, title: '暂无相关申请'),
       );
     }
     return LayoutBuilder(

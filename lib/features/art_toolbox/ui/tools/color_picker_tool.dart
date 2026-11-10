@@ -107,7 +107,7 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
     return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
   }
 
-  Widget _buildStage(BuildContext context, bool wide) {
+  Widget _buildStage(BuildContext context) {
     return ToolStage(
       child: Padding(
         padding: const EdgeInsets.all(AppSpace.s12),
@@ -201,7 +201,7 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
     );
   }
 
-  Widget _buildPanel(BuildContext context, bool wide) {
+  Widget _buildPanel(BuildContext context) {
     final color = _color;
     final palette = _palette;
     final base = _baseColor;
@@ -356,10 +356,7 @@ class _PickedColorCard extends StatelessWidget {
             children: [
               _TemperatureTag(info: temperature),
               const Spacer(),
-              Text(
-                '像素 ${position.x}, ${position.y}',
-                style: AppText.caption12,
-              ),
+              Text('像素 ${position.x}, ${position.y}', style: AppText.caption12),
             ],
           ),
         ],
@@ -436,25 +433,18 @@ class _HarmonySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppSegmented<HarmonyScheme>(
-          segments: [
-            for (final s in HarmonyScheme.values)
-              AppSegment(value: s, label: _shortLabel(s)),
-          ],
+        ToolSegmented<HarmonyScheme>(
+          values: HarmonyScheme.values,
           value: scheme,
+          labelOf: _shortLabel,
           onChanged: onScheme,
-          expand: true,
         ),
         const SizedBox(height: AppSpace.s8),
-        AppSegmented<ColorWheelKind>(
-          segments: [
-            for (final w in ColorWheelKind.values)
-              AppSegment(value: w, label: w.label),
-          ],
+        ToolSegmented<ColorWheelKind>(
+          values: ColorWheelKind.values,
           value: wheel,
+          labelOf: (kind) => kind.label,
           onChanged: onWheel,
-          size: AppControlSize.sm,
-          expand: true,
         ),
         const SizedBox(height: AppSpace.s12),
         Center(
@@ -466,10 +456,7 @@ class _HarmonySection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpace.s8),
-        Text(
-          '${scheme.label}：${scheme.description}',
-          style: AppText.body13,
-        ),
+        Text('${scheme.label}：${scheme.description}', style: AppText.body13),
         Text(wheel.description, style: AppText.caption12),
         if (grayish) ...[
           const SizedBox(height: AppSpace.s8),

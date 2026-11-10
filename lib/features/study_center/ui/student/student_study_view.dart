@@ -78,21 +78,11 @@ class _StudentOverview extends StatelessWidget {
   final StudentStudyState state;
   final StudentStudyController controller;
 
-  String _subtitle(StudyOverview overview) {
-    final profile = overview.profile;
-    return [
-      profile.schoolName,
-      profile.organizationName,
-      if (profile.studentNo.isNotEmpty) '学号 ${profile.studentNo}',
-    ].where((part) => part.isNotEmpty).join(' · ');
-  }
-
   @override
   Widget build(BuildContext context) {
     final overview = state.overview;
     final header = AppPageHeader(
       title: '我的学情',
-      subtitle: overview == null ? '成绩来自艺考网阅卷系统' : _subtitle(overview),
       actions: [
         AppButton(
           label: '成长曲线',
@@ -172,6 +162,12 @@ class _OverviewBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profile = overview.profile;
+    final studentLabel = [
+      profile.schoolName,
+      profile.organizationName,
+      if (profile.studentNo.isNotEmpty) '学号 ${profile.studentNo}',
+    ].where((part) => part.isNotEmpty).join(' · ');
     final recent = overview.recentStage;
     final reportState = recent == null
         ? null
@@ -217,6 +213,7 @@ class _OverviewBody extends ConsumerWidget {
           else ...[
             StudyHeroCard(
               exam: exam,
+              studentLabel: studentLabel,
               scoreChange: report?.scoreChange ?? recent.scoreChange,
               rankingChange: report?.rankingChange ?? recent.rankingChange,
               surpassedPercent: report?.surpassedPercent,
@@ -255,6 +252,7 @@ class _OverviewBody extends ConsumerWidget {
             onFilterChanged: controller.setFilter,
             onOpen: (item) => controller.openReport(item.examId),
             onLoadMore: () => controller.loadExams(),
+            onRetry: () => controller.loadExams(reset: true),
           ),
           const StudyFootnote('成绩以阅卷系统最终结果为准，仅供本人查阅'),
         ],

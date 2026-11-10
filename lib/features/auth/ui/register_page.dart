@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/ui/ui.dart';
 import '../state/auth_controller.dart';
 import '../state/auth_state.dart';
@@ -29,10 +30,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     return AuthPageFrame(
       card: AuthCard(
         title: '账号注册',
-        subtitle: '使用手机号注册美术之路账号',
         children: [
           AppIconInputField(
-            icon: Icons.phone_iphone_rounded,
+            iconAsset: AppAssets.authPhone,
             hint: '请输入手机号',
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
@@ -43,20 +43,22 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             errorText: state.errorOf(AuthField.mobile),
             onChanged: controller.setMobile,
           ),
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: AppSpace.s20),
           AuthSmsCodeRow(
             state: state,
             onChanged: controller.setSmsCode,
             onSend: _onSendSms,
           ),
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: AppSpace.s20),
           AppIconInputField(
-            icon: Icons.lock_outline_rounded,
+            iconAsset: AppAssets.authPassword,
             hint: '请设置密码',
             obscureText: true,
             textInputAction: TextInputAction.next,
             inputFormatters: [
-              LengthLimitingTextInputFormatter(AuthController.passwordMaxLength),
+              LengthLimitingTextInputFormatter(
+                AuthController.passwordMaxLength,
+              ),
             ],
             errorText: passwordError,
             onChanged: controller.setPassword,
@@ -65,14 +67,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             const SizedBox(height: AppSpace.s4),
             Text('密码为 6–20 位，建议同时包含字母和数字', style: AppText.caption12),
           ],
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: AppSpace.s16),
           AppIconInputField(
-            icon: Icons.lock_outline_rounded,
+            iconAsset: AppAssets.authPassword,
             hint: '请再次输入密码',
             obscureText: true,
             textInputAction: TextInputAction.done,
             inputFormatters: [
-              LengthLimitingTextInputFormatter(AuthController.passwordMaxLength),
+              LengthLimitingTextInputFormatter(
+                AuthController.passwordMaxLength,
+              ),
             ],
             errorText: state.errorOf(AuthField.confirmPassword),
             onChanged: controller.setConfirmPassword,
@@ -92,11 +96,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             onOpenTerms: _openTerms,
           ),
           const SizedBox(height: AppSpace.s12),
-          AuthSwitchLine(
-            prompt: '已有账号？',
-            action: '立即登录',
-            onTap: _backToLogin,
-          ),
+          AuthSwitchLine(prompt: '已有账号？', action: '立即登录', onTap: _backToLogin),
         ],
       ),
     );
