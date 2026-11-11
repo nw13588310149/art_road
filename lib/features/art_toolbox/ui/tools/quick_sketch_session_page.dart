@@ -77,6 +77,16 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 全局工作台收起后暂停练习，重新展开由用户决定何时继续。
+    if (!TickerMode.valuesOf(context).enabled && _clock.isAnimating) {
+      _clock.stop();
+      _paused = true;
+    }
+  }
+
   void _begin() {
     _sequence = buildSketchSequence(widget.pool, widget.count);
     _records.clear();

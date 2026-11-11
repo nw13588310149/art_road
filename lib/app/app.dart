@@ -14,6 +14,8 @@ import '../core/push/push_notification_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/keyboard_dismisser.dart';
 import '../features/auth/data/auth_repository.dart';
+import '../features/art_toolbox/ui/floating_toolbox_host.dart';
+import '../features/art_toolbox/ui/toolbox_route_observer.dart';
 import '../features/shell/navigation/shell_polling_route_observer.dart';
 import '../features/shell/state/shell_controller.dart';
 import 'router/app_navigator.dart';
@@ -30,6 +32,7 @@ class MyApp extends ConsumerStatefulWidget {
 class _MyAppState extends ConsumerState<MyApp> {
   StreamSubscription<String>? _cidSubscription;
   late final ShellPollingRouteObserver _shellPollingRouteObserver;
+  final _toolboxRouteObserver = ToolboxRouteObserver();
 
   @override
   void initState() {
@@ -110,6 +113,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   void dispose() {
+    _toolboxRouteObserver.dispose();
     unawaited(_cidSubscription?.cancel());
     super.dispose();
   }
@@ -128,7 +132,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       theme: AppTheme.light,
       initialRoute: initialRoute,
       onGenerateRoute: AppRouter.onGenerateRoute,
-      navigatorObservers: [_shellPollingRouteObserver],
+      navigatorObservers: [_shellPollingRouteObserver, _toolboxRouteObserver],
       // 本地化：强制 zh-CN，并注入 Material / Cupertino / Widgets 三套
       // LocalizationsDelegates。修复 iPadOS 输入框长按 / Live Text 弹出的
       // 系统编辑菜单（Scan Text、Copy、Paste 等）显示英文的问题。
@@ -174,7 +178,10 @@ class _MyAppState extends ConsumerState<MyApp> {
               navigatorKey: rootNavigatorKey,
               child: GlobalKeyboardFocusSentinel(
                 child: _TapOutsideToDismissKeyboard(
-                  child: child ?? const SizedBox.shrink(),
+                  child: FloatingToolboxHost(
+                    observer: _toolboxRouteObserver,
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               ),
             ),

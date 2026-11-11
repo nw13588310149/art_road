@@ -33,7 +33,17 @@ import 'widgets/tool_panel.dart';
 /// 带 `tool` 时直接打开该工具，返回即关闭本页；`imageUrl` 会预先载入给图片类工具使用
 /// （如范画库「临摹网格」），`title` 为图片名称。
 class ArtToolboxPage extends ConsumerStatefulWidget {
-  const ArtToolboxPage({super.key});
+  const ArtToolboxPage({
+    this.embedded = false,
+    this.initialTool,
+    this.onToolChanged,
+    super.key,
+  });
+
+  /// 全局工作台直接占满画布，普通路由仍使用原有页面容器。
+  final bool embedded;
+  final ArtTool? initialTool;
+  final ValueChanged<ArtTool?>? onToolChanged;
 
   @override
   ConsumerState<ArtToolboxPage> createState() => _ArtToolboxPageState();
@@ -48,12 +58,29 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
   bool _imagePending = false;
 
   @override
+  void initState() {
+    super.initState();
+    _tool = widget.initialTool;
+    _group = _tool?.group ?? _group;
+  }
+
+  @override
+  void didUpdateWidget(covariant ArtToolboxPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTool != oldWidget.initialTool) {
+      _tool = widget.initialTool;
+      _group = _tool?.group ?? _group;
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_argsApplied) {
       return;
     }
     _argsApplied = true;
+    if (widget.embedded) return;
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is! Map) {
       return;
@@ -80,7 +107,10 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
     });
   }
 
-  void _open(ArtTool tool) => setState(() => _tool = tool);
+  void _open(ArtTool tool) {
+    setState(() => _tool = tool);
+    widget.onToolChanged?.call(tool);
+  }
 
   /// 由路由参数直达的工具，返回时关闭整页回到来源页。
   void _back() {
@@ -93,6 +123,7 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
       }
     }
     setState(() => _tool = null);
+    widget.onToolChanged?.call(null);
   }
 
   Widget _buildTool(ArtTool tool) => switch (tool) {
@@ -136,29 +167,28 @@ class _ArtToolboxPageState extends ConsumerState<ArtToolboxPage> {
 
     final tool = _tool;
     final canPop = Navigator.of(context).canPop();
-    return ShellPageSurface(
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
-        borderRadius: AppRadius.br16,
-        child: ToolboxWorkspaceScope(
-          pending: _imagePending,
-          onSwitchTool: _open,
-          child: KeyedSubtree(
-            key: ValueKey<ArtTool?>(tool),
-            child: tool == null
-                ? _ToolboxHome(
-                    group: _group,
-                    onGroupChanged: (group) => setState(() => _group = group),
-                    onOpen: _open,
-                    onBack: _returnToSource && canPop
-                        ? () => Navigator.of(context).pop()
-                        : null,
-                  )
-                : _buildTool(tool),
-          ),
+    final workspace = ClipRRect(
+      borderRadius: AppRadius.br16,
+      child: ToolboxWorkspaceScope(
+        pending: _imagePending,
+        onSwitchTool: _open,
+        child: KeyedSubtree(
+          key: ValueKey<ArtTool?>(tool),
+          child: tool == null
+              ? _ToolboxHome(
+                  group: _group,
+                  onGroupChanged: (group) => setState(() => _group = group),
+                  onOpen: _open,
+                  onBack: _returnToSource && canPop
+                      ? () => Navigator.of(context).pop()
+                      : null,
+                )
+              : _buildTool(tool),
         ),
       ),
     );
+    if (widget.embedded) return workspace;
+    return ShellPageSurface(padding: EdgeInsets.zero, child: workspace);
   }
 }
 
