@@ -44,12 +44,28 @@ try {
       await page.waitForTimeout(2500);
       if (await skip.isVisible()) await skip.click();
       await expect(launcher).toBeVisible({ timeout: 15000 });
+      await expect(launcher).toHaveAccessibleName(/小墨/);
       await shot(page, `${id}-home`);
+      if (role.id === 'student') {
+        await page.mouse.move(100, 100);
+        await page.waitForTimeout(3500);
+        await shot(page, `${id}-half`);
+        await page.waitForTimeout(9000);
+        const resting = await launcher.boundingBox();
+        expect(resting.width).toBeGreaterThanOrEqual(44);
+        await shot(page, `${id}-rest`);
+      }
       await launcher.click();
       await expect(page.getByText('随手用画具', { exact: true })).toBeVisible();
       await expect(button(page, /全屏打开/)).toHaveCount(6);
+      await expect(page.getByRole('switch', { name: '精灵动态' })).toBeVisible();
       await shot(page, `${id}-panel`);
       if (role.id === 'student') {
+        const motionSwitch = page.getByRole('switch', { name: '精灵动态' });
+        await motionSwitch.click();
+        await expect(motionSwitch).not.toBeChecked();
+        await motionSwitch.click();
+        await expect(motionSwitch).toBeChecked();
         await button(page, /全屏打开构图网格/).click();
         await expect(button(page, /收起工具/)).toBeVisible();
         await button(page, /暖调静物/).click();
@@ -78,7 +94,7 @@ try {
             const snapped = await launcher.boundingBox();
             const gap = edge === 'left' ? snapped.x : edge === 'top' ? snapped.y : edge === 'right' ? width - snapped.x - snapped.width : height - snapped.y - snapped.height;
             return Math.round(gap);
-          }).toBe(8);
+          }).toBe(0);
           await launcher.click();
           await expect(page.getByText('随手用画具', { exact: true })).toBeVisible();
           await shot(page, `${id}-${edge}`);

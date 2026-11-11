@@ -136,7 +136,7 @@ void main() {
       await tester.drag(handle, const Offset(-700, -470));
       await tester.pumpAndSettle();
       expect(find.text('随手用画具'), findsNothing);
-      expect(tester.getTopLeft(handle).dy, 8);
+      expect(tester.getTopLeft(handle).dy, 0);
       await tester.tap(handle);
       await tester.pumpAndSettle();
       expect(find.text('随手用画具'), findsOneWidget);

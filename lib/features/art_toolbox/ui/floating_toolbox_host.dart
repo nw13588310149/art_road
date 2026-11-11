@@ -8,9 +8,12 @@ import '../../../core/ui/ui.dart';
 import '../data/toolbox_catalog.dart';
 import '../data/toolbox_dock_preferences.dart';
 import '../state/toolbox_dock_controller.dart';
+import '../state/companion_controller.dart';
 import '../state/toolbox_image_controller.dart';
 import 'art_toolbox_page.dart';
 import 'toolbox_route_observer.dart';
+import 'widgets/toolbox_companion.dart';
+import 'widgets/art_companion_portrait.dart';
 
 const _quickTools = <ArtTool>[
   ArtTool.grid,
@@ -47,7 +50,7 @@ class FloatingToolboxHost extends ConsumerStatefulWidget {
 }
 
 class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
-  static const _extent = 60.0;
+  static const _extent = ToolboxCompanion.extent;
   final _workspaceNavigator = GlobalKey<NavigatorState>();
   final _selection = ValueNotifier<ArtTool?>(null);
   LocalHistoryEntry? _history;
@@ -156,25 +159,25 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
         ? ref.watch(toolboxImageControllerProvider)
         : null;
     final dock = ref.watch(toolboxDockControllerProvider);
+    final motionEnabled = ref.watch(companionMotionProvider);
     final media = MediaQuery.of(context);
     return Overlay.wrap(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final left = media.padding.left + 8;
-          final top = media.padding.top + 8;
+          final left = media.padding.left;
+          final top = media.padding.top;
           final bounds = Rect.fromLTRB(
             left,
             top,
             math.max(
               left,
-              constraints.maxWidth - media.padding.right - _extent - 8,
+              constraints.maxWidth - media.padding.right - _extent,
             ),
             math.max(
               top,
               constraints.maxHeight -
                   math.max(media.padding.bottom, media.viewInsets.bottom) -
-                  _extent -
-                  8,
+                  _extent,
             ),
           );
           final point = ToolboxDockGeometry.clamp(
@@ -360,64 +363,29 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
                   top: point.dy,
                   width: _extent,
                   height: _extent,
-                  child: GestureDetector(
-                    onPanStart: (_) {
+                  child: ToolboxCompanion(
+                    edge: dock.edge,
+                    expanded: _panelOpen,
+                    dragging: _dragPosition != null,
+                    motionEnabled: motionEnabled,
+                    onTap: _togglePanel,
+                    onDragStart: (_) {
                       _close();
                       setState(() => _dragPosition = point);
                     },
-                    onPanUpdate: (event) => setState(() {
+                    onDragUpdate: (event) => setState(() {
                       _dragPosition = ToolboxDockGeometry.clamp(
                         (_dragPosition ?? point) + event.delta,
                         bounds,
                       );
                     }),
-                    onPanEnd: (_) {
+                    onDragEnd: (_) {
                       ref
                           .read(toolboxDockControllerProvider.notifier)
                           .dock(_dragPosition ?? point, bounds);
                       setState(() => _dragPosition = null);
                     },
-                    onPanCancel: () => setState(() => _dragPosition = null),
-                    child: Tooltip(
-                      message: '画具 · 拖动可贴边',
-                      child: AppPressable(
-                        semanticLabel: _panelOpen ? '收起画具' : '打开画具',
-                        onTap: _togglePanel,
-                        child: Container(
-                          key: const ValueKey('floating-toolbox-handle'),
-                          decoration: BoxDecoration(
-                            color: _panelOpen
-                                ? AppColors.brandDeep
-                                : AppColors.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: AppShadow.popover,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _panelOpen
-                                    ? Icons.close_rounded
-                                    : Icons.draw_outlined,
-                                color: _panelOpen
-                                    ? AppColors.onBrand
-                                    : AppColors.brandDeep,
-                                size: 24,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '画具',
-                                style: AppText.caption12.copyWith(
-                                  color: _panelOpen
-                                      ? AppColors.onBrand
-                                      : AppColors.ink,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    onDragCancel: () => setState(() => _dragPosition = null),
                   ),
                 ),
             ],
@@ -428,7 +396,7 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
   }
 }
 
-class _QuickToolPanel extends StatelessWidget {
+class _QuickToolPanel extends ConsumerWidget {
   const _QuickToolPanel({
     required this.imageState,
     required this.lastTool,
@@ -446,7 +414,9 @@ class _QuickToolPanel extends StatelessWidget {
   final VoidCallback onResume;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final motion = ref.watch(companionMotionProvider);
+    final reduced = MediaQuery.disableAnimationsOf(context);
     final image = imageState.image;
     return Semantics(
       scopesRoute: true,
@@ -469,6 +439,8 @@ class _QuickToolPanel extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
                 child: Row(
                   children: [
+                    const ArtCompanionPortrait(size: 32, happy: true),
+                    const SizedBox(width: 10),
                     Expanded(child: Text('随手用画具', style: AppText.title20)),
                     AppIconButton(
                       icon: Icons.close_rounded,
@@ -481,7 +453,7 @@ class _QuickToolPanel extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                child: Text('看形、看色、练动态', style: AppText.body13),
+                child: Text('小墨 · 拖动贴边，轻点展开', style: AppText.body13),
               ),
               Expanded(
                 child: SingleChildScrollView(
@@ -627,7 +599,24 @@ class _QuickToolPanel extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text('拖动画具，松手贴边', style: AppText.caption12),
+                      child: Row(
+                        children: [
+                          Text(
+                            reduced ? '已减少动态' : '精灵动态',
+                            style: AppText.caption12Strong,
+                          ),
+                          const SizedBox(width: 8),
+                          AppSwitch(
+                            value: motion && !reduced,
+                            enabled: !reduced,
+                            size: AppControlSize.sm,
+                            semanticLabel: '精灵动态',
+                            onChanged: ref
+                                .read(companionMotionProvider.notifier)
+                                .setMotion,
+                          ),
+                        ],
+                      ),
                     ),
                     AppButton(
                       label: '全部 ${ArtTool.values.length} 个工具',
