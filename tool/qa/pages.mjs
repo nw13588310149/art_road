@@ -114,6 +114,15 @@ const sharedContent = [
     ],
   },
   { id: 'courseware', route: '/', actions: [nav('校园课件')] },
+  {
+    id: 'courseware-speed',
+    route: '/',
+    actions: [
+      nav('校园课件'),
+      { click: /^速写课程/, role: 'button' },
+      { check: /速写课堂实录|速写晚自习/ },
+    ],
+  },
   { id: 'cloud', route: '/', actions: [nav('我的云盘')] },
   { id: 'video', route: '/', actions: [nav('视频中心')] },
   {
@@ -157,7 +166,7 @@ const sharedContent = [
   { id: 'personal-edit', route: '/personal-center', actions: [/^编辑资料$/, { check: '姓名' }] },
   { id: 'personal-gender', route: '/info', actions: [/^性别/, { check: '请选择性别' }] },
   { id: 'info', route: '/info' },
-  { id: 'feedback', route: '/', actions: [nav('意见反馈')] },
+  { id: 'feedback', route: '/help-feedback' },
   { id: 'help', route: '/help-guide' },
   { id: 'news', route: '/', actions: [{ click: '更多', after: 2000 }] },
   {

@@ -155,17 +155,9 @@ void main() {
     final field = find.byType(AppIconInputField).at(1);
     final text = find.text('获取验证码');
     final button = find.ancestor(of: text, matching: find.byType(AppPressable));
-    final editor = find.descendant(
-      of: field,
-      matching: find.byType(EditableText),
-    );
-
     expect(tester.getSize(button), const Size(117, 45));
     expect(tester.getSize(field).height, 45);
-    expect(
-      tester.getCenter(button).dy,
-      closeTo(tester.getCenter(editor).dy, 1),
-    );
+    expect(tester.getCenter(button).dy, closeTo(tester.getCenter(field).dy, 1));
     expect(tester.getCenter(button).dy, closeTo(tester.getCenter(text).dy, 1));
     expect(tester.widget<Text>(text).style?.fontSize, 14);
     expect(

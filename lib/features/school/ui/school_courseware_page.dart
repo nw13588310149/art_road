@@ -80,11 +80,10 @@ class _SchoolView extends StatelessWidget {
                 // Banner 高度（647:190 比例）—— 保持响应式比例不变。
                 final bannerH = leftW * 190.0 / 647.0;
 
-                // 素描/色彩：每张卡宽 = (leftW - 16) / 2，高 = 宽 × 121/315
-                // —— 保持响应式比例不变。
-                final voiceCardW = math.max(0.0, (leftW - gap) / 2.0);
-                final voiceH = voiceCardW * 121.0 / 315.0;
-                final quickAreaH = leftH - bannerH - voiceH - gap * 2;
+                // 沿用原科目入口区高度，让三张卡与右栏底部对齐。
+                final subjectRowHeight =
+                    math.max(0.0, leftW - gap) * 121.0 / 630.0;
+                final quickAreaH = leftH - bannerH - subjectRowHeight - gap * 2;
                 final compactQuickActions =
                     _SchoolIpadProLayout.matches(ctx) ||
                     quickAreaH < _SchoolIpadProLayout.quickActionsMinHeight;
@@ -119,9 +118,9 @@ class _SchoolView extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: gap),
-                          // 素描 / 色彩：紧贴底部，与右栏底部对齐。
+                          // 科目入口紧贴底部，与右栏底部对齐。
                           SizedBox(
-                            height: voiceH,
+                            height: subjectRowHeight,
                             child: _SubjectCoursesRow(schoolId: state.schoolId),
                           ),
                         ],
@@ -503,7 +502,6 @@ class _QuickActionItem extends StatelessWidget {
   }
 }
 
-// ── Sketch / Color row (315:121 aspect ratio, gap 16) ────────────────────
 class _SubjectCoursesRow extends StatelessWidget {
   const _SubjectCoursesRow({required this.schoolId});
 
@@ -511,179 +509,130 @@ class _SubjectCoursesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gap = 16.0;
-    // 通过 LayoutBuilder 计算自适应宽度，再由 315:121 推算按钮高度。
-    return LayoutBuilder(
-      builder: (_, bc) {
-        final cardW = (bc.maxWidth - gap) / 2.0;
-        final cardH = cardW * 121.0 / 315.0;
-        return SizedBox(
-          height: cardH,
-          child: Row(
-            children: [
-              Expanded(
-                child: _SketchFeatureCard(onTap: () => _go(context, '素描')),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 16,
+      children: [
+        for (final subject in ArtSubject.values)
+          Expanded(
+            child: _SubjectCourseCard(
+              key: ValueKey('school-course-${subject.code}'),
+              subject: subject,
+              onTap: () => Navigator.pushNamed(
+                context,
+                RoutePaths.schoolVideo,
+                arguments: {
+                  'school': schoolId != '0' ? schoolId : true,
+                  'keyword': subject.label,
+                },
               ),
-              const SizedBox(width: gap),
-              Expanded(
-                child: _ColorFeatureCard(onTap: () => _go(context, '色彩')),
-              ),
-            ],
+            ),
           ),
-        );
-      },
+      ],
     );
   }
+}
 
-  /// 与 1.0 `gosY` / `goQY` 一致：
-  ///   - 移除 firstMenu/secondMenu（这里不传即等价于"清空"）
-  ///   - 带上 school 标记，让 voice/instrumental 二级页走 schoolTextbookList 接口
-  void _go(BuildContext context, String subject) {
-    final args = <String, dynamic>{
-      'school': schoolId != '0' ? schoolId : true,
-      'keyword': subject,
+class _SubjectCourseCard extends StatelessWidget {
+  const _SubjectCourseCard({
+    required this.subject,
+    required this.onTap,
+    super.key,
+  });
+
+  final ArtSubject subject;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final (description, backgroundAsset) = switch (subject) {
+      ArtSubject.sketch => ('观察结构，练习造型', AppAssets.schoolSketchCardBg),
+      ArtSubject.color => ('观察色调，练习表现', AppAssets.schoolColorCardBg),
+      ArtSubject.speed => ('练习动态与比例', null),
     };
-    Navigator.pushNamed(context, RoutePaths.schoolVideo, arguments: args);
-  }
-}
 
-/// 素描入口卡 — icon 位置独立维护。
-class _SketchFeatureCard extends StatelessWidget {
-  const _SketchFeatureCard({required this.onTap});
-
-  final VoidCallback onTap;
-
-  static const _iconRight = 22.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              AppAssets.schoolSketchCardBg,
-              alignment: Alignment.center,
-            ),
-            const Padding(
-              padding: EdgeInsets.only(left: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      button: true,
+      label: '${subject.label}课程',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final inset = constraints.maxWidth < 200 ? 12.0 : 24.0;
+              final coverWidth = math.min(70.0, constraints.maxWidth * .30);
+              return Stack(
+                fit: StackFit.expand,
                 children: [
-                  Text(
-                    '素描',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
-                      height: 1,
+                  if (backgroundAsset != null)
+                    Image.asset(backgroundAsset, fit: BoxFit.fill)
+                  else
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color.lerp(
+                              subject.accentSoft,
+                              subject.accent,
+                              .18,
+                            )!,
+                            subject.accentSoft,
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    '观察结构，练习造型',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF1A1A1A),
-                      height: 1,
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: inset),
+                    child: Row(
+                      spacing: 8,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                subject.label,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1A1A1A),
+                                  height: 1,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF1A1A1A),
+                                  height: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Image.asset(
+                          subject.coverAsset,
+                          width: coverWidth,
+                          height: math.max(0.0, constraints.maxHeight - 12),
+                          fit: BoxFit.contain,
+                          excludeFromSemantics: true,
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-            ),
-            Positioned(
-              right: _iconRight,
-              top: 0,
-              bottom: -5,
-              child: Center(
-                child: SizedBox(
-                  width: 70,
-                  height: 70 / 0.8795180722891566,
-                  child: Image.asset(
-                    ArtSubject.sketch.coverAsset,
-                    alignment: Alignment.center,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 色彩入口卡 — icon 位置独立维护（相对原 17 右距左移 5 → right 22）。
-class _ColorFeatureCard extends StatelessWidget {
-  const _ColorFeatureCard({required this.onTap});
-
-  final VoidCallback onTap;
-
-  /// 原 Figma 右距 17，单独左移 5。
-  static const _iconRight = 27.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              AppAssets.schoolColorCardBg,
-              alignment: Alignment.center,
-            ),
-            const Padding(
-              padding: EdgeInsets.only(left: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '色彩',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
-                      height: 1,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    '观察色调，练习表现',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF1A1A1A),
-                      height: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              right: _iconRight,
-              top: 0,
-              bottom: -5,
-              child: Center(
-                child: SizedBox(
-                  width: 70,
-                  height: 70 / 0.8795180722891566,
-                  child: Image.asset(
-                    ArtSubject.color.coverAsset,
-                    alignment: Alignment.center,
-                  ),
-                ),
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
       ),
     );
