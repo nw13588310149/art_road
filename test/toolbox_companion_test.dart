@@ -99,6 +99,70 @@ void main() {
     },
   );
 
+  for (final distanceFromEdge in [12.0, 54.0]) {
+    testWidgets(
+      'a stationary mouse does not prevent resting: $distanceFromEdge',
+      (tester) async {
+        await pumpCompanion(tester);
+        final target = find.byKey(const ValueKey('floating-toolbox-handle'));
+        final bounds = tester.getRect(target);
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(
+          Offset(bounds.right - distanceFromEdge, bounds.center.dy),
+        );
+        await tester.pumpAndSettle();
+        expect(portrait(tester).happy, isTrue);
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+        expect(portrait(tester).conceal, 0.5);
+        expect(find.text('小墨 · 轻点用画具，拖动可贴边'), findsNothing);
+        // 收纳可能让鼠标自动离开命中区；离开也不能把角色重新弹出来。
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pumpAndSettle();
+        expect(portrait(tester).conceal, closeTo(2 / 3, 0.001));
+        await mouse.removePointer();
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
+  testWidgets('only keyboard focus keeps the companion fully revealed', (
+    tester,
+  ) async {
+    final manager = FocusManager.instance;
+    final previousStrategy = manager.highlightStrategy;
+    addTearDown(() => manager.highlightStrategy = previousStrategy);
+    manager.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
+    await pumpCompanion(tester);
+    final detector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: find.byType(ToolboxCompanion),
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    detector.focusNode!.requestFocus();
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 13));
+    await tester.pumpAndSettle();
+    expect(portrait(tester).conceal, 0);
+    // 桌面鼠标也可能处于 traditional 模式；实际按下后应退出键盘聚焦。
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    final point = tester.getCenter(
+      find.byKey(const ValueKey('floating-toolbox-handle')),
+    );
+    await mouse.addPointer(location: point);
+    await mouse.down(point);
+    await mouse.up();
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(detector.focusNode!.hasFocus, isFalse);
+    expect(portrait(tester).conceal, 0.5);
+    await mouse.removePointer();
+    await tester.pumpWidget(const SizedBox());
+  });
+
   for (final reduced in [false, true]) {
     testWidgets(
       'quiet preference or system reduction disables idle gestures: $reduced',

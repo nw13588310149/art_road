@@ -95,6 +95,13 @@ try {
             const gap = edge === 'left' ? snapped.x : edge === 'top' ? snapped.y : edge === 'right' ? width - snapped.x - snapped.width : height - snapped.y - snapped.height;
             return Math.round(gap);
           }).toBe(0);
+          // 松手后不移开鼠标，也必须自动收纳；覆盖静止悬停的回归。
+          await expect.poll(async () => {
+            const resting = await launcher.boundingBox();
+            return Math.round(edge === 'left' || edge === 'right' ? resting.width : resting.height);
+          }, { timeout: 5000 }).toBe(44);
+          await expect(page.getByText('小墨 · 轻点用画具，拖动可贴边', { exact: true })).toHaveCount(0);
+          await shot(page, `${id}-${edge}-idle-pointer`);
           await launcher.click();
           await expect(page.getByText('随手用画具', { exact: true })).toBeVisible();
           await shot(page, `${id}-${edge}`);

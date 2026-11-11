@@ -54,13 +54,13 @@ class _ToolboxCompanionState extends State<ToolboxCompanion>
   int _cycle = 0;
   bool _peeking = false;
   bool _hover = false;
-  bool _focused = false;
   bool _focusRing = false;
   bool _foreground = true;
   bool _reduced = false;
   bool _tickerEnabled = true;
 
-  bool get _engaged => widget.expanded || widget.dragging || _hover || _focused;
+  // 指针静止和指针操作留下的焦点都不算持续操作，否则松手后无法收纳。
+  bool get _engaged => widget.expanded || widget.dragging || _focusRing;
   bool get _canMove =>
       widget.motionEnabled && !_reduced && _foreground && _tickerEnabled;
 
@@ -126,11 +126,20 @@ class _ToolboxCompanionState extends State<ToolboxCompanion>
     });
   }
 
-  void _engage({bool? hover, bool? focused}) {
+  void _setHover(bool value) {
     setState(() {
-      _hover = hover ?? _hover;
-      _focused = focused ?? _focused;
-      _rest = 0;
+      _hover = value;
+      if (value) _rest = 0;
+    });
+    // 收纳会缩小命中区并触发 onExit，离开时不能唤醒或重置计时。
+    if (value) _resetTimers();
+  }
+
+  void _setFocusHighlight(bool value) {
+    if (_focusRing == value) return;
+    setState(() {
+      _focusRing = value;
+      if (value) _rest = 0;
     });
     _resetTimers();
   }
@@ -219,9 +228,7 @@ class _ToolboxCompanionState extends State<ToolboxCompanion>
                       hint: '轻点展开画具，拖动可换到其他边缘',
                       child: FocusableActionDetector(
                         focusNode: _focusNode,
-                        onFocusChange: (value) => _engage(focused: value),
-                        onShowFocusHighlight: (value) =>
-                            setState(() => _focusRing = value),
+                        onShowFocusHighlight: _setFocusHighlight,
                         actions: {
                           ActivateIntent: CallbackAction<ActivateIntent>(
                             onInvoke: (_) {
@@ -241,31 +248,37 @@ class _ToolboxCompanionState extends State<ToolboxCompanion>
                           cursor: widget.dragging
                               ? SystemMouseCursors.grabbing
                               : SystemMouseCursors.grab,
-                          onEnter: (_) => _engage(hover: true),
-                          onExit: (_) => _engage(hover: false),
-                          child: Tooltip(
-                            message: '小墨 · 轻点用画具，拖动可贴边',
-                            excludeFromSemantics: true,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              dragStartBehavior: DragStartBehavior.down,
-                              onTap: widget.onTap,
-                              onPanStart: widget.onDragStart,
-                              onPanUpdate: widget.onDragUpdate,
-                              onPanEnd: widget.onDragEnd,
-                              onPanCancel: widget.onDragCancel,
-                              child: Container(
-                                key: const ValueKey('floating-toolbox-handle'),
-                                width: side ? hitExtent : size,
-                                height: side ? size : hitExtent,
-                                decoration: BoxDecoration(
-                                  borderRadius: AppRadius.br12,
-                                  border: _focusRing
-                                      ? Border.all(
-                                          color: AppColors.brandDeep,
-                                          width: 2,
-                                        )
-                                      : null,
+                          onEnter: (_) => _setHover(true),
+                          onExit: (_) => _setHover(false),
+                          child: TooltipVisibility(
+                            visible: _rest == 0 || _engaged,
+                            child: Tooltip(
+                              message: '小墨 · 轻点用画具，拖动可贴边',
+                              excludeFromSemantics: true,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                dragStartBehavior: DragStartBehavior.down,
+                                onPanDown: (_) => _focusNode.unfocus(),
+                                onTap: widget.onTap,
+                                onPanStart: widget.onDragStart,
+                                onPanUpdate: widget.onDragUpdate,
+                                onPanEnd: widget.onDragEnd,
+                                onPanCancel: widget.onDragCancel,
+                                child: Container(
+                                  key: const ValueKey(
+                                    'floating-toolbox-handle',
+                                  ),
+                                  width: side ? hitExtent : size,
+                                  height: side ? size : hitExtent,
+                                  decoration: BoxDecoration(
+                                    borderRadius: AppRadius.br12,
+                                    border: _focusRing
+                                        ? Border.all(
+                                            color: AppColors.brandDeep,
+                                            width: 2,
+                                          )
+                                        : null,
+                                  ),
                                 ),
                               ),
                             ),
