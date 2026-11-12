@@ -83,7 +83,9 @@ DemoAuthorCard demoStaffAuthor(DemoCampusStaff staff) {
   final headOf = DemoCampusData.classes
       .where((c) => c.headTeacherId == staff.id)
       .firstOrNull;
-  if (staff.roles.contains('admin')) {
+  if (staff.roles.contains('principal')) {
+    identity = '校长 · ${DemoCampusData.schoolName}';
+  } else if (staff.roles.contains('admin')) {
     identity = '教务处 · ${DemoCampusData.schoolName}';
   } else if (staff.roles.contains('dormManager')) {
     identity = '宿管老师 · ${staff.organizationName}';

@@ -303,7 +303,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
 
   /// 右栏今日待办底部的主操作：宿管直接开始查寝，管理员进入智慧校园工作台。
   Widget? _sideTodoFooter(String role) {
-    return switch (role) {
+    return switch (homeRoleKind(role)) {
       'dormManager' => AppButton(
         label: '按宿舍查寝',
         expand: true,

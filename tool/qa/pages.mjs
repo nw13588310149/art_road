@@ -364,6 +364,17 @@ export const ROLES = [
     ],
   },
   {
+    id: 'subjectLead',
+    chip: '科目组长 · 张明远',
+    steps: [
+      homeStep,
+      guideStep,
+      { id: 'artworks', route: '/artworks' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
+      campusAction('schedule', '授课课表'),
+    ],
+  },
+  {
     id: 'headTeacher',
     chip: '班主任 · 赵雪',
     steps: [
@@ -414,6 +425,18 @@ export const ROLES = [
       campusAction('group-chat', '群聊'),
       campusAction('mailbox', '校长信箱'),
       campusAction('circle-governance', '校圈治理'),
+    ],
+  },
+  {
+    id: 'principal',
+    chip: '校长 · 秦文博',
+    steps: [
+      homeStep,
+      guideStep,
+      { id: 'study', route: '/study' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
+      campusAction('teachers', '教师管理'),
+      campusAction('mailbox', '校长信箱'),
     ],
   },
 ];

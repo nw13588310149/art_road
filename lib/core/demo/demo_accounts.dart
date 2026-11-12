@@ -5,15 +5,27 @@
 enum DemoRole {
   student('学生'),
   teacher('任课老师'),
+  subjectLead('科目组长'),
   headTeacher('班主任'),
   dormManager('宿管'),
-  admin('管理员');
+  admin('管理员'),
+  principal('校长');
 
   const DemoRole(this.label);
 
   final String label;
 
   bool get isStaff => this != DemoRole.student;
+
+  /// 全校范围的管理身份：教务管理员与校长。
+  bool get managesSchool =>
+      this == DemoRole.admin || this == DemoRole.principal;
+
+  /// 有个人授课课表的教职身份：任课老师、科目组长、班主任。
+  bool get teaches =>
+      this == DemoRole.teacher ||
+      this == DemoRole.subjectLead ||
+      this == DemoRole.headTeacher;
 }
 
 class DemoAccount {
@@ -38,7 +50,7 @@ class DemoAccount {
   /// 学生在阅卷演示数据中的序号（[DemoMarkingData.persons] 的 index）。
   final int? personIndex;
 
-  /// 老师在阅卷演示数据中的 id（作品点评、标签归属）。
+  /// 教职工 id（与 [DemoCampusStaff.id] 一致；作品点评、标签归属）。
   final String? teacherId;
 
   /// 后端 `myInfo.user.role` 取值。
@@ -74,6 +86,16 @@ abstract final class DemoAccounts {
     gender: '女',
     teacherId: 't-1',
   );
+
+  /// 素描组组长：复核李静（演示任课老师）的点评，闭环上每一环都有体验账号。
+  static const subjectLead = DemoAccount(
+    role: DemoRole.subjectLead,
+    mobile: '13809310012',
+    name: '张明远',
+    userId: '1880000000000000012',
+    gender: '男',
+    teacherId: 't-2',
+  );
   static const headTeacher = DemoAccount(
     role: DemoRole.headTeacher,
     mobile: '13809310003',
@@ -98,12 +120,25 @@ abstract final class DemoAccounts {
     teacherId: 't-9',
   );
 
+  /// 校长：分管城东校区，并单独分管安宁校区的校考提高班。
+  static const principal = DemoAccount(
+    role: DemoRole.principal,
+    mobile: '13809310006',
+    name: '秦文博',
+    userId: '1880000000000000006',
+    gender: '男',
+    teacherId: 'p-1',
+  );
+
+  /// 登录页「体验身份」的顺序：学生 → 老师 → 组长 → 班主任 → 宿管 → 管理员 → 校长。
   static const all = <DemoAccount>[
     student,
     teacher,
+    subjectLead,
     headTeacher,
     dormManager,
     admin,
+    principal,
   ];
 
   /// 登录：预置手机号命中对应身份；其他手机号一律以学生身份进入。

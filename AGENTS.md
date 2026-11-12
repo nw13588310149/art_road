@@ -50,7 +50,7 @@
 - `DemoStore` (memory + SharedPreferences, key prefix `demo_store:`) holds all writable demo state. `DemoStore.reset()` restores the seeds and is wired to 「重置演示数据」 on the login page, so never keep mutable demo state in static fields.
 - `DemoMedia`: on io a loopback HTTP server serves bundled assets (`/a/<asset>`) and uploads (`/f/<id>`, with Range support); on web it uses asset URLs and blob URLs (blob uploads don't survive a reload). Reference assets as `asset:assets/demo/...` and resolve them with `DemoMedia.url`.
 - `DemoSocketBridge` injects frames into `ChatSocketService`: AI streaming (type 10004 deltas + 10005 final) and chat pushes (type 2001).
-- Identity: `DemoAccounts` (student / teacher / head teacher / dorm manager / admin, mobiles 13809310001–05). Tokens look like `demo.<role>.<mobile>`; resolve them with `DemoAccounts.fromToken`.
+- Identity: `DemoAccounts` (student / teacher / subject lead / head teacher / dorm manager / admin / principal; mobiles 13809310001–06, subject lead 13809310012). Subject groups and the principal in charge of each campus or class live in `DemoCampusData` (`subjectGroups`, `campusPrincipals`, `principalOfClass`). The target architecture is `docs/美育集架构方案.md`. Tokens look like `demo.<role>.<mobile>`; resolve them with `DemoAccounts.fromToken`.
 - Data:
   - `DemoMarkingData` is a deterministic port of the uni-app mock data (mulberry32 RNG): 示范画室, three campuses, exams 21–27, 40 students, judges / trimmed mean / arbitration, A–E bands.
   - `DemoCampusData` covers classes, staff, timetable and dorm beds; `DemoArtworkData` and `DemoFavorites` cover artworks and favorites.

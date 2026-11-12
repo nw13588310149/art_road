@@ -127,6 +127,8 @@ SmartCampusRole mapBackendRoleToCampus(String role, [String identity = '']) {
     case 'banzhuren':
       return SmartCampusRole.headTeacher;
     case 'teacher':
+    case 'subjectlead':
+    case 'subjectleader':
     case 'subjectteacher':
     case 'instructor':
       return SmartCampusRole.teacher;

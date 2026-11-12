@@ -96,6 +96,7 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
       case 'headteacher':
         return SmartCampusRole.headTeacher;
       case 'course_teacher':
+      case 'subject_leader':
       case 'courseteacher':
       case 'teacher':
         return SmartCampusRole.teacher;

@@ -6,6 +6,7 @@ import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../school/state/school_config_controller.dart';
 import '../../../shell/state/shell_controller.dart';
+import '../../state/home_dashboard_state.dart';
 import '../../state/home_staff_cards.dart';
 
 /// 班主任、宿管、管理员首页的「今日待办」：每行点开进入智慧校园对应视图（或作品点评、通知）。
@@ -30,7 +31,7 @@ class HomeTodoCard extends ConsumerWidget {
     final unread = ref.watch(
       shellControllerProvider.select((s) => s.unreadCount),
     );
-    switch (role) {
+    switch (homeRoleKind(role)) {
       case 'headTeacher':
         final stats = ref.watch(homeReviewStatsProvider);
         return HomeTodoInput(

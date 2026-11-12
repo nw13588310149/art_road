@@ -13,12 +13,16 @@ class DemoCampusClass {
     required this.organizationName,
     required this.headTeacherId,
     required this.grade,
+    this.principalId,
   });
 
   final String id;
   final String name;
   final String organizationName;
   final String headTeacherId;
+
+  /// 单独为本班指定的分管校长；为空时取所在校区的分管校长。
+  final String? principalId;
 
   /// 届别，例如「2027 届」。
   final String grade;
@@ -54,12 +58,38 @@ class DemoCampusStaff {
   /// 任教科目；管理人员为空串。
   final String subject;
 
-  /// 角色标识：teacher / headTeacher / dormManager / admin。
+  /// 角色标识：teacher / headTeacher / dormManager / admin / principal。
+  /// 科目组长不写在这里，由 [DemoCampusData.subjectGroups] 决定。
   final List<String> roles;
   final String organizationName;
 
   /// 任教班级 id。
   final List<String> classIds;
+}
+
+/// 科目组：按科目划分的教研组，组长逐份复核本组老师的点评。
+class DemoSubjectGroup {
+  const DemoSubjectGroup({
+    required this.id,
+    required this.subject,
+    required this.leadId,
+  });
+
+  final String id;
+
+  /// 科目名称：素描 / 色彩 / 速写。
+  final String subject;
+
+  /// 组长的教职工 id。
+  final String leadId;
+
+  String get name => '$subject组';
+
+  /// 本组老师：任教该科目的全部教职工（含组长）。
+  List<DemoCampusStaff> get members => [
+    for (final s in DemoCampusData.staff)
+      if (s.subject == subject) s,
+  ];
 }
 
 class DemoTimetableSlot {
@@ -152,6 +182,7 @@ abstract final class DemoCampusData {
       organizationName: '安宁校区',
       headTeacherId: 't-6',
       grade: '2027 届',
+      principalId: 'p-1',
     ),
   ];
 
@@ -264,7 +295,43 @@ abstract final class DemoCampusData {
       roles: ['admin'],
       organizationName: '城东校区',
     ),
+    DemoCampusStaff(
+      id: 'p-1',
+      userId: '1880000000000000006',
+      name: '秦文博',
+      gender: '男',
+      phone: '13809310006',
+      subject: '',
+      roles: ['principal'],
+      organizationName: '城东校区',
+    ),
+    DemoCampusStaff(
+      id: 'p-2',
+      userId: '1880000000000000019',
+      name: '沈丹',
+      gender: '女',
+      phone: '13809310019',
+      subject: '',
+      roles: ['principal'],
+      organizationName: '城西校区',
+    ),
   ];
+
+  /// 科目组：素描、色彩、速写各一个，组长从本组任课老师里指定。
+  static const subjectGroups = <DemoSubjectGroup>[
+    DemoSubjectGroup(id: 'g-sketch', subject: '素描', leadId: 't-2'),
+    DemoSubjectGroup(id: 'g-color', subject: '色彩', leadId: 't-5'),
+    DemoSubjectGroup(id: 'g-speed', subject: '速写', leadId: 't-6'),
+  ];
+
+  /// 各校区的分管校长（教职工 id）。个别班级可以用
+  /// [DemoCampusClass.principalId] 另行指定，班级上的指定优先：安宁校区的
+  /// 校考提高班单独指定给秦文博。
+  static const campusPrincipals = <String, String>{
+    '城东校区': 'p-1',
+    '城西校区': 'p-2',
+    '安宁校区': 'p-2',
+  };
 
   /// 联考冲刺1班的周课表；首页等只需要一份课表的地方沿用它。
   static const timetableTemplate = _timetable501;
@@ -374,6 +441,49 @@ abstract final class DemoCampusData {
     }
     return null;
   }
+
+  // ── 科目组与分管校长 ─────────────────────────────────────────────────
+
+  static DemoSubjectGroup? groupOfSubject(String subject) {
+    for (final g in subjectGroups) {
+      if (g.subject == subject) {
+        return g;
+      }
+    }
+    return null;
+  }
+
+  /// [staffId] 担任组长的科目组；不是组长时为 null。
+  static DemoSubjectGroup? groupLedBy(String staffId) {
+    for (final g in subjectGroups) {
+      if (g.leadId == staffId) {
+        return g;
+      }
+    }
+    return null;
+  }
+
+  /// 某科目的组长。
+  static DemoCampusStaff? leadOfSubject(String subject) {
+    final group = groupOfSubject(subject);
+    return group == null ? null : staffById(group.leadId);
+  }
+
+  /// 班级的分管校长：班级上单独指定的优先，否则取所在校区的分管校长。
+  static DemoCampusStaff? principalOfClass(String classId) {
+    final c = classById(classId);
+    if (c == null) {
+      return null;
+    }
+    final id = c.principalId ?? campusPrincipals[c.organizationName];
+    return id == null ? null : staffById(id);
+  }
+
+  /// 某位校长分管的班级。
+  static List<DemoCampusClass> classesOfPrincipal(String staffId) => [
+    for (final c in classes)
+      if (principalOfClass(c.id)?.id == staffId) c,
+  ];
 
   /// 宿舍：女生住女生公寓 1 号楼，男生住男生公寓 2 号楼，每间 4 床。
   static final List<DemoDormBed> beds = _buildBeds();

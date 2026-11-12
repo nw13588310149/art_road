@@ -203,6 +203,14 @@ class HomeDashboardState {
   }
 }
 
+/// 首页按哪一类身份布局：科目组长沿用任课老师的首页，校长沿用管理员的首页。
+/// 其他身份原样返回。
+String homeRoleKind(String role) => switch (role.trim()) {
+  'subjectLead' => 'teacher',
+  'principal' => 'admin',
+  final value => value,
+};
+
 /// 首页九宫格，按角色给入口。学生、任课老师、班主任从左到右、从上到下为：
 /// 资讯、校圈、群聊、工具箱、作业、素材库、作品库、小课件、集市。
 /// 作业对学生打开「我的作业」，对老师和班主任打开「作业批改」。
@@ -213,6 +221,7 @@ List<HomeQuickAction> buildQuickActions({
   String role = '',
 }) {
   const campusIcons = AppAssets.campusHomeActions;
+  role = homeRoleKind(role);
   if (role == 'dormManager') {
     return const <HomeQuickAction>[
       HomeQuickAction(

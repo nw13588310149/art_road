@@ -74,7 +74,7 @@ Map<String, dynamic> _newReportRecord(String postId) => <String, dynamic>{
 };
 
 void _requireManager(DemoAccount viewer) {
-  if (viewer.role != DemoRole.admin) {
+  if (!viewer.role.managesSchool) {
     throw const DemoApiException('只有管理员可以处理校圈举报');
   }
 }

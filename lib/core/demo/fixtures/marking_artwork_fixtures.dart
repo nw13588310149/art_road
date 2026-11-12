@@ -791,8 +791,8 @@ const _peerTagPreference = <String, List<String>>{
   '速写': ['线条生硬', '动态僵硬'],
 };
 
-/// 没有体验账号的指派老师（张明远、刘芳）在有老师保存点评后自动补上点评，
-/// 让学生端能看到完整的多师点评；有体验账号的老师（李静、赵雪）需要登录点评。
+/// 没有体验账号的指派老师（刘芳）在有老师保存点评后自动补上点评，
+/// 让学生端能看到完整的多师点评；有体验账号的老师（李静、张明远、赵雪）需要登录点评。
 void _simulatePeerReviews(
   Map<String, dynamic> work,
   Map<String, dynamic> trigger,

@@ -36,17 +36,21 @@ class RoleGuide {
 const roleGuideRoles = <String>[
   'student',
   'teacher',
+  'subjectLead',
   'headTeacher',
   'dormManager',
   'admin',
+  'principal',
 ];
 
 /// 各身份的新手引导，每步都指向该身份真实可见的入口；未知身份按学生处理。
 RoleGuide roleGuideFor(String role) => switch (role.trim()) {
   'teacher' => _teacher,
+  'subjectLead' => _subjectLead,
   'headTeacher' => _headTeacher,
   'dormManager' => _dormManager,
   'admin' => _admin,
+  'principal' => _principal,
   _ => _student,
 };
 
@@ -101,6 +105,32 @@ const _teacher = RoleGuide(
       iconAsset: AppAssets.leftNavXiaoyuan,
       title: '智慧校园',
       body: '授课课表、签课管理、作业批改与考评管理都在这里，班级群聊也在这里。',
+      where: '左侧导航「智慧校园」',
+    ),
+  ],
+);
+
+/// 科目组长目前的入口与任课老师相同；组内复核上线后在这里补一步。
+const _subjectLead = RoleGuide(
+  role: 'subjectLead',
+  roleLabel: '科目组长',
+  steps: [
+    RoleGuideStep(
+      iconAsset: AppAssets.leftNavZuopin,
+      title: '作品点评',
+      body: '分配给你的学生作品会进入点评队列，可以打分、选标签、写评语，也能直接在图上批注。',
+      where: '首页「作品库」，首页显示待点评件数',
+    ),
+    RoleGuideStep(
+      iconAsset: AppAssets.leftNavXueqing,
+      title: '班级学情',
+      body: '按考试查看分数分布和各科均分，点开学生可以看成绩报告与成长曲线。',
+      where: '左侧导航「班级学情」',
+    ),
+    RoleGuideStep(
+      iconAsset: AppAssets.leftNavXiaoyuan,
+      title: '智慧校园',
+      body: '授课课表、签课管理、作业批改与考评管理都在这里，教职工群聊也在这里。',
       where: '左侧导航「智慧校园」',
     ),
   ],
@@ -192,6 +222,33 @@ const _admin = RoleGuide(
       title: '通知管理',
       body: '向全校或指定班级发布通知，可以定时发布，也可以先存为草稿。',
       where: '首页功能入口「通知管理」',
+    ),
+    RoleGuideStep(
+      iconAsset: AppAssets.leftNavXueqing,
+      title: '班级学情',
+      body: '按考试查看全画室的分数分布、各科均分与校区对比。',
+      where: '左侧导航「班级学情」',
+    ),
+  ],
+);
+
+/// 校长目前沿用管理端的入口；教学查阅与驾驶舱上线后在这里补充。
+const _principal = RoleGuide(
+  role: 'principal',
+  roleLabel: '校长',
+  steps: [
+    RoleGuideStep(
+      iconAsset: AppAssets.leftNavXiaoyuan,
+      title: '学校管理',
+      body: '学生、教师、班级管理与排课都在智慧校园，首页的功能入口可以直接打开。',
+      where: '左侧导航「智慧校园」',
+    ),
+    RoleGuideStep(
+      iconAsset:
+          '${AppAssets.campusHomeActions}/dorm_manager/principal_mailbox.png',
+      title: '校长信箱',
+      body: '学生和教职工的来信集中在这里，可以逐条查看并回复。',
+      where: '智慧校园「校长信箱」',
     ),
     RoleGuideStep(
       iconAsset: AppAssets.leftNavXueqing,

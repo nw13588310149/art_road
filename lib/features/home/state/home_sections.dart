@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/demo/demo_accounts.dart';
 import '../../../core/demo/demo_config.dart';
+import 'home_dashboard_state.dart';
 
 /// 首页按身份显示的区块：不适用的卡片不出现。
 ///
@@ -45,7 +46,7 @@ class HomeSections {
 }
 
 /// 身份未知（`/myInfo` 未回包）时只保留各身份共有的区块，避免先闪出别的身份的卡片。
-HomeSections homeSectionsFor(String role) => switch (role.trim()) {
+HomeSections homeSectionsFor(String role) => switch (homeRoleKind(role)) {
   'student' => const HomeSections(practice: true, studySnapshot: true),
   'teacher' => const HomeSections(studySnapshot: true, reviewQueue: true),
   'headTeacher' => const HomeSections(studySnapshot: true, todo: true),
