@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../data/demo_artwork_data.dart';
+import '../data/demo_campus_data.dart';
 import '../data/demo_marking_data.dart';
 import '../demo_accounts.dart';
 import '../demo_backend.dart';
@@ -60,6 +61,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         for (final teacherId in DemoArtworkData.teacherIdsOf(work))
           _studentReview(work, teacherId, visible: visible),
       ],
+      'leadReview': visible ? _leadReviewJson(work, forStudent: true) : null,
     };
   });
 
@@ -147,7 +149,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final teacherId = _teacherId(req);
     final mine = _assigned(teacherId);
     final reviewed = mine
-        .where((w) => DemoArtworkData.reviewOf(w, teacherId) != null)
+        .where((w) => DemoArtworkData.hasReviewed(w, teacherId))
         .length;
     return <String, dynamic>{
       'total': mine.length,
@@ -161,7 +163,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final status = _statusFilter(req);
     final archiveId = req.str('archiveId');
     final rows = _assigned(teacherId).where((w) {
-      final mineReviewed = DemoArtworkData.reviewOf(w, teacherId) != null;
+      final mineReviewed = DemoArtworkData.hasReviewed(w, teacherId);
       final statusOk =
           status == 'ALL' || (status == 'REVIEWED') == mineReviewed;
       return statusOk &&
@@ -269,6 +271,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       review,
     ];
     _simulatePeerReviews(work, review);
+    _syncLeadReview(work);
     DemoStore.save(DemoArtworkData.worksKey);
 
     final id = _text(work['id']);
@@ -359,6 +362,150 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     }
     DemoStore.save(DemoArtworkData.tagsKey(teacherId));
     return true;
+  });
+
+  // ── 科目组长：组内复核 ──────────────────────────────────────────────
+  marking.get('/school/lead/artworks/statistics', (req) {
+    final group = _ledGroup(req);
+    if (group == null) {
+      return <String, dynamic>{
+        'isLead': false,
+        'groupName': '',
+        'total': 0,
+        'pending': 0,
+        'reviewed': 0,
+      };
+    }
+    final works = _leadWorks(group.leadId);
+    return <String, dynamic>{
+      'isLead': true,
+      'groupName': group.name,
+      'subject': group.subject,
+      'memberCount': group.members.length,
+      'total': works.length,
+      'pending': works.where(_leadPending).length,
+      'reviewed': works.where(_leadDone).length,
+    };
+  });
+
+  marking.get('/school/lead/artworks', (req) {
+    final group = _requireLead(req);
+    final status = _statusFilter(req);
+    final rows = _leadWorks(group.leadId).where((w) {
+      return switch (status) {
+        'PENDING' => _leadPending(w),
+        'REVIEWED' => _leadDone(w),
+        _ => true,
+      };
+    }).toList();
+    final matched = demoSearch(rows, req.str('keyword'), (w) {
+      final person = _personOf(w);
+      return <String>[
+        _text(w['title']),
+        person?.name ?? '',
+        person?.organizationName ?? '',
+        for (final id in DemoArtworkData.teacherIdsOf(w)) _teacherNameOf(id),
+      ];
+    });
+    return demoPage([
+      for (final w in matched) _leadSummary(w, group.leadId),
+    ], req);
+  });
+
+  marking.get('/school/lead/artworks/{id}', (req) {
+    final group = _requireLead(req);
+    final work = _leadWork(group.leadId, req.param('id'));
+    final workId = _text(work['id']);
+    return <String, dynamic>{
+      'work': <String, dynamic>{
+        ..._leadSummary(work, group.leadId),
+        'description': _text(work['description']),
+        'teachers': <Map<String, dynamic>>[
+          for (final id in DemoArtworkData.teacherIdsOf(work))
+            <String, dynamic>{
+              'teacherId': id,
+              'teacherName': _teacherNameOf(id, req.account),
+              'reviewed': DemoArtworkData.hasReviewed(work, id),
+            },
+        ],
+      },
+      'images': _imagesOf(work),
+      'reviews': <Map<String, dynamic>>[
+        for (final id in DemoArtworkData.teacherIdsOf(work))
+          <String, dynamic>{
+            ..._teacherReview(
+              work,
+              id,
+              viewer: req.account,
+              mine: id == group.leadId,
+              revealed: true,
+            ),
+            'annotations': _strokesOf(workId, id),
+          },
+      ],
+      'leadReview': _leadReviewJson(work),
+    };
+  });
+
+  marking.post('/school/lead/artworks/review', (req) {
+    final group = _requireLead(req);
+    final body = req.bodyMap;
+    final work = _leadWork(group.leadId, _text(body['artworkId']));
+    if (!_isReviewed(work)) {
+      throw const DemoApiException('老师还没有完成点评，暂时不能复核', code: 400);
+    }
+    final approve = _text(body['action']).toUpperCase() != 'RETURN';
+    final content = _text(body['content']);
+    if (content.runes.length > 2000) {
+      throw const DemoApiException('复核意见最多 2000 个字', code: 400);
+    }
+    if (!approve && content.isEmpty) {
+      throw const DemoApiException('请填写退回原因，老师会按原因重新点评', code: 400);
+    }
+    final score = approve
+        ? _optionalNumber(body['score'], '分数须为数字，最多两位小数')
+        : null;
+    if (score != null) {
+      final maxScore = DemoArtworkData.aggregate(work).maxScore;
+      if (score < 0 || !_twoDecimals(score)) {
+        throw const DemoApiException('分数须为不小于 0 的数字，最多两位小数', code: 400);
+      }
+      if (score > maxScore) {
+        throw DemoApiException(
+          '分数不能超过满分 ${_scoreText(maxScore)}',
+          code: 400,
+        );
+      }
+    }
+    work['leadReview'] = <String, dynamic>{
+      'leadId': group.leadId,
+      'action': approve
+          ? DemoArtworkData.leadApproved
+          : DemoArtworkData.leadReturned,
+      'content': content,
+      'score': score,
+      'exemplar': approve && body['exemplar'] == true,
+      'attention': body['attention'] == true,
+      'reviewedTime': _now(),
+    };
+    if (!approve) {
+      // 退回：本组老师的点评回到待点评，组长自己的点评保留。
+      work['reviews'] = <Map<String, dynamic>>[
+        for (final review in DemoArtworkData.reviewsOf(work))
+          review['teacherId'] == group.leadId
+              ? review
+              : <String, dynamic>{...review, 'returned': true},
+      ];
+    }
+    DemoStore.save(DemoArtworkData.worksKey);
+
+    final id = _text(work['id']);
+    return <String, dynamic>{
+      'artworkId': id,
+      'nextArtworkId': req.boolOf('next')
+          ? _nextLeadPending(group.leadId, id)
+          : null,
+    };
   });
 }
 
@@ -465,7 +612,7 @@ DemoPerson? _personOf(Map<String, dynamic> work) {
 String? _nextPending(String teacherId, String currentId) {
   final all = _assigned(teacherId);
   bool pending(Map<String, dynamic> w) =>
-      w['id'] != currentId && DemoArtworkData.reviewOf(w, teacherId) == null;
+      w['id'] != currentId && !DemoArtworkData.hasReviewed(w, teacherId);
   final position = all.indexWhere((w) => w['id'] == currentId);
   final ordered = [
     ...all.skip(position + 1),
@@ -513,6 +660,7 @@ Map<String, dynamic> _studentSummary(Map<String, dynamic> work) {
     'coverUrl': images.isEmpty ? '' : images.first['url'],
     'finalScore': summary.finalScore,
     'maxScore': summary.maxScore,
+    'exemplar': _isExemplar(work),
   };
 }
 
@@ -522,7 +670,7 @@ Map<String, dynamic> _studentReview(
   String teacherId, {
   required bool visible,
 }) {
-  final review = DemoArtworkData.reviewOf(work, teacherId);
+  final review = DemoArtworkData.activeReviewOf(work, teacherId);
   final shown = visible ? review : null;
   return <String, dynamic>{
     'teacherId': teacherId,
@@ -568,9 +716,19 @@ Map<String, dynamic> _teacherSummary(
     'status': summary.status,
     'coverUrl': images.isEmpty ? '' : images.first['url'],
     'imageCount': images.length,
-    'myReviewed': DemoArtworkData.reviewOf(work, teacherId) != null,
+    'myReviewed': DemoArtworkData.hasReviewed(work, teacherId),
     'finalScore': summary.finalScore,
     'maxScore': summary.maxScore,
+    'leadStatus': DemoArtworkData.leadStatusOf(work),
+    'exemplar': _isExemplar(work),
+    'attention': DemoArtworkData.leadReviewOf(work)?['attention'] == true,
+    'returnReason':
+        DemoArtworkData.isReturned(DemoArtworkData.reviewOf(work, teacherId))
+        ? _text(DemoArtworkData.leadReviewOf(work)?['content'])
+        : '',
+    'teacherNames': [
+      for (final id in DemoArtworkData.teacherIdsOf(work)) _teacherNameOf(id),
+    ].join('、'),
   };
 }
 
@@ -581,7 +739,7 @@ Map<String, dynamic> _teacherDetail(
   DemoAccount viewer,
 ) {
   final teacherIds = DemoArtworkData.teacherIdsOf(work);
-  final myReviewed = DemoArtworkData.reviewOf(work, teacherId) != null;
+  final myReviewed = DemoArtworkData.hasReviewed(work, teacherId);
   return <String, dynamic>{
     'work': <String, dynamic>{
       ..._teacherSummary(work, teacherId),
@@ -592,7 +750,7 @@ Map<String, dynamic> _teacherDetail(
           <String, dynamic>{
             'teacherId': id,
             'teacherName': _teacherNameOf(id, viewer),
-            'reviewed': DemoArtworkData.reviewOf(work, id) != null,
+            'reviewed': DemoArtworkData.hasReviewed(work, id),
           },
       ],
     },
@@ -607,6 +765,7 @@ Map<String, dynamic> _teacherDetail(
           revealed: id == teacherId || myReviewed,
         ),
     ],
+    'leadReview': _leadReviewJson(work),
   };
 }
 
@@ -623,7 +782,8 @@ Map<String, dynamic> _teacherReview(
     'teacherId': teacherId,
     'teacherName': _teacherNameOf(teacherId, viewer),
     'mine': mine,
-    'reviewed': review != null,
+    'reviewed': review != null && !DemoArtworkData.isReturned(review),
+    'returned': DemoArtworkData.isReturned(review),
     'score': shown?['score'],
     'maxScore': review?['maxScore'] ?? 100,
     'content': shown == null ? null : _text(shown['content']),
@@ -842,5 +1002,114 @@ void _simulatePeerReviews(
   }
   if (added.isNotEmpty) {
     work['reviews'] = <Map<String, dynamic>>[...reviews, ...added];
+  }
+}
+
+// ── 组长复核 ───────────────────────────────────────────────────────────
+
+/// 当前账号担任组长的科目组；不是组长时为 null。
+DemoSubjectGroup? _ledGroup(DemoRequest req) {
+  final teacherId = req.account.teacherId;
+  return teacherId == null ? null : DemoCampusData.groupLedBy(teacherId);
+}
+
+DemoSubjectGroup _requireLead(DemoRequest req) {
+  final group = _ledGroup(req);
+  if (group == null) {
+    throw const DemoApiException('仅科目组长可以复核本组老师的点评', code: 403);
+  }
+  return group;
+}
+
+/// 需要这位组长复核的作品（本组科目、指派给了组长以外的老师）。
+List<Map<String, dynamic>> _leadWorks(String leadId) =>
+    _works().where((w) => DemoArtworkData.leadIdOf(w) == leadId).toList()
+      ..sort(_newestSubmitted);
+
+Map<String, dynamic> _leadWork(String leadId, String id) {
+  final work = _leadWorks(leadId).where((w) => w['id'] == id).firstOrNull;
+  if (work == null) {
+    throw const DemoApiException('作品不存在或不在本组复核范围内，请返回列表刷新', code: 404);
+  }
+  return work;
+}
+
+bool _leadPending(Map<String, dynamic> work) =>
+    DemoArtworkData.leadStatusOf(work) == DemoArtworkData.leadPending;
+
+bool _leadDone(Map<String, dynamic> work) {
+  final status = DemoArtworkData.leadStatusOf(work);
+  return status == DemoArtworkData.leadApproved ||
+      status == DemoArtworkData.leadReturned;
+}
+
+bool _isExemplar(Map<String, dynamic> work) {
+  final lead = DemoArtworkData.leadReviewOf(work);
+  return lead != null &&
+      lead['action'] == DemoArtworkData.leadApproved &&
+      lead['exemplar'] == true;
+}
+
+Map<String, dynamic> _leadSummary(Map<String, dynamic> work, String leadId) =>
+    <String, dynamic>{
+      ..._teacherSummary(work, leadId),
+      'leadReviewedTime': DemoArtworkData.leadReviewOf(work)?['reviewedTime'],
+    };
+
+/// 组长复核的展示结构。学生端只看已通过的复核，不带「需关注」标记。
+Map<String, dynamic>? _leadReviewJson(
+  Map<String, dynamic> work, {
+  bool forStudent = false,
+}) {
+  final lead = DemoArtworkData.leadReviewOf(work);
+  if (lead == null) {
+    return null;
+  }
+  final approved = lead['action'] == DemoArtworkData.leadApproved;
+  if (forStudent && !approved) {
+    return null;
+  }
+  return <String, dynamic>{
+    'leaderName':
+        DemoCampusData.staffById(_text(lead['leadId']))?.name ?? '组长',
+    'action': lead['action'],
+    'content': _text(lead['content']),
+    'score': lead['score'],
+    'exemplar': approved && lead['exemplar'] == true,
+    'attention': !forStudent && lead['attention'] == true,
+    'reviewedTime': lead['reviewedTime'],
+  };
+}
+
+String? _nextLeadPending(String leadId, String currentId) {
+  final all = _leadWorks(leadId);
+  final position = all.indexWhere((w) => w['id'] == currentId);
+  final ordered = [
+    ...all.skip(position + 1),
+    ...all.take(position < 0 ? 0 : position),
+  ];
+  return ordered
+      .where((w) => w['id'] != currentId && _leadPending(w))
+      .map((w) => _text(w['id']))
+      .firstOrNull;
+}
+
+/// 老师保存点评后同步复核状态：被退回的点评全部重新保存后，退回记录清除、作品重新
+/// 进入待复核；组长没有体验账号时，点评完成即按已复核处理。
+void _syncLeadReview(Map<String, dynamic> work) {
+  final lead = DemoArtworkData.leadReviewOf(work);
+  final anyReturned = DemoArtworkData.reviewsOf(
+    work,
+  ).any(DemoArtworkData.isReturned);
+  if (lead != null &&
+      lead['action'] == DemoArtworkData.leadReturned &&
+      !anyReturned) {
+    work.remove('leadReview');
+  }
+  final leadId = DemoArtworkData.leadIdOf(work);
+  if (leadId != null &&
+      !DemoArtworkData.leadHasAccount(leadId) &&
+      DemoArtworkData.leadStatusOf(work) == DemoArtworkData.leadPending) {
+    work['leadReview'] = DemoArtworkData.autoLeadReview(leadId, _now());
   }
 }

@@ -110,11 +110,17 @@ const _teacher = RoleGuide(
   ],
 );
 
-/// 科目组长目前的入口与任课老师相同；组内复核上线后在这里补一步。
+/// 科目组长：任课老师的入口，加上本组点评的逐份复核。
 const _subjectLead = RoleGuide(
   role: 'subjectLead',
   roleLabel: '科目组长',
   steps: [
+    RoleGuideStep(
+      iconAsset: AppAssets.leftNavZuopin,
+      title: '组内复核',
+      body: '本组老师点评完成的作品逐份复核：可以补充组长点评、改定分数、标为范例，也可以退回老师重评。',
+      where: '首页「作品库」，切换到「组内复核」',
+    ),
     RoleGuideStep(
       iconAsset: AppAssets.leftNavZuopin,
       title: '作品点评',

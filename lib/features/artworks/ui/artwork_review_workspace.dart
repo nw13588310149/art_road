@@ -75,7 +75,10 @@ class _ArtworkReviewWorkspaceState
 
   void _initForm(ArtworkDetail detail) {
     final mine = detail.myReview;
-    final saved = mine != null && mine.reviewed ? mine : null;
+    // 被组长退回的点评也预填进表单，老师在原来的基础上修改。
+    final saved = mine != null && (mine.reviewed || mine.returned)
+        ? mine
+        : null;
     final score = saved?.score;
     _score.text = score == null ? '' : ArtworkRules.formatScore(score);
     _maxScore.text = ArtworkRules.formatScore(
@@ -562,9 +565,26 @@ class _ArtworkReviewWorkspaceState
     ArtworkDetail detail,
     ArtworkTagsState tagsState,
   ) {
+    final lead = detail.leadReview;
+    final returned = detail.work.returnReason.isNotEmpty;
     return <Widget>[
       _StudentCard(detail: detail),
       const SizedBox(height: AppSpace.s12),
+      if (returned) ...[
+        const AppNotice(
+          tone: AppTone.danger,
+          message: '组长退回了这份点评，请按退回原因修改后重新保存',
+        ),
+        const SizedBox(height: AppSpace.s12),
+      ],
+      if (lead != null && (returned || lead.approved)) ...[
+        ArtworkLeadReviewCard(
+          review: lead,
+          showAttention: true,
+          maxScore: detail.work.maxScore,
+        ),
+        const SizedBox(height: AppSpace.s12),
+      ],
       AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

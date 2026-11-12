@@ -370,6 +370,21 @@ export const ROLES = [
       homeStep,
       guideStep,
       { id: 'artworks', route: '/artworks' },
+      {
+        id: 'lead-review',
+        route: '/artworks',
+        actions: [
+          { click: /组内复核/, after: 1800 }, { check: /^开始复核$/, role: 'button' },
+        ],
+      },
+      {
+        id: 'lead-review-workspace',
+        route: '/artworks',
+        actions: [
+          { click: /组内复核/, after: 1800 }, { click: /^开始复核$/, after: 2500 },
+          { check: '组长点评' }, { check: /^通过并下一份$/, role: 'button' },
+        ],
+      },
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('schedule', '授课课表'),
     ],

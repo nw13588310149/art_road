@@ -144,7 +144,7 @@ _latestCompletedReview(int personIndex) {
       .where(
         (w) =>
             DemoArtworkData.teacherIdsOf(w).contains(teacherId) &&
-            DemoArtworkData.reviewOf(w, teacherId) == null,
+            !DemoArtworkData.hasReviewed(w, teacherId),
       )
       .toList();
   if (pending.isEmpty) {

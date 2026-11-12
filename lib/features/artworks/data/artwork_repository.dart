@@ -149,6 +149,59 @@ class ArtworkRepository {
     );
   }
 
+  // ── 科目组长：组内复核（演示接口，后续由后端提供） ────────────────────
+
+  /// 返回 `isLead`（当前账号是否为科目组长）、`groupName` 与待复核 / 已复核数量。
+  Future<ApiResponse> getLeadStatistics() {
+    return client.get('/school/lead/artworks/statistics');
+  }
+
+  /// [status]：`PENDING` 待复核 / `REVIEWED` 已复核 / `ALL`。
+  Future<ApiResponse> getLeadArtworks({
+    required ArtworkStatusFilter status,
+    required int page,
+    required int size,
+    String keyword = '',
+  }) {
+    return client.get(
+      '/school/lead/artworks',
+      queryParameters: <String, dynamic>{
+        'status': status.code,
+        'current': page,
+        'size': size,
+        if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+      },
+    );
+  }
+
+  Future<ApiResponse> getLeadArtwork(String id) {
+    return client.get('/school/lead/artworks/${_id(id)}');
+  }
+
+  /// [approve] 为 false 时退回老师重评，[content] 必填（退回原因）。
+  /// [next] 为 true 时返回队列里的下一份待复核作品 id。
+  Future<ApiResponse> saveLeadReview({
+    required String artworkId,
+    required bool approve,
+    required String content,
+    required double? score,
+    required bool exemplar,
+    required bool attention,
+    required bool next,
+  }) {
+    return client.post(
+      '/school/lead/artworks/review?next=$next',
+      data: <String, dynamic>{
+        'artworkId': artworkId,
+        'action': approve ? 'APPROVE' : 'RETURN',
+        'content': content.isEmpty ? null : content,
+        'score': score,
+        'exemplar': exemplar,
+        'attention': attention,
+      },
+    );
+  }
+
   Future<ApiResponse> getTags() {
     return client.get('/school/teacher/tags');
   }
