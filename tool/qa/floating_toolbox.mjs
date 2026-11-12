@@ -44,7 +44,7 @@ try {
       await page.waitForTimeout(2500);
       if (await skip.isVisible()) await skip.click();
       await expect(launcher).toBeVisible({ timeout: 15000 });
-      await expect(launcher).toHaveAccessibleName(/小墨/);
+      await expect(launcher).toHaveAccessibleName(/小画/);
       await shot(page, `${id}-home`);
       if (role.id === 'student') {
         await page.mouse.move(100, 100);
@@ -100,7 +100,7 @@ try {
             const resting = await launcher.boundingBox();
             return Math.round(edge === 'left' || edge === 'right' ? resting.width : resting.height);
           }, { timeout: 5000 }).toBe(44);
-          await expect(page.getByText('小墨 · 轻点用画具，拖动可贴边', { exact: true })).toHaveCount(0);
+          await expect(page.getByText('小画 · 轻点用画具，拖动可贴边', { exact: true })).toHaveCount(0);
           await shot(page, `${id}-${edge}-idle-pointer`);
           await launcher.click();
           await expect(page.getByText('随手用画具', { exact: true })).toBeVisible();

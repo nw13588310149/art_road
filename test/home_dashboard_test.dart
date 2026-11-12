@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:the_road_of_art_flutter/app/router/route_paths.dart';
 import 'package:the_road_of_art_flutter/core/network/api_response.dart';
 import 'package:the_road_of_art_flutter/core/permissions/first_launch_permission_host.dart';
 import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
@@ -159,12 +160,30 @@ void main() {
     expect(homeRoleHasTimetable('admin'), isFalse);
   });
 
-  test('quick actions use the same names as the navigation', () {
-    final student = buildQuickActions().map((a) => a.name).toList();
-    expect(student, containsAll(['我的学情', '作品档案', '范画库', '工具箱', '速写计时练习']));
-    final staff = buildQuickActions(isStaff: true).map((a) => a.name).toList();
-    expect(staff, containsAll(['班级学情', '作品点评']));
-    expect(staff, isNot(contains('我的学情')));
+  test('student and staff home entries follow the nine-button order', () {
+    const names = ['资讯', '校圈', '群聊', '工具箱', '作业', '素材库', '作品库', '小课件', '集市'];
+    final student = buildQuickActions();
+    expect(student.map((a) => a.name), names);
+    expect(
+      student.firstWhere((a) => a.name == '作业').campus,
+      HomeCampusTarget.myHomework,
+    );
+    expect(
+      student.firstWhere((a) => a.name == '素材库').route,
+      RoutePaths.gallery,
+    );
+    expect(
+      student.firstWhere((a) => a.name == '作品库').route,
+      RoutePaths.artworks,
+    );
+    expect(student.firstWhere((a) => a.name == '小课件').route, RoutePaths.school);
+    expect(student.firstWhere((a) => a.name == '集市').comingSoon, isTrue);
+    final staff = buildQuickActions(isStaff: true, role: 'teacher');
+    expect(staff.map((a) => a.name), names);
+    expect(
+      staff.firstWhere((a) => a.name == '作业').campus,
+      HomeCampusTarget.homeworkReview,
+    );
   });
 
   test('dorm managers and admins get their own work entries', () {
@@ -281,8 +300,10 @@ void main() {
     expect(find.text('2节'), findsOneWidget);
     expect(find.text('5节'), findsNothing);
     expect(find.byType(HomeCourseNoticeCard), findsNWidgets(2));
-    expect(find.text('我的学情'), findsOneWidget);
-    expect(find.text('速写计时练习'), findsOneWidget);
+    expect(find.text('资讯'), findsOneWidget);
+    expect(find.text('集市'), findsOneWidget);
+    expect(find.text('我的学情'), findsNothing);
+    expect(find.text('速写计时练习'), findsNothing);
     expect(find.textContaining('学情速览'), findsOneWidget);
     expect(find.text('↑9 分'), findsOneWidget);
 

@@ -288,7 +288,7 @@ class _DetailSide extends StatelessWidget {
               const SizedBox(width: AppSpace.s8),
               Expanded(
                 child: Text(
-                  '示例书刊，仅供演示：内容为「绘画星球」自制示例，非正式出版物，没有书号与定价。',
+                  '示例书刊，仅供演示：内容为「美育集」自制示例，非正式出版物，没有书号与定价。',
                   style: AppText.body13,
                 ),
               ),

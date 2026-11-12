@@ -58,7 +58,7 @@ class ConsultationDetail {
   final int id;
   final String title;
 
-  /// 来源：接口 `source` / `author`，缺省显示「绘画星球」；校园入口会用学校名覆盖。
+  /// 来源：接口 `source` / `author`，缺省显示「美育集」；校园入口会用学校名覆盖。
   final String source;
 
   /// yyyy-MM-dd HH:mm:ss 字符串，直接展示。
@@ -76,7 +76,7 @@ class ConsultationDetail {
     return ConsultationDetail(
       id: _toInt(raw['id']) ?? 0,
       title: raw['title']?.toString() ?? '',
-      source: source.isNotEmpty ? source : '绘画星球',
+      source: source.isNotEmpty ? source : '美育集',
       updateTime: raw['updateTime']?.toString() ?? '',
       viewCount: _toInt(raw['viewCount']) ?? 0,
       htmlContent: raw['longText1']?.toString() ?? '',

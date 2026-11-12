@@ -166,7 +166,7 @@ const sharedContent = [
   { id: 'personal-edit', route: '/personal-center', actions: [/^编辑资料$/, { check: '姓名' }] },
   { id: 'personal-gender', route: '/info', actions: [/^性别/, { check: '请选择性别' }] },
   { id: 'info', route: '/info' },
-  { id: 'feedback', route: '/help-feedback' },
+  { id: 'feedback', route: '/', actions: [nav('意见反馈')] },
   { id: 'help', route: '/help-guide' },
   { id: 'news', route: '/', actions: [{ click: '更多', after: 2000 }] },
   {
@@ -235,7 +235,7 @@ export const ROLES = [
       },
       {
         id: 'home-toolbox-return', route: '/', actions: [
-          skipGuide, { click: /^工具箱$/, nth: 1 },
+          skipGuide, { click: /^工具箱$/ },
           { check: '分析工具' }, /^返回$/, { check: '今日练习' },
         ],
       },

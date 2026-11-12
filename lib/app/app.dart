@@ -127,7 +127,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
-      title: '绘画星球',
+      title: '美育集',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       initialRoute: initialRoute,

@@ -58,13 +58,13 @@ void main() {
       (tester) async {
         var taps = 0;
         await pumpCompanion(tester, edge: edge, onTap: () => taps++);
-        expect(portrait(tester).conceal, 0);
+        expect(portrait(tester).pose.conceal, 0);
         await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
-        expect(portrait(tester).conceal, closeTo(0.5, 0.001));
+        expect(portrait(tester).pose.conceal, closeTo(0.5, 0.001));
         await tester.pump(const Duration(seconds: 10));
         await tester.pumpAndSettle();
-        expect(portrait(tester).conceal, closeTo(2 / 3, 0.001));
+        expect(portrait(tester).pose.conceal, closeTo(2 / 3, 0.001));
         final target = find.byKey(const ValueKey('floating-toolbox-handle'));
         final size = tester.getSize(target);
         expect(size.shortestSide, greaterThanOrEqualTo(44));
@@ -88,12 +88,12 @@ void main() {
         tester.getCenter(find.byKey(const ValueKey('floating-toolbox-handle'))),
       );
       await tester.pumpAndSettle();
-      expect(portrait(tester).conceal, 0);
-      expect(portrait(tester).happy, isTrue);
+      expect(portrait(tester).pose.conceal, 0);
+      expect(portrait(tester).pose.mood, CompanionMood.happy);
       await mouse.moveTo(Offset.zero);
       await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
-      expect(portrait(tester).conceal, 0.5);
+      expect(portrait(tester).pose.conceal, 0.5);
       await mouse.removePointer();
       await tester.pumpWidget(const SizedBox());
     },
@@ -112,15 +112,15 @@ void main() {
           Offset(bounds.right - distanceFromEdge, bounds.center.dy),
         );
         await tester.pumpAndSettle();
-        expect(portrait(tester).happy, isTrue);
+        expect(portrait(tester).pose.mood, CompanionMood.happy);
         await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
-        expect(portrait(tester).conceal, 0.5);
-        expect(find.text('小墨 · 轻点用画具，拖动可贴边'), findsNothing);
+        expect(portrait(tester).pose.conceal, 0.5);
+        expect(find.text('小画 · 轻点用画具，拖动可贴边'), findsNothing);
         // 收纳可能让鼠标自动离开命中区；离开也不能把角色重新弹出来。
         await tester.pump(const Duration(seconds: 10));
         await tester.pumpAndSettle();
-        expect(portrait(tester).conceal, closeTo(2 / 3, 0.001));
+        expect(portrait(tester).pose.conceal, closeTo(2 / 3, 0.001));
         await mouse.removePointer();
         await tester.pumpWidget(const SizedBox());
       },
@@ -145,7 +145,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 13));
     await tester.pumpAndSettle();
-    expect(portrait(tester).conceal, 0);
+    expect(portrait(tester).pose.conceal, 0);
     // 桌面鼠标也可能处于 traditional 模式；实际按下后应退出键盘聚焦。
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     final point = tester.getCenter(
@@ -158,7 +158,7 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
     expect(detector.focusNode!.hasFocus, isFalse);
-    expect(portrait(tester).conceal, 0.5);
+    expect(portrait(tester).pose.conceal, 0.5);
     await mouse.removePointer();
     await tester.pumpWidget(const SizedBox());
   });
@@ -170,8 +170,10 @@ void main() {
         await pumpCompanion(tester, motion: reduced, reduced: reduced);
         await tester.pump(const Duration(seconds: 7));
         await tester.pump(const Duration(milliseconds: 300));
-        expect(portrait(tester).blink, 0);
-        expect(portrait(tester).glance, 0);
+        expect(portrait(tester).pose.blink, 0);
+        expect(portrait(tester).pose.peek, 0);
+        expect(portrait(tester).pose.wave, 0);
+        expect(portrait(tester).pose.dip, 0);
         expect(tester.binding.hasScheduledFrame, isFalse);
         await tester.pumpWidget(const SizedBox());
       },
@@ -184,15 +186,16 @@ void main() {
       await pumpCompanion(tester);
       await tester.pump(const Duration(seconds: 7));
       await tester.pump(const Duration(milliseconds: 350));
-      expect(portrait(tester).blink, greaterThan(0.2));
+      expect(portrait(tester).pose.blink, greaterThan(0.2));
       await tester.pumpAndSettle();
       expect(tester.binding.hasScheduledFrame, isFalse);
       // 第三次短动作会探头，之后恢复少露状态。
       await tester.pump(const Duration(seconds: 14));
       await tester.pump(const Duration(milliseconds: 700));
-      expect(portrait(tester).conceal, lessThan(0.6));
+      expect(portrait(tester).pose.peek, greaterThan(0.4));
       await tester.pumpAndSettle();
-      expect(portrait(tester).conceal, closeTo(2 / 3, 0.001));
+      expect(portrait(tester).pose.peek, 0);
+      expect(portrait(tester).pose.conceal, closeTo(2 / 3, 0.001));
       expect(tester.binding.hasScheduledFrame, isFalse);
       await tester.pumpWidget(const SizedBox());
     },
@@ -203,14 +206,14 @@ void main() {
   ) async {
     await pumpCompanion(tester, ticker: false);
     await tester.pump(const Duration(seconds: 30));
-    expect(portrait(tester).conceal, 0);
-    expect(portrait(tester).glance, 0);
+    expect(portrait(tester).pose.conceal, 0);
+    expect(portrait(tester).pose.look, Offset.zero);
     await pumpCompanion(tester);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump(const Duration(seconds: 30));
-    expect(portrait(tester).glance, 0);
+    expect(portrait(tester).pose.look, Offset.zero);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);

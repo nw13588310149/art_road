@@ -616,7 +616,7 @@ class _NavUnreadCapsule extends StatelessWidget {
   }
 }
 
-/// 侧栏品牌标识沿用艺考网，尺寸与原版一致。
+/// 侧栏品牌标识为美育集横版组合，占位尺寸与原版一致。
 class _ShellSidebarLogo extends StatelessWidget {
   const _ShellSidebarLogo({
     required this.logoUrl,
@@ -631,7 +631,15 @@ class _ShellSidebarLogo extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     height: height,
     child: Center(
-      child: AppAssetGraphic(AppAssets.shellLogo, width: width, height: height),
+      child: Semantics(
+        label: '美育集',
+        image: true,
+        child: AppAssetGraphic(
+          AppAssets.shellLogo,
+          width: width,
+          height: height,
+        ),
+      ),
     ),
   );
 }

@@ -1,4 +1,4 @@
-# 绘画星球（Painting Planet）
+# 美育集
 
 面向美术艺考生、画室老师与画室管理者的 iPad 横屏 App（艺考网出品）。围绕阅卷系统，提供学情中心、作品档案与作品点评、范画库、美术书刊、画室工具箱（三组 17 个工具），以及资讯、校园课件、云盘、视频、笔记、收藏、题库、AI 美术助教「小美同学」、校圈、智慧校园等通用模块。首页、新手引导和通知按学生、任课老师、班主任、宿管、管理员五种身份配置。
 
@@ -87,7 +87,7 @@ docs/             产品规划、设计规范、后端缺口清单、走查问�
 test/             单元测试与组件测试
 tool/
   qa/             1180×820 全角色截图走查脚本
-  brand/          艺考网图标渲染脚本
+  brand/          美育集图标渲染脚本
   ebooks/         示例书刊页面生成脚本
 ```
 
@@ -112,7 +112,7 @@ node tool/qa/screens.mjs --out=build/qa/after --roles=student --only=home,study
 ## 上线前需要替换
 
 - 演示素材：`assets/demo/**`（示例作品、原卷、视频、头像、画室 Logo、示例书刊）为演示生成或制作，需要换成画室授权的素材与书刊。
-- 品牌：App 图标 `assets/icon/app_icon.png`（由 `tool/brand/render_icons.mjs` 用艺考网图形标渲染，`flutter_launcher_icons` 生成各端图标）、侧栏与登录页 Logo `assets/images/brand/`（艺考网标志，取自品牌规范包）、登录插画 `assets/images/auth/bg_art.jpg`，上线前需品牌方确认。
+- 品牌：App 图标 `assets/icon/app_icon.png`（由 `tool/brand/render_icons.mjs` 用「美育集」字标渲染，`flutter_launcher_icons` 生成各端图标）、侧栏与登录页 Logo `assets/images/brand/meiyuji_logo.png`（ArtEd.Hub / 美育集 横版组合）、登录插画 `assets/images/auth/bg_art.jpg`，上线前需品牌方确认。
 - 包名：Android `com.yyzl.the_road_of_art_flutter`，iOS / macOS `com.uniapp.art`，与应用商店账号核对后再改签名配置。推送到 GitHub 供 Codemagic 构建的 iOS 体验包临时沿用音乐之路的 `com.uniapp.music` 与其开发证书。
 - 协议文本：`lib/features/common/ui/terms_page.dart` 中的服务协议与隐私政策为模板，需法务审核。
 - AI 作品分析：演示版只返回分析模板，正式版需接入支持图片理解的模型。

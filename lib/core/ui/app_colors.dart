@@ -1,6 +1,6 @@
 import 'package:flutter/painting.dart';
 
-/// 绘画星球统一色板，与艺考网机构端 `tokens.css` 对齐。
+/// 美育集统一色板，与艺考网机构端 `tokens.css` 对齐。
 ///
 /// 品牌紫只用于主操作、选中态、关键数字和链接；其余界面走墨色与中性灰。
 abstract final class AppColors {

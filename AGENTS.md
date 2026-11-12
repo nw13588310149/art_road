@@ -1,8 +1,8 @@
 # AGENTS
 
 ## Product
-- 绘画星球 (Painting Planet): a landscape iPad app for art-exam (美术艺考) students, studio teachers and studio staff, built around the marking system (阅卷系统).
-- 2.0 is a demo build: every request is answered by the local demo backend while keeping the real API paths. The app carries the 艺考网 logo; the app name stays 「绘画星球」.
+- 美育集: a landscape iPad app for art-exam (美术艺考) students, studio teachers and studio staff, built around the marking system (阅卷系统).
+- 2.0 is a demo build: every request is answered by the local demo backend while keeping the real API paths. The app name is 「美育集」. The logo is the ArtEd.Hub / 美育集 lockup in `assets/images/brand/meiyuji_logo.png`; the square app icon uses the 「美育集」 wordmark.
 - Product plan: `docs/美术之路产品规划.md`. Design rules and component library: `docs/设计规范.md`. Backend gaps before going live: `docs/后端缺口清单.md`. Run instructions and demo accounts: `README.md`. Audit findings and fix records: `docs/走查问题清单.md`, `docs/走查/`.
 
 ## Current Rules
@@ -21,7 +21,7 @@
 - Landscape dashboard shell (`ShellScaffold`: left nav + top bar) on a 1180×820 design base. `DashboardScaleScope.ui()` is identity now; kit components use fixed tokens. Kit overlays (`showAppDialog` / `showAppConfirm` / `showAppDrawer`) work inside and outside the shell; the legacy `showScaledDialog` / `showConfirmDialog` also inherit the shell scale when present and fall back to identity outside it.
 - The home page is role-based: `homeSectionsFor(role)` in `lib/features/home/state/home_sections.dart` decides the cards per role.
 - Shared shell areas such as the left navigation and top bar stay reusable and stable.
-- Navigation labels are role-based (`isStaffRole`): students see 我的学情 / 作品档案, staff see 班级学情 / 作品点评.
+- Left nav keeps 首页、小美同学、学情、校园课件（学校开启时）、我的云盘、视频中心、智慧校园、我的笔记、我的收藏、个人中心, plus a fixed footer 「意见反馈」. Labels are role-based (`isStaffRole`): students see 我的学情, staff see 班级学情; dorm managers do not see 学情.
 
 ## Architecture
 - Routing: Navigator 1.0 `onGenerateRoute` with `RoutePaths`. Art routes and their arguments:

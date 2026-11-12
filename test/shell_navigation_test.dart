@@ -39,8 +39,8 @@ void main() {
     test('nav roots highlight themselves', () {
       expect(shellActiveNavIndex(routes, RoutePaths.home), 0);
       expect(
-        shellActiveNavIndex(routes, RoutePaths.gallery),
-        indexOf(RoutePaths.gallery),
+        shellActiveNavIndex(routes, RoutePaths.videoTutorial),
+        indexOf(RoutePaths.videoTutorial),
       );
       expect(
         shellActiveNavIndex(routes, '/smart-campus/sign-records'),
@@ -110,8 +110,26 @@ void main() {
       schoolCoursewareEnabled: true,
       isStaff: true,
       role: 'teacher',
-    ).map((item) => item.label);
-    expect(teacher, containsAll(['班级学情', '作品点评']));
+    ).map((item) => item.label).toList();
+    expect(teacher, contains('班级学情'));
+    expect(teacher, isNot(contains('作品点评')));
+    expect(
+      buildDefaultNavItems(
+        schoolCoursewareEnabled: true,
+      ).map((item) => item.label),
+      [
+        '首页',
+        '小美同学',
+        '我的学情',
+        '校园课件',
+        '我的云盘',
+        '视频中心',
+        '智慧校园',
+        '我的笔记',
+        '我的收藏',
+        '个人中心',
+      ],
+    );
   });
 
   test('小美同学 uses the original navigation icon', () {
@@ -166,10 +184,10 @@ void main() {
     testWidgets('only the current item uses the reference background image', (
       tester,
     ) async {
-      await pumpNav(tester, route: RoutePaths.gallery);
+      await pumpNav(tester, route: RoutePaths.videoTutorial);
       expect(activeBackground(), findsOneWidget);
       final selection = tester.getRect(activeBackground());
-      expect(selection.contains(tester.getCenter(find.text('范画库'))), isTrue);
+      expect(selection.contains(tester.getCenter(find.text('视频中心'))), isTrue);
       expect(selection.contains(tester.getCenter(find.text('首页'))), isFalse);
       final label = tester.widget<Text>(find.text('首页'));
       expect(label.style?.fontSize, 15);
@@ -202,6 +220,8 @@ void main() {
         onToggle: () => toggles++,
         onNavigate: (route) => opened = route,
       );
+      expect(find.text('范画库'), findsNothing);
+      expect(find.text('工具箱'), findsNothing);
       final feedback = tester.widget<Text>(find.text('意见反馈'));
       expect(feedback.style?.color, const Color(0xFFD1D1D1));
       expect(feedback.style?.fontSize, 12);
