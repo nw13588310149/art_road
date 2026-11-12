@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/data/toolbox_dock_preferences.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/state/toolbox_dock_controller.dart';
+import 'package:the_road_of_art_flutter/features/art_toolbox/state/page_tools_controller.dart';
+import 'package:the_road_of_art_flutter/features/art_toolbox/data/toolbox_catalog.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/ui/floating_toolbox_host.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/ui/toolbox_route_observer.dart';
 
@@ -94,38 +96,45 @@ void main() {
     const Size(1024, 768),
     const Size(720, 400),
   ]) {
-    testWidgets(
-      'expand, full screen, retain settings, resume and return at $size',
-      (tester) async {
-        final nav = await _pumpHost(tester, size);
-        await tester.tap(find.byKey(_handleKey));
-        await tester.pumpAndSettle();
-        expect(find.text('随手用画具'), findsOneWidget);
-        await tester.tap(find.text('速写计时练习'));
-        await tester.pumpAndSettle();
-        expect(find.text('收起工具'), findsOneWidget);
-        final semantics = tester.ensureSemantics();
-        expect(find.bySemanticsLabel('收起工具'), findsOneWidget);
-        semantics.dispose();
-        await tester.ensureVisible(find.text('30 秒'));
-        await tester.tap(find.text('30 秒'));
-        await tester.pump();
-        await tester.tap(find.text('收起工具'));
-        await tester.pumpAndSettle();
-        expect(find.text('业务页面 /'), findsOneWidget);
-        nav.currentState!.pushNamed<void>('/notes');
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(_handleKey));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('继续 · 速写计时练习'));
-        await tester.pumpAndSettle();
-        expect(find.textContaining('共 10 张 · 每张 30 秒'), findsOneWidget);
-        await tester.tap(find.text('收起工具'));
-        await tester.pumpAndSettle();
-        expect(find.text('业务页面 /notes'), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      },
-    );
+    testWidgets('drawer applies tools to source page at $size', (tester) async {
+      final nav = await _pumpHost(tester, size);
+      await tester.tap(find.byKey(_handleKey));
+      await tester.pumpAndSettle();
+      final rect = tester.getRect(
+        find.byKey(const ValueKey('page-tools-drawer')),
+      );
+      expect(rect.right, size.width);
+      expect(rect.top, 0);
+      expect(rect.height, size.height);
+      await tester.tap(find.bySemanticsLabel(RegExp('在当前页面使用构图网格')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('page-tool-lines')), findsOneWidget);
+      expect(find.text('业务页面 /'), findsOneWidget);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(FloatingToolboxHost)),
+      );
+      expect(container.read(pageToolsProvider).tool, ArtTool.grid);
+      await tester.ensureVisible(find.text('4 × 4'));
+      await tester.tap(find.text('4 × 4'));
+      await tester.tap(find.bySemanticsLabel('收起画具抽屉'));
+      await tester.pumpAndSettle();
+      expect(container.read(pageToolsProvider).grid, 4);
+      expect(find.byKey(const ValueKey('page-tool-lines')), findsOneWidget);
+      await tester.tap(find.text('调整'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.bySemanticsLabel(RegExp('在当前页面使用明度检查')));
+      await tester.tap(find.bySemanticsLabel(RegExp('在当前页面使用明度检查')));
+      await tester.pumpAndSettle();
+      expect(container.read(pageToolsProvider).tool, ArtTool.value);
+      await nav.currentState!.maybePop();
+      await tester.pumpAndSettle();
+      expect(find.text('业务页面 /'), findsOneWidget);
+      nav.currentState!.pushNamed<void>('/notes');
+      await tester.pumpAndSettle();
+      expect(container.read(pageToolsProvider).tool, isNull);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
   }
 
   testWidgets(
@@ -180,26 +189,38 @@ void main() {
     expect(find.text('业务页面 /'), findsOneWidget);
   });
 
-  testWidgets('minimizing pauses a running sketch and retains the exercise', (
-    tester,
-  ) async {
-    await _pumpHost(tester, const Size(1024, 768));
-    await tester.tap(find.byKey(_handleKey));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('速写计时练习'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('开始练习'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 2));
-    await tester.tap(find.text('收起工具'));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 65));
-    await tester.tap(find.byKey(_handleKey));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('继续 · 速写计时练习'));
-    await tester.pumpAndSettle();
-    expect(find.text('已暂停，点击继续'), findsOneWidget);
-    expect(find.text('练习回顾'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'timer remains active when drawer closes; only footer opens full toolbox',
+    (tester) async {
+      await _pumpHost(tester, const Size(1024, 768));
+      await tester.tap(find.byKey(_handleKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('速写计时'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('开始计时'));
+      await tester.tap(find.bySemanticsLabel('收起画具抽屉'));
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(FloatingToolboxHost)),
+      );
+      expect(container.read(pageToolsProvider).running, isTrue);
+      final semantics = tester.ensureSemantics();
+      final timerNode = tester.getSemantics(
+        find.bySemanticsLabel(RegExp('速写 [0-9]')),
+      );
+      expect(timerNode.rect.width, lessThan(400));
+      semantics.dispose();
+      expect(find.text('业务页面 /'), findsOneWidget);
+      await tester.tap(find.text('调整'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('进入完整工具箱 · 17 个工具'));
+      await tester.pumpAndSettle();
+      expect(find.text('看画分析'), findsOneWidget);
+      expect(container.read(pageToolsProvider).running, isFalse);
+      await tester.tap(find.text('收起工具'));
+      await tester.pumpAndSettle();
+      expect(find.text('业务页面 /'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 }
