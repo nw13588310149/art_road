@@ -130,6 +130,16 @@ void main() {
         size: Size(width, 732),
       );
       expect(find.text('学习进度'), findsOneWidget);
+      final subjectCards = [
+        for (final code in ['sketch', 'color', 'speed'])
+          tester.getRect(find.byKey(ValueKey('school-course-$code'))),
+      ];
+      for (final card in subjectCards.skip(1)) {
+        expect(card.width, closeTo(subjectCards.first.width, 0.01));
+        expect(card.top, subjectCards.first.top);
+        expect(card.height, subjectCards.first.height);
+      }
+      expect(find.text('练习动态与比例'), findsOneWidget);
       expect(find.text('课程进度'), findsNWidgets(3));
       expect(find.text('总共'), findsNWidgets(3));
       expect(find.text('已上'), findsNWidgets(3));

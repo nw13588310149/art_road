@@ -530,7 +530,13 @@ Map<String, dynamic> cbTeacherLeaveJson(Map<String, dynamic> m) {
     },
     'roleName': staff == null
         ? ''
-        : (staff.roles.contains('dormManager') ? '宿管' : '${staff.subject}老师'),
+        : (staff.roles.contains('dormManager')
+              ? '宿管'
+              : staff.roles.contains('principal')
+              ? '校长'
+              : staff.subject.isEmpty
+              ? '教务老师'
+              : '${staff.subject}老师'),
   };
 }
 

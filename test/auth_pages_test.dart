@@ -133,6 +133,31 @@ void main() {
       expect(_agreed(tester), isFalse);
       await _settleToast(tester);
     });
+
+    testWidgets('lists all seven demo identities without overflow', (
+      tester,
+    ) async {
+      final repository = await _pumpPage(tester, const LoginPage());
+      for (final label in const [
+        '学生 · 林小雨',
+        '任课老师 · 李静',
+        '科目组长 · 张明远',
+        '班主任 · 赵雪',
+        '宿管 · 马红梅',
+        '管理员 · 王敏',
+        '校长 · 秦文博',
+      ]) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      expect(tester.takeException(), isNull);
+
+      await tester.ensureVisible(find.text('校长 · 秦文博'));
+      await tester.tap(find.text('校长 · 秦文博'));
+      await tester.pump();
+      await tester.pump();
+      expect(repository.loginCalls, 1);
+      await _settleToast(tester);
+    });
   });
 
   testWidgets('RegisterPage has confirm password and no forgot link', (
@@ -155,17 +180,9 @@ void main() {
     final field = find.byType(AppIconInputField).at(1);
     final text = find.text('获取验证码');
     final button = find.ancestor(of: text, matching: find.byType(AppPressable));
-    final editor = find.descendant(
-      of: field,
-      matching: find.byType(EditableText),
-    );
-
     expect(tester.getSize(button), const Size(117, 45));
     expect(tester.getSize(field).height, 45);
-    expect(
-      tester.getCenter(button).dy,
-      closeTo(tester.getCenter(editor).dy, 1),
-    );
+    expect(tester.getCenter(button).dy, closeTo(tester.getCenter(field).dy, 1));
     expect(tester.getCenter(button).dy, closeTo(tester.getCenter(text).dy, 1));
     expect(tester.widget<Text>(text).style?.fontSize, 14);
     expect(

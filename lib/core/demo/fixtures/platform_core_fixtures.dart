@@ -179,10 +179,7 @@ Map<String, dynamic> _notice(
 List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
   final role = account.role;
   final student = role == DemoRole.student;
-  final staffStudy =
-      role == DemoRole.teacher ||
-      role == DemoRole.headTeacher ||
-      role == DemoRole.admin;
+  final staffStudy = role.teaches || role.managesSchool;
   final notices = <Map<String, dynamic>>[];
 
   final personIndex = account.personIndex;
@@ -206,8 +203,7 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
     }
   }
   final teacherId = account.teacherId;
-  if (teacherId != null &&
-      (role == DemoRole.teacher || role == DemoRole.headTeacher)) {
+  if (teacherId != null && role.teaches) {
     final queue = _latestPendingFor(teacherId);
     if (queue != null) {
       final work = queue.work;
@@ -241,9 +237,11 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
   final campus = switch (role) {
     DemoRole.student => '【校园】班主任发布了新的班级通知，可在「智慧校园」查看。',
     DemoRole.teacher => '【校园】学校发布了新的教学通知，可在「智慧校园」查看。',
+    DemoRole.subjectLead => '【校园】学校发布了新的教学通知，本组老师的课表与签课可在「智慧校园」查看。',
     DemoRole.headTeacher => '【校园】班级有新的请假申请与考勤记录，可在「智慧校园」的班级工作台查看。',
     DemoRole.dormManager => '【校园】今晚晚查寝 21:30 开始、$_eveningCheckTime 截止，请按时到岗。',
     DemoRole.admin => '【校园】有新的请假审批与小课签课待处理，可在「智慧校园」查看。',
+    DemoRole.principal => '【校园】校长信箱有新的来信，分管校区的出勤与请假可在「智慧校园」查看。',
   };
   notices.add(
     _notice(
@@ -254,7 +252,7 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
     ),
   );
 
-  if (role != DemoRole.dormManager && role != DemoRole.admin) {
+  if (role != DemoRole.dormManager && !role.managesSchool) {
     notices.add(
       _notice(
         4,

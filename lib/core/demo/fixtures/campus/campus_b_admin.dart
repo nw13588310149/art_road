@@ -469,11 +469,16 @@ const Map<String, String> _staffIntro = {
   't-8': '负责语文、英语文化课辅导，帮助学生兼顾专业与文化成绩。',
   't-9': '教务主管，统筹排课、考务安排与家校沟通。',
   'd-1': '宿舍管理老师，负责两栋学生公寓的查寝、安全巡查与生活服务。',
+  'p-1': '校长，分管城东校区，并单独分管校考提高班的教学与日常管理。',
+  'p-2': '校长，分管城西校区与安宁校区的教学与日常管理。',
 };
 
 String _staffSubject(DemoCampusStaff s) {
   if (s.subject.isNotEmpty) {
     return s.subject;
+  }
+  if (s.roles.contains('principal')) {
+    return '学校管理';
   }
   return s.roles.contains('dormManager') ? '宿舍管理' : '教务管理';
 }
@@ -481,6 +486,9 @@ String _staffSubject(DemoCampusStaff s) {
 String _staffDept(DemoCampusStaff s) {
   if (s.subject.isNotEmpty) {
     return '${s.subject}教研组';
+  }
+  if (s.roles.contains('principal')) {
+    return '校长室';
   }
   return s.roles.contains('dormManager') ? '后勤处' : '教务处';
 }

@@ -1,11 +1,11 @@
 {
-    "name": "绘画星球",
-    "short_name": "绘画星球",
+    "name": "美育集",
+    "short_name": "美育集",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#715EFE",
-    "description": "绘画星球：面向美术艺考生与老师的学习与学情平台",
+    "description": "美育集：面向美术艺考生与老师的学习与学情平台",
     "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [

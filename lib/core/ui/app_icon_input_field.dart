@@ -142,7 +142,11 @@ class _AppIconInputFieldState extends State<AppIconInputField> {
               cursorWidth: 1.5,
               cursorHeight: 16,
               textAlignVertical: TextAlignVertical.center,
-              decoration: InputDecoration.collapsed(
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                // 苹方的字形在输入行内偏下，用底部留白校正视觉中心。
+                contentPadding: const EdgeInsets.only(bottom: 4),
                 hintText: widget.hint,
                 hintStyle: textStyle.copyWith(color: AppColors.textPlaceholder),
                 hintFadeDuration: Duration.zero,

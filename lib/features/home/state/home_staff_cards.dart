@@ -5,6 +5,7 @@ import '../../../core/constants/app_assets.dart';
 import '../../artworks/data/artwork_models.dart';
 import '../../artworks/data/artwork_repository.dart';
 import '../data/home_repository.dart';
+import 'home_dashboard_state.dart';
 
 /// 今日待办里一行点开去哪里。
 enum HomeTodoAction {
@@ -88,7 +89,7 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
     unit: '条',
     attention: input.unreadNotices > 0,
   );
-  switch (role.trim()) {
+  switch (homeRoleKind(role)) {
     case 'headTeacher':
       final pending = input.pendingReviews;
       return [

@@ -112,12 +112,52 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   }
 
   void _onQuickActionTap(HomeQuickAction action) {
+    if (action.comingSoon) {
+      _showComingSoon();
+      return;
+    }
     final campus = action.campus;
     if (campus != null) {
       _openCampus(campus);
       return;
     }
     Navigator.pushNamed(context, action.route, arguments: action.arguments);
+  }
+
+  void _showComingSoon() {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.8),
+      barrierDismissible: true,
+      builder: (ctx) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.asset(
+                AppAssets.homeComingSoon,
+                width: 520,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 15),
+            Semantics(
+              button: true,
+              label: '关闭',
+              child: GestureDetector(
+                onTap: () => Navigator.of(ctx).pop(),
+                child: Image.asset(
+                  AppAssets.homeDialogClose,
+                  width: 40,
+                  height: 40,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 先切到智慧校园对应视图，再进入智慧校园页。
@@ -158,6 +198,10 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
         campus.openNotificationManagement();
       case HomeCampusTarget.classWorkbench:
         campus.openClassWorkbench();
+      case HomeCampusTarget.myHomework:
+        campus.openMyHomework();
+      case HomeCampusTarget.homeworkReview:
+        campus.openHomeworkReview();
     }
     Navigator.pushNamed(context, RoutePaths.smartCampus);
   }
@@ -259,7 +303,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
 
   /// 右栏今日待办底部的主操作：宿管直接开始查寝，管理员进入智慧校园工作台。
   Widget? _sideTodoFooter(String role) {
-    return switch (role) {
+    return switch (homeRoleKind(role)) {
       'dormManager' => AppButton(
         label: '按宿舍查寝',
         expand: true,

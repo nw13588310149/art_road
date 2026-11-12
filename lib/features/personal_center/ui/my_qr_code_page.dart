@@ -67,7 +67,7 @@ class _MyQrCodePageState extends ConsumerState<MyQrCodePage> {
           children: [
             AppPageHeader(
               title: '我的二维码',
-              subtitle: '好友扫码即可下载绘画星球并添加你为好友',
+              subtitle: '好友扫码即可下载美育集并添加你为好友',
               onBack: _back,
               actions: [
                 AppButton(

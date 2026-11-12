@@ -822,7 +822,7 @@ class _ActionListCard extends StatelessWidget {
               if (checkStatusEnabled)
                 _ActionTile(
                   iconAsset: AppAssets.profileRecommend,
-                  label: '推荐绘画星球给好友',
+                  label: '推荐美育集给好友',
                   onTap: onRecommend,
                   showDivider: true,
                 ),
@@ -1113,7 +1113,7 @@ class _QrCodeCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            '快来与我一起在绘画星球学习吧～',
+            '快来与我一起在美育集学习吧～',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF0B081A),
@@ -1124,7 +1124,7 @@ class _QrCodeCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            '好友可直接通过扫描二维码下载绘画星球并添加你为好友',
+            '好友可直接通过扫描二维码下载美育集并添加你为好友',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFFCECED1),
@@ -1398,7 +1398,7 @@ class _RecommendDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '把绘画星球推荐给你的同学和朋友，一起在这里学习绘画～',
+            '把美育集推荐给你的同学和朋友，一起在这里学习绘画～',
             style: TextStyle(
               color: Color(0xFF6D6B75),
               fontSize: 14,

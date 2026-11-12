@@ -24,9 +24,11 @@ abstract final class AppAssets {
   static const authPassword = 'assets/images/auth/pass.png';
   static const authSms = 'assets/images/auth/code.png';
 
-  /// 艺考网标识（来自艺考网品牌库 yikao-marketing/brand/logo）。
-  static const shellLogo = 'assets/images/brand/yikaowang_logo.svg';
-  static const brandMark = 'assets/images/brand/yikaowang_mark.svg';
+  /// 美育集横版标识（ArtEd.Hub / 美育集，透明底）。
+  static const shellLogo = 'assets/images/brand/meiyuji_logo.png';
+
+  /// 「美育集」字标，用于小尺寸角标和应用图标源图。
+  static const brandMark = 'assets/images/brand/meiyuji_mark.png';
 
   static const leftNavHome = 'assets/images/shell/leftNav/home.png';
   static const leftNavAi = 'assets/images/shell/leftNav/AI.png';

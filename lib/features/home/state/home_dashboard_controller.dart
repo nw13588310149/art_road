@@ -41,8 +41,10 @@ List<HomeWeekDayItem> alignWeekWithCourses(
 }
 
 /// 有个人课表的角色：学生、任课老师、班主任。
-bool homeRoleHasTimetable(String role) =>
-    role == 'student' || role == 'teacher' || role == 'headTeacher';
+bool homeRoleHasTimetable(String role) => switch (homeRoleKind(role)) {
+  'student' || 'teacher' || 'headTeacher' => true,
+  _ => false,
+};
 
 class HomeDashboardController extends StateNotifier<HomeDashboardState> {
   HomeDashboardController({

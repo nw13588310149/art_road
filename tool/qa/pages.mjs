@@ -114,6 +114,15 @@ const sharedContent = [
     ],
   },
   { id: 'courseware', route: '/', actions: [nav('校园课件')] },
+  {
+    id: 'courseware-speed',
+    route: '/',
+    actions: [
+      nav('校园课件'),
+      { click: /^速写课程/, role: 'button' },
+      { check: /速写课堂实录|速写晚自习/ },
+    ],
+  },
   { id: 'cloud', route: '/', actions: [nav('我的云盘')] },
   { id: 'video', route: '/', actions: [nav('视频中心')] },
   {
@@ -226,7 +235,7 @@ export const ROLES = [
       },
       {
         id: 'home-toolbox-return', route: '/', actions: [
-          skipGuide, { click: /^工具箱$/, nth: 1 },
+          skipGuide, { click: /^工具箱$/ },
           { check: '分析工具' }, /^返回$/, { check: '今日练习' },
         ],
       },
@@ -355,6 +364,17 @@ export const ROLES = [
     ],
   },
   {
+    id: 'subjectLead',
+    chip: '科目组长 · 张明远',
+    steps: [
+      homeStep,
+      guideStep,
+      { id: 'artworks', route: '/artworks' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
+      campusAction('schedule', '授课课表'),
+    ],
+  },
+  {
     id: 'headTeacher',
     chip: '班主任 · 赵雪',
     steps: [
@@ -405,6 +425,18 @@ export const ROLES = [
       campusAction('group-chat', '群聊'),
       campusAction('mailbox', '校长信箱'),
       campusAction('circle-governance', '校圈治理'),
+    ],
+  },
+  {
+    id: 'principal',
+    chip: '校长 · 秦文博',
+    steps: [
+      homeStep,
+      guideStep,
+      { id: 'study', route: '/study' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
+      campusAction('teachers', '教师管理'),
+      campusAction('mailbox', '校长信箱'),
     ],
   },
 ];

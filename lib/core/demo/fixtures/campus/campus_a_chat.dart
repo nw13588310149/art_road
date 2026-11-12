@@ -182,7 +182,7 @@ abstract final class CampusAChat {
   }
 
   static List<CampusChatGroup> groupsOf(DemoAccount account) {
-    if (account.role == DemoRole.admin) {
+    if (account.role.managesSchool) {
       return groups;
     }
     if (CampusA.isStudent(account)) {
@@ -208,7 +208,7 @@ abstract final class CampusAChat {
   }
 
   static bool _canManage(DemoAccount account, CampusChatGroup group) =>
-      account.role == DemoRole.admin || group.headUserId == account.userId;
+      account.role.managesSchool || group.headUserId == account.userId;
 
   // ── 群状态（公告） ──────────────────────────────────────────────────
 
@@ -584,7 +584,7 @@ abstract final class CampusAChat {
       'doNotDisturb': mute,
       'isPinned': pin ? 1 : 0,
       'isHeadTeacher': g.headUserId == account.userId,
-      'isAdmin': account.role == DemoRole.admin,
+      'isAdmin': account.role.managesSchool,
       'canEditAnnouncement': manage,
     };
   }

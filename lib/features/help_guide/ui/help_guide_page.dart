@@ -351,9 +351,9 @@ class _GuideCover extends StatelessWidget {
               top: AppSpace.s8,
               left: AppSpace.s8,
               child: AppAssetGraphic(
-                AppAssets.brandMark,
-                width: 20,
-                height: 20,
+                AppAssets.shellLogo,
+                height: 16,
+                fit: BoxFit.contain,
               ),
             ),
             Align(
@@ -368,7 +368,7 @@ class _GuideCover extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '绘画星球 功能指南',
+                      '美育集 功能指南',
                       textAlign: TextAlign.center,
                       style: AppText.title20.copyWith(
                         color: AppColors.brandDeep,

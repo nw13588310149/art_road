@@ -674,8 +674,12 @@ class CbScope {
 
 CbScope cbScope(DemoRequest req) {
   final account = req.account;
-  if (account.role == DemoRole.admin) {
-    return CbScope._(account, DemoCampusData.staffById('t-9'), true);
+  if (account.role.managesSchool) {
+    // 教务管理员与校长都看全部班级；名册里找不到本人时按教务主管处理。
+    final self =
+        DemoCampusData.staffByUserId(account.userId) ??
+        DemoCampusData.staffById('t-9');
+    return CbScope._(account, self, true);
   }
   if (account.role == DemoRole.student) {
     return CbScope._(account, null, false);
@@ -691,8 +695,14 @@ CbScope cbScope(DemoRequest req) {
 /// 教职工身份 CSV（与 `teacherRole.roles` 一致），班主任身份按班级实时判断。
 String cbStaffRoles(DemoCampusStaff s) {
   final tokens = <String>[];
+  if (s.roles.contains('principal')) {
+    tokens.add('headmaster');
+  }
   if (s.roles.contains('admin')) {
     tokens.add('manager');
+  }
+  if (DemoCampusData.groupLedBy(s.id) != null) {
+    tokens.add('subject_leader');
   }
   if (cbClasses().any(
     (c) => !cbIsSmallClass(c) && cbStr(c['headTeacherId']) == s.userId,

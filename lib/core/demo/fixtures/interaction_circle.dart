@@ -92,7 +92,7 @@ void registerCircleFixtures(DemoRouter r) {
   r.post('$_base/postsDelete', (req) {
     final viewer = req.account;
     final post = _requirePost(req.str('id'));
-    if (post['userId'] != viewer.userId && viewer.role != DemoRole.admin) {
+    if (post['userId'] != viewer.userId && !viewer.role.managesSchool) {
       throw const DemoApiException('只能删除自己发布的动态');
     }
     _closeReportsOnDelete(post, viewer);
@@ -165,7 +165,7 @@ void registerCircleFixtures(DemoRouter r) {
     final allowed =
         comment['userId'] == viewer.userId ||
         post?['userId'] == viewer.userId ||
-        viewer.role == DemoRole.admin;
+        viewer.role.managesSchool;
     if (!allowed) {
       throw const DemoApiException('只能删除自己的评论或自己动态下的评论');
     }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../app/router/route_paths.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../common/ui/terms_page.dart';
 import 'auth_design_canvas.dart';
 
@@ -92,7 +92,7 @@ class _Scaled extends StatelessWidget {
   }
 }
 
-/// 卡片上方的艺考网标识。
+/// 卡片上方的美育集标识。
 class AuthBrandLogo extends StatelessWidget {
   const AuthBrandLogo({super.key});
 
@@ -101,13 +101,12 @@ class AuthBrandLogo extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Semantics(
-        label: '艺考网',
+        label: '美育集',
         image: true,
-        child: SvgPicture.asset(
+        child: AppAssetGraphic(
           AppAssets.shellLogo,
           height: 40,
           fit: BoxFit.contain,
-          alignment: Alignment.centerLeft,
         ),
       ),
     );

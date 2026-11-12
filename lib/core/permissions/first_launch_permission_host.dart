@@ -98,7 +98,7 @@ Future<bool> showFirstLaunchPermissionDialog(BuildContext context) async {
     barrierDismissible: false,
     builder: (dialogContext) => AppDialog(
       title: '权限使用说明',
-      message: '为正常使用以下功能，绘画星球需要申请对应的系统权限。拒绝后不影响其他功能，也可以随时在系统设置中修改。',
+      message: '为正常使用以下功能，美育集需要申请对应的系统权限。拒绝后不影响其他功能，也可以随时在系统设置中修改。',
       actions: [
         AppButton(
           label: '稍后再说',

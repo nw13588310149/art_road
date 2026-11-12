@@ -261,21 +261,24 @@ class ShellState {
 }
 
 /// 后端 `myInfo.user.role` 是否为教职角色（任课老师 / 班主任 / 宿管 / 管理员）。
-/// 学情中心与作品档案对教职角色展示「班级学情」「作品点评」视角。
+/// 学情入口对教职角色展示「班级学情」。
 bool isStaffRole(String role) {
   final value = role.trim();
   return value.isNotEmpty && value != 'student';
 }
 
-/// 侧栏导航项（按显示顺序）。[role] 为 dormManager（宿管）时不显示「班级学情」
-/// 「作品点评」：宿管不查看学生成绩与作品。条目数不固定，新增导航项直接插入列表。
+/// 侧栏导航项（按显示顺序）。只保留首页、小美同学、学情、校园课件、
+/// 我的云盘、视频中心、智慧校园、我的笔记、我的收藏、个人中心。
+/// 底部「意见反馈」由 [buildFeedbackFooterNavItem] 单独固定，不在此列表中。
+/// [role] 为 dormManager（宿管）时不显示学情：宿管不查看学生成绩。
+/// 校园课件随学校开关显示。
 List<ShellNavItem> buildDefaultNavItems({
   required bool schoolCoursewareEnabled,
   bool isStaff = false,
   String role = '',
 }) {
   final academic = role.trim() != 'dormManager';
-  final base = <ShellNavItem>[
+  return [
     const ShellNavItem(
       label: '首页',
       route: RoutePaths.home,
@@ -288,87 +291,57 @@ List<ShellNavItem> buildDefaultNavItems({
       icon: AppAssets.leftNavAi,
       activeIcon: AppAssets.leftNavAi,
     ),
-    if (academic) ...[
+    if (academic)
       ShellNavItem(
         label: isStaff ? '班级学情' : '我的学情',
         route: RoutePaths.studyCenter,
         icon: AppAssets.leftNavXueqing,
         activeIcon: AppAssets.leftNavXueqing,
       ),
-      ShellNavItem(
-        label: isStaff ? '作品点评' : '作品档案',
-        route: RoutePaths.artworks,
-        icon: AppAssets.leftNavZuopin,
-        activeIcon: AppAssets.leftNavZuopin,
+    if (schoolCoursewareEnabled)
+      const ShellNavItem(
+        label: '校园课件',
+        route: RoutePaths.school,
+        icon: AppAssets.leftNavSchool,
+        activeIcon: AppAssets.leftNavSchool,
       ),
-    ],
     const ShellNavItem(
-      label: '范画库',
-      route: RoutePaths.gallery,
-      icon: AppAssets.leftNavFanhua,
-      activeIcon: AppAssets.leftNavFanhua,
-    ),
-    const ShellNavItem(
-      label: '美术书刊',
-      route: RoutePaths.ebooks,
-      icon: AppAssets.leftNavShukan,
-      activeIcon: AppAssets.leftNavShukan,
-    ),
-    const ShellNavItem(
-      label: '工具箱',
-      route: RoutePaths.artToolbox,
-      icon: AppAssets.leftNavGongju,
-      activeIcon: AppAssets.leftNavGongju,
-    ),
-  ];
-
-  const school = ShellNavItem(
-    label: '校园课件',
-    route: RoutePaths.school,
-    icon: AppAssets.leftNavSchool,
-    activeIcon: AppAssets.leftNavSchool,
-  );
-
-  const tail = <ShellNavItem>[
-    ShellNavItem(
       label: '我的云盘',
       route: RoutePaths.courseware,
       icon: AppAssets.leftNavYunpan,
       activeIcon: AppAssets.leftNavYunpan,
     ),
-    ShellNavItem(
+    const ShellNavItem(
       label: '视频中心',
       route: RoutePaths.videoTutorial,
       icon: AppAssets.leftNavVideo,
       activeIcon: AppAssets.leftNavVideo,
     ),
-    ShellNavItem(
+    const ShellNavItem(
       label: '智慧校园',
       route: RoutePaths.smartCampus,
       icon: AppAssets.leftNavXiaoyuan,
       activeIcon: AppAssets.leftNavXiaoyuan,
     ),
-    ShellNavItem(
+    const ShellNavItem(
       label: '我的笔记',
       route: RoutePaths.myNotes,
       icon: AppAssets.leftNavBiji,
       activeIcon: AppAssets.leftNavBiji,
     ),
-    ShellNavItem(
+    const ShellNavItem(
       label: '我的收藏',
       route: RoutePaths.myCollection,
       icon: AppAssets.leftNavShoucang,
       activeIcon: AppAssets.leftNavShoucang,
     ),
-    ShellNavItem(
+    const ShellNavItem(
       label: '个人中心',
       route: RoutePaths.personalCenter,
       icon: AppAssets.leftNavInfo,
       activeIcon: AppAssets.leftNavInfo,
     ),
   ];
-
-  return [...base, if (schoolCoursewareEnabled) school, ...tail];
 }
 
 /// 侧栏底部固定的「意见反馈」入口（弱样式，见 ShellLeftNav._FooterFeedbackLink）。

@@ -1,8 +1,8 @@
 # AGENTS
 
 ## Product
-- 绘画星球 (Painting Planet): a landscape iPad app for art-exam (美术艺考) students, studio teachers and studio staff, built around the marking system (阅卷系统).
-- 2.0 is a demo build: every request is answered by the local demo backend while keeping the real API paths. The app carries the 艺考网 logo; the app name stays 「绘画星球」.
+- 美育集: a landscape iPad app for art-exam (美术艺考) students, studio teachers and studio staff, built around the marking system (阅卷系统).
+- 2.0 is a demo build: every request is answered by the local demo backend while keeping the real API paths. The app name is 「美育集」. The logo is the ArtEd.Hub / 美育集 lockup in `assets/images/brand/meiyuji_logo.png`; the square app icon uses the 「美育集」 wordmark.
 - Product plan: `docs/美术之路产品规划.md`. Design rules and component library: `docs/设计规范.md`. Backend gaps before going live: `docs/后端缺口清单.md`. Run instructions and demo accounts: `README.md`. Audit findings and fix records: `docs/走查问题清单.md`, `docs/走查/`.
 
 ## Current Rules
@@ -21,7 +21,7 @@
 - Landscape dashboard shell (`ShellScaffold`: left nav + top bar) on a 1180×820 design base. `DashboardScaleScope.ui()` is identity now; kit components use fixed tokens. Kit overlays (`showAppDialog` / `showAppConfirm` / `showAppDrawer`) work inside and outside the shell; the legacy `showScaledDialog` / `showConfirmDialog` also inherit the shell scale when present and fall back to identity outside it.
 - The home page is role-based: `homeSectionsFor(role)` in `lib/features/home/state/home_sections.dart` decides the cards per role.
 - Shared shell areas such as the left navigation and top bar stay reusable and stable.
-- Navigation labels are role-based (`isStaffRole`): students see 我的学情 / 作品档案, staff see 班级学情 / 作品点评.
+- Left nav keeps 首页、小美同学、学情、校园课件（学校开启时）、我的云盘、视频中心、智慧校园、我的笔记、我的收藏、个人中心, plus a fixed footer 「意见反馈」. Labels are role-based (`isStaffRole`): students see 我的学情, staff see 班级学情; dorm managers do not see 学情.
 
 ## Architecture
 - Routing: Navigator 1.0 `onGenerateRoute` with `RoutePaths`. Art routes and their arguments:
@@ -50,7 +50,7 @@
 - `DemoStore` (memory + SharedPreferences, key prefix `demo_store:`) holds all writable demo state. `DemoStore.reset()` restores the seeds and is wired to 「重置演示数据」 on the login page, so never keep mutable demo state in static fields.
 - `DemoMedia`: on io a loopback HTTP server serves bundled assets (`/a/<asset>`) and uploads (`/f/<id>`, with Range support); on web it uses asset URLs and blob URLs (blob uploads don't survive a reload). Reference assets as `asset:assets/demo/...` and resolve them with `DemoMedia.url`.
 - `DemoSocketBridge` injects frames into `ChatSocketService`: AI streaming (type 10004 deltas + 10005 final) and chat pushes (type 2001).
-- Identity: `DemoAccounts` (student / teacher / head teacher / dorm manager / admin, mobiles 13809310001–05). Tokens look like `demo.<role>.<mobile>`; resolve them with `DemoAccounts.fromToken`.
+- Identity: `DemoAccounts` (student / teacher / subject lead / head teacher / dorm manager / admin / principal; mobiles 13809310001–06, subject lead 13809310012). Subject groups and the principal in charge of each campus or class live in `DemoCampusData` (`subjectGroups`, `campusPrincipals`, `principalOfClass`). The target architecture is `docs/美育集架构方案.md`. Tokens look like `demo.<role>.<mobile>`; resolve them with `DemoAccounts.fromToken`.
 - Data:
   - `DemoMarkingData` is a deterministic port of the uni-app mock data (mulberry32 RNG): 示范画室, three campuses, exams 21–27, 40 students, judges / trimmed mean / arbitration, A–E bands.
   - `DemoCampusData` covers classes, staff, timetable and dorm beds; `DemoArtworkData` and `DemoFavorites` cover artworks and favorites.

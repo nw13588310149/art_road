@@ -1,5 +1,5 @@
 name: the_road_of_art_flutter
-description: "绘画星球：面向美术艺考生与老师的学习与学情平台（围绕艺考网阅卷系统）。"
+description: "美育集：面向美术艺考生与老师的学习与学情平台（围绕艺考网阅卷系统）。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

@@ -209,7 +209,7 @@ class _FeedbackForm extends StatelessWidget {
           onChanged: (_) => onChanged(),
         ),
         const SizedBox(height: AppSpace.s8),
-        Text('反馈会发送给绘画星球产品团队，回复会显示在「我的反馈」中。', style: AppText.caption12),
+        Text('反馈会发送给美育集产品团队，回复会显示在「我的反馈」中。', style: AppText.caption12),
         const SizedBox(height: AppSpace.s16),
         Center(
           child: SizedBox(
