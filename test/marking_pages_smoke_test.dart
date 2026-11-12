@@ -219,6 +219,40 @@ void _pageTests() {
     await _unmount(tester);
   });
 
+  testWidgets('组内复核列表与复核工作台', (tester) async {
+    await _pump(
+      tester,
+      const TeacherArtworksView(),
+      account: DemoAccounts.subjectLead,
+    );
+    expect(find.text('我的点评'), findsOneWidget);
+    await tester.tap(find.text('组内复核'));
+    await _settle(tester);
+    expect(find.text('待复核'), findsWidgets);
+    expect(find.text('开始复核'), findsOneWidget);
+    expect(find.text('点评标签'), findsNothing);
+
+    await tester.tap(find.text('石膏头像结构练习').first);
+    await _settle(tester);
+    expect(find.text('老师点评'), findsOneWidget);
+    expect(find.text('组长点评'), findsOneWidget);
+    expect(find.text('标为范例'), findsOneWidget);
+    expect(find.text('退回重评'), findsOneWidget);
+    expect(find.text('通过并下一份'), findsOneWidget);
+    await _unmount(tester);
+  });
+
+  testWidgets('任课老师看不到组内复核入口', (tester) async {
+    await _pump(
+      tester,
+      const TeacherArtworksView(),
+      account: DemoAccounts.teacher,
+    );
+    expect(find.text('组内复核'), findsNothing);
+    expect(find.text('我的点评'), findsNothing);
+    await _unmount(tester);
+  });
+
   testWidgets('范画库列表与详情', (tester) async {
     await _pump(tester, const GalleryPage(), account: DemoAccounts.student);
     expect(find.text('范画库'), findsNothing);

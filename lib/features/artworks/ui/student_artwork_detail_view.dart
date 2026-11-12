@@ -60,7 +60,11 @@ class _StudentArtworkDetailViewState
               ? null
               : '${work.subject} · 绘于 ${ArtworkRules.dateText(work.drawingDate)}',
           onBack: widget.onBack,
-          actions: [if (work != null) ArtworkStatusTag(done: work.reviewed)],
+          actions: [
+            if (work != null && work.exemplar)
+              const AppTag(label: '范例', tone: AppTone.success),
+            if (work != null) ArtworkStatusTag(done: work.reviewed),
+          ],
         ),
         Expanded(
           child: detail == null
@@ -232,6 +236,7 @@ class _InfoColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final work = detail.work;
+    final lead = detail.leadReview;
     final reviewed = artworkReviewsByTime(
       detail.reviews.where((r) => r.reviewed),
     );
@@ -257,6 +262,12 @@ class _InfoColumn extends StatelessWidget {
             if (i > 0) const SizedBox(height: AppSpace.s8),
             ArtworkReviewCard(review: reviewed[i]),
           ],
+        if (work.reviewed && lead != null) ...[
+          const SizedBox(height: AppSpace.s20),
+          const AppSectionHeader(title: '组长点评'),
+          const SizedBox(height: AppSpace.s12),
+          ArtworkLeadReviewCard(review: lead, maxScore: work.maxScore),
+        ],
       ],
     );
   }
@@ -296,7 +307,10 @@ class _ScoreCard extends StatelessWidget {
                         : '${work.reviewedCount}/${work.teacherCount} 位老师已点评',
                     style: AppText.body14Strong,
                   ),
-                if (reviewed && score != null && work.teacherCount > 1) ...[
+                if (reviewed && detail.leadReview?.score != null) ...[
+                  const SizedBox(height: AppSpace.s4),
+                  Text('科目组长复核后改定的分数', style: AppText.caption12),
+                ] else if (reviewed && score != null && work.teacherCount > 1) ...[
                   const SizedBox(height: AppSpace.s4),
                   Text(
                     '${work.teacherCount} 位老师评分的平均分',

@@ -8,11 +8,13 @@ import '../../../core/widgets/app_refresh_indicator.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/teacher_artworks_controller.dart';
+import 'artwork_lead_review_workspace.dart';
 import 'artwork_review_workspace.dart';
 import 'artwork_tag_manager_dialog.dart';
 import 'widgets/artwork_widgets.dart';
 
 /// 教职「作品点评」：待点评队列、搜索、点评标签管理，点开进入点评工作台。
+/// 科目组长多一个「组内复核」范围：本组老师点评完成的作品，点开进入复核工作台。
 class TeacherArtworksView extends ConsumerStatefulWidget {
   const TeacherArtworksView({this.initialArtworkId, super.key});
 
@@ -36,6 +38,17 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
   String? _detailId;
   bool _starting = false;
 
+  /// true 为「组内复核」（只有科目组长能切到）。
+  bool _leadScope = false;
+
+  AutoDisposeStateNotifierProvider<
+    TeacherArtworksController,
+    TeacherArtworksState
+  >
+  get _provider => _leadScope
+      ? leadArtworksControllerProvider
+      : teacherArtworksControllerProvider;
+
   @override
   void initState() {
     super.initState();
@@ -53,8 +66,27 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
     super.dispose();
   }
 
-  TeacherArtworksController get _controller =>
-      ref.read(teacherArtworksControllerProvider.notifier);
+  TeacherArtworksController get _controller => ref.read(_provider.notifier);
+
+  void _setScope(bool lead) {
+    if (lead == _leadScope) {
+      return;
+    }
+    _searchDebounce?.cancel();
+    _search.clear();
+    setState(() {
+      _leadScope = lead;
+      _detailId = null;
+    });
+  }
+
+  String _filterLabel(ArtworkStatusFilter filter) => _leadScope
+      ? switch (filter) {
+          ArtworkStatusFilter.pending => '待复核',
+          ArtworkStatusFilter.reviewed => '已复核',
+          ArtworkStatusFilter.all => '全部',
+        }
+      : filter.label;
 
   void _handleScroll() {
     if (_scrollController.hasClients &&
@@ -94,7 +126,7 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
     }
     final id = result.id;
     if (id == null) {
-      AppToast.showInfo(context, '暂无待点评的作品');
+      AppToast.showInfo(context, _leadScope ? '暂无待复核的作品' : '暂无待点评的作品');
       return;
     }
     setState(() => _detailId = id);
@@ -105,16 +137,18 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
   void _closeDetail() {
     setState(() => _detailId = null);
     unawaited(_controller.refresh());
+    // 老师保存点评、组长复核后，待复核数量都可能变化。
+    ref.invalidate(artworkLeadInfoProvider);
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(teacherArtworksControllerProvider);
+    final state = ref.watch(_provider);
     final controller = _controller;
-    ref.listen<TeacherArtworksState>(teacherArtworksControllerProvider, (
-      previous,
-      next,
-    ) {
+    final leadInfo =
+        ref.watch(artworkLeadInfoProvider).valueOrNull ??
+        const ArtworkLeadInfo();
+    ref.listen<TeacherArtworksState>(_provider, (previous, next) {
       final message = next.errorMessage;
       if (message.isEmpty || message == previous?.errorMessage) {
         return;
@@ -138,10 +172,17 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
             offstage: detailId != null,
             child: TickerMode(
               enabled: detailId == null,
-              child: _buildList(state),
+              child: _buildList(state, leadInfo),
             ),
           ),
-          if (detailId != null)
+          if (detailId != null && _leadScope)
+            ArtworkLeadReviewWorkspace(
+              key: ValueKey('lead-$detailId'),
+              artworkId: detailId,
+              onBack: _closeDetail,
+              onOpenArtwork: _openDetail,
+            )
+          else if (detailId != null)
             ArtworkReviewWorkspace(
               key: ValueKey(detailId),
               artworkId: detailId,
@@ -153,14 +194,34 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
     );
   }
 
-  Widget _buildList(TeacherArtworksState state) {
+  Widget _buildList(TeacherArtworksState state, ArtworkLeadInfo leadInfo) {
     final pending = state.stats.pending;
+    final lead = _leadScope;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppPageHeader(
-          title: '作品点评',
-          subtitle: '多位老师独立点评，保存自己的点评后可查看其他老师的意见',
+          title: lead ? '组内复核' : '作品点评',
+          subtitle: lead
+              ? '${leadInfo.groupName}老师点评完成的作品，逐份复核；可以补充点评、改定分数或退回重评'
+              : '多位老师独立点评，保存自己的点评后可查看其他老师的意见',
+          actions: [
+            if (leadInfo.isLead)
+              AppSegmented<bool>(
+                size: AppControlSize.sm,
+                neutral: true,
+                segments: [
+                  const AppSegment(value: false, label: '我的点评'),
+                  AppSegment(
+                    value: true,
+                    label: '组内复核',
+                    badge: leadInfo.pending > 0 ? '${leadInfo.pending}' : null,
+                  ),
+                ],
+                value: lead,
+                onChanged: _setScope,
+              ),
+          ],
           bottom: Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -175,7 +236,7 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
                       for (final filter in _filters)
                         AppSegment(
                           value: filter,
-                          label: filter.label,
+                          label: _filterLabel(filter),
                           badge:
                               filter == ArtworkStatusFilter.pending &&
                                   pending > 0
@@ -203,7 +264,7 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
                     width: 230,
                     child: AppSearchField(
                       controller: _search,
-                      hint: '搜索学生、校区或作品',
+                      hint: lead ? '搜索学生、老师或作品' : '搜索学生、校区或作品',
                       onChanged: _onSearchChanged,
                       onCleared: _clearSearch,
                       onSubmitted: (value) {
@@ -212,16 +273,19 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
                       },
                     ),
                   ),
+                  if (!lead)
+                    AppButton(
+                      label: '点评标签',
+                      icon: Icons.sell_outlined,
+                      variant: AppButtonVariant.secondary,
+                      size: AppButtonSize.sm,
+                      onTap: () => showArtworkTagManager(context),
+                    ),
                   AppButton(
-                    label: '点评标签',
-                    icon: Icons.sell_outlined,
-                    variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.sm,
-                    onTap: () => showArtworkTagManager(context),
-                  ),
-                  AppButton(
-                    label: '开始点评',
-                    icon: Icons.rate_review_outlined,
+                    label: lead ? '开始复核' : '开始点评',
+                    icon: lead
+                        ? Icons.fact_check_outlined
+                        : Icons.rate_review_outlined,
                     size: AppButtonSize.sm,
                     loading: _starting,
                     onTap: _startReview,
@@ -309,12 +373,20 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
               icon: Icons.rate_review_outlined,
               title: searching
                   ? '没有找到「${state.keyword}」相关的作品'
+                  : _leadScope
+                  ? switch (state.filter) {
+                      ArtworkStatusFilter.pending => '暂无待复核作品',
+                      ArtworkStatusFilter.reviewed => '还没有复核过的作品',
+                      ArtworkStatusFilter.all => '本组暂时没有需要复核的作品',
+                    }
                   : switch (state.filter) {
                       ArtworkStatusFilter.pending => '暂无待点评作品',
                       ArtworkStatusFilter.reviewed => '还没有点评过的作品',
                       ArtworkStatusFilter.all => '暂时没有分配给你的作品',
                     },
-              description: searching ? '换个学生姓名、校区或作品名称试试' : '学生提交作品后会出现在这里',
+              description: searching
+                  ? '换个学生姓名、校区或作品名称试试'
+                  : (_leadScope ? '本组老师点评完成后会出现在这里' : '学生提交作品后会出现在这里'),
               actionLabel: searching ? '清除搜索' : null,
               onAction: searching ? _clearSearch : null,
             ),
@@ -330,6 +402,7 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
           delegate: SliverChildBuilderDelegate(
             (context, index) => _TeacherArtworkCard(
               item: state.items[index],
+              lead: _leadScope,
               onTap: () => _openDetail(state.items[index].id),
             ),
             childCount: state.items.length,
@@ -348,12 +421,19 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
 }
 
 class _TeacherArtworkCard extends StatelessWidget {
-  const _TeacherArtworkCard({required this.item, required this.onTap});
+  const _TeacherArtworkCard({
+    required this.item,
+    required this.onTap,
+    this.lead = false,
+  });
 
   static const height = 118.0;
 
   final ArtworkSummary item;
   final VoidCallback onTap;
+
+  /// 组内复核列表：状态显示复核进度，副标题显示点评老师。
+  final bool lead;
 
   @override
   Widget build(BuildContext context) {
@@ -423,10 +503,16 @@ class _TeacherArtworkCard extends StatelessWidget {
                 Row(
                   children: [
                     ArtworkSubjectTag(subject: item.subject),
+                    if (item.exemplar) ...[
+                      const SizedBox(width: AppSpace.s4),
+                      const AppTag(label: '范例', tone: AppTone.success),
+                    ],
                     const SizedBox(width: AppSpace.s8),
                     Expanded(
                       child: Text(
-                        '提交于 ${ArtworkRules.shortTime(item.createTime)}',
+                        lead && item.teacherNames.isNotEmpty
+                            ? '${item.teacherNames}老师点评'
+                            : '提交于 ${ArtworkRules.shortTime(item.createTime)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppText.caption12,
@@ -442,10 +528,15 @@ class _TeacherArtworkCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              ArtworkStatusTag(done: item.myReviewed),
-              if (item.myReviewed && score != null)
+              if (lead)
+                ArtworkLeadStatusTag(status: item.leadStatus)
+              else if (item.returnReason.isNotEmpty)
+                const AppTag(label: '组长退回', tone: AppTone.danger)
+              else
+                ArtworkStatusTag(done: item.myReviewed),
+              if ((lead || item.myReviewed) && score != null)
                 ArtworkScore(score: score, maxScore: item.maxScore, size: 16)
-              else if (item.myReviewed && !item.reviewed)
+              else if (!lead && item.myReviewed && !item.reviewed)
                 Text('等其他老师点评', style: AppText.caption12)
               else
                 const Icon(

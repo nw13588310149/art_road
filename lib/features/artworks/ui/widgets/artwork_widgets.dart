@@ -19,6 +19,113 @@ class ArtworkStatusTag extends StatelessWidget {
   }
 }
 
+/// 组长复核状态：待复核（提醒色）/ 已复核（成功色）/ 已退回（危险色）/ 等老师点评。
+/// 不需要复核的作品不显示。
+class ArtworkLeadStatusTag extends StatelessWidget {
+  const ArtworkLeadStatusTag({required this.status, super.key});
+
+  /// `NONE / WAITING / PENDING / APPROVED / RETURNED`。
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (status) {
+      'PENDING' => const AppTag(label: '待复核', tone: AppTone.warning),
+      'APPROVED' => const AppTag(label: '已复核', tone: AppTone.success),
+      'RETURNED' => const AppTag(label: '已退回', tone: AppTone.danger),
+      'WAITING' => const AppTag(label: '等老师点评'),
+      _ => const SizedBox.shrink(),
+    };
+  }
+}
+
+/// 组长复核卡片：通过时是组长点评（可带改定分数、范例标记），退回时是退回原因。
+/// [showAttention] 只在教职端打开，学生端不显示「需关注」。
+class ArtworkLeadReviewCard extends StatelessWidget {
+  const ArtworkLeadReviewCard({
+    required this.review,
+    this.showAttention = false,
+    this.maxScore = 100,
+    super.key,
+  });
+
+  final ArtworkLeadReview review;
+  final bool showAttention;
+  final double maxScore;
+
+  @override
+  Widget build(BuildContext context) {
+    final time = review.reviewedTime.isEmpty
+        ? ''
+        : ArtworkRules.shortTime(review.reviewedTime);
+    final score = review.score;
+    final name = review.leaderName.isEmpty ? '组长' : review.leaderName;
+    return AppCard(
+      color: AppColors.surfaceSubtle,
+      bordered: false,
+      padding: const EdgeInsets.all(AppSpace.s12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              AppAvatar(name: name, size: 32),
+              const SizedBox(width: AppSpace.s8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$name老师 · 科目组长',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.body14Strong,
+                    ),
+                    if (time.isNotEmpty)
+                      Text(
+                        '${review.approved ? '复核于' : '退回于'} $time',
+                        style: AppText.caption12,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpace.s8),
+              if (review.approved && score != null)
+                ArtworkScore(score: score, maxScore: maxScore)
+              else
+                AppTag(
+                  label: review.approved ? '复核通过' : '退回重评',
+                  tone: review.approved ? AppTone.success : AppTone.danger,
+                ),
+            ],
+          ),
+          if (review.exemplar ||
+              (showAttention && review.attention) ||
+              (review.approved && score != null)) ...[
+            const SizedBox(height: AppSpace.s8),
+            Wrap(
+              spacing: AppSpace.s8,
+              runSpacing: AppSpace.s8,
+              children: [
+                if (review.approved && score != null)
+                  const AppTag(label: '组长改定分数', tone: AppTone.brand),
+                if (review.exemplar)
+                  const AppTag(label: '范例', tone: AppTone.success),
+                if (showAttention && review.attention)
+                  const AppTag(label: '该生需关注', tone: AppTone.warning),
+              ],
+            ),
+          ],
+          if (review.content.isNotEmpty) ...[
+            const SizedBox(height: AppSpace.s8),
+            Text(review.content, style: AppText.body14),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// 科目标签：三科用科目色，自定义科目用品牌紫。
 class ArtworkSubjectTag extends StatelessWidget {
   const ArtworkSubjectTag({required this.subject, super.key});

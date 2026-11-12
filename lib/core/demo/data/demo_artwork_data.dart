@@ -10,6 +10,8 @@ library;
 
 import 'dart:math' as math;
 
+import '../demo_accounts.dart';
+import 'demo_campus_data.dart';
 import 'demo_marking_data.dart';
 
 class _SeedReview {
@@ -77,7 +79,7 @@ typedef DemoArtworkAggregate = ({
 
 abstract final class DemoArtworkData {
   // v2：分数、提交时间、标签类型与批注颜色调整后，旧的本地演示数据不再沿用。
-  static const worksKey = 'artworks:v2';
+  static const worksKey = 'artworks:v3';
   static const annotationsKey = 'artwork_annotations:v2';
   static const uploadsKey = 'artwork_uploads:v2';
 
@@ -147,15 +149,30 @@ abstract final class DemoArtworkData {
     return null;
   }
 
+  /// 老师当前有效的点评：被组长退回、还没重新保存的不算。
+  static Map<String, dynamic>? activeReviewOf(
+    Map<String, dynamic> work,
+    String teacherId,
+  ) {
+    final review = reviewOf(work, teacherId);
+    return isReturned(review) ? null : review;
+  }
+
+  static bool hasReviewed(Map<String, dynamic> work, String teacherId) =>
+      activeReviewOf(work, teacherId) != null;
+
   static double round2(double value) => (value * 100).round() / 100;
 
   /// 全部指派老师都点评后为 REVIEWED；最终分为已打分点评的平均分（两位小数），
   /// 未全部点评或没有老师打分时为 null。
   static DemoArtworkAggregate aggregate(Map<String, dynamic> work) {
     final teacherIds = teacherIdsOf(work);
-    final reviews = reviewsOf(
-      work,
-    ).where((r) => teacherIds.contains(r['teacherId']?.toString())).toList();
+    final reviews = reviewsOf(work)
+        .where(
+          (r) =>
+              teacherIds.contains(r['teacherId']?.toString()) && !isReturned(r),
+        )
+        .toList();
     final reviewedCount = teacherIds
         .where((id) => reviews.any((r) => r['teacherId']?.toString() == id))
         .length;
@@ -175,6 +192,14 @@ abstract final class DemoArtworkData {
       );
       finalScore = round2(sum / scored.length);
     }
+    // 组长复核时改定了分数，以组长的分数为准。
+    final lead = leadReviewOf(work);
+    if (done &&
+        lead != null &&
+        lead['action'] == leadApproved &&
+        lead['score'] is num) {
+      finalScore = round2((lead['score'] as num).toDouble());
+    }
     return (
       status: done ? statusReviewed : statusPending,
       finalScore: finalScore,
@@ -183,6 +208,63 @@ abstract final class DemoArtworkData {
       reviewedCount: reviewedCount,
     );
   }
+
+  // ── 组长复核 ─────────────────────────────────────────────────────────
+
+  static const leadApproved = 'APPROVED';
+  static const leadReturned = 'RETURNED';
+
+  /// 复核状态：不需要复核 / 等老师点评 / 待复核，以及上面的已通过、已退回。
+  static const leadNone = 'NONE';
+  static const leadWaiting = 'WAITING';
+  static const leadPending = 'PENDING';
+
+  /// 负责复核这份作品的科目组长（教职工 id）。科目没有科目组，或作品只指派给
+  /// 组长本人时不需要复核，返回 null。
+  static String? leadIdOf(Map<String, dynamic> work) {
+    final leadId = DemoCampusData.groupOfSubject(
+      work['subject']?.toString() ?? '',
+    )?.leadId;
+    if (leadId == null) {
+      return null;
+    }
+    return teacherIdsOf(work).any((id) => id != leadId) ? leadId : null;
+  }
+
+  static Map<String, dynamic>? leadReviewOf(Map<String, dynamic> work) {
+    final raw = work['leadReview'];
+    return raw is Map ? raw.map((k, v) => MapEntry(k.toString(), v)) : null;
+  }
+
+  /// 被组长退回、等老师重新点评的点评。
+  static bool isReturned(Map<String, dynamic>? review) =>
+      review != null && review['returned'] == true;
+
+  static String leadStatusOf(Map<String, dynamic> work) {
+    if (leadIdOf(work) == null) {
+      return leadNone;
+    }
+    final review = leadReviewOf(work);
+    if (review != null) {
+      return review['action'] == leadReturned ? leadReturned : leadApproved;
+    }
+    return aggregate(work).status == statusReviewed ? leadPending : leadWaiting;
+  }
+
+  /// 组长有体验账号时由本人登录复核；没有体验账号的组长在老师点评完成后自动通过。
+  static bool leadHasAccount(String leadId) =>
+      DemoAccounts.all.any((a) => a.teacherId == leadId);
+
+  static Map<String, dynamic> autoLeadReview(String leadId, String time) =>
+      <String, dynamic>{
+        'leadId': leadId,
+        'action': leadApproved,
+        'content': '',
+        'score': null,
+        'exemplar': false,
+        'attention': false,
+        'reviewedTime': time,
+      };
 
   // ── 高频问题 ─────────────────────────────────────────────────────────
 
@@ -710,7 +792,7 @@ abstract final class DemoArtworkData {
 
   static Map<String, dynamic> _buildWork(_SeedWork seed, String id, int index) {
     final submitted = _submitTimes[index % _submitTimes.length];
-    return <String, dynamic>{
+    final work = <String, dynamic>{
       'id': id,
       'personIndex': seed.person,
       'title': seed.title,
@@ -730,6 +812,45 @@ abstract final class DemoArtworkData {
         for (var k = 0; k < seed.reviews.length; k++)
           _buildReview(seed.reviews[k], seed.date, index * 3 + k),
       ],
+    };
+    final lead = _seedLeadReview(work, seed.date, index);
+    if (lead != null) {
+      work['leadReview'] = lead;
+    }
+    return work;
+  }
+
+  /// 有体验账号的组长（素描组张明远）留下这一天及之后的作品待复核。
+  static const _leadCutoff = '2026-10-21';
+
+  static const _leadComments = <String>[
+    '点评具体，问题指得清楚，学生照着改就行。',
+    '同意老师的意见。下次点评可以再补一句怎么练。',
+    '分数合适，评语清楚。',
+    '',
+  ];
+
+  /// 种子数据里的组长复核：点评完成的作品才有。
+  static Map<String, dynamic>? _seedLeadReview(
+    Map<String, dynamic> work,
+    String date,
+    int index,
+  ) {
+    final leadId = leadIdOf(work);
+    final summary = aggregate(work);
+    if (leadId == null || summary.status != statusReviewed) {
+      return null;
+    }
+    if (leadHasAccount(leadId) && date.compareTo(_leadCutoff) >= 0) {
+      return null;
+    }
+    final score = summary.finalScore;
+    final day = DateTime.parse(date).add(const Duration(days: 2));
+    final minute = (20 + index % 30).toString().padLeft(2, '0');
+    return <String, dynamic>{
+      ...autoLeadReview(leadId, '${_ymd(day)} 08:$minute:00'),
+      'content': _leadComments[index % _leadComments.length],
+      'exemplar': score != null && score >= 90,
     };
   }
 

@@ -87,21 +87,74 @@ final teacherArtworksControllerProvider =
       return TeacherArtworksController(repository: repository);
     });
 
+/// 组内复核队列（科目组长）：与「我的点评」同一套列表状态，接口换成组长端。
+final leadArtworksControllerProvider =
+    StateNotifierProvider.autoDispose<
+      TeacherArtworksController,
+      TeacherArtworksState
+    >((ref) {
+      final repository = ref.watch(artworkRepositoryProvider);
+      return TeacherArtworksController(repository: repository, lead: true);
+    });
+
+/// 当前账号的科目组长信息：是否为组长、科目组名称、待复核数量。
+@immutable
+class ArtworkLeadInfo {
+  const ArtworkLeadInfo({
+    this.isLead = false,
+    this.groupName = '',
+    this.pending = 0,
+  });
+
+  factory ArtworkLeadInfo.fromJson(Object? raw) {
+    final json = raw is Map ? raw : const <Object?, Object?>{};
+    final pending = json['pending'];
+    return ArtworkLeadInfo(
+      isLead: json['isLead'] == true,
+      groupName: json['groupName']?.toString() ?? '',
+      pending: pending is num ? pending.toInt() : 0,
+    );
+  }
+
+  final bool isLead;
+  final String groupName;
+  final int pending;
+}
+
+/// 接口失败时按「不是组长」处理，不影响老师自己的点评队列。
+final artworkLeadInfoProvider = FutureProvider.autoDispose<ArtworkLeadInfo>((
+  ref,
+) async {
+  final response = await ref
+      .watch(artworkRepositoryProvider)
+      .getLeadStatistics();
+  return response.isSuccess
+      ? ArtworkLeadInfo.fromJson(response.data)
+      : const ArtworkLeadInfo();
+});
+
 class TeacherArtworksController extends StateNotifier<TeacherArtworksState> {
-  TeacherArtworksController({required ArtworkRepository repository})
-    : _repository = repository,
-      super(const TeacherArtworksState()) {
+  TeacherArtworksController({
+    required ArtworkRepository repository,
+    this.lead = false,
+  }) : _repository = repository,
+       super(const TeacherArtworksState()) {
     unawaited(refresh());
   }
 
   final ArtworkRepository _repository;
+
+  /// true 时为组内复核队列：状态按「我是否已复核」筛选。
+  final bool lead;
   int _generation = 0;
 
   Future<void> refresh() async {
     final generation = ++_generation;
     state = state.copyWith(loading: true, errorMessage: '');
     final results = await Future.wait(<Future<ApiResponse>>[
-      _repository.getTeacherStatistics(),
+      lead
+          ? _repository.getLeadStatistics()
+          : _repository.getTeacherStatistics(),
       _fetchPage(1),
     ]);
     if (!mounted) {
@@ -155,26 +208,42 @@ class TeacherArtworksController extends StateNotifier<TeacherArtworksState> {
     await _loadList(reset: false);
   }
 
-  /// 「开始点评」：取第一份待我点评的作品。
+  /// 「开始点评 / 开始复核」：取第一份待我处理的作品。
   Future<({String? id, String error})> firstPendingId() async {
-    final response = await _repository.getTeacherArtworks(
-      status: ArtworkStatusFilter.pending,
-      page: 1,
-      size: 1,
-    );
+    final response = lead
+        ? await _repository.getLeadArtworks(
+            status: ArtworkStatusFilter.pending,
+            page: 1,
+            size: 1,
+          )
+        : await _repository.getTeacherArtworks(
+            status: ArtworkStatusFilter.pending,
+            page: 1,
+            size: 1,
+          );
     if (!response.isSuccess) {
-      return (id: null, error: response.errorOr('获取待点评作品失败，请稍后重试'));
+      return (
+        id: null,
+        error: response.errorOr(lead ? '获取待复核作品失败，请稍后重试' : '获取待点评作品失败，请稍后重试'),
+      );
     }
     final records = ArtworkPage.fromJson(response.data).records;
     return (id: records.isEmpty ? null : records.first.id, error: '');
   }
 
-  Future<ApiResponse> _fetchPage(int page) => _repository.getTeacherArtworks(
-    status: state.filter,
-    keyword: state.keyword,
-    page: page,
-    size: _pageSize,
-  );
+  Future<ApiResponse> _fetchPage(int page) => lead
+      ? _repository.getLeadArtworks(
+          status: state.filter,
+          keyword: state.keyword,
+          page: page,
+          size: _pageSize,
+        )
+      : _repository.getTeacherArtworks(
+          status: state.filter,
+          keyword: state.keyword,
+          page: page,
+          size: _pageSize,
+        );
 
   Future<void> _loadList({required bool reset}) async {
     final generation = reset ? ++_generation : _generation;

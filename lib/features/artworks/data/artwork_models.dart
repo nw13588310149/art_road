@@ -96,6 +96,11 @@ class ArtworkSummary {
     this.organizationName = '',
     this.avatarUrl = '',
     this.myReviewed = false,
+    this.leadStatus = '',
+    this.exemplar = false,
+    this.attention = false,
+    this.returnReason = '',
+    this.teacherNames = '',
   });
 
   factory ArtworkSummary.fromJson(Object? raw) {
@@ -120,6 +125,11 @@ class ArtworkSummary {
       organizationName: _str(json['organizationName']),
       avatarUrl: _str(json['avatarUrl']),
       myReviewed: _bool(json['myReviewed']),
+      leadStatus: _str(json['leadStatus']).toUpperCase(),
+      exemplar: _bool(json['exemplar']),
+      attention: _bool(json['attention']),
+      returnReason: _str(json['returnReason']),
+      teacherNames: _str(json['teacherNames']),
     );
   }
 
@@ -152,6 +162,27 @@ class ArtworkSummary {
   final String organizationName;
   final String avatarUrl;
   final bool myReviewed;
+
+  /// 组长复核状态：`NONE` 不需要复核 / `WAITING` 等老师点评 / `PENDING` 待复核 /
+  /// `APPROVED` 已通过 / `RETURNED` 已退回重评。
+  final String leadStatus;
+
+  /// 组长标为范例。
+  final bool exemplar;
+
+  /// 组长标记该生需关注（只对教职可见）。
+  final bool attention;
+
+  /// 组长退回重评的原因；只在我的点评被退回、还没重新保存时有值。
+  final String returnReason;
+
+  /// 点评老师姓名，用「、」连接（组内复核列表用）。
+  final String teacherNames;
+
+  bool get leadPending => leadStatus == 'PENDING';
+  bool get leadApproved => leadStatus == 'APPROVED';
+  bool get leadReturned => leadStatus == 'RETURNED';
+  bool get leadWaiting => leadStatus == 'WAITING';
 }
 
 @immutable
@@ -285,6 +316,7 @@ class ArtworkReview {
     this.reviewedTime = '',
     this.tags = const <ArtworkTag>[],
     this.annotations = const <AnnotationStroke>[],
+    this.returned = false,
   });
 
   factory ArtworkReview.fromJson(Object? raw) {
@@ -302,8 +334,12 @@ class ArtworkReview {
       annotations: _maps(
         json['annotations'],
       ).map(AnnotationStroke.fromJson).toList(),
+      returned: _bool(json['returned']),
     );
   }
+
+  /// 被组长退回、等这位老师重新点评。
+  final bool returned;
 
   final String teacherId;
   final String teacherName;
@@ -321,6 +357,50 @@ class ArtworkReview {
       reviewed && (score != null || content.isNotEmpty || tags.isNotEmpty);
 }
 
+/// 科目组长对一份作品的复核。
+@immutable
+class ArtworkLeadReview {
+  const ArtworkLeadReview({
+    this.leaderName = '',
+    this.approved = true,
+    this.content = '',
+    this.score,
+    this.exemplar = false,
+    this.attention = false,
+    this.reviewedTime = '',
+  });
+
+  static ArtworkLeadReview? tryParse(Object? raw) {
+    if (raw is! Map) {
+      return null;
+    }
+    final json = _map(raw);
+    return ArtworkLeadReview(
+      leaderName: _str(json['leaderName']),
+      approved: _str(json['action']).toUpperCase() != 'RETURNED',
+      content: _str(json['content']),
+      score: _num(json['score']),
+      exemplar: _bool(json['exemplar']),
+      attention: _bool(json['attention']),
+      reviewedTime: _str(json['reviewedTime']),
+    );
+  }
+
+  final String leaderName;
+
+  /// true 为通过，false 为退回老师重评。
+  final bool approved;
+
+  /// 通过时是组长点评，退回时是退回原因。
+  final String content;
+
+  /// 组长改定的分数；为空表示沿用老师的评分。
+  final double? score;
+  final bool exemplar;
+  final bool attention;
+  final String reviewedTime;
+}
+
 @immutable
 class ArtworkDetail {
   const ArtworkDetail({
@@ -329,6 +409,7 @@ class ArtworkDetail {
     this.teachers = const <ArtworkTeacher>[],
     this.images = const <ArtworkImage>[],
     this.reviews = const <ArtworkReview>[],
+    this.leadReview,
   });
 
   factory ArtworkDetail.fromJson(Object? raw) {
@@ -351,8 +432,12 @@ class ArtworkDetail {
       teachers: teachers,
       images: _maps(json['images']).map(ArtworkImage.fromJson).toList(),
       reviews: reviews,
+      leadReview: ArtworkLeadReview.tryParse(json['leadReview']),
     );
   }
+
+  /// 组长复核；学生端只在组长通过后返回。
+  final ArtworkLeadReview? leadReview;
 
   final ArtworkSummary work;
 
