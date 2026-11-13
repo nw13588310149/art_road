@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:the_road_of_art_flutter/app/router/route_paths.dart';
 import 'package:the_road_of_art_flutter/core/demo/data/demo_artwork_data.dart';
+import 'package:the_road_of_art_flutter/core/demo/data/demo_artwork_store.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_accounts.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_backend.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_clock.dart';
@@ -161,6 +162,7 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       await DemoStore.init();
       await DemoStore.reset();
+      DemoArtworkStore.clearCache();
       platform = DemoRouter('notice-test-platform');
       marking = DemoRouter('notice-test-marking');
       registerPlatformCoreFixtures(platform);
@@ -202,14 +204,12 @@ void main() {
       () async {
         final list = await notices(DemoAccounts.student);
         final artwork = byType(list, ShellNoticeTargetType.artwork)!;
-        final work = DemoArtworkData.seedWorks().firstWhere(
-          (w) => w['personIndex'] == 1 && w['title'] == '石膏头像结构练习',
-        );
-        expect(artwork['targetId'], work['id']);
-        expect(artwork['content'], contains('《石膏头像结构练习》'));
-        expect(artwork['content'], contains('李静老师'));
-        // 消息在最后一位老师点评（11-06 09:10）之后。
-        expect(artwork['createTime'], '2026-11-06 09:12:00');
+        final work = DemoArtworkStore.workById('${artwork['targetId']}');
+        expect(work, isNotNull);
+        expect(DemoArtworkData.personOf(work!), 1);
+        expect(DemoArtworkData.isReviewed(work), isTrue);
+        expect(artwork['content'], contains('《${work['title']}》'));
+        expect(artwork['content'], contains('老师'));
 
         expect(byType(list, ShellNoticeTargetType.study)!['targetId'], '26');
 
@@ -272,11 +272,10 @@ void main() {
                 )
                 as Map;
         expect(artwork['content'], contains('你还有 ${stats['pending']} 件作品待点评'));
-        final work = DemoArtworkData.seedWorks().firstWhere(
-          (w) => w['id'] == artwork['targetId'],
-        );
-        expect(DemoArtworkData.teacherIdsOf(work), contains('t-1'));
-        expect(DemoArtworkData.reviewOf(work, 't-1'), isNull);
+        final work = DemoArtworkStore.workById('${artwork['targetId']}');
+        expect(work, isNotNull);
+        expect(DemoArtworkData.text(work!['teacherId']), 't-1');
+        expect(DemoArtworkData.isReviewed(work), isFalse);
         expect(artwork['content'], contains('《${work['title']}》'));
       },
     );

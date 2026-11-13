@@ -9,16 +9,36 @@ import '../data/artwork_rules.dart';
 import '../state/student_artworks_controller.dart';
 
 /// 学生上传作品弹窗；提交成功返回 true。
-Future<bool?> showArtworkUploadDialog(BuildContext context) {
+///
+/// [parentId] 非空时为改画重交，科目与责任老师沿用上一版。
+Future<bool?> showArtworkUploadDialog(
+  BuildContext context, {
+  String parentId = '',
+  String title = '',
+  String subject = '',
+}) {
   return showAppDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const ArtworkUploadDialog(),
+    builder: (_) => ArtworkUploadDialog(
+      parentId: parentId,
+      initialTitle: title,
+      initialSubject: subject,
+    ),
   );
 }
 
 class ArtworkUploadDialog extends ConsumerStatefulWidget {
-  const ArtworkUploadDialog({super.key});
+  const ArtworkUploadDialog({
+    this.parentId = '',
+    this.initialTitle = '',
+    this.initialSubject = '',
+    super.key,
+  });
+
+  final String parentId;
+  final String initialTitle;
+  final String initialSubject;
 
   @override
   ConsumerState<ArtworkUploadDialog> createState() =>
@@ -34,12 +54,29 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
   final _title = TextEditingController();
   final _customSubject = TextEditingController();
   final _description = TextEditingController();
-  String _subject = _subjects.first;
+  late String _subject;
   DateTime _date = ArtworkRules.dateOnly(DateTime.now());
   bool _picking = false;
   bool _submitting = false;
   double _progress = 0;
   String _progressText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialSubject.trim();
+    if (initial.isNotEmpty && _subjects.contains(initial)) {
+      _subject = initial;
+    } else if (initial.isNotEmpty) {
+      _subject = _otherSubject;
+      _customSubject.text = initial;
+    } else {
+      _subject = _subjects.first;
+    }
+    if (widget.initialTitle.isNotEmpty) {
+      _title.text = widget.initialTitle;
+    }
+  }
 
   @override
   void dispose() {
@@ -181,6 +218,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
             drawingDate: ArtworkRules.ymd(_date),
             description: _description.text.trim(),
             images: List<ArtworkDraftImage>.of(_images),
+            parentId: widget.parentId,
           ),
           uploaded: _uploaded,
           onProgress: (done, count) {

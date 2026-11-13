@@ -1,0 +1,138 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../data/artwork_models.dart';
+import '../data/artwork_repository.dart';
+
+const _pageSize = 24;
+
+@immutable
+class ExcellentArtworksState {
+  const ExcellentArtworksState({
+    this.loading = true,
+    this.loadingMore = false,
+    this.subject = '',
+    this.items = const <ArtworkSummary>[],
+    this.page = 0,
+    this.hasMore = false,
+    this.errorMessage = '',
+  });
+
+  final bool loading;
+  final bool loadingMore;
+  final String subject;
+  final List<ArtworkSummary> items;
+  final int page;
+  final bool hasMore;
+  final String errorMessage;
+
+  ExcellentArtworksState copyWith({
+    bool? loading,
+    bool? loadingMore,
+    String? subject,
+    List<ArtworkSummary>? items,
+    int? page,
+    bool? hasMore,
+    String? errorMessage,
+  }) {
+    return ExcellentArtworksState(
+      loading: loading ?? this.loading,
+      loadingMore: loadingMore ?? this.loadingMore,
+      subject: subject ?? this.subject,
+      items: items ?? this.items,
+      page: page ?? this.page,
+      hasMore: hasMore ?? this.hasMore,
+      errorMessage: errorMessage ?? this.errorMessage,
+    );
+  }
+}
+
+final excellentArtworksControllerProvider =
+    StateNotifierProvider.autoDispose<
+      ExcellentArtworksController,
+      ExcellentArtworksState
+    >((ref) {
+      return ExcellentArtworksController(
+        repository: ref.watch(artworkRepositoryProvider),
+      );
+    });
+
+class ExcellentArtworksController
+    extends StateNotifier<ExcellentArtworksState> {
+  ExcellentArtworksController({required ArtworkRepository repository})
+    : _repository = repository,
+      super(const ExcellentArtworksState()) {
+    unawaited(refresh());
+  }
+
+  final ArtworkRepository _repository;
+
+  Future<void> refresh() async {
+    state = state.copyWith(loading: true, errorMessage: '');
+    final response = await _repository.getExcellentArtworks(
+      subject: state.subject,
+      page: 1,
+      size: _pageSize,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (!response.isSuccess) {
+      state = state.copyWith(
+        loading: false,
+        errorMessage: response.errorOr('优秀作品墙加载失败，请稍后重试'),
+      );
+      return;
+    }
+    final page = ArtworkPage.fromJson(response.data);
+    state = state.copyWith(
+      loading: false,
+      items: page.records,
+      page: page.current,
+      hasMore: page.hasMore,
+    );
+  }
+
+  Future<void> setSubject(String subject) async {
+    if (subject == state.subject) {
+      return;
+    }
+    state = state.copyWith(subject: subject, items: const <ArtworkSummary>[]);
+    await refresh();
+  }
+
+  Future<void> loadMore() async {
+    if (state.loading || state.loadingMore || !state.hasMore) {
+      return;
+    }
+    state = state.copyWith(loadingMore: true);
+    final response = await _repository.getExcellentArtworks(
+      subject: state.subject,
+      page: state.page + 1,
+      size: _pageSize,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (!response.isSuccess) {
+      state = state.copyWith(
+        loadingMore: false,
+        errorMessage: response.errorOr('优秀作品墙加载失败，请稍后重试'),
+      );
+      return;
+    }
+    final page = ArtworkPage.fromJson(response.data);
+    final known = state.items.map((e) => e.id).toSet();
+    state = state.copyWith(
+      loadingMore: false,
+      items: <ArtworkSummary>[
+        ...state.items,
+        ...page.records.where((e) => known.add(e.id)),
+      ],
+      page: page.current,
+      hasMore: page.hasMore,
+    );
+  }
+}

@@ -4,6 +4,8 @@ import '../../features/ai_chat/ui/ai_chat_page.dart';
 import '../../features/art_toolbox/ui/art_toolbox_page.dart';
 import '../../features/ebooks/ui/ebooks_page.dart';
 import '../../features/artworks/ui/artworks_page.dart';
+import '../../features/artworks/ui/excellent_artworks_page.dart';
+import '../../features/artworks/ui/lead_reviews_page.dart';
 import '../../features/auth/ui/forget_password_page.dart';
 import '../../features/auth/ui/login_page.dart';
 import '../../features/auth/ui/register_page.dart';
@@ -93,6 +95,10 @@ class AppRouter {
         return const StudyCenterPage();
       case RoutePaths.artworks:
         return const ArtworksPage();
+      case RoutePaths.excellentArtworks:
+        return const ExcellentArtworksPage();
+      case RoutePaths.leadReviews:
+        return const LeadReviewsPage();
       case RoutePaths.gallery:
         return const GalleryPage();
       case RoutePaths.artToolbox:

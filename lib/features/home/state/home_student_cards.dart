@@ -179,7 +179,7 @@ String homeCommentLine(String text) {
   return clause.isEmpty ? text.trim() : clause;
 }
 
-/// 首页「最近点评」：最近一份全部老师点评完成的作品。
+/// 首页「最近点评」：最近一份责任老师已点评的作品。
 @immutable
 class HomeLatestReview {
   const HomeLatestReview({
@@ -195,20 +195,22 @@ class HomeLatestReview {
     this.reviewedTime = '',
   });
 
-  /// 评语取最近一位写了评语的老师；都只打了分时取最近一位点评的老师。
+  /// 评语优先取责任老师点评；兼容旧的多师列表时取时间最新且有正文的一条。
   factory HomeLatestReview.from(ArtworkSummary work, ArtworkDetail? detail) {
-    ArtworkReview? pick;
-    for (final review in detail?.reviews ?? const <ArtworkReview>[]) {
-      if (!review.visible) {
-        continue;
-      }
-      final better =
-          pick == null ||
-          (review.content.isNotEmpty && pick.content.isEmpty) ||
-          (review.content.isNotEmpty == pick.content.isNotEmpty &&
-              review.reviewedTime.compareTo(pick.reviewedTime) > 0);
-      if (better) {
-        pick = review;
+    ArtworkReview? pick = detail?.review;
+    if (pick == null || !pick.visible) {
+      for (final review in detail?.reviews ?? const <ArtworkReview>[]) {
+        if (!review.visible) {
+          continue;
+        }
+        final better =
+            pick == null ||
+            (review.content.isNotEmpty && pick.content.isEmpty) ||
+            (review.content.isNotEmpty == pick.content.isNotEmpty &&
+                review.reviewedTime.compareTo(pick.reviewedTime) > 0);
+        if (better) {
+          pick = review;
+        }
       }
     }
     return HomeLatestReview(
@@ -219,7 +221,9 @@ class HomeLatestReview {
       drawingDate: work.drawingDate,
       score: work.finalScore,
       maxScore: work.maxScore,
-      teacherName: pick?.teacherName ?? '',
+      teacherName: pick?.teacherName.isNotEmpty == true
+          ? pick!.teacherName
+          : work.teacherName,
       comment: homeCommentLine(pick?.content ?? ''),
       reviewedTime: pick?.reviewedTime ?? '',
     );

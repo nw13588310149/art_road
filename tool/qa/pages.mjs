@@ -265,6 +265,11 @@ export const ROLES = [
         actions: [{ click: /石膏头像结构练习/, after: 2500 }],
       },
       {
+        id: 'artwork-excellent',
+        route: '/artworks/excellent',
+        actions: [{ check: '优秀作品墙' }, { check: /素描|色彩|速写|还没有优秀作品/ }],
+      },
+      {
         id: 'artwork-upload',
         route: '/artworks',
         actions: [{ click: '上传作品', after: 1800 }],
@@ -388,6 +393,14 @@ export const ROLES = [
       noticeStep,
       { id: 'study', route: '/study' },
       { id: 'artworks', route: '/artworks' },
+      {
+        id: 'artwork-lead-reviews',
+        route: '/artworks/lead-reviews',
+        actions: [
+          { check: '复核池' },
+          { check: /超时|石膏头像结构练习|暂无待复核作品/ },
+        ],
+      },
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('schedule', '授课课表'),
       campusAction('group-chat', '群聊'),
@@ -454,6 +467,17 @@ export const ROLES = [
       guideStep,
       noticeStep,
       { id: 'study', route: '/study' },
+      { id: 'artworks', route: '/artworks' },
+      {
+        id: 'artwork-all',
+        route: '/artworks',
+        actions: [{ check: '全部作品' }, { check: /共 \d+ 件|暂无/ }],
+      },
+      {
+        id: 'artwork-excellent',
+        route: '/artworks/excellent',
+        actions: [{ check: '优秀作品墙' }, { check: /素描|色彩|速写|还没有优秀作品/ }],
+      },
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('teachers', '教师管理'),
       campusAction('students', '学生管理'),

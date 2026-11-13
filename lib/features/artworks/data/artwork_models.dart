@@ -55,9 +55,37 @@ enum ArtworkStatusFilter {
   final String label;
 }
 
+/// 复核状态：`NONE` / `IN_REVIEW`（复核中）/ `DONE`（已复核）。
+enum ArtworkLeadStatus {
+  none('NONE', ''),
+  inReview('IN_REVIEW', '复核中'),
+  done('DONE', '已复核');
+
+  const ArtworkLeadStatus(this.code, this.label);
+
+  final String code;
+  final String label;
+
+  static ArtworkLeadStatus parse(Object? raw) {
+    switch (_str(raw).toUpperCase()) {
+      case 'IN_REVIEW':
+        return ArtworkLeadStatus.inReview;
+      case 'DONE':
+        return ArtworkLeadStatus.done;
+      default:
+        return ArtworkLeadStatus.none;
+    }
+  }
+}
+
 @immutable
 class ArtworkStats {
-  const ArtworkStats({this.total = 0, this.reviewed = 0, this.pending = 0});
+  const ArtworkStats({
+    this.total = 0,
+    this.reviewed = 0,
+    this.pending = 0,
+    this.overdue = 0,
+  });
 
   factory ArtworkStats.fromJson(Object? raw) {
     final json = _map(raw);
@@ -65,12 +93,14 @@ class ArtworkStats {
       total: _int(json['total']),
       reviewed: _int(json['reviewed']),
       pending: _int(json['pending']),
+      overdue: _int(json['overdue']),
     );
   }
 
   final int total;
   final int reviewed;
   final int pending;
+  final int overdue;
 }
 
 /// 作品列表项；教师端额外带学生信息与「我是否已点评」。
@@ -84,6 +114,18 @@ class ArtworkSummary {
     this.createTime = '',
     this.description = '',
     this.reviewed = false,
+    this.leadStatus = ArtworkLeadStatus.none,
+    this.version = 1,
+    this.versionCount = 1,
+    this.rootId = '',
+    this.taskId = '',
+    this.taskTitle = '',
+    this.teacherId = '',
+    this.teacherName = '',
+    this.hasPrincipalComment = false,
+    this.featured = false,
+    this.overdue = false,
+    this.leadOverdue = false,
     this.imageCount = 0,
     this.teacherCount = 0,
     this.reviewedCount = 0,
@@ -100,14 +142,30 @@ class ArtworkSummary {
 
   factory ArtworkSummary.fromJson(Object? raw) {
     final json = _map(raw);
+    final root = _str(json['rootId']);
+    final id = _str(json['id']);
     return ArtworkSummary(
-      id: _str(json['id']),
+      id: id,
       title: _str(json['title']),
       subject: _str(json['subject']),
       drawingDate: _str(json['drawingDate']),
       createTime: _str(json['createTime']),
       description: _str(json['description']),
       reviewed: _str(json['status']).toUpperCase() == 'REVIEWED',
+      leadStatus: ArtworkLeadStatus.parse(json['leadStatus']),
+      version: _int(json['version']) < 1 ? 1 : _int(json['version']),
+      versionCount: _int(json['versionCount']) < 1
+          ? 1
+          : _int(json['versionCount']),
+      rootId: root.isEmpty ? id : root,
+      taskId: _str(json['taskId']),
+      taskTitle: _str(json['taskTitle']),
+      teacherId: _str(json['teacherId']),
+      teacherName: _str(json['teacherName']),
+      hasPrincipalComment: _bool(json['hasPrincipalComment']),
+      featured: _bool(json['featured']),
+      overdue: _bool(json['overdue']),
+      leadOverdue: _bool(json['leadOverdue']),
       imageCount: _int(json['imageCount']),
       teacherCount: _int(json['teacherCount']),
       reviewedCount: _int(json['reviewedCount']),
@@ -134,8 +192,20 @@ class ArtworkSummary {
   final String createTime;
   final String description;
 
-  /// 全部指派老师已点评（`status == REVIEWED`）。
+  /// 责任老师已点评（`status == REVIEWED`）。
   final bool reviewed;
+  final ArtworkLeadStatus leadStatus;
+  final int version;
+  final int versionCount;
+  final String rootId;
+  final String taskId;
+  final String taskTitle;
+  final String teacherId;
+  final String teacherName;
+  final bool hasPrincipalComment;
+  final bool featured;
+  final bool overdue;
+  final bool leadOverdue;
   final int imageCount;
   final int teacherCount;
   final int reviewedCount;
@@ -174,6 +244,7 @@ class ArtworkTag {
     required this.name,
     this.explanation = '',
     this.color = '#715EFE',
+    this.dimension = '',
     this.usageCount = 0,
   });
 
@@ -184,6 +255,7 @@ class ArtworkTag {
       name: _str(json['name']),
       explanation: _str(json['explanation']),
       color: _str(json['color']),
+      dimension: _str(json['dimension']),
       usageCount: _int(json['usageCount']),
     );
   }
@@ -194,7 +266,180 @@ class ArtworkTag {
 
   /// `#RRGGBB`。
   final String color;
+
+  /// 所属分项 key，可空。
+  final String dimension;
   final int usageCount;
+}
+
+@immutable
+class ArtworkDimensionDef {
+  const ArtworkDimensionDef({required this.key, required this.name});
+
+  factory ArtworkDimensionDef.fromJson(Object? raw) {
+    final json = _map(raw);
+    return ArtworkDimensionDef(key: _str(json['key']), name: _str(json['name']));
+  }
+
+  final String key;
+  final String name;
+}
+
+@immutable
+class ArtworkTimelineEvent {
+  const ArtworkTimelineEvent({
+    required this.role,
+    required this.type,
+    required this.name,
+    this.time = '',
+    this.content = '',
+    this.score,
+    this.fromScore,
+    this.toScore,
+  });
+
+  factory ArtworkTimelineEvent.fromJson(Object? raw) {
+    final json = _map(raw);
+    return ArtworkTimelineEvent(
+      role: _str(json['role']),
+      type: _str(json['type']),
+      name: _str(json['name']),
+      time: _str(json['time']),
+      content: _str(json['content']),
+      score: _num(json['score']),
+      fromScore: _num(json['fromScore']),
+      toScore: _num(json['toScore']),
+    );
+  }
+
+  final String role;
+  final String type;
+  final String name;
+  final String time;
+  final String content;
+  final double? score;
+  final double? fromScore;
+  final double? toScore;
+}
+
+@immutable
+class ArtworkLeadReview {
+  const ArtworkLeadReview({
+    this.reasons = const <String>[],
+    this.enteredTime = '',
+    this.leaderId = '',
+    this.leaderName = '',
+    this.action = '',
+    this.score,
+    this.reason = '',
+    this.content = '',
+    this.qualityStars = 0,
+    this.qualityNote = '',
+    this.time = '',
+  });
+
+  factory ArtworkLeadReview.fromJson(Object? raw) {
+    final json = _map(raw);
+    final reasons = json['reasons'];
+    return ArtworkLeadReview(
+      reasons: reasons is List
+          ? <String>[for (final item in reasons) _str(item)]
+          : const <String>[],
+      enteredTime: _str(json['enteredTime']),
+      leaderId: _str(json['leaderId']),
+      leaderName: _str(json['leaderName']),
+      action: _str(json['action']).toUpperCase(),
+      score: _num(json['score']),
+      reason: _str(json['reason']),
+      content: _str(json['content']),
+      qualityStars: _int(json['qualityStars']),
+      qualityNote: _str(json['qualityNote']),
+      time: _str(json['time']),
+    );
+  }
+
+  final List<String> reasons;
+  final String enteredTime;
+  final String leaderId;
+  final String leaderName;
+  final String action;
+  final double? score;
+  final String reason;
+  final String content;
+  final int qualityStars;
+  final String qualityNote;
+  final String time;
+}
+
+@immutable
+class ArtworkPrincipalComment {
+  const ArtworkPrincipalComment({
+    required this.id,
+    required this.name,
+    required this.content,
+    this.time = '',
+  });
+
+  factory ArtworkPrincipalComment.fromJson(Object? raw) {
+    final json = _map(raw);
+    return ArtworkPrincipalComment(
+      id: _str(json['id']),
+      name: _str(json['name']),
+      content: _str(json['content']),
+      time: _str(json['time']),
+    );
+  }
+
+  final String id;
+  final String name;
+  final String content;
+  final String time;
+}
+
+@immutable
+class ArtworkTask {
+  const ArtworkTask({
+    required this.id,
+    required this.title,
+    this.subject = '',
+    this.requirement = '',
+    this.dueTime = '',
+    this.createTime = '',
+    this.teacherId = '',
+    this.teacherName = '',
+    this.status = '',
+    this.classIds = const <String>[],
+  });
+
+  factory ArtworkTask.fromJson(Object? raw) {
+    final json = _map(raw);
+    final classes = json['classIds'];
+    return ArtworkTask(
+      id: _str(json['id']),
+      title: _str(json['title']),
+      subject: _str(json['subject']),
+      requirement: _str(json['requirement']),
+      dueTime: _str(json['dueTime']),
+      createTime: _str(json['createTime']),
+      teacherId: _str(json['teacherId']),
+      teacherName: _str(json['teacherName']),
+      status: _str(json['status']).toUpperCase(),
+      classIds: classes is List
+          ? <String>[for (final item in classes) _str(item)]
+          : const <String>[],
+    );
+  }
+
+  final String id;
+  final String title;
+  final String subject;
+  final String requirement;
+  final String dueTime;
+  final String createTime;
+  final String teacherId;
+  final String teacherName;
+  final String status;
+  final List<String> classIds;
 }
 
 /// 一笔批注：[points] 按图片宽高归一化到 0–1，[width] 以 600 宽的图片为基准。
@@ -283,12 +528,33 @@ class ArtworkReview {
     this.maxScore = 100,
     this.content = '',
     this.reviewedTime = '',
+    this.dimensions = const <String, int>{},
+    this.requestLeadReview = false,
     this.tags = const <ArtworkTag>[],
+    this.tagResolutions = const <({String tag, bool resolved})>[],
     this.annotations = const <AnnotationStroke>[],
   });
 
   factory ArtworkReview.fromJson(Object? raw) {
     final json = _map(raw);
+    final dims = <String, int>{};
+    final rawDims = json['dimensions'];
+    if (rawDims is Map) {
+      rawDims.forEach((key, value) {
+        final level = _int(value);
+        if (level >= 1 && level <= 5) {
+          dims[key.toString()] = level;
+        }
+      });
+    }
+    final resolutions = <({String tag, bool resolved})>[];
+    for (final item in _maps(json['tagResolutions'])) {
+      final tag = _str(item['tag']);
+      if (tag.isEmpty) {
+        continue;
+      }
+      resolutions.add((tag: tag, resolved: _bool(item['resolved'])));
+    }
     return ArtworkReview(
       teacherId: _str(json['teacherId']),
       teacherName: _str(json['teacherName']),
@@ -298,7 +564,10 @@ class ArtworkReview {
       maxScore: _num(json['maxScore']) ?? 100,
       content: _str(json['content']),
       reviewedTime: _str(json['reviewedTime']),
+      dimensions: dims,
+      requestLeadReview: _bool(json['requestLeadReview']),
       tags: _maps(json['tags']).map(ArtworkTag.fromJson).toList(),
+      tagResolutions: resolutions,
       annotations: _maps(
         json['annotations'],
       ).map(AnnotationStroke.fromJson).toList(),
@@ -313,7 +582,10 @@ class ArtworkReview {
   final double maxScore;
   final String content;
   final String reviewedTime;
+  final Map<String, int> dimensions;
+  final bool requestLeadReview;
   final List<ArtworkTag> tags;
+  final List<({String tag, bool resolved})> tagResolutions;
   final List<AnnotationStroke> annotations;
 
   /// 点评内容对当前查看者可见。
@@ -329,12 +601,27 @@ class ArtworkDetail {
     this.teachers = const <ArtworkTeacher>[],
     this.images = const <ArtworkImage>[],
     this.reviews = const <ArtworkReview>[],
+    this.review,
+    this.leadReview,
+    this.principalComments = const <ArtworkPrincipalComment>[],
+    this.timeline = const <ArtworkTimelineEvent>[],
+    this.versions = const <ArtworkSummary>[],
+    this.dimensions = const <ArtworkDimensionDef>[],
+    this.canReview = false,
+    this.canComment = false,
+    this.canFeature = false,
   });
 
   factory ArtworkDetail.fromJson(Object? raw) {
     final json = _map(raw);
     final work = _map(json['work']);
-    final reviews = _maps(json['reviews']).map(ArtworkReview.fromJson).toList();
+    var reviews = _maps(json['reviews']).map(ArtworkReview.fromJson).toList();
+    final single = json['review'] == null
+        ? null
+        : ArtworkReview.fromJson(json['review']);
+    if (reviews.isEmpty && single != null) {
+      reviews = <ArtworkReview>[single];
+    }
     final teachers = work['teachers'] is List
         ? _maps(work['teachers']).map(ArtworkTeacher.fromJson).toList()
         : <ArtworkTeacher>[
@@ -345,12 +632,30 @@ class ArtworkDetail {
                 reviewed: r.reviewed,
               ),
           ];
+    final access = _map(json['access']);
     return ArtworkDetail(
       work: ArtworkSummary.fromJson(work),
       requiredFullScore: _num(work['requiredFullScore']),
       teachers: teachers,
       images: _maps(json['images']).map(ArtworkImage.fromJson).toList(),
       reviews: reviews,
+      review: single ?? (reviews.isEmpty ? null : reviews.first),
+      leadReview: json['leadReview'] == null
+          ? null
+          : ArtworkLeadReview.fromJson(json['leadReview']),
+      principalComments: _maps(
+        json['principalComments'],
+      ).map(ArtworkPrincipalComment.fromJson).toList(),
+      timeline: _maps(
+        json['timeline'],
+      ).map(ArtworkTimelineEvent.fromJson).toList(),
+      versions: _maps(json['versions']).map(ArtworkSummary.fromJson).toList(),
+      dimensions: _maps(
+        json['dimensions'],
+      ).map(ArtworkDimensionDef.fromJson).toList(),
+      canReview: _bool(access['canReview']),
+      canComment: _bool(access['canComment']),
+      canFeature: _bool(access['canFeature']),
     );
   }
 
@@ -362,17 +667,28 @@ class ArtworkDetail {
   final List<ArtworkImage> images;
   final List<ArtworkReview> reviews;
 
+  /// 责任老师点评（点评链新字段）；旧界面可继续用 [reviews]。
+  final ArtworkReview? review;
+  final ArtworkLeadReview? leadReview;
+  final List<ArtworkPrincipalComment> principalComments;
+  final List<ArtworkTimelineEvent> timeline;
+  final List<ArtworkSummary> versions;
+  final List<ArtworkDimensionDef> dimensions;
+  final bool canReview;
+  final bool canComment;
+  final bool canFeature;
+
   ArtworkReview? get myReview {
-    for (final review in reviews) {
-      if (review.mine) {
-        return review;
+    for (final item in reviews) {
+      if (item.mine) {
+        return item;
       }
     }
-    return null;
+    return review;
   }
 
   List<ArtworkReview> get otherReviews =>
-      reviews.where((review) => !review.mine).toList();
+      reviews.where((item) => !item.mine).toList();
 }
 
 @immutable
@@ -450,6 +766,9 @@ class ArtworkInsights {
     this.bestSubject = '',
     this.weakestSubject = '',
     this.suggestions = const <ArtworkSuggestion>[],
+    this.streakDays = 0,
+    this.recentSubmitCount = 0,
+    this.resolveRate,
   });
 
   factory ArtworkInsights.fromJson(Object? raw) {
@@ -463,6 +782,9 @@ class ArtworkInsights {
       suggestions: _maps(
         json['suggestions'],
       ).map(ArtworkSuggestion.fromJson).toList(),
+      streakDays: _int(json['streakDays']),
+      recentSubmitCount: _int(json['recentSubmitCount']),
+      resolveRate: _num(json['resolveRate']),
     );
   }
 
@@ -472,6 +794,9 @@ class ArtworkInsights {
   final String bestSubject;
   final String weakestSubject;
   final List<ArtworkSuggestion> suggestions;
+  final int streakDays;
+  final int recentSubmitCount;
+  final double? resolveRate;
 }
 
 /// 分页结构 `{records, total, size, current, pages}`。
@@ -536,6 +861,8 @@ class ArtworkDraft {
     required this.drawingDate,
     required this.description,
     required this.images,
+    this.taskId = '',
+    this.parentId = '',
   });
 
   final String title;
@@ -545,6 +872,8 @@ class ArtworkDraft {
   final String drawingDate;
   final String description;
   final List<ArtworkDraftImage> images;
+  final String taskId;
+  final String parentId;
 }
 
 /// 解析接口返回的 id（字符串或数字）。

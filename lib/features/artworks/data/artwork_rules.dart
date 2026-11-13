@@ -15,6 +15,20 @@ abstract final class ArtworkRules {
   static const tagNameLimit = 50;
   static const tagExplanationLimit = 500;
   static const defaultFullScore = 100.0;
+  static const adjustReasonLimit = 10;
+  static const briefCommentLimit = 20;
+  static const dimensionMin = 1;
+  static const dimensionMax = 5;
+
+  /// 分项 1–5 级文案。
+  static const dimensionLabels = <String>['待加强', '一般', '合格', '良好', '优秀'];
+
+  static String dimensionLabel(int level) {
+    if (level < dimensionMin || level > dimensionMax) {
+      return '';
+    }
+    return dimensionLabels[level - 1];
+  }
 
   /// 点评标签分「问题」「亮点」两类，接口仍以颜色字段保存：亮点固定绿色，其余都按问题处理。
   static const problemTagColor = '#B9770F';
@@ -161,6 +175,39 @@ abstract final class ArtworkRules {
     }
     if (score == null && tagCount == 0 && lengthOf(comment) == 0) {
       return '请至少填写分数、选择标签或填写评语';
+    }
+    return null;
+  }
+
+  /// 组长复核：调分理由至少 10 字，星级必选。
+  static String? validateLeadReview({
+    required String action,
+    required int qualityStars,
+    String reason = '',
+    String content = '',
+    double? score,
+    double maxScore = defaultFullScore,
+  }) {
+    final normalized = action.trim().toUpperCase();
+    if (!const {'KEEP', 'ADJUST', 'SUPPLEMENT'}.contains(normalized)) {
+      return '请选择复核结果';
+    }
+    if (qualityStars < 1 || qualityStars > 5) {
+      return '请为这次点评选择 1 至 5 星';
+    }
+    if (normalized == 'ADJUST') {
+      if (lengthOf(reason) < adjustReasonLimit) {
+        return '调分理由至少 $adjustReasonLimit 个字';
+      }
+      if (score == null) {
+        return '请填写调整后的分数';
+      }
+      if (score < 0 || score > maxScore) {
+        return '分数不能超过满分 ${formatScore(maxScore)}';
+      }
+    }
+    if (normalized == 'SUPPLEMENT' && lengthOf(content) < 5) {
+      return '补充评语至少 5 个字';
     }
     return null;
   }

@@ -1,120 +1,232 @@
-/// 作品档案 / 作品点评演示数据（移植自学情小程序的演示作品）：学生日常作品、
-/// 多位老师的独立点评、老师私有的点评标签与批注，学生端与教师端共用一份。
+/// 作品点评链演示数据的定义与规则：责任老师点评 → 组长复核 → 校长点评与推优，
+/// 加上改画版本、分项评价和作业关联（口径见 `docs/美育集3.0实施规格.md` 第 1、2 节）。
 ///
-/// 作品：`{id, personIndex, title, subject, drawingDate, createTime,
-/// description, images: [{id, ref}], teacherIds, reviews}`；
-/// 点评：`{teacherId, score|null, maxScore, content, reviewedTime,
-/// tags: [{id, name, explanation, color}]}`，标签按点评当时的内容存快照。
-/// 状态与最终分不落盘，读取时由 [DemoArtworkData.aggregate] 计算。
+/// 一份作品：
+/// ```
+/// id, rootId, version(1 起), parentId(上一版 id，没有为空)
+/// personIndex, title, subject, drawingDate, createTime, description,
+/// images[{id, ref}], taskId(自主练习为空), teacherId(责任老师)
+/// review: null | {teacherId, score|null, maxScore, content, reviewedTime,
+///   dimensions{key: 1..5}, tags[{id, name, explanation, color, dimension}],
+///   voiceRef, voiceSeconds, requestLeadReview, tagResolutions[{tag, resolved}]}
+/// supplements[{teacherId, content, time}]
+/// leadReview: null | {reasons[], enteredTime, leaderId, action: null|KEEP|ADJUST|
+///   SUPPLEMENT, score, reason, content, qualityStars, qualityNote, time}
+/// principalComments[{id, userId, name, content, time}]
+/// featured, featuredTime, featuredBy
+/// ```
+/// 状态、最终分、是否超时与时间线不落盘，读取时由本文件里的规则计算。
+/// 种子见 `demo_artwork_seed.dart`，读写入口见 `demo_artwork_store.dart`。
 library;
 
-import 'dart:math' as math;
-
+import '../demo_accounts.dart';
+import 'demo_campus_data.dart';
 import 'demo_marking_data.dart';
 
-class _SeedReview {
-  const _SeedReview(
-    this.teacherId,
-    this.score,
-    this.content, [
-    this.tags = const <int>[],
-    this.time = '',
-  ]);
+class DemoDimensionDef {
+  const DemoDimensionDef(this.key, this.name);
 
-  final String teacherId;
-  final double? score;
-  final String content;
-
-  /// 老师标签序号（从 1 开始；8 为该老师的专属标签）。
-  final List<int> tags;
-
-  /// 指定的点评时间 `yyyy-MM-dd HH:mm:ss`；为空时取绘画日期次日的晚自习时段。
-  final String time;
+  final String key;
+  final String name;
 }
 
-class _SeedWork {
-  const _SeedWork({
-    required this.person,
-    required this.title,
-    required this.subject,
-    required this.date,
-    required this.images,
-    required this.teachers,
-    this.description = '',
-    this.reviews = const <_SeedReview>[],
+/// 点评设置：抽查比例与两个时限，教务可改。
+class DemoReviewSettings {
+  const DemoReviewSettings({
+    this.spotCheckPercent = 20,
+    this.reviewHours = 24,
+    this.leadHours = 48,
   });
 
-  final int person;
-  final String title;
-  final String subject;
-  final String date;
+  factory DemoReviewSettings.fromMap(Map<String, dynamic> map) {
+    int read(String key, int fallback) {
+      final value = map[key];
+      return value is num ? value.toInt() : fallback;
+    }
 
-  /// `assets/demo/` 下的相对路径。
-  final List<String> images;
-  final List<String> teachers;
-  final String description;
-  final List<_SeedReview> reviews;
+    return DemoReviewSettings(
+      spotCheckPercent: read('spotCheckPercent', 20),
+      reviewHours: read('reviewHours', 24),
+      leadHours: read('leadHours', 48),
+    );
+  }
+
+  /// 抽查比例（百分数，10–50）。
+  final int spotCheckPercent;
+
+  /// 点评时限：从提交算起的小时数。
+  final int reviewHours;
+
+  /// 复核时限：从进入复核池算起的小时数。
+  final int leadHours;
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+    'spotCheckPercent': spotCheckPercent,
+    'reviewHours': reviewHours,
+    'leadHours': leadHours,
+  };
 }
 
-class _TagStat {
-  _TagStat(this.name);
+/// 查看者与一份作品的关系，决定能看到什么、能做什么（规格 2.2 的可见范围表）。
+class DemoArtworkAccess {
+  const DemoArtworkAccess({
+    this.owner = false,
+    this.responsible = false,
+    this.leader = false,
+    this.principal = false,
+    this.admin = false,
+    this.headTeacher = false,
+    this.artTeacher = false,
+  });
 
-  final String name;
-  int count = 0;
-  String color = '';
-  String explanation = '';
-  String latest = '';
-  final Map<String, int> subjects = <String, int>{};
+  /// 提交这份作品的学生本人。
+  final bool owner;
+
+  /// 责任老师。
+  final bool responsible;
+
+  /// 这份作品所在科目组的组长。
+  final bool leader;
+  final bool principal;
+  final bool admin;
+
+  /// 学生所在班级的班主任。
+  final bool headTeacher;
+
+  /// 查看者是美术科目老师（可以补充点评）。
+  final bool artTeacher;
+
+  bool get staff => responsible || leader || principal || admin || headTeacher;
+
+  bool get canRead => owner || staff;
+
+  /// 老师点评（分数、分项、标签、评语、批注、语音）。
+  bool get seesReview => canRead;
+
+  /// 进入复核的原因：学生和班主任看不到，只知道「复核中」。
+  bool get seesLeadReasons => responsible || leader || principal || admin;
+
+  /// 复核结果（维持 / 调分及理由 / 补充评语）。
+  bool get seesLeadResult => canRead;
+
+  /// 点评质量星级与意见：老师本人、组长、校长与管理员。
+  bool get seesQuality => responsible || leader || principal || admin;
+
+  /// 校长点评与优秀作品标记。
+  bool get seesPrincipal => canRead;
+
+  bool get canReview => responsible;
+
+  /// 非责任老师的补充点评，不计分。
+  bool get canSupplement => artTeacher && !responsible;
+
+  /// 校长可以点评和推优，不改分；管理员只读。
+  bool get canComment => principal;
+  bool get canFeature => principal;
 }
-
-typedef DemoArtworkAggregate = ({
-  String status,
-  double? finalScore,
-  double maxScore,
-  int teacherCount,
-  int reviewedCount,
-});
 
 abstract final class DemoArtworkData {
-  // v2：分数、提交时间、标签类型与批注颜色调整后，旧的本地演示数据不再沿用。
-  static const worksKey = 'artworks:v2';
-  static const annotationsKey = 'artwork_annotations:v2';
-  static const uploadsKey = 'artwork_uploads:v2';
+  // v3：点评链数据模型，旧的 v2 键不再读取。
+  static const worksKey = 'artworks:v3';
+  static const tasksKey = 'artwork_tasks:v3';
+  static const annotationsKey = 'artwork_annotations:v3';
+  static const uploadsKey = 'artwork_uploads:v3';
+  static const settingsKey = 'review_settings:v3';
 
-  static String tagsKey(String teacherId) => 'artwork_tags:v2:$teacherId';
+  static String tagsKey(String teacherId) => 'artwork_tags:v3:$teacherId';
 
   static const statusReviewed = 'REVIEWED';
   static const statusPending = 'PENDING';
 
-  static String tagId(String teacherId, int index) => '$teacherId-tag-$index';
+  static const leadNone = 'NONE';
+  static const leadInReview = 'IN_REVIEW';
+  static const leadDone = 'DONE';
 
-  static String teacherName(String teacherId) {
-    for (final teacher in DemoMarkingData.reviewTeachers) {
-      if (teacher.id == teacherId) {
-        return teacher.name;
-      }
-    }
-    return '老师';
+  static const reasonRequested = 'REQUESTED';
+  static const reasonScoreAnomaly = 'SCORE_ANOMALY';
+  static const reasonBrief = 'BRIEF';
+  static const reasonSpotCheck = 'SPOT_CHECK';
+  static const reasons = <String>[
+    reasonRequested,
+    reasonScoreAnomaly,
+    reasonBrief,
+    reasonSpotCheck,
+  ];
+
+  static const actionKeep = 'KEEP';
+  static const actionAdjust = 'ADJUST';
+  static const actionSupplement = 'SUPPLEMENT';
+  static const actions = <String>[actionKeep, actionAdjust, actionSupplement];
+
+  /// 分数异常：与最近同科最终分均值的差不少于满分的 15%。
+  static const anomalyRatio = 0.15;
+
+  /// 分数异常至少要有的历史次数，以及参与均值的最近次数。
+  static const anomalyMinHistory = 2;
+  static const anomalyHistory = 5;
+
+  /// 点评过简：评语少于 20 字且没有批注。
+  static const briefLength = 20;
+
+  /// 调分理由的最少字数。
+  static const adjustReasonLength = 10;
+
+  /// 没有演示账号的老师、组长由演示后端代为处理的固定时延。
+  static const autoDelay = Duration(seconds: 60);
+
+  static const subjects = <String>['素描', '色彩', '速写'];
+
+  // ── 时间 ─────────────────────────────────────────────────────────────
+
+  static String _two(int v) => v.toString().padLeft(2, '0');
+
+  static String ymd(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
+
+  static String fmt(DateTime d) =>
+      '${ymd(d)} ${_two(d.hour)}:${_two(d.minute)}:${_two(d.second)}';
+
+  static DateTime? parseTime(Object? raw) {
+    final value = text(raw);
+    return value.isEmpty ? null : DateTime.tryParse(value.replaceFirst(' ', 'T'));
   }
 
-  static bool isReviewTeacher(String teacherId) =>
-      DemoMarkingData.reviewTeachers.any((t) => t.id == teacherId);
+  static DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  /// 学生新提交的作品：指派给演示任课老师李静，色彩 / 速写再加上对应科目老师。
-  static List<String> teachersForNewWork(String subject) => switch (subject) {
-    '色彩' => <String>['t-1', 't-3'],
-    '速写' => <String>['t-1', 't-4'],
-    _ => <String>['t-1'],
-  };
+  /// 画室周日休息，不上课、不交作品，也不计入点评与复核的时限。
+  static bool isSchoolDay(DateTime d) => d.weekday != DateTime.sunday;
+
+  /// [start] 之后 [hours] 小时的截止时刻；周日整天不计时。
+  static DateTime deadline(DateTime start, int hours) {
+    var at = start;
+    var remaining = Duration(hours: hours);
+    while (true) {
+      if (!isSchoolDay(at)) {
+        at = DateTime(at.year, at.month, at.day + 1);
+        continue;
+      }
+      final nextSunday = DateTime(
+        at.year,
+        at.month,
+        at.day + (DateTime.sunday - at.weekday),
+      );
+      final available = nextSunday.difference(at);
+      if (remaining <= available) {
+        return at.add(remaining);
+      }
+      remaining -= available;
+      at = DateTime(nextSunday.year, nextSunday.month, nextSunday.day + 1);
+    }
+  }
 
   // ── 读取工具（兼容种子数据与 JSON 往返后的结构） ─────────────────────
 
-  static List<String> teacherIdsOf(Map<String, dynamic> work) {
-    final raw = work['teacherIds'];
-    return raw is List
-        ? raw.map((e) => e.toString()).toList()
-        : const <String>[];
+  static String text(Object? value) {
+    final result = value?.toString().trim() ?? '';
+    return result == 'null' ? '' : result;
   }
+
+  static Map<String, dynamic>? mapOf(Object? raw) =>
+      raw is Map ? raw.map((k, v) => MapEntry(k.toString(), v)) : null;
 
   static List<Map<String, dynamic>> mapsOf(Object? raw) {
     if (raw is! List) {
@@ -126,66 +238,555 @@ abstract final class DemoArtworkData {
     ];
   }
 
-  static List<Map<String, dynamic>> reviewsOf(Map<String, dynamic> work) =>
-      mapsOf(work['reviews']);
+  static Map<String, dynamic>? reviewOf(Map<String, dynamic> work) =>
+      mapOf(work['review']);
+
+  static Map<String, dynamic>? leadOf(Map<String, dynamic> work) =>
+      mapOf(work['leadReview']);
 
   static List<Map<String, dynamic>> imagesOf(Map<String, dynamic> work) =>
       mapsOf(work['images']);
 
-  static List<Map<String, dynamic>> tagsOf(Map<String, dynamic> review) =>
-      mapsOf(review['tags']);
+  static List<Map<String, dynamic>> tagsOf(Map<String, dynamic>? review) =>
+      mapsOf(review?['tags']);
 
-  static Map<String, dynamic>? reviewOf(
+  static List<Map<String, dynamic>> supplementsOf(Map<String, dynamic> work) =>
+      mapsOf(work['supplements']);
+
+  static List<Map<String, dynamic>> principalCommentsOf(
     Map<String, dynamic> work,
-    String teacherId,
+  ) => mapsOf(work['principalComments']);
+
+  static int personOf(Map<String, dynamic> work) =>
+      (work['personIndex'] as num?)?.toInt() ?? 0;
+
+  static int versionOf(Map<String, dynamic> work) =>
+      (work['version'] as num?)?.toInt() ?? 1;
+
+  static String rootOf(Map<String, dynamic> work) {
+    final root = text(work['rootId']);
+    return root.isEmpty ? text(work['id']) : root;
+  }
+
+  static double round2(double value) => (value * 100).round() / 100;
+
+  // ── 状态（读取时计算） ───────────────────────────────────────────────
+
+  static String statusOf(Map<String, dynamic> work) =>
+      reviewOf(work) == null ? statusPending : statusReviewed;
+
+  static bool isReviewed(Map<String, dynamic> work) => reviewOf(work) != null;
+
+  static String leadStatusOf(Map<String, dynamic> work) {
+    final lead = leadOf(work);
+    if (lead == null || reviewOf(work) == null) {
+      return leadNone;
+    }
+    return text(lead['action']).isEmpty ? leadInReview : leadDone;
+  }
+
+  /// 组长调分后取组长的分数，否则取责任老师的分数；未点评或没有打分时为 null。
+  static double? finalScoreOf(Map<String, dynamic> work) {
+    final review = reviewOf(work);
+    if (review == null) {
+      return null;
+    }
+    final lead = leadOf(work);
+    if (lead != null &&
+        text(lead['action']) == actionAdjust &&
+        lead['score'] is num) {
+      return (lead['score'] as num).toDouble();
+    }
+    final score = review['score'];
+    return score is num ? score.toDouble() : null;
+  }
+
+  static double maxScoreOf(Map<String, dynamic> work) {
+    final max = reviewOf(work)?['maxScore'];
+    return max is num && max > 0 ? max.toDouble() : 100;
+  }
+
+  /// 待点评且提交超过点评时限。
+  static bool isOverdue(
+    Map<String, dynamic> work,
+    DateTime now,
+    DemoReviewSettings settings,
   ) {
-    for (final review in reviewsOf(work)) {
-      if (review['teacherId']?.toString() == teacherId) {
-        return review;
+    if (isReviewed(work)) {
+      return false;
+    }
+    final created = parseTime(work['createTime']);
+    return created != null &&
+        now.isAfter(deadline(created, settings.reviewHours));
+  }
+
+  /// 复核中且进入复核池超过复核时限。
+  static bool isLeadOverdue(
+    Map<String, dynamic> work,
+    DateTime now,
+    DemoReviewSettings settings,
+  ) {
+    if (leadStatusOf(work) != leadInReview) {
+      return false;
+    }
+    final entered = parseTime(leadOf(work)?['enteredTime']);
+    return entered != null &&
+        now.isAfter(deadline(entered, settings.leadHours));
+  }
+
+  // ── 进入复核池的规则 ─────────────────────────────────────────────────
+
+  /// 字符串的 32 位固定散列（FNV-1a）：各端结果一致，不随运行平台变化。
+  static int hash32(String value) {
+    var hash = 0x811C9DC5;
+    for (final unit in value.codeUnits) {
+      hash = (hash ^ unit) & 0xFFFFFFFF;
+      // 32 位乘法拆成高低 16 位，Web 端也不会丢精度。
+      hash =
+          ((hash & 0xFFFF) * 0x01000193 +
+              ((((hash >>> 16) * 0x01000193) & 0xFFFF) << 16)) &
+          0xFFFFFFFF;
+    }
+    return hash;
+  }
+
+  /// 作品 id 的固定散列值（0–99），与抽查比例比较。
+  static int spotHash(String id) => hash32(id) % 100;
+
+  static bool isSpotChecked(String id, int percent) => spotHash(id) < percent;
+
+  /// 老师保存点评时判断是否进入复核池：满足任一条即进入，返回全部命中的原因。
+  ///
+  /// [recentFinals] 是该生此前同科作品的最终分占满分的比例（0–1），新的在前。
+  static List<String> leadReasons({
+    required String id,
+    required bool requested,
+    required double? score,
+    required double maxScore,
+    required List<double> recentFinals,
+    required String content,
+    required bool hasAnnotations,
+    required int spotCheckPercent,
+  }) {
+    final result = <String>[];
+    if (requested) {
+      result.add(reasonRequested);
+    }
+    if (score != null &&
+        maxScore > 0 &&
+        recentFinals.length >= anomalyMinHistory) {
+      final recent = recentFinals.take(anomalyHistory).toList();
+      final mean = recent.reduce((a, b) => a + b) / recent.length;
+      if ((score / maxScore - mean).abs() >= anomalyRatio - 1e-9) {
+        result.add(reasonScoreAnomaly);
+      }
+    }
+    if (content.trim().runes.length < briefLength && !hasAnnotations) {
+      result.add(reasonBrief);
+    }
+    if (isSpotChecked(id, spotCheckPercent)) {
+      result.add(reasonSpotCheck);
+    }
+    return result;
+  }
+
+  // ── 老师、班级与责任 ─────────────────────────────────────────────────
+
+  static DemoTeacher? teacherOf(String teacherId) {
+    for (final teacher in DemoMarkingData.reviewTeachers) {
+      if (teacher.id == teacherId) {
+        return teacher;
       }
     }
     return null;
   }
 
-  static double round2(double value) => (value * 100).round() / 100;
+  static bool isReviewTeacher(String teacherId) => teacherOf(teacherId) != null;
 
-  /// 全部指派老师都点评后为 REVIEWED；最终分为已打分点评的平均分（两位小数），
-  /// 未全部点评或没有老师打分时为 null。
-  static DemoArtworkAggregate aggregate(Map<String, dynamic> work) {
-    final teacherIds = teacherIdsOf(work);
-    final reviews = reviewsOf(
-      work,
-    ).where((r) => teacherIds.contains(r['teacherId']?.toString())).toList();
-    final reviewedCount = teacherIds
-        .where((id) => reviews.any((r) => r['teacherId']?.toString() == id))
-        .length;
-    final done = teacherIds.isNotEmpty && reviewedCount == teacherIds.length;
-    final scored = <Map<String, dynamic>>[
-      for (final review in reviews)
-        if (review['score'] is num) review,
-    ];
-    final maxScore = scored.isEmpty
-        ? 100.0
-        : ((scored.first['maxScore'] as num?) ?? 100).toDouble();
-    double? finalScore;
-    if (done && scored.isNotEmpty) {
-      final sum = scored.fold<double>(
-        0,
-        (total, r) => total + (r['score'] as num).toDouble(),
-      );
-      finalScore = round2(sum / scored.length);
+  static String teacherName(String teacherId) =>
+      teacherOf(teacherId)?.name ??
+      DemoCampusData.staffById(teacherId)?.name ??
+      '老师';
+
+  /// 科目组的组长。
+  static DemoTeacher? leaderOfSubject(String subject) {
+    for (final teacher in DemoMarkingData.reviewTeachers) {
+      if (teacher.leader && teacher.subject == subject) {
+        return teacher;
+      }
     }
-    return (
-      status: done ? statusReviewed : statusPending,
-      finalScore: finalScore,
-      maxScore: maxScore,
-      teacherCount: teacherIds.length,
-      reviewedCount: reviewedCount,
+    return null;
+  }
+
+  /// 负责复核 [teacherId] 的组长；组长本人负责的作品不进复核池，返回 null。
+  static String? leaderIdFor(String teacherId) {
+    final teacher = teacherOf(teacherId);
+    if (teacher == null || teacher.leader) {
+      return null;
+    }
+    return leaderOfSubject(teacher.subject)?.id;
+  }
+
+  /// 有演示账号、需要演示的人亲自操作的老师。
+  static bool hasDemoAccount(String teacherId) => DemoAccounts.all.any(
+    (account) => account.role.teaches && account.teacherId == teacherId,
+  );
+
+  /// 在校学生：38 号休学，不交作品。
+  static bool isActiveStudent(int personIndex) => personIndex != 38;
+
+  static DemoCampusClass classOf(int personIndex) =>
+      DemoCampusData.classOfPerson(personIndex);
+
+  /// 责任老师 = 班级该科目的任课老师（按课表）；其他科目归到素描老师名下。
+  static String responsibleTeacherId(String classId, String subject) {
+    final slots = DemoCampusData.timetableOf(classId);
+    for (final wanted in <String>[subject, '素描']) {
+      for (final slot in slots) {
+        if (slot.courseName == wanted) {
+          return slot.teacherId;
+        }
+      }
+    }
+    return 't-1';
+  }
+
+  /// 平台用户 id（只有带演示账号的人才收得到消息）。
+  static String? userIdOfTeacher(String teacherId) {
+    final userId = DemoCampusData.staffById(teacherId)?.userId;
+    if (userId == null) {
+      return null;
+    }
+    return DemoAccounts.all.any((a) => a.userId == userId) ? userId : null;
+  }
+
+  static String? userIdOfStudent(int personIndex) =>
+      personIndex == DemoAccounts.student.personIndex
+      ? DemoAccounts.student.userId
+      : null;
+
+  static String studentName(int personIndex) {
+    for (final person in DemoMarkingData.instance.persons) {
+      if (person.index == personIndex) {
+        return person.name;
+      }
+    }
+    return '学生';
+  }
+
+  /// 查看者与作品的关系（规格 2.2）。
+  static DemoArtworkAccess accessOf(
+    DemoAccount viewer,
+    Map<String, dynamic> work,
+  ) {
+    final role = viewer.role;
+    final person = personOf(work);
+    if (role == DemoRole.student) {
+      return DemoArtworkAccess(owner: viewer.personIndex == person);
+    }
+    final teacherId = text(work['teacherId']);
+    final viewerTeacher = viewer.teacherId ?? '';
+    final group = teacherOf(teacherId)?.subject ?? '';
+    final headTeacherId = person > 0 && person <= 40
+        ? classOf(person).headTeacherId
+        : '';
+    return DemoArtworkAccess(
+      responsible: viewerTeacher.isNotEmpty && viewerTeacher == teacherId,
+      leader: group.isNotEmpty && viewer.groupLeaderSubjects.contains(group),
+      principal: role == DemoRole.principal,
+      admin: role == DemoRole.admin,
+      headTeacher: viewerTeacher.isNotEmpty && viewerTeacher == headTeacherId,
+      artTeacher: isReviewTeacher(viewerTeacher),
     );
   }
 
-  // ── 高频问题 ─────────────────────────────────────────────────────────
+  // ── 分项 ─────────────────────────────────────────────────────────────
 
+  static const levelLabels = <String>['待加强', '一般', '合格', '良好', '优秀'];
+
+  static const _dimensions = <String, List<DemoDimensionDef>>{
+    '素描': [
+      DemoDimensionDef('composition', '构图'),
+      DemoDimensionDef('form', '造型'),
+      DemoDimensionDef('value', '明暗'),
+      DemoDimensionDef('rendering', '刻画'),
+    ],
+    '色彩': [
+      DemoDimensionDef('composition', '构图'),
+      DemoDimensionDef('form', '造型'),
+      DemoDimensionDef('color', '色彩关系'),
+      DemoDimensionDef('rendering', '刻画'),
+    ],
+    '速写': [
+      DemoDimensionDef('composition', '构图'),
+      DemoDimensionDef('gesture', '比例动态'),
+      DemoDimensionDef('line', '线条'),
+      DemoDimensionDef('rendering', '刻画'),
+    ],
+  };
+
+  /// 科目的四项分项；三科以外的自定义科目没有分项。
+  static List<DemoDimensionDef> dimensionsOf(String subject) =>
+      _dimensions[subject] ?? const <DemoDimensionDef>[];
+
+  // ── 时间线 ───────────────────────────────────────────────────────────
+
+  /// 按时间排的事件：提交、点评、补充点评、复核、校长点评、推优。
+  /// 复核原因与质量星级不进时间线，由各端按可见范围单独返回。
+  static List<Map<String, dynamic>> timelineOf(Map<String, dynamic> work) {
+    final events = <Map<String, dynamic>>[];
+    Map<String, dynamic> event(
+      String role,
+      String type,
+      String name,
+      Object? time, {
+      String content = '',
+      Object? score,
+      Object? fromScore,
+      Object? toScore,
+    }) => <String, dynamic>{
+      'role': role,
+      'type': type,
+      'name': name,
+      'time': text(time),
+      'content': content,
+      'score': score is num ? score.toDouble() : null,
+      'fromScore': fromScore is num ? fromScore.toDouble() : null,
+      'toScore': toScore is num ? toScore.toDouble() : null,
+    };
+
+    final version = versionOf(work);
+    events.add(
+      event(
+        'STUDENT',
+        'SUBMIT',
+        studentName(personOf(work)),
+        work['createTime'],
+        content: version > 1 ? '改画重交，第 $version 版' : '提交作品',
+      ),
+    );
+    final review = reviewOf(work);
+    if (review != null) {
+      events.add(
+        event(
+          'TEACHER',
+          'REVIEW',
+          teacherName(text(review['teacherId'])),
+          review['reviewedTime'],
+          content: text(review['content']),
+          score: review['score'],
+        ),
+      );
+      for (final item in supplementsOf(work)) {
+        events.add(
+          event(
+            'TEACHER',
+            'SUPPLEMENT',
+            teacherName(text(item['teacherId'])),
+            item['time'],
+            content: text(item['content']),
+          ),
+        );
+      }
+      final lead = leadOf(work);
+      final action = text(lead?['action']);
+      if (lead != null && action.isNotEmpty) {
+        final leader = teacherName(text(lead['leaderId']));
+        switch (action) {
+          case actionAdjust:
+            events.add(
+              event(
+                'LEADER',
+                'LEAD_ADJUST',
+                leader,
+                lead['time'],
+                content: text(lead['reason']),
+                score: lead['score'],
+                fromScore: review['score'],
+                toScore: lead['score'],
+              ),
+            );
+          case actionSupplement:
+            events.add(
+              event(
+                'LEADER',
+                'LEAD_SUPPLEMENT',
+                leader,
+                lead['time'],
+                content: text(lead['content']),
+              ),
+            );
+          default:
+            events.add(
+              event(
+                'LEADER',
+                'LEAD_KEEP',
+                leader,
+                lead['time'],
+                content: text(lead['content']),
+                score: review['score'],
+              ),
+            );
+        }
+      }
+    }
+    for (final comment in principalCommentsOf(work)) {
+      events.add(
+        event(
+          'PRINCIPAL',
+          'PRINCIPAL_COMMENT',
+          text(comment['name']),
+          comment['time'],
+          content: text(comment['content']),
+        ),
+      );
+    }
+    if (work['featured'] == true) {
+      events.add(
+        event(
+          'PRINCIPAL',
+          'FEATURE',
+          text(work['featuredBy']),
+          work['featuredTime'],
+          content: '推荐到优秀作品墙',
+        ),
+      );
+    }
+    // 同一时刻的事件保持上面的先后顺序。
+    final indexed = <(int, Map<String, dynamic>)>[
+      for (var i = 0; i < events.length; i++) (i, events[i]),
+    ];
+    indexed.sort((a, b) {
+      final byTime = text(a.$2['time']).compareTo(text(b.$2['time']));
+      return byTime != 0 ? byTime : a.$1.compareTo(b.$1);
+    });
+    return <Map<String, dynamic>>[for (final item in indexed) item.$2];
+  }
+
+  // ── 标签 ─────────────────────────────────────────────────────────────
+
+  /// 点评标签两类，接口以颜色区分：亮点绿色，问题琥珀色（与 `ArtworkRules` 一致）。
+  static const highlightColor = '#3B9A6E';
+  static const problemColor = '#B9770F';
+
+  static bool isHighlightTag(String name, String color) =>
+      color.toUpperCase() == highlightColor || name == '细节出彩';
+
+  static String tagId(String teacherId, int index) => '$teacherId-tag-$index';
+
+  /// 名称、解释、颜色、所属分项（可为空）。
+  static const standardTags = <(String, String, String, String)>[
+    (
+      '结构错误',
+      '形体比例或透视关系不准确。先用辅助线核对大的比例和骨点位置，再深入刻画。',
+      problemColor,
+      'form',
+    ),
+    (
+      '明暗层次弱',
+      '黑白灰关系没有拉开，暗部与亮部之间的过渡层次不足，画面显得发平。',
+      problemColor,
+      'value',
+    ),
+    (
+      '构图失衡',
+      '主体位置或大小不合适，画面重心偏移。动笔前先用小构图推敲布局。',
+      problemColor,
+      'composition',
+    ),
+    (
+      '线条生硬',
+      '线条缺少轻重、虚实变化，转折处可以更有节奏，避免描边式的均匀线条。',
+      problemColor,
+      'line',
+    ),
+    (
+      '色调不统一',
+      '画面冷暖倾向不明确，局部颜色跳出整体色调，注意环境色的相互影响。',
+      problemColor,
+      'color',
+    ),
+    ('细节出彩', '局部刻画深入到位，质感与空间表现准确，值得在后续作品中保持。', highlightColor, 'rendering'),
+    ('透视错误', '近大远小和消失点不统一，先确定视平线和主要透视线再起形。', problemColor, 'form'),
+  ];
+
+  /// 各老师自己加的标签（序号 8）。
+  static const exclusiveTags = <String, (String, String, String, String)>{
+    't-2': ('暗部偏闷', '暗部笔触过于平涂，缺少反光和细微变化。', problemColor, 'value'),
+    't-3': ('环境色不足', '物体暗部和投影缺少周围环境色的影响，颜色显得孤立。', problemColor, 'color'),
+    't-4': (
+      '动态僵硬',
+      '人物重心和动势不明确，动作像摆拍，先用几根动态线确定姿态。',
+      problemColor,
+      'gesture',
+    ),
+    't-5': ('画面偏灰', '颜色纯度不足，亮部和暗部都偏灰，注意保留色彩的饱和度。', problemColor, 'color'),
+    't-6': ('比例失调', '头身比例或四肢长短不准，先定头顶、脚底和重心线。', problemColor, 'gesture'),
+  };
+
+  static List<(String, String, String, String)> tagDefs(String teacherId) =>
+      <(String, String, String, String)>[
+        ...standardTags,
+        ?exclusiveTags[teacherId],
+      ];
+
+  /// 点评里保存的标签快照（序号从 1 开始）。
+  static Map<String, dynamic>? tagSnapshot(String teacherId, int index) {
+    final defs = tagDefs(teacherId);
+    if (index < 1 || index > defs.length) {
+      return null;
+    }
+    final def = defs[index - 1];
+    return <String, dynamic>{
+      'id': tagId(teacherId, index),
+      'name': def.$1,
+      'explanation': def.$2,
+      'color': def.$3,
+      'dimension': def.$4,
+    };
+  }
+
+  /// 演示前的历史用量（这些老师此前点评过的作品不在演示列表里）。
+  static const _historyUsage = <int>[12, 9, 5, 8, 4, 7, 3, 2];
+
+  /// 老师的标签库；用量 = 历史用量 + 在 [works] 里的使用次数。
+  static List<Map<String, dynamic>> seedTags(
+    String teacherId,
+    List<Map<String, dynamic>> works,
+  ) {
+    final defs = tagDefs(teacherId);
+    final history = isReviewTeacher(teacherId);
+    final used = <String, int>{};
+    if (history) {
+      for (final work in works) {
+        final review = reviewOf(work);
+        if (review == null || text(review['teacherId']) != teacherId) {
+          continue;
+        }
+        for (final tag in tagsOf(review)) {
+          final id = text(tag['id']);
+          used[id] = (used[id] ?? 0) + 1;
+        }
+      }
+    }
+    return <Map<String, dynamic>>[
+      for (var i = 0; i < defs.length; i++)
+        <String, dynamic>{
+          'id': tagId(teacherId, i + 1),
+          'name': defs[i].$1,
+          'explanation': defs[i].$2,
+          'color': defs[i].$3,
+          'dimension': defs[i].$4,
+          'usageCount': history
+              ? _historyUsage[i] + (used[tagId(teacherId, i + 1)] ?? 0)
+              : 0,
+        },
+    ];
+  }
+
+  // ── 点评小结 ─────────────────────────────────────────────────────────
+
+  /// 标签对应的练习建议：建议文字、范画科目、范画关键词、工具箱工具。
   static const _advice = <String, (String, String, String, String)>{
     '结构错误': ('起形时用辅助线核对比例和骨点，完成后镜像翻转检查形准。', '素描', '结构', '镜像'),
     '明暗层次弱': ('眯眼概括黑白灰三大关系，先拉开明暗交界线两侧的对比。', '素描', '明暗', '明度检查'),
@@ -196,48 +797,64 @@ abstract final class DemoArtworkData {
     '环境色不足': ('暗部与投影里加入周围的环境色，让物体融入空间。', '色彩', '环境色', '取色色卡'),
     '暗部偏闷': ('暗部加入反光与冷暖变化，避免一遍平涂。', '素描', '暗部', '明度检查'),
     '动态僵硬': ('先用几根动态线确定重心与动势，再刻画细节。', '速写', '动态', '速写计时'),
+    '画面偏灰': ('提高亮部颜色的纯度，暗部用补色调暗而不是加黑。', '色彩', '色调', '冷暖'),
+    '比例失调': ('先定头顶、脚底和重心线，再用头长去量全身比例。', '速写', '比例', '人体比例'),
   };
 
-  /// 点评标签两类，接口以颜色区分：亮点绿色，问题琥珀色（与 `ArtworkRules` 一致）。
-  static const highlightColor = '#3B9A6E';
-  static const problemColor = '#B9770F';
-
-  static bool _isHighlight(String name, String color) =>
-      color.toUpperCase() == highlightColor || name == '细节出彩';
-
-  /// 学生「我的高频问题」：只统计已完成点评（学生可见）的作品。
-  static Map<String, dynamic> insightsOf(List<Map<String, dynamic>> works) {
+  /// 学生的点评小结：高频问题、练习建议、分项水平、问题解决率、连续练习天数与
+  /// 近 7 天提交数。分数与标签只统计已点评的作品。
+  ///
+  /// 问题解决率 = 改画时被标为「已改善」的问题标签数 ÷ 改画时逐个标记过的问题标签数。
+  static Map<String, dynamic> insightsOf(
+    List<Map<String, dynamic>> works,
+    DateTime now,
+  ) {
     final stats = <String, _TagStat>{};
     final subjectScores = <String, List<double>>{};
     final finals = <double>[];
     var reviewedCount = 0;
+    var problemTags = 0;
+    var markedTags = 0;
+    var resolvedTags = 0;
+    final reviewed = <Map<String, dynamic>>[];
     for (final work in works) {
-      final summary = aggregate(work);
-      if (summary.status != statusReviewed) {
+      final review = reviewOf(work);
+      if (review == null) {
         continue;
       }
+      reviewed.add(work);
       reviewedCount++;
-      final subject = work['subject']?.toString() ?? '';
-      final score = summary.finalScore;
+      final subject = text(work['subject']);
+      final score = finalScoreOf(work);
       if (score != null) {
-        finals.add(score);
-        subjectScores.putIfAbsent(subject, () => <double>[]).add(score);
+        final percent = score / maxScoreOf(work) * 100;
+        finals.add(percent);
+        subjectScores.putIfAbsent(subject, () => <double>[]).add(percent);
       }
-      for (final review in reviewsOf(work)) {
-        final time = review['reviewedTime']?.toString() ?? '';
-        for (final tag in tagsOf(review)) {
-          final name = tag['name']?.toString() ?? '';
-          if (name.isEmpty) {
-            continue;
-          }
-          final stat = stats.putIfAbsent(name, () => _TagStat(name));
-          stat.count++;
-          stat.subjects[subject] = (stat.subjects[subject] ?? 0) + 1;
-          if (time.compareTo(stat.latest) >= 0) {
-            stat.latest = time;
-            stat.color = tag['color']?.toString() ?? '';
-            stat.explanation = tag['explanation']?.toString() ?? '';
-          }
+      final time = text(review['reviewedTime']);
+      for (final tag in tagsOf(review)) {
+        final name = text(tag['name']);
+        if (name.isEmpty) {
+          continue;
+        }
+        final color = text(tag['color']);
+        if (!isHighlightTag(name, color)) {
+          problemTags++;
+        }
+        final stat = stats.putIfAbsent(name, () => _TagStat(name));
+        stat.count++;
+        stat.subjects[subject] = (stat.subjects[subject] ?? 0) + 1;
+        if (time.compareTo(stat.latest) >= 0) {
+          stat.latest = time;
+          stat.color = color;
+          stat.explanation = text(tag['explanation']);
+        }
+      }
+      for (final item in mapsOf(review['tagResolutions'])) {
+        markedTags++;
+        if (item['resolved'] == true) {
+          resolvedTags++;
+          stats[text(item['tag'])]?.resolved++;
         }
       }
     }
@@ -256,6 +873,57 @@ abstract final class DemoArtworkData {
     final bySubject = means.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
+    // 分项水平：每科最近 10 份已点评作品的分项等级均值。
+    reviewed.sort(
+      (a, b) => text(
+        reviewOf(b)?['reviewedTime'],
+      ).compareTo(text(reviewOf(a)?['reviewedTime'])),
+    );
+    final dimensionLevels = <Map<String, dynamic>>[];
+    for (final subject in subjects) {
+      final defs = dimensionsOf(subject);
+      final sums = <String, double>{};
+      final counts = <String, int>{};
+      var samples = 0;
+      for (final work in reviewed) {
+        if (text(work['subject']) != subject) {
+          continue;
+        }
+        final dims = mapOf(reviewOf(work)?['dimensions']);
+        if (dims == null || dims.isEmpty) {
+          continue;
+        }
+        if (samples >= 10) {
+          break;
+        }
+        samples++;
+        for (final def in defs) {
+          final level = dims[def.key];
+          if (level is num) {
+            sums[def.key] = (sums[def.key] ?? 0) + level;
+            counts[def.key] = (counts[def.key] ?? 0) + 1;
+          }
+        }
+      }
+      if (samples == 0) {
+        continue;
+      }
+      dimensionLevels.add(<String, dynamic>{
+        'subject': subject,
+        'sampleCount': samples,
+        'items': <Map<String, dynamic>>[
+          for (final def in defs)
+            <String, dynamic>{
+              'key': def.key,
+              'name': def.name,
+              'level': counts[def.key] == null
+                  ? null
+                  : round2(sums[def.key]! / counts[def.key]!),
+            },
+        ],
+      });
+    }
+
     return <String, dynamic>{
       'reviewedCount': reviewedCount,
       'averageScore': finals.isEmpty
@@ -270,15 +938,70 @@ abstract final class DemoArtworkData {
             'color': stat.color,
             'count': stat.count,
             'explanation': stat.explanation,
-            'positive': _isHighlight(stat.name, stat.color),
+            'positive': isHighlightTag(stat.name, stat.color),
+            'resolvedCount': stat.resolved,
           },
       ],
       'suggestions': <Map<String, dynamic>>[
         for (final stat
-            in ranked.where((s) => !_isHighlight(s.name, s.color)).take(3))
+            in ranked.where((s) => !isHighlightTag(s.name, s.color)).take(3))
           _suggestionOf(stat),
       ],
+      'dimensionLevels': dimensionLevels,
+      'problemTagCount': problemTags,
+      'markedTagCount': markedTags,
+      'resolvedTagCount': resolvedTags,
+      'resolveRate': markedTags == 0
+          ? null
+          : round2(resolvedTags / markedTags),
+      'streakDays': streakDays(works, now),
+      'recentSubmitCount': recentSubmitCount(works, now),
     };
+  }
+
+  /// 连续练习天数：截至今天，连续有作品提交的在校日数（周日不算断）。
+  /// 今天还没交时从上一个在校日算起。
+  static int streakDays(List<Map<String, dynamic>> works, DateTime now) {
+    final days = <String>{
+      for (final work in works)
+        if (text(work['createTime']).length >= 10)
+          text(work['createTime']).substring(0, 10),
+    };
+    var day = dateOnly(now);
+    var streak = 0;
+    var first = true;
+    while (true) {
+      if (!isSchoolDay(day)) {
+        day = DateTime(day.year, day.month, day.day - 1);
+        continue;
+      }
+      if (days.contains(ymd(day))) {
+        streak++;
+      } else if (!first) {
+        break;
+      }
+      first = false;
+      day = DateTime(day.year, day.month, day.day - 1);
+      if (streak > 400) {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  /// 近 7 天（含今天）提交的作品数，改画的每一版都算一次提交。
+  static int recentSubmitCount(List<Map<String, dynamic>> works, DateTime now) {
+    final today = dateOnly(now);
+    final from = ymd(DateTime(today.year, today.month, today.day - 6));
+    final to = ymd(today);
+    return works.where((work) {
+      final created = text(work['createTime']);
+      if (created.length < 10) {
+        return false;
+      }
+      final day = created.substring(0, 10);
+      return day.compareTo(from) >= 0 && day.compareTo(to) <= 0;
+    }).length;
   }
 
   static Map<String, dynamic> _suggestionOf(_TagStat stat) {
@@ -287,10 +1010,7 @@ abstract final class DemoArtworkData {
         (stat.subjects.entries.toList()
               ..sort((a, b) => b.value.compareTo(a.value)))
             .map((e) => e.key)
-            .firstWhere(
-              (s) => const {'素描', '色彩', '速写'}.contains(s),
-              orElse: () => advice?.$2 ?? '素描',
-            );
+            .firstWhere(subjects.contains, orElse: () => advice?.$2 ?? '素描');
     return <String, dynamic>{
       'tag': stat.name,
       'color': stat.color,
@@ -305,612 +1025,16 @@ abstract final class DemoArtworkData {
       'tool': advice?.$4 ?? '',
     };
   }
+}
 
-  // ── 标签 ─────────────────────────────────────────────────────────────
+class _TagStat {
+  _TagStat(this.name);
 
-  static const _standardTags = <(String, String, String)>[
-    ('结构错误', '形体比例或透视关系不准确。先用辅助线核对大的比例和骨点位置，再深入刻画。', problemColor),
-    ('明暗层次弱', '黑白灰关系没有拉开，暗部与亮部之间的过渡层次不足，画面显得发平。', problemColor),
-    ('构图失衡', '主体位置或大小不合适，画面重心偏移。动笔前先用小构图推敲布局。', problemColor),
-    ('线条生硬', '线条缺少轻重、虚实变化，转折处可以更有节奏，避免描边式的均匀线条。', problemColor),
-    ('色调不统一', '画面冷暖倾向不明确，局部颜色跳出整体色调，注意环境色的相互影响。', problemColor),
-    ('细节出彩', '局部刻画深入到位，质感与空间表现准确，值得在后续作品中保持。', highlightColor),
-    ('透视错误', '近大远小和消失点不统一，先确定视平线和主要透视线再起形。', problemColor),
-  ];
-
-  static const _exclusiveTags = <String, (String, String, String)>{
-    't-2': ('暗部偏闷', '暗部笔触过于平涂，缺少反光和细微变化。', problemColor),
-    't-3': ('环境色不足', '物体暗部和投影缺少周围环境色的影响，颜色显得孤立。', problemColor),
-    't-4': ('动态僵硬', '人物重心和动势不明确，动作像摆拍，先用几根动态线确定姿态。', problemColor),
-  };
-
-  /// 演示前的历史用量（这些老师此前点评过的作品不在演示列表里）。
-  static const _historyUsage = <int>[12, 9, 5, 8, 4, 7, 3, 2];
-
-  static List<(String, String, String)> _tagDefs(String teacherId) =>
-      <(String, String, String)>[..._standardTags, ?_exclusiveTags[teacherId]];
-
-  static List<Map<String, dynamic>> seedTags(String teacherId) {
-    final defs = _tagDefs(teacherId);
-    final history = isReviewTeacher(teacherId);
-    final works = history ? seedWorks() : const <Map<String, dynamic>>[];
-    int usage(String id) => works.where((work) {
-      final review = reviewOf(work, teacherId);
-      return review != null && tagsOf(review).any((t) => t['id'] == id);
-    }).length;
-    return <Map<String, dynamic>>[
-      for (var i = 0; i < defs.length; i++)
-        <String, dynamic>{
-          'id': tagId(teacherId, i + 1),
-          'name': defs[i].$1,
-          'explanation': defs[i].$2,
-          'color': defs[i].$3,
-          'usageCount': history
-              ? _historyUsage[i] + usage(tagId(teacherId, i + 1))
-              : 0,
-        },
-    ];
-  }
-
-  // ── 作品 ─────────────────────────────────────────────────────────────
-
-  static const _seeds = <_SeedWork>[
-    // 学生演示账号林小雨：两份待点评（在李静的队列里），六份已完成点评。
-    // 日常作品各科均分与学情中心月考一致：素描最高、速写次之、色彩有待加强。
-    _SeedWork(
-      person: 1,
-      title: '石膏头像长期作业',
-      subject: '素描',
-      date: '2026-11-03',
-      images: ['art/sketch-bust-1.jpg', 'art/detail-sketch.jpg'],
-      description: '画了两个课时，重点练习头部结构和明暗交界线，耳朵的位置感觉没有画准。',
-      teachers: ['t-1'],
-    ),
-    _SeedWork(
-      person: 1,
-      title: '花卉色彩写生',
-      subject: '色彩',
-      date: '2026-11-05',
-      images: ['art/color-flower-1.jpg'],
-      description: '尝试了偏暖的整体色调，花瓣的颜色不知道是不是太跳。',
-      teachers: ['t-1', 't-3'],
-      reviews: [
-        _SeedReview('t-3', 83, '花卉的色彩倾向明确，花瓣边缘的虚实处理得不错，背景还可以再统一一些。', [6, 5]),
-      ],
-    ),
-    _SeedWork(
-      person: 1,
-      title: '秋日静物色彩写生',
-      subject: '色彩',
-      date: '2026-10-25',
-      images: ['art/color-still-2.jpg'],
-      description: '尝试用补色处理暗部。',
-      teachers: ['t-3'],
-      reviews: [
-        _SeedReview('t-3', 83, '画面完整，色彩关系清楚。继续关注边缘虚实与主次关系，暗部层次还可以更丰富。', [6, 8]),
-      ],
-    ),
-    _SeedWork(
-      person: 1,
-      title: '人物动态速写',
-      subject: '速写',
-      date: '2026-10-22',
-      images: [
-        'art/speed-figure-1.jpg',
-        'art/speed-figure-3.jpg',
-        'art/speed-figure-4.jpg',
-      ],
-      teachers: ['t-1', 't-4'],
-      reviews: [
-        _SeedReview('t-1', 84, '人物重心稳定，外套的衣纹线条略显均匀，注意疏密与轻重变化。', [4]),
-        _SeedReview('t-4', 86, '动态抓取比较准确，人物重心稳定。下一次加强手部的结构交代，让线条更有节奏。', [4, 1]),
-      ],
-    ),
-    _SeedWork(
-      person: 1,
-      title: '几何体明暗关系',
-      subject: '素描',
-      date: '2026-10-18',
-      images: ['art/sketch-geometry-1.jpg'],
-      description: '练习投影和反光。',
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 91, '明暗交界线处理肯定，投影的虚实关系得当，整体完成度高。', [6]),
-      ],
-    ),
-    // 与平台消息「李静老师点评了你的《石膏头像结构练习》」保持一致。
-    _SeedWork(
-      person: 1,
-      title: '石膏头像结构练习',
-      subject: '素描',
-      date: '2026-11-04',
-      images: ['art/sketch-bust-3.jpg'],
-      description: '这次重点练习头部结构和明暗交界线。',
-      teachers: ['t-1', 't-2'],
-      reviews: [
-        _SeedReview(
-          't-1',
-          88,
-          '结构交代清楚，暗部再整体一些；五官位置略有偏差，先用三庭五眼核对比例再刻画细节。',
-          [2],
-          '2026-11-06 09:10:00',
-        ),
-        _SeedReview('t-2', 86, '暗部笔触偏平，反光和投影的层次可以再拉开。', [8, 1]),
-      ],
-    ),
-    _SeedWork(
-      person: 1,
-      title: '暖色调静物组合',
-      subject: '色彩',
-      date: '2026-09-26',
-      images: ['art/color-still-4.jpg'],
-      teachers: ['t-3'],
-      reviews: [
-        _SeedReview('t-3', 80, '色彩关系较协调，冷暖对比还可以拉开，背景用笔再概括一些。', [5]),
-      ],
-    ),
-    _SeedWork(
-      person: 1,
-      title: '静物结构素描',
-      subject: '素描',
-      date: '2026-08-30',
-      images: ['art/sketch-still-2.jpg'],
-      description: '第一次画玻璃瓶，反光有点难。',
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 82, '碗口的透视椭圆偏窄，瓶身中轴线要垂直；右侧衬布占比过大，画面重心偏右。', [
-          7,
-          1,
-          3,
-        ]),
-      ],
-    ),
-    // 李静的待点评队列（另有林小雨的两份）。
-    _SeedWork(
-      person: 4,
-      title: '秋日静物色彩写生',
-      subject: '色彩',
-      date: '2026-10-29',
-      images: ['art/color-still-3.jpg'],
-      description: '尝试了偏暖的整体色调。',
-      teachers: ['t-1', 't-3'],
-      reviews: [
-        _SeedReview('t-3', 86, '色彩关系整体协调，暗部可以再加入一些环境色。', [8]),
-      ],
-    ),
-    _SeedWork(
-      person: 6,
-      title: '人物动态速写',
-      subject: '速写',
-      date: '2026-10-28',
-      images: ['art/speed-figure-2.jpg'],
-      teachers: ['t-1', 't-4'],
-    ),
-    _SeedWork(
-      person: 9,
-      title: '静物组合明暗',
-      subject: '素描',
-      date: '2026-10-27',
-      images: ['art/sketch-still-1.jpg'],
-      description: '想请老师看一下投影的处理。',
-      teachers: ['t-1'],
-    ),
-    _SeedWork(
-      person: 12,
-      title: '暖色调静物组合',
-      subject: '色彩',
-      date: '2026-10-26',
-      images: ['art/color-still-5.jpg'],
-      teachers: ['t-1'],
-    ),
-    _SeedWork(
-      person: 30,
-      title: '色彩风景写生',
-      subject: '色彩',
-      date: '2026-11-02',
-      images: ['art/color-landscape-1.jpg'],
-      description: '第一次画户外风景。',
-      teachers: ['t-1'],
-    ),
-    // 李静已点评。
-    _SeedWork(
-      person: 15,
-      title: '校园人物速写',
-      subject: '速写',
-      date: '2026-10-24',
-      images: ['art/speed-figure-5.jpg'],
-      description: '课间在操场画的。',
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 84, '人物动态抓得准，衣纹线条略显均匀，注意疏密与轻重变化。', [4]),
-      ],
-    ),
-    _SeedWork(
-      person: 18,
-      title: '石膏五官写生',
-      subject: '素描',
-      date: '2026-10-22',
-      images: ['art/sketch-bust-2.jpg', 'art/detail-sketch.jpg'],
-      teachers: ['t-1', 't-2'],
-      reviews: [
-        _SeedReview('t-1', 78, '五官位置偏差较大，建议先找准三庭五眼再刻画细节。', [1, 2]),
-        _SeedReview('t-2', 80, '', [8]),
-      ],
-    ),
-    _SeedWork(
-      person: 21,
-      title: '罐子与水果色彩',
-      subject: '色彩',
-      date: '2026-10-20',
-      images: ['art/color-still-1.jpg'],
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 88, '水果的质感表现很好，背景可以再概括一些。', [6]),
-      ],
-    ),
-    _SeedWork(
-      person: 2,
-      title: '长期素描头像',
-      subject: '素描',
-      date: '2026-10-16',
-      images: ['art/sketch-portrait-1.jpg'],
-      description: '画了三个课时。',
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 91, '整体完成度高，结构扎实，暗部层次丰富。', [6]),
-      ],
-    ),
-    _SeedWork(
-      person: 25,
-      title: '街景速写',
-      subject: '速写',
-      date: '2026-10-15',
-      images: ['art/speed-scene-1.jpg'],
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', null, '画面元素安排偏满，主体人物不够突出，下次先确定视觉中心。', [3]),
-      ],
-    ),
-    _SeedWork(
-      person: 34,
-      title: '静物素描组合',
-      subject: '素描',
-      date: '2026-10-10',
-      images: ['art/sketch-still-3.jpg'],
-      teachers: ['t-1', 't-2'],
-      reviews: [
-        _SeedReview('t-2', 82, '形体塑造扎实，背景衬布的褶皱可以再概括。'),
-        _SeedReview('t-1', 85, '物体之间的空间关系清楚，陶罐的高光略显生硬。', [6]),
-      ],
-    ),
-    _SeedWork(
-      person: 2,
-      title: '静物色彩小稿',
-      subject: '色彩',
-      date: '2026-09-26',
-      images: ['papers/color.jpg'],
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 79, '色彩关系较协调，冷暖对比还可以拉开，背景用笔再概括一些。', [5]),
-      ],
-    ),
-    _SeedWork(
-      person: 4,
-      title: '人物头像速写',
-      subject: '速写',
-      date: '2026-09-24',
-      images: ['art/speed-figure-4.jpg'],
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 85, '动态比较自然，线条有节奏，手脚的结构交代可以更清楚。', [4]),
-      ],
-    ),
-    _SeedWork(
-      person: 6,
-      title: '几何体组合素描',
-      subject: '素描',
-      date: '2026-09-22',
-      images: ['papers/sketch.jpg'],
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 76, '形体基本准确，明暗交界线可以再肯定一些，立方体的透视要统一。', [2, 7]),
-      ],
-    ),
-    _SeedWork(
-      person: 9,
-      title: '蔬菜静物写生',
-      subject: '色彩',
-      date: '2026-09-20',
-      images: ['art/detail-color.jpg'],
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 87, '固有色把握准确，蔬菜的质感表现生动。', [6]),
-      ],
-    ),
-    _SeedWork(
-      person: 12,
-      title: '站姿与坐姿人物速写',
-      subject: '速写',
-      date: '2026-09-18',
-      images: ['papers/speed.jpg'],
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 72, '人物比例基本正确，但动态偏僵硬，两个人物在画面中的位置需要推敲。', [4, 3]),
-      ],
-    ),
-    _SeedWork(
-      person: 25,
-      title: '立方体组合素描',
-      subject: '素描',
-      date: '2026-09-10',
-      images: ['art/sketch-geometry-1.jpg'],
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 90, '形体结构准确，明暗层次丰富，投影的虚实处理到位。', [6]),
-      ],
-    ),
-    _SeedWork(
-      person: 30,
-      title: '石膏头像写生',
-      subject: '素描',
-      date: '2026-08-28',
-      images: ['art/sketch-bust-1.jpg'],
-      teachers: ['t-1'],
-      reviews: [
-        _SeedReview('t-1', 80, '头部转面的透视不统一，下颌与颈部的穿插关系需要交代。', [7]),
-      ],
-    ),
-    // 其他老师的作品：赵雪（速写，演示班主任账号）、张明远。
-    _SeedWork(
-      person: 7,
-      title: '组合人物速写',
-      subject: '速写',
-      date: '2026-11-01',
-      images: ['art/speed-group-1.jpg'],
-      description: '三个人物的前后关系不太会处理。',
-      teachers: ['t-4'],
-    ),
-    _SeedWork(
-      person: 10,
-      title: '车站场景速写',
-      subject: '速写',
-      date: '2026-10-19',
-      images: ['art/speed-scene-1.jpg'],
-      teachers: ['t-4'],
-      reviews: [
-        _SeedReview('t-4', 83, '场景透视基本准确，人物与环境的比例关系清楚。', [7]),
-      ],
-    ),
-    _SeedWork(
-      person: 3,
-      title: '构图小稿练习',
-      subject: '素描',
-      date: '2026-10-29',
-      images: ['papers/sketch.jpg'],
-      description: '刚加入画室，第一次提交作品。',
-      teachers: ['t-2'],
-    ),
-  ];
-
-  static List<Map<String, dynamic>> seedWorks() => <Map<String, dynamic>>[
-    for (var i = 0; i < _seeds.length; i++)
-      _buildWork(_seeds[i], 'aw-${1001 + i}', i),
-  ];
-
-  /// 学生提交作品的时间：当天晚自习（18:30–21:30）里分散开。
-  static const _submitTimes = <String>[
-    '18:42', '19:05', '20:16', '19:38', '21:07', '18:55', '20:48', '19:21',
-    '20:33', '21:18', '19:52', '18:36', '20:04', '21:25', '19:14',
-  ];
-
-  /// 老师点评的时间：次日晚自习时段，与提交时间错开。
-  static const _reviewTimes = <String>[
-    '19:26', '20:12', '20:51', '19:48', '21:09', '18:58', '20:37',
-  ];
-
-  static Map<String, dynamic> _buildWork(_SeedWork seed, String id, int index) {
-    final submitted = _submitTimes[index % _submitTimes.length];
-    return <String, dynamic>{
-      'id': id,
-      'personIndex': seed.person,
-      'title': seed.title,
-      'subject': seed.subject,
-      'drawingDate': seed.date,
-      'createTime': '${seed.date} $submitted:00',
-      'description': seed.description,
-      'images': <Map<String, dynamic>>[
-        for (var k = 0; k < seed.images.length; k++)
-          <String, dynamic>{
-            'id': '$id-${k + 1}',
-            'ref': 'asset:assets/demo/${seed.images[k]}',
-          },
-      ],
-      'teacherIds': <String>[...seed.teachers],
-      'reviews': <Map<String, dynamic>>[
-        for (var k = 0; k < seed.reviews.length; k++)
-          _buildReview(seed.reviews[k], seed.date, index * 3 + k),
-      ],
-    };
-  }
-
-  static Map<String, dynamic> _buildReview(
-    _SeedReview review,
-    String date,
-    int slot,
-  ) {
-    final defs = _tagDefs(review.teacherId);
-    final day = DateTime.parse(date).add(const Duration(days: 1));
-    final reviewedTime = review.time.isNotEmpty
-        ? review.time
-        : '${_ymd(day)} ${_reviewTimes[slot % _reviewTimes.length]}:00';
-    return <String, dynamic>{
-      'teacherId': review.teacherId,
-      'score': review.score,
-      'maxScore': 100.0,
-      'content': review.content,
-      'reviewedTime': reviewedTime,
-      'tags': <Map<String, dynamic>>[
-        for (final index in review.tags)
-          if (index >= 1 && index <= defs.length)
-            <String, dynamic>{
-              'id': tagId(review.teacherId, index),
-              'name': defs[index - 1].$1,
-              'explanation': defs[index - 1].$2,
-              'color': defs[index - 1].$3,
-            },
-      ],
-    };
-  }
-
-  static String _ymd(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-  // ── 批注 ─────────────────────────────────────────────────────────────
-
-  /// `{artworkId: {teacherId: [stroke]}}`；坐标按图片宽高归一化到 0–1。
-  static Map<String, dynamic> seedAnnotations() {
-    final works = seedWorks();
-    String idOf(String title) => works
-        .firstWhere((w) => w['personIndex'] == 1 && w['title'] == title)['id']
-        .toString();
-    // 与批注笔一致：红取色板危险色，蓝取素描科目色。
-    const red = '#E5323B';
-    const blue = '#4A74D6';
-    return <String, dynamic>{
-      idOf('几何体明暗关系'): <String, dynamic>{
-        't-1': <Map<String, dynamic>>[
-          _stroke(
-            _curve([0.30, 0.52], [0.47, 0.60], [0.40, 0.72]),
-            color: blue,
-            width: 3,
-          ),
-          _stroke(_ellipse(0.46, 0.735, 0.16, 0.045), color: red),
-          _stroke([
-            [0.13, 0.33],
-            [0.16, 0.36],
-            [0.22, 0.30],
-          ], color: red),
-        ],
-      },
-      idOf('石膏头像结构练习'): <String, dynamic>{
-        't-1': <Map<String, dynamic>>[
-          _stroke(
-            [
-              [0.36, 0.327],
-              [0.70, 0.327],
-            ],
-            color: blue,
-            width: 2,
-          ),
-          _stroke(
-            [
-              [0.36, 0.449],
-              [0.70, 0.449],
-            ],
-            color: blue,
-            width: 2,
-          ),
-          _stroke(
-            [
-              [0.36, 0.557],
-              [0.70, 0.557],
-            ],
-            color: blue,
-            width: 2,
-          ),
-          _stroke(_ellipse(0.462, 0.356, 0.075, 0.032), color: red),
-          _stroke(_ellipse(0.312, 0.43, 0.035, 0.055), color: red),
-        ],
-      },
-      idOf('人物动态速写'): <String, dynamic>{
-        't-4': <Map<String, dynamic>>[
-          _stroke([
-            [0.48, 0.07],
-            [0.49, 0.17],
-            [0.47, 0.32],
-            [0.47, 0.46],
-            [0.44, 0.58],
-            [0.42, 0.68],
-            [0.42, 0.80],
-            [0.43, 0.90],
-          ], color: blue),
-          _stroke(_ellipse(0.33, 0.41, 0.06, 0.045), color: red),
-        ],
-      },
-      idOf('静物结构素描'): <String, dynamic>{
-        't-1': <Map<String, dynamic>>[
-          _stroke(_ellipse(0.555, 0.518, 0.16, 0.06), color: red),
-          _stroke(
-            [
-              [0.293, 0.04],
-              [0.293, 0.80],
-            ],
-            color: blue,
-            width: 2,
-          ),
-          _stroke([
-            [0.94, 0.30],
-            [0.86, 0.60],
-          ], color: red),
-          _stroke([
-            [0.84, 0.53],
-            [0.86, 0.60],
-            [0.905, 0.555],
-          ], color: red),
-        ],
-      },
-    };
-  }
-
-  static Map<String, dynamic> _stroke(
-    List<List<double>> points, {
-    required String color,
-    double width = 4,
-    int imageIndex = 0,
-  }) {
-    double r4(double v) => (v * 10000).round() / 10000;
-    return <String, dynamic>{
-      'color': color,
-      'width': width,
-      'imageIndex': imageIndex,
-      'points': <List<double>>[
-        for (final p in points) <double>[r4(p[0]), r4(p[1])],
-      ],
-    };
-  }
-
-  static List<List<double>> _ellipse(
-    double cx,
-    double cy,
-    double rx,
-    double ry,
-  ) {
-    const segments = 48;
-    return <List<double>>[
-      for (var i = 0; i <= segments; i++)
-        <double>[
-          cx + rx * math.cos(2 * math.pi * i / segments),
-          cy + ry * math.sin(2 * math.pi * i / segments),
-        ],
-    ];
-  }
-
-  /// 二次贝塞尔曲线：起点 [a]、控制点 [c]、终点 [b]。
-  static List<List<double>> _curve(
-    List<double> a,
-    List<double> c,
-    List<double> b,
-  ) {
-    const segments = 24;
-    final points = <List<double>>[];
-    for (var i = 0; i <= segments; i++) {
-      final t = i / segments;
-      final u = 1 - t;
-      points.add(<double>[
-        u * u * a[0] + 2 * u * t * c[0] + t * t * b[0],
-        u * u * a[1] + 2 * u * t * c[1] + t * t * b[1],
-      ]);
-    }
-    return points;
-  }
+  final String name;
+  int count = 0;
+  int resolved = 0;
+  String color = '';
+  String explanation = '';
+  String latest = '';
+  final Map<String, int> subjects = <String, int>{};
 }

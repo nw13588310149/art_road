@@ -193,6 +193,10 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
     required String content,
     required List<String> tagIds,
     required bool next,
+    Map<String, int> dimensions = const <String, int>{},
+    bool requestLeadReview = false,
+    List<({String tag, bool resolved})> tagResolutions =
+        const <({String tag, bool resolved})>[],
   }) async {
     if (state.saving) {
       return null;
@@ -211,6 +215,9 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
       content: content,
       tagIds: tagIds,
       next: next,
+      dimensions: dimensions,
+      requestLeadReview: requestLeadReview,
+      tagResolutions: tagResolutions,
     );
     if (!mounted) {
       return null;
