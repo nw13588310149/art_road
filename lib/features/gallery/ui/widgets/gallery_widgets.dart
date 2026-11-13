@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/art/art_tokens.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/theme/app_font.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../data/gallery_models.dart';
 import '../../state/gallery_state.dart';
+import 'library_controls.dart';
 
 /// 瀑布流：按卡片预估高度把作品分配到最短的一列，图片按真实宽高比占位。
 class GalleryMasonryGrid extends StatelessWidget {
@@ -21,8 +24,8 @@ class GalleryMasonryGrid extends StatelessWidget {
   final ValueChanged<GalleryWork> onOpen;
   final ValueChanged<GalleryWork> onToggleFavorite;
 
-  static const _gap = AppSpace.s16;
-  static const _infoHeight = 70.0;
+  /// 列缝与行缝，和视频网格一致。
+  static const _gap = 16.0;
 
   static int columnsFor(double width) {
     if (width >= 860) {
@@ -53,7 +56,7 @@ class GalleryMasonryGrid extends StatelessWidget {
           buckets[target].add(work);
           heights[target] +=
               columnWidth / GalleryWorkCard.imageAspect(work) +
-              _infoHeight +
+              GalleryWorkCard.infoHeight +
               _gap;
         }
         return Row(
@@ -85,43 +88,8 @@ class GalleryMasonryGrid extends StatelessWidget {
   }
 }
 
-/// 瀑布流加载骨架：与作品卡同宽，高度错落。
-class GalleryMasonrySkeleton extends StatelessWidget {
-  const GalleryMasonrySkeleton({super.key});
-
-  static const _heights = <double>[220, 300, 260, 200, 280, 240, 320, 210];
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = GalleryMasonryGrid.columnsFor(constraints.maxWidth);
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var c = 0; c < columns; c++) ...[
-              if (c > 0) const SizedBox(width: AppSpace.s16),
-              Expanded(
-                child: Column(
-                  children: [
-                    for (var r = 0; r < 2; r++) ...[
-                      if (r > 0) const SizedBox(height: AppSpace.s16),
-                      AppSkeleton(
-                        height: _heights[(c + r * columns) % _heights.length],
-                        radius: AppRadius.card,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
+/// 范画卡：外观取自视频网格卡（浅灰底、圆角 12、标题 13 号中等字重、
+/// 16 高的信息行），图片按画作比例显示。
 class GalleryWorkCard extends StatelessWidget {
   const GalleryWorkCard({
     required this.work,
@@ -134,37 +102,47 @@ class GalleryWorkCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onToggleFavorite;
 
+  /// 图片下方信息区的高度：上 9 + 标题 + 信息行 16 + 下 10。
+  static const double infoHeight = 56;
+
   /// 极端长图 / 宽图限制在合理范围内，卡片之间高度不至于悬殊。
   static double imageAspect(GalleryWork work) =>
       work.aspectRatio.clamp(0.68, 1.45).toDouble();
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: EdgeInsets.zero,
+    return AppPressable(
       onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AspectRatio(
-            aspectRatio: imageAspect(work),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppRadius.card - 1),
-              ),
+      child: Container(
+        clipBehavior: Clip.hardEdge,
+        decoration: const BoxDecoration(
+          color: AppColors.surfaceSubtle,
+          borderRadius: AppRadius.br12,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AspectRatio(
+              aspectRatio: imageAspect(work),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  AppImage(src: work.imageUrl),
+                  AppImage(
+                    src: work.imageUrl,
+                    placeholder: const ColoredBox(
+                      color: LibraryPalette.coverFallback,
+                    ),
+                  ),
                   if (work.source != GallerySource.master)
                     Positioned(
-                      left: AppSpace.s8,
-                      top: AppSpace.s8,
-                      child: GallerySourceTag(source: work.source),
+                      left: 8,
+                      top: 8,
+                      child: GallerySourceTag(source: work.source, dense: true),
                     ),
                   Positioned(
-                    right: AppSpace.s8,
-                    top: AppSpace.s8,
+                    right: 8,
+                    top: 8,
                     child: GalleryFavoriteButton(
                       favorite: work.favorite,
                       onTap: onToggleFavorite,
@@ -173,29 +151,32 @@ class GalleryWorkCard extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.s12,
-              AppSpace.s8,
-              AppSpace.s12,
-              AppSpace.s12,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  work.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.body14Strong,
+            SizedBox(
+              height: infoHeight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      work.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: libraryText(
+                        size: 13,
+                        weight: AppFont.w500,
+                        color: AppColors.ink,
+                        height: 1.3,
+                      ),
+                    ),
+                    const Spacer(),
+                    SizedBox(height: 16, child: _CardMeta(work: work)),
+                  ],
                 ),
-                const SizedBox(height: AppSpace.s4),
-                _CardMeta(work: work),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -218,45 +199,103 @@ class _CardMeta extends StatelessWidget {
     final grade = work.grade;
     // 高分卷这一行放档位与分数，作者与校区在详情里看；其余作品放作者。
     final examPaper = work.isExamPaper && grade.isNotEmpty;
-    return SizedBox(
-      height: 22,
-      child: Row(
-        children: [
-          if (examPaper) ...[
-            AppTag(
-              label: '$grade 档',
-              tone: grade == 'A' ? AppTone.brand : AppTone.neutral,
-            ),
-            const SizedBox(width: AppSpace.s8),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: formatScore(work.score),
-                      style: AppText.number(size: 14),
-                    ),
-                    TextSpan(text: ' 分', style: AppText.caption12),
-                  ],
-                ),
-                maxLines: 1,
+    final muted = libraryText(
+      size: 10,
+      weight: AppFont.w500,
+      color: AppColors.textPlaceholder,
+      height: 1,
+    );
+    return Row(
+      children: [
+        if (examPaper) ...[
+          _GradeMark(grade: grade),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: formatScore(work.score),
+                    style: AppText.number(size: 12),
+                  ),
+                  TextSpan(text: ' 分', style: muted),
+                ],
               ),
+              maxLines: 1,
             ),
-          ] else
-            Expanded(
-              child: Text(
-                byline,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.caption12,
-              ),
+          ),
+        ] else
+          Expanded(
+            child: Text(
+              byline,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: muted,
             ),
-          const SizedBox(width: AppSpace.s8),
-          Image.asset(AppAssets.newsViews, width: 14, height: 14),
-          const SizedBox(width: 2),
-          Text(formatViewCount(work.views), style: AppText.caption12),
-        ],
+          ),
+        const SizedBox(width: 8),
+        GalleryViewCount(views: work.views),
+      ],
+    );
+  }
+}
+
+/// 档位：16 高的方角小标签，A 档用品牌色。
+class _GradeMark extends StatelessWidget {
+  const _GradeMark({required this.grade});
+
+  final String grade;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = grade == 'A';
+    return Container(
+      height: 16,
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      decoration: BoxDecoration(
+        color: top ? AppColors.tint(AppColors.brand, 0.1) : AppColors.surface,
+        borderRadius: AppRadius.br4,
       ),
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          '$grade 档',
+          style: libraryText(
+            size: 10,
+            weight: AppFont.w500,
+            color: top ? AppColors.brand : AppColors.textSecondary,
+            height: 1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 浏览量：眼睛图标 + 12 号数字。
+class GalleryViewCount extends StatelessWidget {
+  const GalleryViewCount({required this.views, this.suffix = '', super.key});
+
+  final int views;
+  final String suffix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const AppAssetGraphic(AppAssets.newsViews, width: 12, height: 12),
+        const SizedBox(width: 4),
+        Text(
+          '${formatViewCount(views)}$suffix',
+          style: libraryText(
+            size: 12,
+            weight: AppFont.w500,
+            color: AppColors.textPlaceholder,
+            height: 1,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -269,79 +308,158 @@ String formatViewCount(int views) {
   return '$views';
 }
 
-/// 来源角标：联考高分卷（品牌色）/ 学生优秀作品（成功色），浅底深字。
+/// 来源标签：联考高分卷（品牌色）/ 学生优秀作品（绿色）/ 名师范画（中性），方角浅底。
+/// [dense] 用在图片上。
 class GallerySourceTag extends StatelessWidget {
-  const GallerySourceTag({required this.source, super.key});
+  const GallerySourceTag({required this.source, this.dense = false, super.key});
 
   final String source;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
     return switch (source) {
-      GallerySource.examTop => const AppTag(label: '高分卷', tone: AppTone.brand),
-      GallerySource.student => const AppTag(
-        label: '优秀作品',
-        tone: AppTone.success,
-      ),
-      _ => const AppTag(label: '名师范画'),
+      GallerySource.examTop => LibraryTag.brand('高分卷', dense: dense),
+      GallerySource.student => LibraryTag.green('优秀作品', dense: dense),
+      _ => LibraryTag('名师范画', dense: dense),
     };
   }
 }
 
-/// 收藏按钮：白底圆钮，点按立即切换，不做缩放动画。
+/// 卡片上的收藏按钮：28 见方白底圆角 8，星形图标，点按立即切换。
 class GalleryFavoriteButton extends StatelessWidget {
   const GalleryFavoriteButton({
     required this.favorite,
     required this.onTap,
-    this.size = 30,
     super.key,
   });
 
   final bool favorite;
   final VoidCallback onTap;
-  final double size;
 
   @override
   Widget build(BuildContext context) {
+    final size = favorite ? 14.0 : 20.0;
     return AppPressable(
       onTap: onTap,
       toggled: favorite,
       semanticLabel: favorite ? '取消收藏' : '收藏',
       child: Container(
-        width: size,
-        height: size,
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
         decoration: const BoxDecoration(
           color: AppColors.surface,
-          shape: BoxShape.circle,
+          borderRadius: AppRadius.br8,
         ),
-        child: Icon(
-          favorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          size: size * 0.56,
-          color: favorite ? AppColors.danger : AppColors.textTertiary,
+        child: AppAssetGraphic(
+          favorite ? AppAssets.videoV2StarFilled : AppAssets.videoV2Star,
+          width: size,
+          height: size,
         ),
       ),
     );
   }
 }
 
-/// 筛选：科目 AppSegmented + 该科目下的分类 AppChip（可取消，取消即全部）。
-class GalleryFilterBar extends StatelessWidget {
-  const GalleryFilterBar({
+/// 顶部一行（36 高）：左侧科目页签，右侧排序与搜索。
+class GalleryToolbar extends StatelessWidget {
+  const GalleryToolbar({
     required this.state,
+    required this.onBack,
     required this.onSubjectChanged,
-    required this.onCategoryChanged,
     required this.onSortChanged,
     required this.onKeywordChanged,
     super.key,
   });
 
   final GalleryState state;
+  final VoidCallback? onBack;
   final ValueChanged<String> onSubjectChanged;
-  final ValueChanged<String> onCategoryChanged;
   final ValueChanged<GallerySort> onSortChanged;
   final ValueChanged<String> onKeywordChanged;
 
+  static const double height = 36;
   static const _subjects = <String>['', '素描', '色彩', '速写'];
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 搜索框原宽 254，窄横屏下让出页签的位置。
+          final searchWidth = (constraints.maxWidth * 0.34)
+              .clamp(140.0, 254.0)
+              .toDouble();
+          return Row(
+            children: [
+              if (onBack != null) ...[
+                LibraryIconButton.back(onTap: onBack),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: AppTabs<String>(
+                    textOnly: true,
+                    gap: 20,
+                    tabs: [
+                      for (final subject in _subjects)
+                        AppTab(
+                          value: subject,
+                          label: subject.isEmpty ? '全部科目' : subject,
+                        ),
+                    ],
+                    value: state.subject,
+                    onChanged: onSubjectChanged,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              LibrarySortButton<GallerySort>(
+                height: height,
+                options: [
+                  for (final sort in GallerySort.values)
+                    LibraryOption(value: sort, label: sort.label),
+                ],
+                value: state.sort,
+                onChanged: onSortChanged,
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: searchWidth,
+                child: GallerySearchField(
+                  keyword: state.keyword,
+                  onChanged: onKeywordChanged,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 分类筛选条：「全部」+ 当前科目下的分类，单选。
+class GalleryCategoryBar extends StatelessWidget {
+  const GalleryCategoryBar({
+    required this.state,
+    required this.onChanged,
+    super.key,
+  });
+
+  final GalleryState state;
+  final ValueChanged<String> onChanged;
+
+  /// 未选科目时只列跨科分类，选了科目再列该科目的分类。
+  static List<GalleryCategory> categoriesOf(GalleryState state) => [
+    for (final category in state.visibleCategories)
+      if (category.key != GalleryCategory.allKey &&
+          (state.subject.isNotEmpty || category.subject == null))
+        category,
+  ];
 
   /// 已选科目时去掉分类名里重复的科目前缀：「素描 · 石膏」→「石膏」。
   static String shortLabel(GalleryCategory category) {
@@ -355,78 +473,14 @@ class GalleryFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chips = [
-      for (final category in state.visibleCategories)
-        if (category.key != GalleryCategory.allKey &&
-            (state.subject.isNotEmpty || category.subject == null))
-          category,
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          spacing: AppSpace.s12,
-          runSpacing: AppSpace.s8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            AppSegmented<String>(
-              segments: [
-                for (final subject in _subjects)
-                  AppSegment(
-                    value: subject,
-                    label: subject.isEmpty ? '全部科目' : subject,
-                  ),
-              ],
-              value: state.subject,
-              onChanged: onSubjectChanged,
-            ),
-            Wrap(
-              spacing: AppSpace.s8,
-              runSpacing: AppSpace.s8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                SizedBox(
-                  width: 228,
-                  child: GallerySearchField(
-                    keyword: state.keyword,
-                    onChanged: onKeywordChanged,
-                  ),
-                ),
-                AppSegmented<GallerySort>(
-                  segments: [
-                    for (final sort in GallerySort.values)
-                      AppSegment(value: sort, label: sort.label),
-                  ],
-                  value: state.sort,
-                  onChanged: onSortChanged,
-                ),
-              ],
-            ),
-          ],
-        ),
-        if (chips.isNotEmpty) ...[
-          const SizedBox(height: AppSpace.s8),
-          Wrap(
-            spacing: AppSpace.s8,
-            runSpacing: AppSpace.s8,
-            children: [
-              for (final category in chips)
-                AppChip(
-                  label: category.count > 0
-                      ? '${shortLabel(category)} ${category.count}'
-                      : shortLabel(category),
-                  selected: category.key == state.category,
-                  onTap: () => onCategoryChanged(
-                    category.key == state.category
-                        ? GalleryCategory.allKey
-                        : category.key,
-                  ),
-                ),
-            ],
-          ),
-        ],
+    return LibraryChipBar<String>(
+      items: [
+        const LibraryOption(value: GalleryCategory.allKey, label: '全部'),
+        for (final category in categoriesOf(state))
+          LibraryOption(value: category.key, label: shortLabel(category)),
       ],
+      value: state.category,
+      onChanged: onChanged,
     );
   }
 }
@@ -487,9 +541,10 @@ class _GallerySearchFieldState extends State<GallerySearchField> {
 
   @override
   Widget build(BuildContext context) {
-    return AppSearchField(
+    return LibrarySearchField(
       controller: _controller,
       hint: '搜索标题、作者、点评要点',
+      height: GalleryToolbar.height,
       onChanged: _schedule,
       onSubmitted: _submit,
       onCleared: () => _submit(''),
