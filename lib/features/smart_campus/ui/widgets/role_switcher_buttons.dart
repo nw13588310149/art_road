@@ -1,6 +1,7 @@
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_pressable.dart';
+import '../../../shell/ui/shell_layout.dart';
 import '../../state/smart_campus_state.dart';
 
 /// 智慧校园右侧栏「身份切换」按钮组。
@@ -9,7 +10,8 @@ import '../../state/smart_campus_state.dart';
 /// `#F3F2F3` 边框。视觉与教师 dashboard 原先的「任课老师 / 班主任」
 /// tab (`_TeacherRoleTabButton`) 保持一致，确保 admin / 班主任 / 任课老师 等多端右栏的视觉语言统一。
 ///
-/// 每行两个等宽按钮。`label` 走 [SmartCampusRoleX.label]（学生端 / 任课老师 /
+/// `Wrap` 布局：按钮带 `alignment` 会撑满 Wrap 宽度，256 宽的侧栏里每颗
+/// 独占一行。`label` 走 [SmartCampusRoleX.label]（学生端 / 任课老师 /
 /// 班主任 / 宿管 / 管理员），让数据完全由 controller / 后端
 /// `/teacher/teacherRole` 决定。
 ///
@@ -34,29 +36,17 @@ class RoleSwitcherButtons extends StatelessWidget {
     if (availableRoles.isEmpty) {
       return const SizedBox.shrink();
     }
-    Widget button(SmartCampusRole role) => _RoleSwitcherButton(
-      label: role.label,
-      active: role == selectedRole,
-      onTap: () => onSelectRole(role),
-    );
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    final ui = DashboardScaleScope.of(context).ui;
+    return Wrap(
+      spacing: ui(8),
+      runSpacing: ui(8),
       children: [
-        for (var i = 0; i < availableRoles.length; i += 2) ...[
-          if (i > 0) const SizedBox(height: AppSpace.s8),
-          Row(
-            children: [
-              Expanded(child: button(availableRoles[i])),
-              const SizedBox(width: AppSpace.s12),
-              Expanded(
-                child: i + 1 < availableRoles.length
-                    ? button(availableRoles[i + 1])
-                    : const SizedBox.shrink(),
-              ),
-            ],
+        for (final role in availableRoles)
+          _RoleSwitcherButton(
+            label: role.label,
+            active: role == selectedRole,
+            onTap: () => onSelectRole(role),
           ),
-        ],
       ],
     );
   }
@@ -75,23 +65,23 @@ class _RoleSwitcherButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     return AppPressable(
       onTap: onTap,
       selected: active,
       child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
+        padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
         decoration: BoxDecoration(
           gradient: active
               ? const LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [AppColors.brandSoft, AppColors.brand],
+                  colors: [Color(0xFF9585FF), Color(0xFF715EFE)],
                 )
               : null,
-          color: active ? null : AppColors.surface,
-          borderRadius: AppRadius.br8,
-          border: Border.all(color: AppColors.lineSoft),
+          color: active ? null : Colors.white,
+          borderRadius: BorderRadius.circular(ui(8)),
+          border: Border.all(color: const Color(0xFFF3F2F3)),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -99,8 +89,12 @@ class _RoleSwitcherButton extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: (active ? AppText.caption12Strong : AppText.caption12)
-              .copyWith(color: active ? AppColors.surface : AppColors.ink),
+          style: TextStyle(
+            fontSize: ui(11),
+            color: active ? Colors.white : const Color(0xFF0B081A),
+            fontWeight: FontWeight.w400,
+            height: 12 / 11,
+          ),
         ),
       ),
     );

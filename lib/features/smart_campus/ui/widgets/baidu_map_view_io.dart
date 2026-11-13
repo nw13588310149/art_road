@@ -1,4 +1,3 @@
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -7,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
@@ -74,17 +74,18 @@ class _BaiduMapViewState extends State<BaiduMapView> {
   Widget build(BuildContext context) {
     final lat = widget.lat;
     final lng = widget.lng;
-    final hasPoint = lat != null && lng != null && lat.isFinite && lng.isFinite;
+    final hasPoint =
+        lat != null && lng != null && lat.isFinite && lng.isFinite;
     final radius = widget.borderRadius;
 
     Widget child;
     if (!hasPoint) {
       child = const ColoredBox(
-        color: AppColors.page,
+        color: Color(0xFFEFF3FC),
         child: Center(
           child: Text(
             '暂无定位',
-            style: TextStyle(color: AppColors.textPlaceholder, fontSize: 13),
+            style: TextStyle(color: Color(0xFFB6B5BB), fontSize: 13),
           ),
         ),
       );
@@ -97,7 +98,11 @@ class _BaiduMapViewState extends State<BaiduMapView> {
         onAddressResolved: widget.onAddressResolved,
       );
     } else {
-      child = _BaiduMapStaticLayer(lat: lat, lng: lng, zoom: widget.zoom);
+      child = _BaiduMapStaticLayer(
+        lat: lat,
+        lng: lng,
+        zoom: widget.zoom,
+      );
     }
 
     if (radius == null) return child;
@@ -170,7 +175,7 @@ class _BaiduMapWebViewLayerState extends State<_BaiduMapWebViewLayer> {
 
     return WebViewController.fromPlatformCreationParams(params)
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(AppColors.page)
+      ..setBackgroundColor(const Color(0xFFEFF3FC))
       ..addJavaScriptChannel(
         _hostChannel,
         onMessageReceived: (JavaScriptMessage msg) {
@@ -336,7 +341,7 @@ class _BaiduMapStaticLayerState extends State<_BaiduMapStaticLayer> {
 
         if (_loading && _mapBytes == null) {
           return const ColoredBox(
-            color: AppColors.page,
+            color: Color(0xFFEFF3FC),
             child: Center(child: AppLoadingIndicator()),
           );
         }
@@ -344,13 +349,13 @@ class _BaiduMapStaticLayerState extends State<_BaiduMapStaticLayer> {
         final bytes = _mapBytes;
         if (bytes == null) {
           return ColoredBox(
-            color: AppColors.page,
+            color: const Color(0xFFEFF3FC),
             child: Center(
               child: Text(
                 '地图加载失败\n${widget.lat.toStringAsFixed(5)}, ${widget.lng.toStringAsFixed(5)}',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: AppColors.textPlaceholder,
+                  color: Color(0xFFB6B5BB),
                   fontSize: 12,
                   height: 1.4,
                 ),
