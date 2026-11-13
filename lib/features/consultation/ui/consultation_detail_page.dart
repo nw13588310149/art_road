@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/class_share_drawer.dart';
@@ -219,7 +220,7 @@ class _ShareButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset(
-                'assets/images/home/dictation/10.png',
+                AppAssets.newsShare,
                 width: ui(20),
                 height: ui(20),
                 fit: BoxFit.contain,

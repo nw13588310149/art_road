@@ -203,18 +203,23 @@ class SmartCampusFilterRow extends StatelessWidget {
     final drop = dropdown;
     final lead = leading;
 
+    // Wrap 不会自己撑满一行，宽度不撑满时 spaceBetween 不生效、搜索框会贴着左边排；
+    // 撑满后一行放得下就和原版一样左右分开，放不下才折行。
+    Widget wrapped(List<Widget> children) => SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: ui(12),
+        runSpacing: ui(12),
+        children: children,
+      ),
+    );
+
     if (lead == null) {
       // 教师管理：左下拉 + Spacer + 右搜索
       assert(drop != null);
-      if (useWrap) {
-        return Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: ui(12),
-          runSpacing: ui(12),
-          children: [drop!, search],
-        );
-      }
+      if (useWrap) return wrapped([drop!, search]);
       return Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [drop!, const Spacer(), search],
@@ -231,15 +236,7 @@ class SmartCampusFilterRow extends StatelessWidget {
               search,
             ],
           );
-    if (useWrap) {
-      return Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: ui(12),
-        runSpacing: ui(12),
-        children: [lead, right],
-      );
-    }
+    if (useWrap) return wrapped([lead, right]);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [lead, const Spacer(), right],

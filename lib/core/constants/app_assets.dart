@@ -95,6 +95,9 @@ abstract final class AppAssets {
   /// 侧栏底部「需求反馈」入口图标。
   static const homeFeedbackIcon = 'assets/images/home/yj.png';
   static const newsViews = 'assets/images/home/eye.png';
+
+  /// 资讯详情页头右侧「分享」按钮的图标（20×20）。
+  static const newsShare = 'assets/images/home/share.png';
   static const profileQr = 'assets/images/info/icon1.png';
   static const profileRecommend = 'assets/images/info/icon2.png';
   static const profileFeedback = 'assets/images/info/icon3.png';

@@ -120,9 +120,6 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
           onSearchChanged: (value) => setState(() => _query = value),
           onSearchCleared: _clearSearch,
           onOpenRoleGuide: () => showRoleGuide(context, role: _currentRole()),
-          onOpenDesignSystem: widget.demoMode
-              ? () => Navigator.of(context).pushNamed(RoutePaths.designSystem)
-              : null,
         ),
         SizedBox(height: ui(14)),
         _CategoryBar(
@@ -138,11 +135,27 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
               message: _guidesSkipped == true
                   ? '演示版：新手引导已跳过，各身份进入首页时不再弹出。'
                   : '演示版：各身份第一次进入首页时会弹出新手引导。',
-              action: AppButton(
-                label: _guidesSkipped == true ? '恢复新手引导' : '跳过新手引导',
-                variant: AppButtonVariant.text,
-                size: AppButtonSize.sm,
-                onTap: _guidesSkipped == null ? null : _toggleGuides,
+              // 组件库只在演示版开放，和「跳过新手引导」一起放在演示提示条里，
+              // 页头保持原版的样子。
+              action: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppButton(
+                    label: '组件库',
+                    variant: AppButtonVariant.text,
+                    size: AppButtonSize.sm,
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(RoutePaths.designSystem),
+                  ),
+                  SizedBox(width: ui(4)),
+                  AppButton(
+                    label: _guidesSkipped == true ? '恢复新手引导' : '跳过新手引导',
+                    variant: AppButtonVariant.text,
+                    size: AppButtonSize.sm,
+                    onTap: _guidesSkipped == null ? null : _toggleGuides,
+                  ),
+                ],
               ),
             ),
           ),
@@ -171,7 +184,6 @@ class _GuideHeader extends StatelessWidget {
     required this.onSearchChanged,
     required this.onSearchCleared,
     required this.onOpenRoleGuide,
-    required this.onOpenDesignSystem,
   });
 
   final VoidCallback onBack;
@@ -179,11 +191,86 @@ class _GuideHeader extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onSearchCleared;
   final VoidCallback onOpenRoleGuide;
-  final VoidCallback? onOpenDesignSystem;
 
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
+    final back = Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(ui(8)),
+      child: InkWell(
+        onTap: onBack,
+        borderRadius: BorderRadius.circular(ui(8)),
+        child: Container(
+          width: ui(28),
+          height: ui(28),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(ui(8)),
+            border: Border.all(color: _softBorder),
+          ),
+          child: Icon(
+            Icons.chevron_left_rounded,
+            size: ui(20),
+            color: _textPrimary,
+          ),
+        ),
+      ),
+    );
+    Widget titles(CrossAxisAlignment align) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: align,
+      children: [
+        Text(
+          '操作指南',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: _textPrimary,
+            fontFamily: 'PingFang SC',
+            fontSize: ui(16),
+            height: 1.1,
+            fontWeight: AppFont.w600,
+          ),
+        ),
+        SizedBox(height: ui(3)),
+        Text(
+          '美育集操作指南',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: const Color(0xFFC2C1C5),
+            fontFamily: 'PingFang SC',
+            fontSize: ui(10),
+            height: 1.1,
+            fontWeight: AppFont.w400,
+          ),
+        ),
+      ],
+    );
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: ui(148),
+          height: ui(32),
+          child: AppSearchField(
+            controller: search,
+            hint: '搜索指南',
+            onChanged: onSearchChanged,
+            onCleared: onSearchCleared,
+          ),
+        ),
+        SizedBox(width: ui(6)),
+        AppButton(
+          label: '新手引导',
+          icon: Icons.explore_outlined,
+          variant: AppButtonVariant.quiet,
+          size: AppButtonSize.sm,
+          onTap: onOpenRoleGuide,
+        ),
+      ],
+    );
     return ShellPageSurface(
       height: ui(54),
       borderRadius: BorderRadius.circular(ui(14)),
@@ -192,96 +279,32 @@ class _GuideHeader extends StatelessWidget {
         begin: Alignment.centerLeft,
         end: Alignment.centerRight,
       ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: ui(12)),
-        child: Row(
-          children: [
-            Material(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(ui(8)),
-              child: InkWell(
-                onTap: onBack,
-                borderRadius: BorderRadius.circular(ui(8)),
-                child: Container(
-                  width: ui(28),
-                  height: ui(28),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(ui(8)),
-                    border: Border.all(color: _softBorder),
-                  ),
-                  child: Icon(
-                    Icons.chevron_left_rounded,
-                    size: ui(20),
-                    color: _textPrimary,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: ui(10)),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 原版页头标题居中。本页右侧多了搜索和新手引导，页头太窄时居中的标题会
+          // 压到搜索框，这时标题退到返回按钮右边。
+          if (constraints.maxWidth < ui(680)) {
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: ui(12)),
+              child: Row(
                 children: [
-                  Text(
-                    '操作指南',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: _textPrimary,
-                      fontFamily: 'PingFang SC',
-                      fontSize: ui(16),
-                      height: 1.1,
-                      fontWeight: AppFont.w600,
-                    ),
-                  ),
-                  SizedBox(height: ui(3)),
-                  Text(
-                    '美育集操作指南',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: const Color(0xFFC2C1C5),
-                      fontFamily: 'PingFang SC',
-                      fontSize: ui(10),
-                      height: 1.1,
-                      fontWeight: AppFont.w400,
-                    ),
-                  ),
+                  back,
+                  SizedBox(width: ui(10)),
+                  Expanded(child: titles(CrossAxisAlignment.start)),
+                  actions,
                 ],
               ),
-            ),
-            SizedBox(
-              width: ui(148),
-              height: ui(32),
-              child: AppSearchField(
-                controller: search,
-                hint: '搜索指南',
-                onChanged: onSearchChanged,
-                onCleared: onSearchCleared,
-              ),
-            ),
-            SizedBox(width: ui(6)),
-            AppButton(
-              label: '新手引导',
-              icon: Icons.explore_outlined,
-              variant: AppButtonVariant.quiet,
-              size: AppButtonSize.sm,
-              onTap: onOpenRoleGuide,
-            ),
-            if (onOpenDesignSystem != null) ...[
-              SizedBox(width: ui(6)),
-              AppButton(
-                label: '组件库（演示）',
-                icon: Icons.widgets_outlined,
-                variant: AppButtonVariant.quiet,
-                size: AppButtonSize.sm,
-                onTap: onOpenDesignSystem,
-              ),
+            );
+          }
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(left: ui(12), child: back),
+              titles(CrossAxisAlignment.center),
+              Positioned(right: ui(12), child: actions),
             ],
-          ],
-        ),
+          );
+        },
       ),
     );
   }
