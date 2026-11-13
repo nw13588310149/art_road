@@ -2,36 +2,35 @@
 // 命名参数，部分条目沿用默认值；analyzer 误报为 unused_element_parameter，整体忽略。
 // ignore_for_file: unused_element_parameter
 
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/network/snowflake_id.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
-import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/admin_repository.dart';
 import '../data/admin_student_exam_data.dart';
+import 'widgets/smart_campus_dark_tabs.dart';
+import 'widgets/smart_campus_filter_bar.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_person_card.dart';
+import 'widgets/smart_campus_square_avatar.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ============================================================================
-// 颜色常量
+// 颜色常量（原版色值；紫色统一为品牌紫）
 // ============================================================================
 
-const Color _kCardBg = AppColors.surface;
-const Color _kTextPrimary = AppColors.ink;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kTextSub = AppColors.textSecondary;
+const Color _kTextPrimary = Color(0xFF0B081A);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kTextSub = Color(0xFF6D6B75);
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleSoft = AppColors.brandTint;
-const Color _kBorder = AppColors.lineSoft;
+const Color _kPurpleSoft = Color(0xFFDAD2FF);
 
 /// 与人脸库录入截取预览同比例（11:14），学籍档案内略放大展示。
 const double _kFaceImgPreviewWidth = 104;
@@ -90,6 +89,32 @@ extension on _StudentStatus {
         return '退学';
       case _StudentStatus.graduated:
         return '毕业';
+    }
+  }
+
+  Color get bg {
+    switch (this) {
+      case _StudentStatus.enrolled:
+        return _kPurpleSoft;
+      case _StudentStatus.suspended:
+        return const Color(0xFFFFE7C2);
+      case _StudentStatus.transferring:
+        return const Color(0xFFD2EAFF);
+      case _StudentStatus.graduated:
+        return const Color(0xFFE0E0E0);
+    }
+  }
+
+  Color get fg {
+    switch (this) {
+      case _StudentStatus.enrolled:
+        return _kPurple;
+      case _StudentStatus.suspended:
+        return const Color(0xFFE89B30);
+      case _StudentStatus.transferring:
+        return const Color(0xFF1F77E0);
+      case _StudentStatus.graduated:
+        return const Color(0xFF6D6B75);
     }
   }
 }
@@ -678,9 +703,9 @@ class _AdminStudentManagementViewState
 
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
         title: '学生管理',
-        subtitle: '管理全部学生的班级、学籍与住宿信息',
+        subtitle: '全量在籍视图：行政班、学籍状态、住宿与联系方式；支持检索与导出。与学生端名册同源口径。',
         onBack: widget.onBack,
       ),
       body: Column(
@@ -717,6 +742,7 @@ class _AdminStudentManagementViewState
               fontSize: ui(12),
               height: 1.2,
               color: _kTextPrimary,
+              fontFamily: 'PingFang SC',
             ),
           ),
           SizedBox(height: ui(12)),
@@ -823,225 +849,35 @@ class _FilterRowState extends State<_FilterRow> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-
-    final tabs = <(String, _StudentStatus?)>[
-      ('全部', null),
-      ..._StudentStatus.values.map((s) => (s.label, s)),
-    ];
-
-    return Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: ui(12),
-      runSpacing: ui(12),
-      children: [
-        Container(
-          height: ui(44),
-          padding: EdgeInsets.all(ui(4)),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(8)),
-            border: Border.all(color: _kBorder, width: 1),
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final t in tabs)
-                  _StatusPill(
-                    label: t.$1,
-                    active: t.$2 == widget.statusFilter,
-                    onTap: () => widget.onStatusChanged(t.$2),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        Wrap(
-          spacing: ui(12),
-          runSpacing: ui(12),
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _ClassFilterField(
-              options: widget.classOptions,
-              selectedClassId: widget.selectedClassId,
-              onChanged: widget.onClassChanged,
-            ),
-            Container(
-              width: ui(324),
-              height: ui(44),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(ui(12)),
-              ),
-              padding: EdgeInsets.symmetric(horizontal: ui(16)),
-              child: Row(
-                children: [
-                  AppAssetGraphic(
-                    AppAssets.shellV2Search,
-                    width: ui(16),
-                    height: ui(16),
-                    fit: BoxFit.contain,
-                  ),
-                  SizedBox(width: ui(10)),
-                  Expanded(
-                    child: AppTextField(
-                      controller: _searchCtrl,
-                      onChanged: widget.onSearchChanged,
-                      cursorColor: _kPurple,
-                      cursorWidth: 1.5,
-                      cursorHeight: ui(16),
-                      style: TextStyle(
-                        fontSize: ui(14),
-                        height: 1.2,
-                        color: _kTextPrimary,
-                      ),
-                      decoration: InputDecoration(
-                        isCollapsed: true,
-                        border: InputBorder.none,
-                        hintText: '搜索姓名、学号、手机、宿舍、家长',
-                        hintStyle: TextStyle(
-                          fontSize: ui(14),
-                          color: AppColors.textPlaceholder,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _ClassFilterField extends StatefulWidget {
-  const _ClassFilterField({
-    required this.options,
-    required this.selectedClassId,
-    required this.onChanged,
-  });
-
-  final List<_ClassFilterOption> options;
-  final String? selectedClassId;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  State<_ClassFilterField> createState() => _ClassFilterFieldState();
-}
-
-class _ClassFilterFieldState extends State<_ClassFilterField> {
-  final _fieldKey = GlobalKey();
-  bool _open = false;
-
-  _ClassFilterOption get _selected => widget.options.firstWhere(
+  _ClassFilterOption get _selected => widget.classOptions.firstWhere(
     (o) => o.id == widget.selectedClassId,
     orElse: () => _ClassFilterOption.all,
   );
 
-  Future<void> _openMenu() async {
-    final fieldCtx = _fieldKey.currentContext;
-    if (fieldCtx == null) return;
-    setState(() => _open = true);
-    final selected = await showAppPopupSelector<_ClassFilterOption>(
-      anchorContext: fieldCtx,
-      items: widget.options,
-      value: _selected,
-      itemLabel: (o) => o.label,
-      width: DashboardScaleScope.of(fieldCtx).ui(280),
-    );
-    if (!mounted) return;
-    setState(() => _open = false);
-    if (selected != null) widget.onChanged(selected.id);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      key: _fieldKey,
-      onTap: _openMenu,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        width: ui(220),
-        height: ui(44),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(12)),
-          border: Border.all(color: _kBorder),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                _selected.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: ui(14),
-                  height: 1.2,
-                  color: _kTextPrimary,
-                ),
-              ),
-            ),
-            AnimatedRotation(
-              turns: _open ? 0.5 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: ui(22),
-                color: AppColors.textPlaceholder,
-              ),
-            ),
-          ],
-        ),
+    final segments = <AppSegment<_StudentStatus?>>[
+      const AppSegment(value: null, label: '全部'),
+      for (final s in _StudentStatus.values)
+        AppSegment(value: s, label: s.label),
+    ];
+    return SmartCampusFilterRow(
+      useWrap: true,
+      leading: SmartCampusDarkTabs<_StudentStatus?>(
+        segments: segments,
+        value: widget.statusFilter,
+        onChanged: widget.onStatusChanged,
       ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: ui(36),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        margin: EdgeInsets.symmetric(horizontal: ui(2)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? _kTextPrimary : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(14),
-            height: 1,
-            fontWeight: AppFont.w500,
-            color: active ? AppColors.surface : _kTextSub,
-          ),
-        ),
+      dropdown: SmartCampusFilterDropdown<_ClassFilterOption>(
+        items: widget.classOptions,
+        value: _selected,
+        itemLabel: (o) => o.label,
+        onChanged: (o) => widget.onClassChanged(o.id),
+      ),
+      search: SmartCampusFilterSearchField(
+        controller: _searchCtrl,
+        hintText: '搜索姓名、学号、手机、宿舍、家长',
+        onChanged: widget.onSearchChanged,
       ),
     );
   }
@@ -1065,12 +901,16 @@ class _StudentGrid extends StatelessWidget {
         height: ui(120),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(ui(12)),
         ),
         child: Text(
           '暂无符合条件的学生',
-          style: TextStyle(fontSize: ui(14), color: _kTextHint),
+          style: TextStyle(
+            fontSize: ui(14),
+            color: _kTextHint,
+            fontFamily: 'PingFang SC',
+          ),
         ),
       );
     }
@@ -1106,107 +946,21 @@ class _StudentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return SmartCampusPersonCard(
+      name: student.name,
+      idLabel: student.studentId,
+      avatarUrl: student.avatarUrl,
+      height: 88,
+      contentRightPadding: 46,
       onTap: onTap,
-      child: Container(
-        height: ui(88),
-        decoration: BoxDecoration(
-          color: _kCardBg,
-          borderRadius: BorderRadius.circular(ui(12)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(ui(12), ui(8), ui(46), ui(8)),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Avatar(name: student.name, avatarUrl: student.avatarUrl),
-                  SizedBox(width: ui(8)),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                student.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textHeightBehavior: const TextHeightBehavior(
-                                  applyHeightToFirstAscent: false,
-                                  applyHeightToLastDescent: false,
-                                ),
-                                style: TextStyle(
-                                  fontSize: ui(14),
-                                  height: 1.0,
-                                  fontWeight: AppFont.w500,
-                                  color: _kTextPrimary,
-                                ),
-                              ),
-                            ),
-                            if (student.studentId.isNotEmpty) ...[
-                              SizedBox(width: ui(8)),
-                              Text(
-                                student.studentId,
-                                style: TextStyle(
-                                  fontSize: ui(12),
-                                  height: 1.2,
-                                  color: _kTextHint,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        SizedBox(height: ui(6)),
-                        Text(
-                          student.classInfo,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: ui(12),
-                            height: 1.2,
-                            color: _kTextPrimary,
-                          ),
-                        ),
-                        SizedBox(height: ui(6)),
-                        Text(
-                          student.dormInfo,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: ui(12),
-                            height: 1.2,
-                            color: _kTextSub,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // 只有非在籍（休学 / 转学 / 毕业）才显示状态。
-            if (student.status != _StudentStatus.enrolled)
-              Positioned(
-                right: ui(12),
-                top: ui(10),
-                child: AppStatusTag(
-                  label: student.status.label,
-                  tone: student.status == _StudentStatus.graduated
-                      ? AppTone.neutral
-                      : AppTone.warning,
-                ),
-              ),
-          ],
-        ),
+      lines: [
+        SmartCampusPersonCardLine(student.classInfo),
+        SmartCampusPersonCardLine(student.dormInfo, color: _kTextSub),
+      ],
+      statusBadge: SmartCampusPersonStatusBadge(
+        label: student.status.label,
+        background: student.status.bg,
+        foreground: student.status.fg,
       ),
     );
   }
@@ -1221,8 +975,11 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return AppAvatar(name: name, url: avatarUrl, size: ui(size));
+    return SmartCampusSquareAvatar(
+      name: name,
+      url: avatarUrl,
+      size: size,
+    );
   }
 }
 

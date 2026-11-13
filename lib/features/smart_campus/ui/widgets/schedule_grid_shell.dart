@@ -4,7 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/theme/app_font.dart';
 import '../../../shell/ui/shell_layout.dart';
+
+const Color _kInnerGray = Color(0xFFF5F6FA);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kTextDivider = Color(0xFFCECED1);
 
 /// 原版冻结节次列与日期列尺寸。
 const double kScheduleGridTimeColWidth = 120;
@@ -373,12 +380,15 @@ class ScheduleGridTimeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     return Container(
+      width: double.infinity,
+      height: ui(kScheduleGridHeaderHeight),
       decoration: const BoxDecoration(
-        color: AppColors.surfaceSubtle,
+        color: _kInnerGray,
         border: Border(
-          right: BorderSide(color: AppColors.lineSoft),
-          bottom: BorderSide(color: AppColors.lineSoft),
+          right: BorderSide(color: _kBorderSoft),
+          bottom: BorderSide(color: _kBorderSoft),
         ),
       ),
       child: Stack(
@@ -387,14 +397,32 @@ class ScheduleGridTimeHeader extends StatelessWidget {
             child: CustomPaint(painter: _ScheduleGridDiagonalLinePainter()),
           ),
           Positioned(
-            right: 20,
-            top: 10,
-            child: Text('日期', style: AppText.caption12Strong),
+            right: ui(20),
+            top: ui(10),
+            child: Text(
+              '日期',
+              style: TextStyle(
+                fontSize: ui(12),
+                color: Colors.black,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 1,
+              ),
+            ),
           ),
           Positioned(
-            left: 20,
-            bottom: 12,
-            child: Text('节次', style: AppText.caption12Strong),
+            left: ui(20),
+            bottom: ui(12),
+            child: Text(
+              '节次',
+              style: TextStyle(
+                fontSize: ui(12),
+                color: Colors.black,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 1,
+              ),
+            ),
           ),
         ],
       ),
@@ -409,52 +437,65 @@ class ScheduleGridDaysHeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     final width = ScheduleGridScope.dayWidthOf(context);
-    return Row(
-      children: [
-        for (var i = 0; i < days.length; i++)
-          Container(
-            width: width,
-            decoration: BoxDecoration(
-              color: days[i].today
-                  ? AppColors.brandWash
-                  : AppColors.surfaceSubtle,
-              border: Border(
-                bottom: const BorderSide(color: AppColors.lineSoft),
-                left: i == 0
-                    ? BorderSide.none
-                    : const BorderSide(color: AppColors.lineSoft),
+    return SizedBox(
+      height: ui(kScheduleGridHeaderHeight),
+      child: Row(
+        children: [
+          for (var i = 0; i < days.length; i++)
+            Container(
+              width: width,
+              height: ui(kScheduleGridHeaderHeight),
+              decoration: BoxDecoration(
+                color: days[i].today ? Colors.white : _kInnerGray,
+                border: Border(
+                  bottom: const BorderSide(color: _kBorderSoft),
+                  left: i == 0
+                      ? BorderSide.none
+                      : const BorderSide(color: _kBorderSoft),
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    days[i].weekdayLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: ui(14),
+                      color: _kTextDark,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w500,
+                      height: 1,
+                    ),
+                  ),
+                  SizedBox(height: ui(4)),
+                  Text(
+                    days[i].dateLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: ui(12),
+                      color: _kTextHint,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w400,
+                      height: 1,
+                    ),
+                  ),
+                ],
               ),
             ),
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  days[i].weekdayLabel,
-                  maxLines: 1,
-                  style: AppText.body14Strong.copyWith(
-                    color: days[i].today ? AppColors.brand : AppColors.ink,
-                  ),
-                ),
-                const SizedBox(height: AppSpace.s4),
-                Text(
-                  days[i].today ? '${days[i].dateLabel} 今天' : days[i].dateLabel,
-                  maxLines: 1,
-                  style: AppText.caption12.copyWith(
-                    color: days[i].today
-                        ? AppColors.brand
-                        : AppColors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
 
+/// 原版节次格只显示起止时间；[label]（上午 / 下午 / 晚上）只给读屏。
 class ScheduleGridTimeRange extends StatelessWidget {
   const ScheduleGridTimeRange({
     super.key,
@@ -469,23 +510,26 @@ class ScheduleGridTimeRange extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (label.isNotEmpty) ...[
-          Text(label, style: AppText.caption12Strong, maxLines: 1),
-          const SizedBox(height: AppSpace.s4),
+    final ui = DashboardScaleScope.of(context).ui;
+    final style = TextStyle(
+      fontSize: ui(14),
+      color: _kTextDark,
+      fontFamily: 'PingFang SC',
+      fontWeight: AppFont.w400,
+      height: 16 / 14,
+    );
+    return Semantics(
+      label: label.isEmpty ? null : label,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(start, style: style),
+          SizedBox(height: ui(8)),
+          Container(width: ui(12), height: 1, color: _kTextDivider),
+          SizedBox(height: ui(8)),
+          Text(end, style: style),
         ],
-        Text(start, style: AppText.body14),
-        const SizedBox(height: AppSpace.s8),
-        const SizedBox(
-          width: AppSpace.s12,
-          height: 1,
-          child: ColoredBox(color: AppColors.line),
-        ),
-        const SizedBox(height: AppSpace.s8),
-        Text(end, style: AppText.body14),
-      ],
+      ),
     );
   }
 }
@@ -495,11 +539,10 @@ class _ScheduleGridDiagonalLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawLine(
-      Offset.zero,
-      Offset(size.width, size.height),
-      Paint()..color = AppColors.line,
-    );
+    final paint = Paint()
+      ..color = _kBorderSoft
+      ..strokeWidth = 1;
+    canvas.drawLine(Offset.zero, Offset(size.width, size.height), paint);
   }
 
   @override

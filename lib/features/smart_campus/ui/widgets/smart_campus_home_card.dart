@@ -1,4 +1,3 @@
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shell/ui/shell_layout.dart';
@@ -11,7 +10,7 @@ class SmartCampusHomeCard extends StatelessWidget {
     this.padding,
     this.width,
     this.height,
-    this.color = AppColors.surface,
+    this.color = Colors.white,
     this.radius = ShellLayoutSpec.panelRadius,
     this.boxShadow,
     this.clipContent = true,
@@ -51,7 +50,10 @@ class SmartCampusHomeCard extends StatelessWidget {
                     : Padding(padding: padding!, child: child),
               ),
             )
-          : Padding(padding: padding ?? EdgeInsets.zero, child: child),
+          : Padding(
+              padding: padding ?? EdgeInsets.zero,
+              child: child,
+            ),
     );
   }
 }

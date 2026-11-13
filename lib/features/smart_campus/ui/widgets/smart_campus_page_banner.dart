@@ -1,10 +1,17 @@
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/theme/app_font.dart';
+import '../../../../core/ui/app_pressable.dart';
+import '../../../../core/ui/app_segmented.dart';
+import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../shell/ui/shell_layout.dart';
+import 'smart_campus_dark_tabs.dart';
 
-/// 作业等页面独立的白色筛选条，选中项使用深色底。
+/// 作业等页面独立的白色状态页签，选中项黑底白字。
+///
+/// 外观委托 [SmartCampusDarkTabs]（原版黑底页签，无描边版本）；保留旧签名，
+/// 已有页面无需改动调用。
 class SmartCampusStatusTabs<T> extends StatelessWidget {
   const SmartCampusStatusTabs({
     required this.segments,
@@ -21,20 +28,11 @@ class SmartCampusStatusTabs<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: AppCard(
-        padding: const EdgeInsets.all(AppSpace.s4),
+      child: SmartCampusDarkTabs<T>(
+        segments: segments,
+        value: value,
+        onChanged: onChanged,
         bordered: false,
-        radius: 8,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: AppSegmented<T>(
-            segments: segments,
-            value: value,
-            onChanged: onChanged,
-            trackColor: AppColors.surface,
-            selectedColor: AppColors.ink,
-          ),
-        ),
       ),
     );
   }
@@ -47,10 +45,11 @@ BoxDecoration smartCampusPageBannerDecoration(
 }) {
   return BoxDecoration(
     borderRadius: BorderRadius.circular(ui(borderRadius)),
+    // 底图右缘曾带 1px 深色竖线；先铺渐变再 cover，避免拉伸后右侧露线。
     gradient: const LinearGradient(
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
-      colors: [AppColors.surface, AppColors.brandWash],
+      colors: [Colors.white, Color(0xFFF9EDFF)],
     ),
     image: const DecorationImage(
       image: AssetImage(AppAssets.xiaoquanHeaderBg),
@@ -58,6 +57,207 @@ BoxDecoration smartCampusPageBannerDecoration(
       alignment: Alignment.centerRight,
     ),
   );
+}
+
+/// 原版二级页横幅：高 62、圆角 16、`xiaoquan/bg.png` 底图；左侧 32×32 白底
+/// 返回，居中标题 16/600 + 12 号 `#B6B5BB` 副标题，右侧放 [actions]
+/// （一般是 [SmartCampusBannerButton]，间距 8）。
+///
+/// 对应 R `features/smart_campus/ui/admin_teacher_management_view.dart`
+/// 613–688（`_Banner`）；右侧按钮区对应 `admin_class_management_view.dart`
+/// 1555–1574。各页原先各写一份，这里统一。
+///
+/// 放进 [SmartCampusSecondaryPageShell.header] 时壳层不再额外铺底图。
+class SmartCampusPageBanner extends StatelessWidget {
+  const SmartCampusPageBanner({
+    required this.title,
+    this.subtitle = '',
+    this.onBack,
+    this.actions = const [],
+    this.titleHorizontalInset = 56,
+    super.key,
+  });
+
+  final String title;
+
+  /// 副标题；为空时只显示居中标题。
+  final String subtitle;
+
+  /// 为 null 时不显示返回按钮。
+  final VoidCallback? onBack;
+
+  /// 右侧操作，距右 12、距顶 14（按钮高 33 时垂直居中）。
+  final List<Widget> actions;
+
+  /// 居中标题区左右留白，右侧按钮较宽时调大，避免长副标题压到按钮下面。
+  final double titleHorizontalInset;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+        width: double.infinity,
+        height: ui(62),
+        decoration: smartCampusPageBannerDecoration(ui),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: ui(titleHorizontalInset),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: ui(16),
+                            height: 1.2,
+                            fontWeight: AppFont.w600,
+                            color: const Color(0xFF0B081A),
+                            fontFamily: 'PingFang SC',
+                          ),
+                        ),
+                      ),
+                      if (subtitle.isNotEmpty) ...[
+                        SizedBox(height: ui(4)),
+                        Text(
+                          subtitle,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: ui(12),
+                            height: 1.2,
+                            color: const Color(0xFFB6B5BB),
+                            fontFamily: 'PingFang SC',
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (onBack != null)
+              Positioned(
+                left: ui(12),
+                top: ui(15),
+                child: AppPressable(
+                  onTap: onBack,
+                  semanticLabel: '返回',
+                  child: Container(
+                    width: ui(32),
+                    height: ui(32),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(ui(8)),
+                      border: Border.all(
+                        color: const Color(0xFFF3F2F3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.chevron_left,
+                      size: ui(20),
+                      color: const Color(0xFF0B081A),
+                    ),
+                  ),
+                ),
+              ),
+            if (actions.isNotEmpty)
+              Positioned(
+                right: ui(12),
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var i = 0; i < actions.length; i++) ...[
+                        if (i > 0) SizedBox(width: ui(8)),
+                        actions[i],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+  }
+}
+
+/// 横幅右侧按钮：高 33、白底 `#F3F2F3` 描边、圆角 8；16 图标 + 12/600 文字。
+///
+/// 对应 R `teacher_homework_review_view.dart` 1084–1134（`_BannerActionButton`）。
+class SmartCampusBannerButton extends StatelessWidget {
+  const SmartCampusBannerButton({
+    required this.label,
+    required this.onTap,
+    this.iconAsset,
+    this.icon,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+
+  /// 原版图标资源（优先于 [icon]）。
+  final String? iconAsset;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final asset = iconAsset;
+    final iconData = icon;
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        height: ui(33),
+        padding: EdgeInsets.symmetric(horizontal: ui(12)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(ui(8)),
+          border: Border.all(color: const Color(0xFFF3F2F3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (asset != null)
+              AppAssetGraphic(
+                asset,
+                width: ui(16),
+                height: ui(16),
+                fit: BoxFit.contain,
+              )
+            else if (iconData != null)
+              Icon(iconData, size: ui(16), color: const Color(0xFF0B081A)),
+            if (asset != null || iconData != null) SizedBox(width: ui(4)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: ui(12),
+                color: const Color(0xFF0B081A),
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w600,
+                height: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// 课表页顶栏壳层：固定 [AppAssets.authBgTop] 背景图 + 仅顶部圆角裁剪。
@@ -85,10 +285,11 @@ class SmartCampusScheduleTopBar extends StatelessWidget {
           topLeft: Radius.circular(ui(borderRadius)),
           topRight: Radius.circular(ui(borderRadius)),
         ),
+        // 底图 [authBgTop] 顶部圆角带透明像素；先铺渐变再 cover，避免拉伸后右上角露白。
         gradient: const LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [AppColors.surface, AppColors.brandWash],
+          colors: [Colors.white, Color(0xFFF9EDFF)],
         ),
         image: const DecorationImage(
           image: AssetImage(AppAssets.authBgTop),
@@ -103,11 +304,14 @@ class SmartCampusScheduleTopBar extends StatelessWidget {
 
 /// 学生端二级页通用壳层：
 ///
-/// 顶部 [header] 使用独立背景，**不随内容滚动**；与下方
+/// 顶部 [header]（标题 + 返回栏）固定浮在灰底上，**不随内容滚动**；与下方
 /// 主内容容器之间留 [headerGap] 间距（即「容器到顶部标题栏有间距」）。
 /// 主内容容器填满剩余高度并以 16 圆角裁切滚动内容；容器内部 **不再叠加**
 /// 任何底部 padding —— 滚动到底时由外层 dashboard 的 16px contentPadding
 /// 提供唯一、稳定的底部留白，避免「容器外下边距」忽大忽小。
+///
+/// [header] 为 [SmartCampusPageBanner] 时原样放置（横幅自带底图）；其它
+/// header（尚未还原的页面传入的工具栏）外面补一层同款底图，最小高 62。
 ///
 /// 与 [SmartCampusSchedulePageShell]（banner 与内容同处一张白卡、banner
 /// 平贴顶部）的区别：本壳层让 banner 独立浮起、内容容器单独裁切，更贴合
@@ -117,7 +321,7 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
     super.key,
     required this.header,
     required this.body,
-    this.backgroundColor = AppColors.page,
+    this.backgroundColor = const Color(0xFFEFF3FC),
     this.headerMinHeight = 62,
     this.headerGap = 16,
     this.bodyBorderRadius = 16,
@@ -128,6 +332,8 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
   final Widget header;
   final Widget body;
   final Color backgroundColor;
+
+  /// 非 [SmartCampusPageBanner] 的 header 外层底图的最小高度。
   final double headerMinHeight;
 
   /// banner 与主内容容器之间的固定间距。
@@ -147,28 +353,37 @@ class SmartCampusSecondaryPageShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final topRadius = Radius.circular(
-      ui(bodyTopClipRadius ?? bodyBorderRadius),
-    );
-    final bottomRadius = Radius.circular(ui(bodyBorderRadius));
+    final topClipRadius = ui(bodyTopClipRadius ?? bodyBorderRadius);
+    final bottomClipRadius = ui(bodyBorderRadius);
+    final banner = header is SmartCampusPageBanner
+        ? header
+        : Container(
+            width: double.infinity,
+            constraints: BoxConstraints(minHeight: ui(headerMinHeight)),
+            alignment: Alignment.center,
+            decoration: smartCampusPageBannerDecoration(ui),
+            child: header,
+          );
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          constraints: BoxConstraints(minHeight: ui(headerMinHeight)),
-          alignment: Alignment.center,
-          decoration: smartCampusPageBannerDecoration(ui),
-          child: header,
-        ),
+        banner,
         SizedBox(height: ui(headerGap)),
         Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.vertical(
-              top: topRadius,
-              bottom: bottomRadius,
-            ),
-            child: ColoredBox(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
               color: backgroundColor,
+              borderRadius: BorderRadius.circular(ui(bodyBorderRadius)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(topClipRadius),
+                topRight: Radius.circular(topClipRadius),
+                bottomLeft: Radius.circular(bottomClipRadius),
+                bottomRight: Radius.circular(bottomClipRadius),
+              ),
+              clipBehavior: Clip.antiAlias,
               child: bodyScrollable ? SingleChildScrollView(child: body) : body,
             ),
           ),
@@ -184,7 +399,7 @@ class SmartCampusSchedulePageShell extends StatelessWidget {
     super.key,
     required this.header,
     required this.body,
-    this.backgroundColor = AppColors.surface,
+    this.backgroundColor = Colors.white,
     this.bodyScrollable = true,
   });
 

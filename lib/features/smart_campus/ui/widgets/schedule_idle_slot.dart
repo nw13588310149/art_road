@@ -1,31 +1,62 @@
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 
+import '../../../shell/ui/shell_layout.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import 'schedule_course_card.dart';
 
-/// 空闲格沿用课程卡的边距和标准高度，叠课时仍贴在格子顶部。
+/// 课表空格占位：白底 + 灰边圆角框 +「空闲」文案，固定显示在顶部标准高度，
+/// 不因同节次有小课叠高整行而纵向拉伸。
+///
+/// 边距与 [ScheduleCourseCard] 所在格子的 `12` 四向 padding 一致；日期列
+/// 等分变宽时虚线框保持 176×96 并水平居中。
 class ScheduleIdleSlot extends StatelessWidget {
   const ScheduleIdleSlot({super.key});
 
+  static const Color _borderColor = Color(0xFFCECED1);
+  static const Color _textColor = Color(0xFFB6B5BB);
+
+  /// 12 上下 + 96 内容区，与有课格视觉高度对齐。
   static const double designSlotHeight =
       kScheduleCourseCardHeight + 2 * kScheduleCourseCellInset;
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: const EdgeInsets.all(kScheduleCourseCellInset),
-        child: SizedBox(
-          width: kScheduleCourseCardWidth,
-          height: kScheduleCourseCardHeight,
-          child: CustomPaint(
-            painter: const _DashedRoundedRectPainter(),
-            child: Center(
-              child: Text(
-                '空闲',
-                style: AppText.body14.copyWith(color: AppColors.textTertiary),
-              ),
+    final ui = DashboardScaleScope.of(context).ui;
+    return ColoredBox(
+      color: Colors.white,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: EdgeInsets.all(ui(kScheduleCourseCellInset)),
+          child: SizedBox(
+            width: ui(kScheduleCourseCardWidth),
+            height: ui(kScheduleCourseCardHeight),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _DashedRoundedRectPainter(
+                      color: _borderColor,
+                      radius: ui(8),
+                      strokeWidth: 1,
+                      dashLength: ui(4),
+                      gapLength: ui(4),
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    '空闲',
+                    style: TextStyle(
+                      fontSize: ui(14),
+                      color: _textColor,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w400,
+                      height: 16 / 14,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -35,28 +66,55 @@ class ScheduleIdleSlot extends StatelessWidget {
 }
 
 class _DashedRoundedRectPainter extends CustomPainter {
-  const _DashedRoundedRectPainter();
+  const _DashedRoundedRectPainter({
+    required this.color,
+    required this.radius,
+    required this.strokeWidth,
+    required this.dashLength,
+    required this.gapLength,
+  });
+
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+  final double dashLength;
+  final double gapLength;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.width <= 1 || size.height <= 1) return;
-    final border = RRect.fromRectAndRadius(
-      (Offset.zero & size).deflate(0.5),
-      const Radius.circular(8),
-    );
+    if (size.width <= strokeWidth || size.height <= strokeWidth) return;
     final paint = Paint()
-      ..color = AppColors.line
+      ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final path = Path()..addRRect(border);
+      ..strokeWidth = strokeWidth;
+
+    final half = strokeWidth / 2;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        half,
+        half,
+        size.width - strokeWidth,
+        size.height - strokeWidth,
+      ),
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(rrect);
+
     for (final metric in path.computeMetrics()) {
-      for (var start = 0.0; start < metric.length; start += 8) {
-        final end = (start + 4).clamp(0.0, metric.length);
-        canvas.drawPath(metric.extractPath(start, end), paint);
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final end = (distance + dashLength).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance += dashLength + gapLength;
       }
     }
   }
 
   @override
-  bool shouldRepaint(_DashedRoundedRectPainter oldDelegate) => false;
+  bool shouldRepaint(_DashedRoundedRectPainter oldDelegate) =>
+      color != oldDelegate.color ||
+      radius != oldDelegate.radius ||
+      strokeWidth != oldDelegate.strokeWidth ||
+      dashLength != oldDelegate.dashLength ||
+      gapLength != oldDelegate.gapLength;
 }

@@ -11,7 +11,6 @@
 //     不主动停止其它气泡（点评场景一般只有一条，简单优先）。
 // =============================================================================
 
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -25,8 +24,8 @@ class HomeworkVoiceCommentBubble extends StatefulWidget {
     required this.relativePath,
     required this.durationSec,
     this.scale = 1.0,
-    this.accent = AppColors.brand,
-    this.background = AppColors.brandWash,
+    this.accent = const Color(0xFF715EFE),
+    this.background = const Color(0xFFF4F4FF),
   });
 
   /// 语音文件相对路径（teacherParam1）或完整 URL。
@@ -165,14 +164,14 @@ class _HomeworkVoiceCommentBubbleState
                       height: u(18),
                       child: const CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.surface,
-                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
                   : Icon(
-                      _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                      color: AppColors.surface,
+                      _playing
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: Colors.white,
                       size: u(22),
                     ),
             ),
@@ -207,7 +206,7 @@ class _HomeworkVoiceCommentBubbleState
                           : _fmt(_durationMs),
                       style: TextStyle(
                         fontSize: u(12),
-                        color: AppColors.textSecondary,
+                        color: const Color(0xFF71717A),
                         fontFamily: 'Barlow',
                       ),
                     ),

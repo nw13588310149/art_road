@@ -38,7 +38,7 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 ///    - 工作提醒：3 条预警卡，红色「预警」徽章 + 标题 + 副标题。
 ///
 /// 整页主内容区统一滚动（左主栏 + 右栏同步），不再由中间左栏单独滚动。
-/// - 顶部 72 圆形头像 + 姓名 + 身份 AppTag(brand) + 「在岗」状态；
+/// - 顶部 72 圆形头像 + 姓名 16/500 + 「运行中」状态 + 身份徽章；
 /// - 「岗位 / 部门 / 权限」3 行键值；
 /// - 「校级通知」title + 通知列表，每条卡含分类徽章
 ///   （教研室 / 场地 / 大师课）+ 内容 + 时间 + 红 / 灰未读点。
@@ -473,10 +473,11 @@ class _SectionTitle extends StatelessWidget {
     final titleWidget = Text(
       title,
       style: TextStyle(
-        fontSize: ui(16),
+        fontSize: ui(18),
         height: 1.2,
         fontWeight: AppFont.w500,
-        color: AppColors.ink,
+        color: const Color(0xFF1A1A1A),
+        fontFamily: 'PingFang SC',
       ),
     );
     if (trailing == null) {
@@ -491,7 +492,8 @@ class _SectionTitle extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             height: 1.2,
-            color: AppColors.textSecondary,
+            color: const Color(0xFF6D6B75),
+            fontFamily: 'PingFang SC',
           ),
         ),
       ],
@@ -695,10 +697,11 @@ class _DataDashboardCard extends StatelessWidget {
                       color: AppColors.textPlaceholder,
                     ),
                     valueLabelStyle: TextStyle(
-                      fontSize: ui(12),
+                      fontSize: ui(11),
                       height: 1.0,
                       color: AppColors.brand,
                       fontWeight: FontWeight.w500,
+                      fontFamily: 'PingFang SC',
                     ),
                   ),
                   child: const SizedBox.expand(),
@@ -1142,10 +1145,11 @@ class _WorkReminderCard extends StatelessWidget {
                 child: Text(
                   item.tag,
                   style: TextStyle(
-                    fontSize: ui(12),
+                    fontSize: ui(10),
                     height: 1.2,
                     fontWeight: AppFont.w500,
-                    color: AppColors.danger,
+                    color: const Color(0xFFFF323C),
+                    fontFamily: 'PingFang SC',
                   ),
                 ),
               ),

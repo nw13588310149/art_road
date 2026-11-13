@@ -1,13 +1,13 @@
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/widgets/app_toast.dart';
 import '../../../../core/theme/app_font.dart';
 import '../../../shell/ui/shell_layout.dart';
 import '../../services/group_chat_media_saver.dart';
 
-const Color _kTextDark = AppColors.ink;
-const Color _kDestructive = AppColors.danger;
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kDestructive = Color(0xFFFF323C);
 
 class GroupChatMessageAction {
   const GroupChatMessageAction({
@@ -44,7 +44,7 @@ Future<void> showGroupChatMessageActionSheet(
   await showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
-    barrierColor: AppColors.ink.withValues(alpha: 0.80),
+    barrierColor: Colors.black.withValues(alpha: 0.80),
     isScrollControlled: true,
     builder: (sheetContext) {
       return DashboardScaleScope(
@@ -117,7 +117,7 @@ class _GroupChatMessageActionSheet extends StatelessWidget {
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(vertical: ui(8)),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(ui(16)),
                 ),
                 child: Column(
@@ -137,7 +137,7 @@ class _GroupChatMessageActionSheet extends StatelessWidget {
                   height: ui(56),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(ui(16)),
                   ),
                   child: Text(
@@ -145,6 +145,7 @@ class _GroupChatMessageActionSheet extends StatelessWidget {
                     style: TextStyle(
                       color: _kTextDark,
                       fontSize: ui(20),
+                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 24 / 20,
                     ),
@@ -184,6 +185,7 @@ class _SheetItem extends StatelessWidget {
             style: TextStyle(
               color: destructive ? _kDestructive : _kTextDark,
               fontSize: ui(20),
+              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 24 / 20,
             ),
