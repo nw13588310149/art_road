@@ -5,13 +5,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_view/photo_view.dart';
 
+import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_text_field.dart';
+import '../../gallery/ui/widgets/library_controls.dart';
 import '../data/ebook_models.dart';
 import '../state/ebook_reader_controller.dart';
 import '../state/ebook_spread.dart';
 
 /// 全屏阅读器：宽屏双页并排、窄屏单页；点左右半屏、两侧箭头、左右滑动或方向键翻页，
 /// 翻页即时切换。底部缩略图与页码拖动条，支持跳页、目录、书签与放大查看，进度自动保存。
+///
+/// 外框取自原版的资料预览：56 高的工具栏、四周留 16 的浅色画布、图标按钮、
+/// 缩略图的描边与当前页徽标、进度条和页码徽标。
 class EbookReaderPage extends ConsumerStatefulWidget {
   const EbookReaderPage({
     required this.bookId,
@@ -30,9 +36,18 @@ class EbookReaderPage extends ConsumerStatefulWidget {
   static const stageKey = ValueKey<String>('ebook-reader-stage');
   static const pageLabelKey = ValueKey<String>('ebook-reader-page-label');
 
-  static const topBarHeight = 56.0;
-  static const bottomBarHeight = 146.0;
-  static const sideGutter = 72.0;
+  static const topBarHeight = LibraryPreviewHeader.height;
+
+  /// 底栏：上下 10 + 缩略图 66 + 间距 10 + 拖动条一行 32，另加 1px 分隔线。
+  static const bottomBarHeight = 129.0;
+
+  /// 画布四周的留白。
+  static const stageInset = 16.0;
+
+  /// 画布内两侧留给翻页按钮的宽度（12 + 32 + 12）。
+  static const sideGutter = 56.0;
+
+  /// 画布内上下的留白。
   static const stagePadding = 16.0;
 
   /// 全屏阅读路由（不经过外壳、没有转场动画）；关闭时返回最新的阅读进度。
@@ -55,7 +70,7 @@ class EbookReaderPage extends ConsumerStatefulWidget {
 
 class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
   static const _thumbWidth = 50.0;
-  static const _thumbGap = AppSpace.s8;
+  static const _thumbGap = 8.0;
 
   late final EbookReaderArgs _args = EbookReaderArgs(
     bookId: widget.bookId,
@@ -125,7 +140,7 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
 
   Future<void> _openToc(EbookReaderState state) async {
     final visible = _spread?.pagesAt(state.page) ?? <int>[state.page];
-    final page = await showAppDrawer<int>(
+    final page = await showLibraryDrawer<int>(
       context: context,
       builder: (_) => _TocDrawer(state: state, visible: visible),
     );
@@ -189,16 +204,21 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
         child: Focus(
           autofocus: true,
           child: Material(
-            color: AppColors.page,
+            color: AppColors.surface,
             child: SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final area = Size(
-                    constraints.maxWidth - EbookReaderPage.sideGutter * 2,
+                    constraints.maxWidth -
+                        (EbookReaderPage.stageInset +
+                                EbookReaderPage.sideGutter) *
+                            2,
                     constraints.maxHeight -
                         EbookReaderPage.topBarHeight -
                         EbookReaderPage.bottomBarHeight -
-                        EbookReaderPage.stagePadding * 2,
+                        (EbookReaderPage.stageInset +
+                                EbookReaderPage.stagePadding) *
+                            2,
                   );
                   final spread = EbookSpread.fit(
                     pageCount: state.pageCount,
@@ -220,6 +240,7 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
                         ready: ready,
                         bookmarked: bookmarked,
                         zoom: _zoom,
+                        compact: constraints.maxWidth < 640,
                         onBack: () => unawaited(_close()),
                         onToc: () => unawaited(_openToc(state)),
                         onBookmark: () => unawaited(
@@ -267,88 +288,97 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
       twoPage: spread.twoPage,
       bookmarks: state.bookmarks,
     );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (_zoom) {
-          return PhotoView.customChild(
-            key: ValueKey<int>(spread.startOf(state.page)),
-            childSize: constraints.biggest,
-            backgroundDecoration: const BoxDecoration(color: AppColors.page),
-            initialScale: PhotoViewComputedScale.contained,
-            minScale: PhotoViewComputedScale.contained,
-            maxScale: PhotoViewComputedScale.contained * 4,
-            child: Padding(
-              padding: const EdgeInsets.all(EbookReaderPage.stagePadding),
-              child: content,
-            ),
-          );
-        }
-        final width = constraints.maxWidth;
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                key: EbookReaderPage.stageKey,
-                behavior: HitTestBehavior.opaque,
-                onTapUp: (details) => details.localPosition.dx < width / 2
-                    ? _previous()
-                    : _next(),
-                onHorizontalDragEnd: (details) {
-                  final velocity = details.primaryVelocity ?? 0;
-                  if (velocity < -240) {
-                    _next();
-                  } else if (velocity > 240) {
-                    _previous();
-                  }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: EbookReaderPage.sideGutter,
-                    vertical: EbookReaderPage.stagePadding,
+    return LibraryCanvas(
+      padding: const EdgeInsets.all(EbookReaderPage.stageInset),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (_zoom) {
+            return PhotoView.customChild(
+              key: ValueKey<int>(spread.startOf(state.page)),
+              childSize: constraints.biggest,
+              backgroundDecoration: const BoxDecoration(
+                color: LibraryPalette.canvas,
+              ),
+              initialScale: PhotoViewComputedScale.contained,
+              minScale: PhotoViewComputedScale.contained,
+              maxScale: PhotoViewComputedScale.contained * 4,
+              child: Padding(
+                padding: const EdgeInsets.all(EbookReaderPage.stagePadding),
+                child: content,
+              ),
+            );
+          }
+          final width = constraints.maxWidth;
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  key: EbookReaderPage.stageKey,
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: (details) => details.localPosition.dx < width / 2
+                      ? _previous()
+                      : _next(),
+                  onHorizontalDragEnd: (details) {
+                    final velocity = details.primaryVelocity ?? 0;
+                    if (velocity < -240) {
+                      _next();
+                    } else if (velocity > 240) {
+                      _previous();
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: EbookReaderPage.sideGutter,
+                      vertical: EbookReaderPage.stagePadding,
+                    ),
+                    child: content,
                   ),
-                  child: content,
                 ),
               ),
-            ),
-            Positioned(
-              left: AppSpace.s16,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: AppIconButton(
-                  key: EbookReaderPage.previousKey,
-                  icon: Icons.chevron_left_rounded,
-                  semanticLabel: '上一页',
-                  onTap: spread.previous(state.page) == null ? null : _previous,
+              Positioned(
+                left: 12,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: LibraryIconButton(
+                    key: EbookReaderPage.previousKey,
+                    icon: Icons.chevron_left_rounded,
+                    semanticLabel: '上一页',
+                    onTap: spread.previous(state.page) == null
+                        ? null
+                        : _previous,
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              right: AppSpace.s16,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: AppIconButton(
-                  key: EbookReaderPage.nextKey,
-                  icon: Icons.chevron_right_rounded,
-                  semanticLabel: '下一页',
-                  onTap: spread.next(state.page) == null ? null : _next,
+              Positioned(
+                right: 12,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: LibraryIconButton(
+                    key: EbookReaderPage.nextKey,
+                    icon: Icons.chevron_right_rounded,
+                    semanticLabel: '下一页',
+                    onTap: spread.next(state.page) == null ? null : _next,
+                  ),
                 ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 }
 
+/// 顶部工具栏：返回、居中的书名、目录 / 书签 / 放大三个操作胶囊。
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.title,
     required this.ready,
     required this.bookmarked,
     required this.zoom,
+    required this.compact,
     required this.onBack,
     required this.onToc,
     required this.onBookmark,
@@ -359,6 +389,7 @@ class _TopBar extends StatelessWidget {
   final bool ready;
   final bool bookmarked;
   final bool zoom;
+  final bool compact;
   final VoidCallback onBack;
   final VoidCallback onToc;
   final VoidCallback onBookmark;
@@ -366,62 +397,41 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: EbookReaderPage.topBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
-      ),
-      child: Row(
-        children: [
-          AppIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            semanticLabel: '返回',
-            filled: false,
-            onTap: onBack,
+    return LibraryPreviewHeader(
+      title: title.isEmpty ? '美术书刊' : title,
+      onBack: onBack,
+      actions: [
+        if (ready) ...[
+          LibraryActionPill(
+            label: '目录',
+            semanticLabel: '目录与书签',
+            icon: Icons.format_list_bulleted_rounded,
+            iconSize: 18,
+            compact: compact,
+            onTap: onToc,
           ),
-          const SizedBox(width: AppSpace.s8),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title.isEmpty ? '美术书刊' : title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.body14Strong,
-                ),
-                Text('示例书刊 · 仅供演示', maxLines: 1, style: AppText.caption12),
-              ],
-            ),
+          LibraryActionPill(
+            label: bookmarked ? '已加书签' : '加书签',
+            semanticLabel: bookmarked ? '删除本页书签' : '为本页加书签',
+            icon: bookmarked
+                ? Icons.bookmark_rounded
+                : Icons.bookmark_border_rounded,
+            iconSize: 18,
+            active: bookmarked,
+            compact: compact,
+            onTap: onBookmark,
           ),
-          if (ready) ...[
-            AppIconButton(
-              icon: Icons.format_list_bulleted_rounded,
-              semanticLabel: '目录与书签',
-              onTap: onToc,
-            ),
-            const SizedBox(width: AppSpace.s8),
-            AppIconButton(
-              icon: bookmarked
-                  ? Icons.bookmark_rounded
-                  : Icons.bookmark_border_rounded,
-              color: bookmarked ? AppColors.brand : AppColors.ink,
-              semanticLabel: bookmarked ? '删除本页书签' : '为本页加书签',
-              onTap: onBookmark,
-            ),
-            const SizedBox(width: AppSpace.s8),
-            AppIconButton(
-              icon: zoom ? Icons.zoom_out_rounded : Icons.zoom_in_rounded,
-              color: zoom ? AppColors.brand : AppColors.ink,
-              semanticLabel: zoom ? '退出放大' : '放大查看',
-              onTap: onZoom,
-            ),
-          ],
+          LibraryActionPill(
+            label: zoom ? '退出放大' : '放大',
+            semanticLabel: zoom ? '退出放大' : '放大查看',
+            icon: zoom ? Icons.zoom_out_rounded : Icons.zoom_in_rounded,
+            iconSize: 18,
+            active: zoom,
+            compact: compact,
+            onTap: onZoom,
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -512,7 +522,7 @@ class _PageImage extends StatelessWidget {
           if (bookmarked)
             const Positioned(
               top: 0,
-              right: AppSpace.s12,
+              right: 12,
               child: Icon(
                 Icons.bookmark_rounded,
                 size: 28,
@@ -525,6 +535,7 @@ class _PageImage extends StatelessWidget {
   }
 }
 
+/// 底栏：一排缩略图，下面是页码拖动条、页码徽标和「跳页」。
 class _BottomBar extends StatelessWidget {
   const _BottomBar({
     required this.state,
@@ -544,17 +555,14 @@ class _BottomBar extends StatelessWidget {
   final ValueChanged<int> onGoTo;
   final VoidCallback onJump;
 
+  static const _thumbHeight = 66.0;
+
   @override
   Widget build(BuildContext context) {
     final visible = spread.pagesAt(state.page);
     return Container(
       height: EbookReaderPage.bottomBarHeight,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s16,
-        AppSpace.s8,
-        AppSpace.s16,
-        AppSpace.s8,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.lineSoft)),
@@ -563,7 +571,7 @@ class _BottomBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            height: 86,
+            height: _thumbHeight,
             child: ListView.separated(
               controller: thumbs,
               scrollDirection: Axis.horizontal,
@@ -574,6 +582,7 @@ class _BottomBar extends StatelessWidget {
                 return _Thumb(
                   page: page,
                   width: thumbWidth,
+                  height: _thumbHeight,
                   active: visible.contains(page.page),
                   bookmarked: state.isBookmarked(page.page),
                   onTap: () => onGoTo(page.page),
@@ -581,9 +590,9 @@ class _BottomBar extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: AppSpace.s8),
+          const SizedBox(height: 10),
           SizedBox(
-            height: AppSize.buttonSm,
+            height: LibraryActionPill.height,
             child: Row(
               children: [
                 Expanded(
@@ -595,19 +604,13 @@ class _BottomBar extends StatelessWidget {
                     next: spread.next(state.page),
                   ),
                 ),
-                const SizedBox(width: AppSpace.s16),
-                Text(
+                const SizedBox(width: 16),
+                LibraryCounter(
                   spread.label(state.page),
-                  key: EbookReaderPage.pageLabelKey,
-                  style: AppText.number(size: 14),
+                  textKey: EbookReaderPage.pageLabelKey,
                 ),
-                const SizedBox(width: AppSpace.s8),
-                AppButton(
-                  label: '跳页',
-                  variant: AppButtonVariant.text,
-                  size: AppButtonSize.sm,
-                  onTap: onJump,
-                ),
+                const SizedBox(width: 8),
+                LibraryActionPill(label: '跳页', onTap: onJump),
               ],
             ),
           ),
@@ -617,10 +620,13 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
+/// 缩略图：1px 浅描边，右下角页码徽标；当前页盖一层浅色蒙版，徽标转为
+/// 浅紫底品牌紫字（原版预览缩略图的当前页样式）。
 class _Thumb extends StatelessWidget {
   const _Thumb({
     required this.page,
     required this.width,
+    required this.height,
     required this.active,
     required this.bookmarked,
     required this.onTap,
@@ -628,58 +634,78 @@ class _Thumb extends StatelessWidget {
 
   final EbookPage page;
   final double width;
+  final double height;
   final bool active;
   final bool bookmarked;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    const radius = BorderRadius.all(Radius.circular(4));
     return AppPressable(
       onTap: onTap,
       selected: active,
       semanticLabel: '第 ${page.page} 页',
       child: SizedBox(
         width: width,
-        child: Column(
-          children: [
-            Container(
-              height: (width / page.aspectRatio).clamp(0.0, 66.0),
-              decoration: BoxDecoration(
-                borderRadius: AppRadius.br4,
-                border: Border.all(
-                  color: active ? AppColors.brand : AppColors.lineSoft,
-                  width: active ? 2 : 1,
+        height: height,
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: LibraryPalette.canvas,
+                  borderRadius: radius,
+                  border: Border.all(
+                    color: active ? AppColors.brand : AppColors.lineSoft,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(1),
+                  child: AppImage(src: page.imageUrl, fit: BoxFit.cover),
                 ),
               ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.all(Radius.circular(3)),
-                    child: AppImage(src: page.imageUrl, fit: BoxFit.contain),
+              if (active) const ColoredBox(color: LibraryPalette.activeScrim),
+              if (bookmarked)
+                const Positioned(
+                  top: 0,
+                  left: 2,
+                  child: Icon(
+                    Icons.bookmark_rounded,
+                    size: 14,
+                    color: AppColors.brand,
                   ),
-                  if (bookmarked)
-                    const Positioned(
-                      top: 0,
-                      right: 2,
-                      child: Icon(
-                        Icons.bookmark_rounded,
-                        size: 14,
-                        color: AppColors.brand,
-                      ),
+                ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? LibraryPalette.activeBadge
+                        : AppColors.surfaceSubtle,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(6),
                     ),
-                ],
+                  ),
+                  child: Text(
+                    '${page.page}',
+                    style: libraryText(
+                      size: 12,
+                      color: active ? AppColors.brand : AppColors.ink,
+                      height: 1,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpace.s4),
-            Text(
-              '${page.page}',
-              style: AppText.number(
-                size: 12,
-                color: active ? AppColors.brand : AppColors.textTertiary,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -732,7 +758,7 @@ class _PageScrubber extends StatelessWidget {
             onHorizontalDragUpdate: (details) =>
                 onChanged(pageAt(details.localPosition.dx)),
             child: CustomPaint(
-              size: Size(width, AppSize.buttonSm),
+              size: Size(width, LibraryActionPill.height),
               painter: _ScrubberPainter(fraction: fraction.clamp(0.0, 1.0)),
             ),
           ),
@@ -742,42 +768,53 @@ class _PageScrubber extends StatelessWidget {
   }
 }
 
+/// 进度条的画法取自原版预览的进度条：4 高圆头轨道、浅紫到品牌紫的渐变、
+/// 12 的品牌紫圆钮带 1px 白描边和轻投影。
 class _ScrubberPainter extends CustomPainter {
   const _ScrubberPainter({required this.fraction});
 
   final double fraction;
 
+  static const _thumb = 12.0;
+  static const _track = 4.0;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final thumb = (size.width / 2).clamp(0.0, 8.0).toDouble();
-    if (thumb < 1) {
+    if (size.width < _thumb) {
       return;
     }
     final y = size.height / 2;
-    final left = thumb;
-    final right = size.width - thumb;
-    final x = left + (right - left) * fraction;
+    final x = _thumb / 2 + (size.width - _thumb) * fraction;
+    const radius = Radius.circular(23);
     final track = RRect.fromLTRBR(
-      left,
-      y - 2,
-      right,
-      y + 2,
-      const Radius.circular(2),
+      0,
+      y - _track / 2,
+      size.width,
+      y + _track / 2,
+      radius,
     );
-    canvas.drawRRect(track, Paint()..color = AppColors.line);
-    canvas.drawRRect(
-      RRect.fromLTRBR(left, y - 2, x, y + 2, const Radius.circular(2)),
-      Paint()..color = AppColors.brand,
-    );
-    canvas.drawCircle(Offset(x, y), thumb, Paint()..color = AppColors.surface);
-    canvas.drawCircle(
-      Offset(x, y),
-      thumb - 1,
-      Paint()
-        ..color = AppColors.brand
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
+    canvas.drawRRect(track, Paint()..color = LibraryPalette.track);
+    if (x > 0) {
+      final fill = Rect.fromLTRB(0, y - _track / 2, x, y + _track / 2);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(fill, radius),
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [LibraryPalette.trackStart, AppColors.brand],
+          ).createShader(fill),
+      );
+    }
+    final center = Offset(x, y);
+    canvas
+      ..drawCircle(
+        center + const Offset(0, 4),
+        _thumb / 2,
+        Paint()
+          ..color = const Color(0x1F000000)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+      )
+      ..drawCircle(center, _thumb / 2, Paint()..color = AppColors.surface)
+      ..drawCircle(center, _thumb / 2 - 1, Paint()..color = AppColors.brand);
   }
 
   @override
@@ -806,50 +843,128 @@ class _TocDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final current = _chapterOf(visible.last);
     final bookmarks = state.bookmarks.toList()..sort();
-    return AppDrawer(
-      title: '目录',
-      subtitle: state.title,
+    final note = libraryText(
+      size: 12,
+      color: AppColors.textPlaceholder,
+      height: 1.5,
+    );
+    return LibraryDrawer(
+      title: '目录与书签',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (state.toc.isEmpty) Text('这本书刊没有目录。', style: AppText.body13),
+          const LibrarySectionTitle('目录'),
+          const SizedBox(height: 12),
+          if (state.toc.isEmpty) Text('这本书刊没有目录。', style: note),
           for (final entry in state.toc)
-            AppListRow(
+            _DrawerRow(
               title: entry.title,
-              padding: const EdgeInsets.symmetric(vertical: AppSpace.s12),
-              divider: true,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (identical(entry, current)) ...[
-                    const AppStatusTag(label: '在读', tone: AppTone.brand),
-                    const SizedBox(width: AppSpace.s8),
-                  ],
-                  Text('第 ${entry.page} 页', style: AppText.caption12),
-                ],
-              ),
+              trailing: '第 ${entry.page} 页',
+              current: identical(entry, current),
               onTap: () => Navigator.of(context).pop(entry.page),
             ),
-          const SizedBox(height: AppSpace.s24),
-          Text('书签', style: AppText.title16),
-          const SizedBox(height: AppSpace.s8),
+          const SizedBox(height: 12),
+          const LibrarySectionTitle('书签'),
+          const SizedBox(height: 12),
           if (bookmarks.isEmpty)
-            Text('还没有书签。阅读时点右上角的书签按钮，可以标记当前页。', style: AppText.body13),
+            Text('还没有书签。阅读时点右上角的「加书签」，可以标记当前页。', style: note),
           for (final page in bookmarks)
-            AppListRow(
+            _DrawerRow(
               title: '第 $page 页',
               subtitle: _chapterOf(page)?.title,
-              leading: const Icon(
-                Icons.bookmark_rounded,
-                size: 18,
-                color: AppColors.brand,
-              ),
-              chevron: true,
-              divider: true,
-              padding: const EdgeInsets.symmetric(vertical: AppSpace.s12),
+              bookmark: true,
               onTap: () => Navigator.of(context).pop(page),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// 抽屉里的一行：浅灰底圆角 12，在读的章节换成浅紫底并带「在读」标签。
+class _DrawerRow extends StatelessWidget {
+  const _DrawerRow({
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.trailing,
+    this.current = false,
+    this.bookmark = false,
+  });
+
+  final String title;
+  final String? subtitle;
+  final String? trailing;
+  final bool current;
+  final bool bookmark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final note = subtitle;
+    final tail = trailing;
+    final muted = libraryText(size: 12, color: AppColors.textPlaceholder);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: AppPressable(
+        onTap: onTap,
+        selected: current,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: current ? LibraryPalette.lilac : AppColors.surfaceSubtle,
+            borderRadius: AppRadius.br12,
+          ),
+          child: Row(
+            children: [
+              if (bookmark) ...[
+                const Icon(
+                  Icons.bookmark_rounded,
+                  size: 18,
+                  color: AppColors.brand,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: libraryText(
+                        size: 14,
+                        weight: AppFont.w500,
+                        color: AppColors.ink,
+                        height: 1.4,
+                      ),
+                    ),
+                    if (note != null && note.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        note,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: muted,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (current) ...[
+                const SizedBox(width: 8),
+                LibraryTag.brand('在读'),
+              ],
+              if (tail != null) ...[
+                const SizedBox(width: 8),
+                Text(tail, style: muted),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -888,6 +1003,16 @@ class _JumpDialogState extends State<_JumpDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final error = _error;
+    final textStyle = libraryText(
+      size: 14,
+      color: AppColors.ink,
+      height: 20 / 14,
+    );
+    OutlineInputBorder border(Color color) => OutlineInputBorder(
+      borderRadius: AppRadius.br8,
+      borderSide: BorderSide(color: color),
+    );
     return AppDialog(
       title: '跳到指定页',
       message: '共 ${widget.pageCount} 页',
@@ -899,15 +1024,50 @@ class _JumpDialogState extends State<_JumpDialog> {
         ),
         AppButton(label: '跳转', onTap: _submit),
       ],
-      child: AppInputField(
-        controller: _input,
-        hint: '输入 1–${widget.pageCount}',
-        errorText: _error,
-        autofocus: true,
-        keyboardType: TextInputType.number,
-        textInputAction: TextInputAction.done,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        onSubmitted: (_) => _submit(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 输入框沿用原版输入弹窗：48 高、圆角 8、1px 浅描边。
+          SizedBox(
+            height: 48,
+            child: AppTextField(
+              controller: _input,
+              autofocus: true,
+              maxLines: 1,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onSubmitted: (_) => _submit(),
+              textAlignVertical: TextAlignVertical.center,
+              cursorColor: AppColors.brand,
+              cursorWidth: 1.5,
+              cursorHeight: 16,
+              style: textStyle,
+              decoration: InputDecoration(
+                hintText: '输入 1–${widget.pageCount}',
+                hintStyle: textStyle.copyWith(color: AppColors.textPlaceholder),
+                hintFadeDuration: Duration.zero,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                filled: true,
+                fillColor: AppColors.surface,
+                enabledBorder: border(
+                  error == null ? AppColors.surfaceSubtle : AppColors.danger,
+                ),
+                focusedBorder: border(
+                  error == null ? AppColors.brandTint : AppColors.danger,
+                ),
+              ),
+            ),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 6),
+            Text(error, style: libraryText(size: 12, color: AppColors.danger)),
+          ],
+        ],
       ),
     );
   }

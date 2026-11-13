@@ -229,7 +229,8 @@ void main() {
     expect(_label(tester), '7–8 / 10');
 
     // 立即返回：未到延迟保存的时间也会先落盘，再把进度带回来源页。
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+    // 阅读器顶栏返回沿用资料预览的 chevron_left 图标按钮。
+    await tester.tap(find.byTooltip('返回'));
     await tester.pump();
     await tester.pump();
     expect(find.byType(EbookReaderPage), findsNothing);

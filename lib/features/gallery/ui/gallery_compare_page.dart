@@ -6,10 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/ui/ui.dart';
 import '../data/gallery_models.dart';
 import '../data/gallery_repository.dart';
+import 'widgets/library_controls.dart';
 
 enum _CompareMode { sideBySide, reveal }
 
 /// 全屏对比：左侧范画、右侧本人最近一次同科原卷（或相册照片），中间分隔条可拖动。
+///
+/// 工具栏和画布取自资料预览：56 高的工具栏、四周留 16 的浅色画布。
 class GalleryComparePage extends ConsumerStatefulWidget {
   const GalleryComparePage({required this.work, super.key});
 
@@ -124,7 +127,7 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
       return _filtered(_CompareImage(url: _mineUrl));
     }
     if (_loadingPaper) {
-      return const Center(child: AppLoadingIndicator(size: 36));
+      return const Center(child: AppLoadingIndicator());
     }
     return _MissingPaper(subject: widget.work.subject, onPick: _pickPhoto);
   }
@@ -137,7 +140,7 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
         child: Column(
           children: [
             _CompareTopBar(
-              subtitle: widget.work.title,
+              title: widget.work.title,
               mode: _mode,
               grayscale: _grayscale,
               onClose: () => Navigator.of(context).maybePop(),
@@ -147,12 +150,7 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpace.s16,
-                  0,
-                  AppSpace.s16,
-                  AppSpace.s8,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: LayoutBuilder(
                   builder: (context, constraints) =>
                       _mode == _CompareMode.sideBySide
@@ -162,18 +160,13 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpace.s16,
-                0,
-                AppSpace.s16,
-                AppSpace.s12,
-              ),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Text(
                 _mode == _CompareMode.sideBySide
                     ? '拖动中间分隔条调整两侧大小，双指可分别缩放；双击分隔条复位'
                     : '左右拖动分隔条，在同一画框内对照两幅作品；双击分隔条复位',
                 textAlign: TextAlign.center,
-                style: AppText.caption12,
+                style: libraryText(size: 12, color: AppColors.textPlaceholder),
               ),
             ),
           ],
@@ -218,9 +211,9 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
   Widget _buildReveal(double width) {
     final x = width * _split;
     return ClipRRect(
-      borderRadius: AppRadius.br12,
+      borderRadius: LibraryCanvas.radius,
       child: ColoredBox(
-        color: AppColors.surfaceSubtle,
+        color: LibraryPalette.canvas,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -228,19 +221,15 @@ class _GalleryComparePageState extends ConsumerState<GalleryComparePage> {
             ClipRect(
               clipper: _LeftClipper(x),
               child: ColoredBox(
-                color: AppColors.surfaceSubtle,
+                color: LibraryPalette.canvas,
                 child: _workImage(),
               ),
             ),
-            const Positioned(
-              left: AppSpace.s8,
-              top: AppSpace.s8,
-              child: _PaneLabel('范画'),
-            ),
+            const Positioned(left: 0, top: 0, child: _PaneLabel('范画')),
             Positioned(
-              right: AppSpace.s8,
-              top: AppSpace.s8,
-              child: _PaneLabel(_mineLabel),
+              right: 0,
+              top: 0,
+              child: _PaneLabel(_mineLabel, alignEnd: true),
             ),
             Positioned(
               left: x - 22,
@@ -275,7 +264,7 @@ class _LeftClipper extends CustomClipper<Rect> {
 
 class _CompareTopBar extends StatelessWidget {
   const _CompareTopBar({
-    required this.subtitle,
+    required this.title,
     required this.mode,
     required this.grayscale,
     required this.onClose,
@@ -284,7 +273,7 @@ class _CompareTopBar extends StatelessWidget {
     required this.onPickPhoto,
   });
 
-  final String subtitle;
+  final String title;
   final _CompareMode mode;
   final bool grayscale;
   final VoidCallback onClose;
@@ -294,37 +283,41 @@ class _CompareTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppPageHeader(
-      title: '对比我的原卷',
-      subtitle: subtitle,
-      onBack: onClose,
-      actions: [
-        AppSegmented<_CompareMode>(
-          size: AppControlSize.sm,
-          segments: const [
-            AppSegment(value: _CompareMode.sideBySide, label: '并排'),
-            AppSegment(value: _CompareMode.reveal, label: '滑动'),
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: '对比我的原卷',
+      child: LayoutBuilder(
+        builder: (context, constraints) => LibraryPreviewHeader(
+          title: title,
+          onBack: onClose,
+          actions: [
+            AppSegmented<_CompareMode>(
+              segments: const [
+                AppSegment(value: _CompareMode.sideBySide, label: '并排'),
+                AppSegment(value: _CompareMode.reveal, label: '滑动'),
+              ],
+              value: mode,
+              onChanged: onModeChanged,
+            ),
+            AppSegmented<bool>(
+              segments: const [
+                AppSegment(value: false, label: '彩色'),
+                AppSegment(value: true, label: '灰度'),
+              ],
+              value: grayscale,
+              onChanged: onGrayscaleChanged,
+            ),
+            LibraryActionPill(
+              label: '选择照片',
+              icon: Icons.photo_library_outlined,
+              iconSize: 18,
+              compact: constraints.maxWidth < 600,
+              onTap: onPickPhoto,
+            ),
           ],
-          value: mode,
-          onChanged: onModeChanged,
         ),
-        AppSegmented<bool>(
-          size: AppControlSize.sm,
-          segments: const [
-            AppSegment(value: false, label: '彩色'),
-            AppSegment(value: true, label: '灰度'),
-          ],
-          value: grayscale,
-          onChanged: onGrayscaleChanged,
-        ),
-        AppButton(
-          label: '选择照片',
-          icon: Icons.photo_library_outlined,
-          variant: AppButtonVariant.secondary,
-          size: AppButtonSize.sm,
-          onTap: onPickPhoto,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -338,9 +331,9 @@ class _ComparePane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: AppRadius.br12,
+      borderRadius: LibraryCanvas.radius,
       child: ColoredBox(
-        color: AppColors.surfaceSubtle,
+        color: LibraryPalette.canvas,
         child: Stack(
           children: [
             Positioned.fill(
@@ -349,11 +342,7 @@ class _ComparePane extends StatelessWidget {
                 child: SizedBox.expand(child: child),
               ),
             ),
-            Positioned(
-              left: AppSpace.s8,
-              top: AppSpace.s8,
-              child: _PaneLabel(label),
-            ),
+            Positioned(left: 0, top: 0, child: _PaneLabel(label)),
           ],
         ),
       ),
@@ -361,29 +350,33 @@ class _ComparePane extends StatelessWidget {
   }
 }
 
+/// 画面角上的名称：贴着画布的角，样式取自预览缩略图的页码徽标。
 class _PaneLabel extends StatelessWidget {
-  const _PaneLabel(this.text);
+  const _PaneLabel(this.text, {this.alignEnd = false});
 
   final String text;
 
+  /// 贴右上角（否则贴左上角）。
+  final bool alignEnd;
+
   @override
   Widget build(BuildContext context) {
+    const corner = Radius.circular(8);
     return IgnorePointer(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 260),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpace.s8,
-          vertical: AppSpace.s4,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.brPill,
+          color: AppColors.surfaceSubtle,
+          borderRadius: alignEnd
+              ? const BorderRadius.only(bottomLeft: corner)
+              : const BorderRadius.only(bottomRight: corner),
         ),
         child: Text(
           text,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: AppText.caption12Strong.copyWith(color: AppColors.ink),
+          style: libraryText(size: 12, color: AppColors.ink, height: 1.2),
         ),
       ),
     );
@@ -446,20 +439,23 @@ class _DividerHandle extends StatelessWidget {
                           borderRadius: AppRadius.brPill,
                         ),
                       ),
+                      // 把手用预览页图标按钮的外形：32 见方、白底、圆角 8。
                       Container(
-                        width: 34,
-                        height: 34,
+                        width: LibraryIconButton.extent,
+                        height: LibraryIconButton.extent,
                         decoration: BoxDecoration(
                           color: AppColors.surface,
-                          shape: BoxShape.circle,
+                          borderRadius: AppRadius.br8,
                           border: Border.all(
-                            color: focused ? AppColors.brand : AppColors.line,
+                            color: focused
+                                ? AppColors.brand
+                                : AppColors.lineSoft,
                           ),
                         ),
                         child: const Icon(
                           Icons.compare_arrows_rounded,
-                          size: 20,
-                          color: AppColors.textSecondary,
+                          size: 18,
+                          color: LibraryPalette.backArrow,
                         ),
                       ),
                     ],
@@ -485,7 +481,7 @@ class _CompareImage extends StatelessWidget {
     return AppImage(
       src: url,
       fit: BoxFit.contain,
-      placeholder: const Center(child: AppLoadingIndicator(size: 36)),
+      placeholder: const Center(child: AppLoadingIndicator()),
       error: const _BrokenImage(),
     );
   }
@@ -499,8 +495,8 @@ class _BrokenImage extends StatelessWidget {
     return const Center(
       child: Icon(
         Icons.broken_image_outlined,
-        size: 36,
-        color: AppColors.textSecondary,
+        size: 48,
+        color: AppColors.textPlaceholder,
         semanticLabel: '图片加载失败',
       ),
     );
@@ -515,9 +511,8 @@ class _MissingPaper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppEmptyState(
-      icon: Icons.image_search_rounded,
-      title: '暂无可对比的$subject原卷',
+    return LibraryEmptyState(
+      message: '暂无可对比的$subject原卷',
       description: '阅卷完成后会显示最近一次考试的原卷，也可以选择照片进行对比',
       actionLabel: '从相册选择',
       onAction: onPick,

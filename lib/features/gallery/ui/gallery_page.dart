@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/app_loading_indicator.dart';
+import '../../../core/widgets/app_refresh_indicator.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../smart_campus/navigation/group_chat_return.dart';
 import '../data/gallery_models.dart';
@@ -11,6 +13,7 @@ import '../state/gallery_controller.dart';
 import '../state/gallery_state.dart';
 import 'gallery_detail_view.dart';
 import 'widgets/gallery_widgets.dart';
+import 'widgets/library_controls.dart';
 
 /// 范画库：名师范画、联考高分卷、学生优秀作品。
 ///
@@ -165,7 +168,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                 onKeywordChanged: (k) =>
                     _applyFilter(() => controller.setKeyword(k)),
                 onResetFilters: () => _applyFilter(controller.resetFilters),
-                onRetry: () => unawaited(controller.refresh()),
+                onRefresh: controller.refresh,
                 onOpen: (work) => controller.openDetail(work.id),
                 onToggleFavorite: _toggleFavorite,
               ),
@@ -189,6 +192,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   }
 }
 
+/// 列表：版式取自视频中心。白色内容板内，顶部一行放科目页签、排序和搜索
+/// （四周 16、下 12），下面是分类筛选条和作品网格，一起滚动。
 class _GalleryBrowser extends StatelessWidget {
   const _GalleryBrowser({
     required this.state,
@@ -199,7 +204,7 @@ class _GalleryBrowser extends StatelessWidget {
     required this.onSortChanged,
     required this.onKeywordChanged,
     required this.onResetFilters,
-    required this.onRetry,
+    required this.onRefresh,
     required this.onOpen,
     required this.onToggleFavorite,
   });
@@ -212,9 +217,11 @@ class _GalleryBrowser extends StatelessWidget {
   final ValueChanged<GallerySort> onSortChanged;
   final ValueChanged<String> onKeywordChanged;
   final VoidCallback onResetFilters;
-  final VoidCallback onRetry;
+  final Future<void> Function() onRefresh;
   final ValueChanged<GalleryWork> onOpen;
   final ValueChanged<GalleryWork> onToggleFavorite;
+
+  static const _side = 16.0;
 
   @override
   Widget build(BuildContext context) {
@@ -224,16 +231,20 @@ class _GalleryBrowser extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppPageHeader(
-          title: '范画库',
-          subtitle: subtitle,
-          onBack: onBack,
-          bottom: GalleryFilterBar(
-            state: state,
-            onSubjectChanged: onSubjectChanged,
-            onCategoryChanged: onCategoryChanged,
-            onSortChanged: onSortChanged,
-            onKeywordChanged: onKeywordChanged,
+        Semantics(
+          container: true,
+          explicitChildNodes: true,
+          label: '范画库',
+          hint: subtitle,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(_side, 16, _side, 12),
+            child: GalleryToolbar(
+              state: state,
+              onBack: onBack,
+              onSubjectChanged: onSubjectChanged,
+              onSortChanged: onSortChanged,
+              onKeywordChanged: onKeywordChanged,
+            ),
           ),
         ),
         Expanded(child: _buildBody()),
@@ -241,72 +252,69 @@ class _GalleryBrowser extends StatelessWidget {
     );
   }
 
+  Widget _categoryBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(_side, 0, _side, 16),
+      child: GalleryCategoryBar(state: state, onChanged: onCategoryChanged),
+    );
+  }
+
   Widget _buildBody() {
     if (state.works.isEmpty) {
+      // 列表为空时 controller 把失败原因留在 errorMessage 里。
+      final failed = state.loadFailed || state.errorMessage.isNotEmpty;
+      final Widget content;
       if (state.loading) {
-        return const SingleChildScrollView(
-          physics: NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            AppSpace.page,
-            AppSpace.s4,
-            AppSpace.page,
-            0,
-          ),
-          child: GalleryMasonrySkeleton(),
-        );
-      }
-      if (state.loadFailed) {
-        return AppErrorState(
+        content = const Center(child: AppLoadingIndicator());
+      } else if (failed) {
+        content = AppErrorState(
           title: '范画加载失败',
           description: '请检查网络后重试',
-          onRetry: onRetry,
+          onRetry: () => unawaited(onRefresh()),
+        );
+      } else {
+        content = LibraryEmptyState(
+          message: state.keyword.isNotEmpty
+              ? '没有找到与「${state.keyword}」相关的范画'
+              : '这个分类下暂时还没有作品',
+          description: state.hasFilters ? '换个科目或分类看看' : '老师上传范画后会出现在这里',
+          actionLabel: state.hasFilters ? '清除筛选' : null,
+          onAction: state.hasFilters ? onResetFilters : null,
         );
       }
-      return AppEmptyState(
-        icon: Icons.collections_outlined,
-        title: state.keyword.isNotEmpty
-            ? '没有找到与「${state.keyword}」相关的范画'
-            : '这个分类下暂时还没有作品',
-        description: state.hasFilters ? '换个科目或分类看看' : '老师上传范画后会出现在这里',
-        actionLabel: state.hasFilters ? '清除筛选' : null,
-        onAction: state.hasFilters ? onResetFilters : null,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _categoryBar(),
+          Expanded(child: content),
+        ],
       );
     }
     return Stack(
       children: [
-        CustomScrollView(
-          controller: scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpace.page,
-                AppSpace.s4,
-                AppSpace.page,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: GalleryMasonryGrid(
-                  works: state.works,
-                  onOpen: onOpen,
-                  onToggleFavorite: onToggleFavorite,
+        AppRefreshIndicator(
+          onRefresh: onRefresh,
+          child: CustomScrollView(
+            controller: scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(child: _categoryBar()),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: _side),
+                sliver: SliverToBoxAdapter(
+                  child: GalleryMasonryGrid(
+                    works: state.works,
+                    onOpen: onOpen,
+                    onToggleFavorite: onToggleFavorite,
+                  ),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(child: _ListFooter(state: state)),
-          ],
-        ),
-        if (state.loading)
-          const Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            child: LinearProgressIndicator(
-              minHeight: 2,
-              color: AppColors.brand,
-              backgroundColor: AppColors.lineSoft,
-            ),
+              SliverToBoxAdapter(child: _ListFooter(state: state)),
+            ],
           ),
+        ),
+        // 切换筛选时保留旧作品，中间显示加载动画。
+        if (state.loading) const Positioned.fill(child: AppLoadingOverlay()),
       ],
     );
   }
@@ -321,24 +329,19 @@ class _ListFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.loadingMore) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpace.s16),
-        child: Center(child: AppLoadingIndicator(size: 28)),
+        padding: EdgeInsets.only(bottom: 16),
+        child: Center(child: AppLoadingIndicator()),
       );
     }
     if (state.hasMore) {
-      return const SizedBox(height: AppSpace.s24);
+      return const SizedBox(height: 24);
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.page,
-        AppSpace.s4,
-        AppSpace.page,
-        AppSpace.s24,
-      ),
+      padding: const EdgeInsets.only(bottom: 20),
       child: Center(
         child: Text(
           '已显示全部 ${state.works.length} 幅作品',
-          style: AppText.caption12,
+          style: libraryText(size: 12, color: AppColors.textPlaceholder),
         ),
       ),
     );
