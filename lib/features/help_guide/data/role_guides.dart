@@ -66,7 +66,7 @@ const _student = RoleGuide(
     RoleGuideStep(
       iconAsset: AppAssets.leftNavZuopin,
       title: '作品档案',
-      body: '日常作业拍照上传后，任课老师会打分、写评语、在图上批注，点评完成会收到通知。',
+      body: '日常作业拍照上传后，由责任老师打分、写评语、在图上批注；需要时组长会复核，校长也可点评或推优。',
       where: '首页「作品库」',
     ),
     RoleGuideStep(

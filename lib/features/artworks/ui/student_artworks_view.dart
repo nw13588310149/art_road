@@ -126,6 +126,15 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
           subtitle: '记录每一张画，收好老师的每一次点评',
           actions: [
             AppButton(
+              label: '优秀作品墙',
+              icon: Icons.star_outline_rounded,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.sm,
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(RoutePaths.excellentArtworks),
+            ),
+            AppButton(
               label: '上传作品',
               icon: Icons.add_photo_alternate_outlined,
               size: AppButtonSize.sm,

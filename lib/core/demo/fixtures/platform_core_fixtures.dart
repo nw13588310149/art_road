@@ -1,4 +1,5 @@
 import '../data/demo_artwork_data.dart';
+import '../data/demo_artwork_store.dart';
 import '../data/demo_campus_data.dart';
 import '../data/demo_marking_data.dart';
 import '../demo_accounts.dart';
@@ -123,27 +124,25 @@ String _firstClause(String text) {
   return clause.isEmpty ? text.trim() : clause;
 }
 
-List<Map<String, dynamic>> _artworks() =>
-    DemoStore.list(DemoArtworkData.worksKey, DemoArtworkData.seedWorks);
-
-/// 学生最近一份全部老师点评完成的作品：作品、最后一位点评的老师与完成时间。
+/// 学生最近一份责任老师已点评的作品。
 ({Map<String, dynamic> work, Map<String, dynamic> review, DateTime? at})?
 _latestCompletedReview(int personIndex) {
   ({Map<String, dynamic> work, Map<String, dynamic> review, DateTime? at})?
   latest;
-  for (final work in _artworks()) {
-    if (work['personIndex'] != personIndex ||
-        DemoArtworkData.aggregate(work).status !=
-            DemoArtworkData.statusReviewed) {
+  for (final work in DemoArtworkStore.works()) {
+    if (DemoArtworkData.personOf(work) != personIndex ||
+        !DemoArtworkData.isReviewed(work)) {
       continue;
     }
-    for (final review in DemoArtworkData.reviewsOf(work)) {
-      final at = _parseTime(review['reviewedTime']);
-      final current = latest?.at;
-      if (latest == null ||
-          (at != null && (current == null || at.isAfter(current)))) {
-        latest = (work: work, review: review, at: at);
-      }
+    final review = DemoArtworkData.reviewOf(work);
+    if (review == null) {
+      continue;
+    }
+    final at = _parseTime(review['reviewedTime']);
+    final current = latest?.at;
+    if (latest == null ||
+        (at != null && (current == null || at.isAfter(current)))) {
+      latest = (work: work, review: review, at: at);
     }
   }
   return latest;
@@ -151,11 +150,11 @@ _latestCompletedReview(int personIndex) {
 
 /// 老师队列里最近提交、自己还没点评的作品，以及待点评总数。
 ({Map<String, dynamic> work, int pending})? _latestPendingFor(String teacherId) {
-  final pending = _artworks()
+  final pending = DemoArtworkStore.works()
       .where(
         (w) =>
-            DemoArtworkData.teacherIdsOf(w).contains(teacherId) &&
-            DemoArtworkData.reviewOf(w, teacherId) == null,
+            DemoArtworkData.text(w['teacherId']) == teacherId &&
+            !DemoArtworkData.isReviewed(w),
       )
       .toList();
   if (pending.isEmpty) {
@@ -377,7 +376,8 @@ void registerPlatformCoreFixtures(DemoRouter r) {
 
   // ── 消息 ────────────────────────────────────────────────────────────
   // v2：消息带跳转目标（targetType + targetId），旧的本地消息不再沿用。
-  String noticesKey(DemoRequest req) => 'notices:v2:${req.account.userId}';
+  String noticesKey(DemoRequest req) =>
+      DemoArtworkStore.noticesKey(req.account.userId);
   List<Map<String, dynamic>> notices(DemoRequest req) =>
       DemoStore.list(noticesKey(req), () => _seedNotices(req.account));
   r.any('/app/msg/getUnReadMsgCount', (req) {

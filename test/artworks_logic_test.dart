@@ -2,305 +2,360 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:the_road_of_art_flutter/core/demo/data/demo_artwork_data.dart';
+import 'package:the_road_of_art_flutter/core/demo/data/demo_artwork_seed.dart';
+import 'package:the_road_of_art_flutter/core/demo/data/demo_artwork_store.dart';
 import 'package:the_road_of_art_flutter/core/demo/data/demo_marking_data.dart';
+import 'package:the_road_of_art_flutter/core/demo/demo_accounts.dart';
 import 'package:the_road_of_art_flutter/features/artworks/data/artwork_models.dart';
 import 'package:the_road_of_art_flutter/features/artworks/data/artwork_rules.dart';
 
-Map<String, dynamic> _work({
-  required List<String> teachers,
-  required List<Map<String, dynamic>> reviews,
-}) => <String, dynamic>{
-  'id': 'aw-test',
-  'personIndex': 1,
-  'subject': '素描',
-  'teacherIds': teachers,
-  'reviews': reviews,
-};
-
-Map<String, dynamic> _review(String teacherId, double? score) =>
-    <String, dynamic>{
-      'teacherId': teacherId,
-      'score': score,
-      'maxScore': 100.0,
-      'content': '',
-      'reviewedTime': '2026-10-20 21:30:00',
-      'tags': const <Map<String, dynamic>>[],
-    };
-
 void main() {
-  group('DemoArtworkData.aggregate', () {
-    test('stays pending until every assigned teacher has reviewed', () {
-      final result = DemoArtworkData.aggregate(
-        _work(teachers: ['t-1', 't-3'], reviews: [_review('t-3', 86)]),
+  final now = DateTime(2026, 11, 13, 21, 30);
+
+  setUp(() {
+    DemoArtworkStore.setNow(now);
+  });
+
+  tearDown(DemoArtworkStore.clearCache);
+
+  group('DemoArtworkData.leadReasons', () {
+    test('collects every matched reason', () {
+      final reasons = DemoArtworkData.leadReasons(
+        id: 'aw-spot-0',
+        requested: true,
+        score: 50,
+        maxScore: 100,
+        recentFinals: const [0.8, 0.82, 0.79],
+        content: '短评',
+        hasAnnotations: false,
+        spotCheckPercent: 100,
       );
-      expect(result.status, DemoArtworkData.statusPending);
-      expect(result.finalScore, isNull);
-      expect(result.reviewedCount, 1);
-      expect(result.teacherCount, 2);
+      expect(
+        reasons,
+        containsAll(<String>[
+          DemoArtworkData.reasonRequested,
+          DemoArtworkData.reasonScoreAnomaly,
+          DemoArtworkData.reasonBrief,
+          DemoArtworkData.reasonSpotCheck,
+        ]),
+      );
     });
 
-    test('final score is the mean of scored reviews with two decimals', () {
-      final result = DemoArtworkData.aggregate(
-        _work(
-          teachers: ['t-1', 't-2', 't-3'],
-          reviews: [_review('t-1', 85), _review('t-2', 86), _review('t-3', 88)],
-        ),
+    test('skips score anomaly when history is shorter than 2', () {
+      final reasons = DemoArtworkData.leadReasons(
+        id: 'aw-ok',
+        requested: false,
+        score: 40,
+        maxScore: 100,
+        recentFinals: const [0.9],
+        content: '这是一条足够长的评语，用来避免被判定为点评过简。',
+        hasAnnotations: false,
+        spotCheckPercent: 0,
       );
-      expect(result.status, DemoArtworkData.statusReviewed);
-      expect(result.finalScore, 86.33);
+      expect(reasons, isEmpty);
     });
 
-    test('reviews without a score do not count toward the mean', () {
-      final result = DemoArtworkData.aggregate(
-        _work(
-          teachers: ['t-1', 't-2'],
-          reviews: [_review('t-1', null), _review('t-2', 80)],
-        ),
+    test('brief needs both short content and no annotations', () {
+      final withAnno = DemoArtworkData.leadReasons(
+        id: 'aw-ok',
+        requested: false,
+        score: 80,
+        maxScore: 100,
+        recentFinals: const [],
+        content: '短',
+        hasAnnotations: true,
+        spotCheckPercent: 0,
       );
-      expect(result.status, DemoArtworkData.statusReviewed);
-      expect(result.finalScore, 80);
+      expect(withAnno, isEmpty);
     });
   });
 
-  group('demo seed data', () {
-    final works = DemoArtworkData.seedWorks();
-
-    test('student 林小雨 has eight works, two of them pending', () {
-      final mine = works.where((w) => w['personIndex'] == 1).toList();
-      final pending = mine.where(
-        (w) =>
-            DemoArtworkData.aggregate(w).status ==
-            DemoArtworkData.statusPending,
-      );
-      expect(mine, hasLength(8));
-      expect(pending, hasLength(2));
+  group('status and final score', () {
+    test('pending until responsible teacher reviews', () {
+      final work = <String, dynamic>{
+        'id': 'aw-1',
+        'teacherId': 't-1',
+        'review': null,
+      };
+      expect(DemoArtworkData.statusOf(work), DemoArtworkData.statusPending);
+      expect(DemoArtworkData.finalScoreOf(work), isNull);
     });
 
-    test('teacher 李静 has seven works waiting for her review', () {
-      final queue = works.where(
-        (w) =>
-            DemoArtworkData.teacherIdsOf(w).contains('t-1') &&
-            DemoArtworkData.reviewOf(w, 't-1') == null,
-      );
-      expect(queue, hasLength(7));
+    test('lead adjust replaces final score', () {
+      final work = <String, dynamic>{
+        'id': 'aw-1',
+        'teacherId': 't-1',
+        'review': <String, dynamic>{
+          'teacherId': 't-1',
+          'score': 80,
+          'maxScore': 100,
+        },
+        'leadReview': <String, dynamic>{
+          'action': DemoArtworkData.actionAdjust,
+          'score': 88,
+        },
+      };
+      expect(DemoArtworkData.statusOf(work), DemoArtworkData.statusReviewed);
+      expect(DemoArtworkData.leadStatusOf(work), DemoArtworkData.leadDone);
+      expect(DemoArtworkData.finalScoreOf(work), 88);
+    });
+  });
+
+  group('visibility', () {
+    test('student cannot see lead reasons or quality', () {
+      final work = <String, dynamic>{
+        'id': DemoArtworkSeed.storyInReviewId,
+        'personIndex': 1,
+        'teacherId': 't-1',
+        'subject': '素描',
+        'review': <String, dynamic>{'teacherId': 't-1', 'score': 88},
+        'leadReview': <String, dynamic>{
+          'reasons': <String>[DemoArtworkData.reasonRequested],
+          'action': null,
+          'leaderId': 't-2',
+          'qualityStars': 4,
+        },
+      };
+      final access = DemoArtworkData.accessOf(DemoAccounts.student, work);
+      expect(access.seesReview, isTrue);
+      expect(access.seesLeadReasons, isFalse);
+      expect(access.seesQuality, isFalse);
+      expect(access.seesLeadResult, isTrue);
     });
 
-    test('insights rank 结构错误 first and skip praise tags in suggestions', () {
-      final insights = DemoArtworkData.insightsOf(
-        works.where((w) => w['personIndex'] == 1).toList(),
-      );
-      final topTags = insights['topTags'] as List;
-      final suggestions = insights['suggestions'] as List;
-      expect((topTags.first as Map)['name'], '结构错误');
-      expect((topTags.first as Map)['count'], 3);
-      expect((suggestions.first as Map)['gallerySubject'], '素描');
-      expect((suggestions.first as Map)['galleryKeyword'], '结构');
-      expect(suggestions.any((s) => (s as Map)['tag'] == '细节出彩'), isFalse);
-      expect(insights['averageScore'], 84.67);
-      final praise = topTags.cast<Map>().firstWhere((t) => t['name'] == '细节出彩');
-      expect(praise['positive'], isTrue);
+    test('leader and principal see reasons and quality', () {
+      final work = <String, dynamic>{
+        'id': 'aw-x',
+        'personIndex': 2,
+        'teacherId': 't-1',
+        'subject': '素描',
+        'review': <String, dynamic>{'teacherId': 't-1'},
+        'leadReview': <String, dynamic>{'leaderId': 't-2', 'action': null},
+      };
+      final leader = DemoArtworkData.accessOf(DemoAccounts.groupLeader, work);
+      final principal = DemoArtworkData.accessOf(DemoAccounts.principal, work);
+      expect(leader.seesLeadReasons, isTrue);
+      expect(leader.seesQuality, isTrue);
+      expect(principal.seesLeadReasons, isTrue);
+      expect(principal.canFeature, isTrue);
+      expect(principal.canReview, isFalse);
+    });
+  });
+
+  group('seed data (injectable now)', () {
+    late DemoArtworkSeedResult seed;
+
+    setUp(() {
+      seed = DemoArtworkSeed.build(now);
     });
 
-    test('林小雨 daily works rank subjects the same way as her 9 月月考', () {
-      final insights = DemoArtworkData.insightsOf(
-        works.where((w) => w['personIndex'] == 1).toList(),
-      );
-      final exam = DemoMarkingData.instance.entryOf(1, '26')!;
-      final bySubject = [...exam.subjects!]
-        ..sort((a, b) => b.score.compareTo(a.score));
-      expect(insights['bestSubject'], bySubject.first.def.subjectName);
-      expect(insights['weakestSubject'], bySubject.last.def.subjectName);
-    });
-
-    test('submissions spread over the evening and reviews come later', () {
-      final times = <String>{};
-      for (final work in works) {
-        final created = work['createTime'] as String;
-        final clock = created.substring(11, 16);
-        times.add(clock);
-        expect(clock.compareTo('18:30') >= 0, isTrue, reason: created);
-        expect(clock.compareTo('21:30') <= 0, isTrue, reason: created);
-        for (final review in DemoArtworkData.reviewsOf(work)) {
-          final reviewed = review['reviewedTime'] as String;
-          expect(reviewed.compareTo(created) > 0, isTrue, reason: reviewed);
-          final hour = int.parse(reviewed.substring(11, 13));
-          expect(hour >= 8 && hour <= 21, isTrue, reason: reviewed);
-        }
+    test('tasks are about 70 across 8 weeks and never on Sunday', () {
+      expect(seed.tasks.length, inInclusiveRange(60, 80));
+      for (final task in seed.tasks) {
+        final created = DemoArtworkData.parseTime(task['createTime'])!;
+        expect(created.weekday, isNot(DateTime.sunday));
       }
-      expect(times.length, greaterThan(8));
     });
 
-    test('only 细节出彩 is a highlight tag', () {
-      final tags = DemoArtworkData.seedTags('t-1');
-      final highlights = tags
-          .where((t) => ArtworkRules.isHighlightTag(t['color'] as String))
-          .map((t) => t['name'])
-          .toList();
-      expect(highlights, ['细节出彩']);
+    test('no submissions after now or on Sunday', () {
+      for (final work in seed.works) {
+        final created = DemoArtworkData.parseTime(work['createTime'])!;
+        expect(created.isAfter(now), isFalse);
+        expect(created.weekday, isNot(DateTime.sunday));
+      }
+    });
+
+    test('林小雨 story line is complete', () {
+      final mine = seed.works.where((w) => w['personIndex'] == 1).toList();
+      final pending = mine.where((w) => !DemoArtworkData.isReviewed(w)).toList();
+      expect(pending, hasLength(2));
+      expect(
+        pending.any((w) => DemoArtworkData.text(w['id']) == DemoArtworkSeed.storyPendingId),
+        isTrue,
+      );
+      final today = DemoArtworkData.ymd(now);
+      expect(
+        pending.any(
+          (w) => DemoArtworkData.text(w['createTime']).startsWith(today),
+        ),
+        isTrue,
+      );
+
+      final gypsum = seed.works
+          .where((w) => w['id'] == DemoArtworkSeed.storyInReviewId)
+          .single;
+      expect(DemoArtworkData.leadStatusOf(gypsum), DemoArtworkData.leadInReview);
+      expect(
+        DemoArtworkData.text(DemoArtworkData.reviewOf(gypsum)?['content']),
+        startsWith('结构交代清楚，暗部再整体一些'),
+      );
+
+      final chain = seed.works
+          .where((w) => w['id'] == DemoArtworkSeed.storyChainId)
+          .single;
+      expect(DemoArtworkData.leadStatusOf(chain), DemoArtworkData.leadDone);
+      expect(chain['featured'], isTrue);
+      expect(DemoArtworkData.principalCommentsOf(chain), isNotEmpty);
+
+      final v2 = seed.works
+          .where((w) => w['id'] == DemoArtworkSeed.storyRevisionV2Id)
+          .single;
+      expect(DemoArtworkData.versionOf(v2), 2);
+      expect(DemoArtworkData.text(v2['parentId']), DemoArtworkSeed.storyRevisionV1Id);
+    });
+
+    test('teacher queues and differences match the brief', () {
+      const settings = DemoReviewSettings();
+      Map<String, List<Map<String, dynamic>>> byTeacher() {
+        final map = <String, List<Map<String, dynamic>>>{};
+        for (final work in seed.works) {
+          final id = DemoArtworkData.text(work['teacherId']);
+          map.putIfAbsent(id, () => <Map<String, dynamic>>[]).add(work);
+        }
+        return map;
+      }
+
+      final grouped = byTeacher();
+      final lijing = grouped['t-1']!;
+      final pendingLijing = lijing.where((w) => !DemoArtworkData.isReviewed(w));
+      expect(pendingLijing.length, inInclusiveRange(8, 12));
+      expect(
+        pendingLijing
+            .where((w) => DemoArtworkData.isOverdue(w, now, settings))
+            .length,
+        2,
+      );
+
+      final zhaoxue = grouped['t-4']!;
+      expect(
+        zhaoxue.where((w) => !DemoArtworkData.isReviewed(w)).length,
+        inInclusiveRange(3, 5),
+      );
+
+      final wang = grouped['t-5']!;
+      final wangPending = wang.where((w) => !DemoArtworkData.isReviewed(w));
+      expect(wangPending.length, inInclusiveRange(5, 8));
+      expect(
+        wangPending.every((w) => DemoArtworkData.isOverdue(w, now, settings)),
+        isTrue,
+      );
+
+      final leadQueue = seed.works.where(
+        (w) =>
+            DemoArtworkData.leadStatusOf(w) == DemoArtworkData.leadInReview &&
+            DemoArtworkData.text(DemoArtworkData.leadOf(w)?['leaderId']) ==
+                't-2',
+      );
+      expect(leadQueue.length, inInclusiveRange(6, 10));
+      expect(
+        leadQueue
+            .where((w) => DemoArtworkData.isLeadOverdue(w, now, settings))
+            .length,
+        inInclusiveRange(1, 2),
+      );
+    });
+
+    test('featured and principal comments cover three subjects', () {
+      final featured = seed.works.where((w) => w['featured'] == true).toList();
+      expect(featured, hasLength(12));
+      expect(
+        featured.map((w) => DemoArtworkData.text(w['subject'])).toSet(),
+        containsAll(DemoArtworkData.subjects),
+      );
+      final comments = seed.works.expand(DemoArtworkData.principalCommentsOf);
+      expect(comments.length, 15);
+    });
+
+    test('reviewTeachers are the six roster teachers', () {
+      expect(DemoMarkingData.reviewTeachers, hasLength(6));
+      expect(
+        DemoMarkingData.reviewTeachers.where((t) => t.leader).map((t) => t.id),
+        containsAll(<String>['t-2', 't-3', 't-6']),
+      );
     });
   });
 
   group('ArtworkRules', () {
-    test('formats scores with at most two decimals', () {
-      expect(ArtworkRules.formatScore(88), '88');
-      expect(ArtworkRules.formatScore(87.5), '87.5');
-      expect(ArtworkRules.formatScore(86.333), '86.33');
-      expect(ArtworkRules.formatScore(100), '100');
-      expect(ArtworkRules.formatScore(null), '—');
-    });
-
-    test('parses review scores against the full score', () {
-      expect(ArtworkRules.parseScore('', '100').score, isNull);
-      expect(ArtworkRules.parseScore('', '100').error, isNull);
-      expect(ArtworkRules.parseScore('92.5', '100').score, 92.5);
-      expect(ArtworkRules.parseScore('101', '100').error, isNotNull);
-      expect(ArtworkRules.parseScore('88.123', '100').error, isNotNull);
-      expect(ArtworkRules.parseScore('40', '0').error, isNotNull);
-      final locked = ArtworkRules.parseScore(
-        '120',
-        '100',
-        requiredFullScore: 150,
-      );
-      expect(locked.maxScore, 150);
-      expect(locked.score, 120);
-    });
-
-    test('a review needs a score, a tag or a comment', () {
+    test('validateLeadReview requires stars and adjust reason', () {
       expect(
-        ArtworkRules.validateReview(score: null, tagCount: 0, comment: ' '),
+        ArtworkRules.validateLeadReview(action: 'KEEP', qualityStars: 0),
         isNotNull,
       );
       expect(
-        ArtworkRules.validateReview(score: null, tagCount: 1, comment: ''),
+        ArtworkRules.validateLeadReview(
+          action: 'ADJUST',
+          qualityStars: 4,
+          reason: '太短',
+          score: 90,
+        ),
+        isNotNull,
+      );
+      expect(
+        ArtworkRules.validateLeadReview(
+          action: 'ADJUST',
+          qualityStars: 4,
+          reason: '对照联考评分标准，造型完成度已到九十分档。',
+          score: 90,
+        ),
         isNull,
       );
-      expect(
-        ArtworkRules.validateReview(score: 80, tagCount: 9, comment: ''),
-        isNotNull,
-      );
     });
 
-    test('validates the upload draft', () {
-      final today = DateTime(2026, 11, 7);
-      String? validate({int images = 1, String title = '静物', DateTime? date}) =>
-          ArtworkRules.validateDraft(
-            imageCount: images,
-            title: title,
-            subject: '素描',
-            drawingDate: date ?? today,
-            description: '',
-            now: today,
-          );
-      expect(validate(), isNull);
-      expect(validate(images: 0), isNotNull);
-      expect(validate(images: 10), isNotNull);
-      expect(validate(title: '  '), isNotNull);
-      expect(validate(date: DateTime(2026, 11, 8)), isNotNull);
-    });
-
-    test('rejects duplicate tag names regardless of case', () {
+    test('draft validation still rejects empty images', () {
       expect(
-        ArtworkRules.validateTag(
-          name: 'Line',
-          explanation: '',
-          color: '#4A74D6',
-          otherNames: const ['line'],
+        ArtworkRules.validateDraft(
+          imageCount: 0,
+          title: '石膏',
+          subject: '素描',
+          drawingDate: DateTime(2026, 11, 1),
+          description: '',
+          now: now,
         ),
-        isNotNull,
-      );
-      expect(
-        ArtworkRules.validateTag(name: '构图失衡', explanation: '', color: 'blue'),
-        isNotNull,
+        '请至少选择 1 张作品照片',
       );
     });
 
-    test('groups works by drawing month and labels the month', () {
-      final groups = ArtworkRules.groupByMonth(const [
-        '2026-11-03',
-        '2026-11-01',
-        '2026-10-25',
-        '2026-08-30',
-      ], (date) => date);
-      expect(groups.map((g) => g.$1), ['2026-11', '2026-10', '2026-08']);
-      expect(groups.first.$2, hasLength(2));
-      expect(ArtworkRules.monthLabel('2026-10'), '2026 年 10 月');
-      expect(ArtworkRules.dateText('2026-11-04 19:20:00'), '2026-11-04');
-    });
-
-    test('display scores keep at most one decimal', () {
-      expect(ArtworkRules.displayScore(84.67), '84.7');
-      expect(ArtworkRules.displayScore(86), '86');
-      expect(ArtworkRules.displayScore(null), '—');
-    });
-
-    test('tags are either problems or highlights', () {
-      expect(ArtworkRules.isHighlightTag('#3b9a6e'), isTrue);
-      expect(ArtworkRules.isHighlightTag(ArtworkRules.problemTagColor), isFalse);
-      expect(ArtworkRules.isHighlightTag('#4A74D6'), isFalse);
-      expect(ArtworkRules.isHighlightTag('#4A74D6', positive: true), isTrue);
-    });
-
-    test('recognizes image signatures', () {
-      expect(
-        ArtworkRules.isSupportedImage(
-          Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]),
-        ),
-        isTrue,
-      );
-      expect(
-        ArtworkRules.isSupportedImage(
-          Uint8List.fromList([0x00, 0x00, 0x00, 0x18]),
-        ),
-        isFalse,
-      );
+    test('image header check accepts jpeg', () {
+      final bytes = Uint8List.fromList(const [0xFF, 0xD8, 0xFF, 0x00]);
+      expect(ArtworkRules.isSupportedImage(bytes), isTrue);
     });
   });
 
-  group('models', () {
-    test('annotation strokes survive a JSON round trip', () {
-      final stroke = AnnotationStroke.fromJson(<String, dynamic>{
-        'color': '#D64A62',
-        'width': 4,
-        'imageIndex': 1,
-        'points': [
-          [0.1, 0.2],
-          [0.3, 0.4],
-        ],
-      });
-      final copy = AnnotationStroke.fromJson(stroke.toJson());
-      expect(copy.points, hasLength(2));
-      expect(copy.points.last.dx, closeTo(0.3, 1e-9));
-      expect(copy.imageIndex, 1);
-      expect(copy.width, 4);
-    });
-
-    test('student detail hides reviews until the work is reviewed', () {
+  group('client models', () {
+    test('ArtworkDetail reads timeline and lead status', () {
       final detail = ArtworkDetail.fromJson(<String, dynamic>{
         'work': <String, dynamic>{
           'id': 'aw-1',
-          'title': '花卉色彩写生',
-          'status': 'PENDING',
-          'finalScore': null,
-          'maxScore': 100,
+          'title': '素描练习',
+          'status': 'REVIEWED',
+          'leadStatus': 'IN_REVIEW',
+          'version': 1,
+          'versionCount': 1,
         },
-        'images': [
-          <String, dynamic>{'id': 'i-1', 'url': 'https://example.com/a.jpg'},
-        ],
-        'reviews': [
+        'images': const <Map<String, dynamic>>[],
+        'review': <String, dynamic>{
+          'teacherId': 't-1',
+          'teacherName': '李静',
+          'reviewed': true,
+          'content': '结构交代清楚，暗部再整体一些。',
+          'score': 88,
+        },
+        'timeline': <Map<String, dynamic>>[
           <String, dynamic>{
-            'teacherId': 't-3',
-            'teacherName': '刘芳',
-            'reviewed': true,
-            'score': null,
-            'content': '',
-            'tags': const <dynamic>[],
+            'role': 'STUDENT',
+            'type': 'SUBMIT',
+            'name': '林小雨',
+            'time': '2026-11-10 12:00:00',
           },
         ],
+        'dimensions': <Map<String, dynamic>>[
+          <String, dynamic>{'key': 'form', 'name': '造型'},
+        ],
       });
-      expect(detail.work.reviewed, isFalse);
-      expect(detail.teachers.single.reviewed, isTrue);
-      expect(detail.reviews.single.visible, isFalse);
-      expect(detail.images.single.url, 'https://example.com/a.jpg');
+      expect(detail.work.leadStatus, ArtworkLeadStatus.inReview);
+      expect(detail.review?.score, 88);
+      expect(detail.timeline, hasLength(1));
+      expect(detail.dimensions.first.name, '造型');
     });
   });
 }

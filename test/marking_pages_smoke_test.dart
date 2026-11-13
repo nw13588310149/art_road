@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:the_road_of_art_flutter/core/demo/data/demo_artwork_store.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_accounts.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_store.dart';
 import 'package:the_road_of_art_flutter/core/demo/fixtures/demo_fixtures.dart';
@@ -32,6 +33,7 @@ Future<void> _pump(
   final prefs = await SharedPreferences.getInstance();
   await DemoStore.init();
   await DemoStore.reset();
+  DemoArtworkStore.clearCache();
   tester.view.physicalSize = _contentSize;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -211,11 +213,11 @@ void _pageTests() {
     await tester.tap(find.byTooltip('关闭'));
     await _settle(tester);
 
-    await tester.tap(find.text('秋日静物色彩写生').first);
+    await tester.tap(find.text('开始点评'));
     await _settle(tester);
-    expect(find.text('秋日静物色彩写生'), findsOneWidget);
     expect(find.textContaining('学号 '), findsOneWidget);
-    expect(find.textContaining('已选 0 个'), findsOneWidget);
+    expect(find.textContaining('已选'), findsOneWidget);
+    expect(find.text('请组长复核'), findsOneWidget);
     await _unmount(tester);
   });
 

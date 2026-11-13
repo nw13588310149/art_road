@@ -198,11 +198,15 @@ class DemoTeacher {
     required this.id,
     required this.name,
     required this.subject,
+    this.leader = false,
   });
 
   final String id;
   final String name;
   final String subject;
+
+  /// 本科目的教学组长：复核组内其他老师的点评。
+  final bool leader;
 }
 
 /// mulberry32：与小程序演示数据同一伪随机序列，保证两端演示数据一致。
@@ -246,12 +250,15 @@ class DemoMarkingData {
     '速写': ['何佳', '高峰', '罗敏', '马骏', '朱琳'],
   };
 
-  /// 作品点评老师（李静为演示任课老师账号）。
+  /// 作品点评老师：名册里的 6 位美术科目老师（同 id、同名、同科目），每科 2 位，
+  /// 其中 1 位是组长。李静、张明远、赵雪有演示账号，其余三位由演示后端代为点评。
   static const reviewTeachers = <DemoTeacher>[
     DemoTeacher(id: 't-1', name: '李静', subject: '素描'),
-    DemoTeacher(id: 't-2', name: '张明远', subject: '素描'),
-    DemoTeacher(id: 't-3', name: '刘芳', subject: '色彩'),
+    DemoTeacher(id: 't-2', name: '张明远', subject: '素描', leader: true),
+    DemoTeacher(id: 't-3', name: '刘芳', subject: '色彩', leader: true),
     DemoTeacher(id: 't-4', name: '赵雪', subject: '速写'),
+    DemoTeacher(id: 't-5', name: '王海波', subject: '色彩'),
+    DemoTeacher(id: 't-6', name: '周强', subject: '速写', leader: true),
   ];
 
   /// 演示任课老师关联的学生（[DemoPerson.index]）。

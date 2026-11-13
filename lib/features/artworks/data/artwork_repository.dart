@@ -13,7 +13,7 @@ final artworkRepositoryProvider = Provider<ArtworkRepository>((ref) {
   return ArtworkRepository(client: client);
 });
 
-/// 艺考网阅卷系统「作品档案（学生）/ 作品点评（教职）」接口。
+/// 艺考网阅卷系统「作品档案 / 作品点评 / 复核 / 优秀作品墙」接口。
 class ArtworkRepository {
   ArtworkRepository({required this.client});
 
@@ -27,7 +27,7 @@ class ArtworkRepository {
     return client.get('/app/artworks/statistics');
   }
 
-  /// 高频问题与练习建议（演示接口，后续由后端提供）。
+  /// 高频问题与练习建议（含分项水平、连续练习天数等）。
   Future<ApiResponse> getInsights() {
     return client.get('/app/artworks/insights');
   }
@@ -36,6 +36,7 @@ class ArtworkRepository {
     required ArtworkStatusFilter status,
     required int page,
     required int size,
+    bool revised = false,
   }) {
     return client.get(
       '/app/artworks',
@@ -43,12 +44,37 @@ class ArtworkRepository {
         'status': status.code,
         'current': page,
         'size': size,
+        if (revised) 'revised': 1,
       },
     );
   }
 
   Future<ApiResponse> getArtwork(String id) {
     return client.get('/app/artworks/${_id(id)}');
+  }
+
+  Future<ApiResponse> getExcellentArtworks({
+    String subject = '',
+    required int page,
+    required int size,
+  }) {
+    return client.get(
+      '/app/artworks/excellent',
+      queryParameters: <String, dynamic>{
+        if (subject.trim().isNotEmpty) 'subject': subject.trim(),
+        'current': page,
+        'size': size,
+      },
+    );
+  }
+
+  Future<ApiResponse> getTasks({String status = ''}) {
+    return client.get(
+      '/app/tasks',
+      queryParameters: <String, dynamic>{
+        if (status.trim().isNotEmpty) 'status': status.trim(),
+      },
+    );
   }
 
   Future<ApiResponse> uploadImage(Uint8List bytes, String fileName) {
@@ -66,6 +92,8 @@ class ArtworkRepository {
     required String drawingDate,
     required String description,
     required List<String> imageIds,
+    String taskId = '',
+    String parentId = '',
   }) {
     return client.post(
       '/app/artworks',
@@ -75,6 +103,8 @@ class ArtworkRepository {
         'drawingDate': drawingDate,
         'description': description.isEmpty ? null : description,
         'imageIds': imageIds,
+        if (taskId.isNotEmpty) 'taskId': taskId,
+        if (parentId.isNotEmpty) 'parentId': parentId,
       },
     );
   }
@@ -90,6 +120,8 @@ class ArtworkRepository {
     required int page,
     required int size,
     String keyword = '',
+    String subject = '',
+    String teacherId = '',
   }) {
     return client.get(
       '/school/teacher/artworks',
@@ -98,6 +130,8 @@ class ArtworkRepository {
         'current': page,
         'size': size,
         if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+        if (subject.trim().isNotEmpty) 'subject': subject.trim(),
+        if (teacherId.trim().isNotEmpty) 'teacherId': teacherId.trim(),
       },
     );
   }
@@ -114,6 +148,12 @@ class ArtworkRepository {
     required String content,
     required List<String> tagIds,
     required bool next,
+    Map<String, int> dimensions = const <String, int>{},
+    bool requestLeadReview = false,
+    List<({String tag, bool resolved})> tagResolutions =
+        const <({String tag, bool resolved})>[],
+    String voiceUrl = '',
+    int voiceSeconds = 0,
   }) {
     return client.post(
       '/school/teacher/artworks/review?next=$next',
@@ -123,16 +163,22 @@ class ArtworkRepository {
         'maxScore': maxScore,
         'content': content.isEmpty ? null : content,
         'tagIds': tagIds,
+        'dimensions': dimensions,
+        'requestLeadReview': requestLeadReview,
+        'tagResolutions': <Map<String, dynamic>>[
+          for (final item in tagResolutions)
+            <String, dynamic>{'tag': item.tag, 'resolved': item.resolved},
+        ],
+        if (voiceUrl.isNotEmpty) 'voiceUrl': voiceUrl,
+        if (voiceSeconds > 0) 'voiceSeconds': voiceSeconds,
       },
     );
   }
 
-  /// 我的批注（演示接口，后续由后端提供）。
   Future<ApiResponse> getAnnotations(String artworkId) {
     return client.get('/school/teacher/artworks/${_id(artworkId)}/annotations');
   }
 
-  /// 覆盖保存我在第 [imageIndex] 张图上的批注。
   Future<ApiResponse> saveAnnotations(
     String artworkId, {
     required int imageIndex,
@@ -157,6 +203,7 @@ class ArtworkRepository {
     required String name,
     required String explanation,
     required String color,
+    String dimension = '',
   }) {
     return client.post(
       '/school/teacher/tags',
@@ -164,6 +211,7 @@ class ArtworkRepository {
         'name': name,
         'explanation': explanation.isEmpty ? null : explanation,
         'color': color,
+        if (dimension.isNotEmpty) 'dimension': dimension,
       },
     );
   }
@@ -173,6 +221,7 @@ class ArtworkRepository {
     required String name,
     required String explanation,
     required String color,
+    String dimension = '',
   }) {
     return client.post(
       '/school/teacher/tags/update',
@@ -181,6 +230,7 @@ class ArtworkRepository {
         'name': name,
         'explanation': explanation.isEmpty ? null : explanation,
         'color': color,
+        if (dimension.isNotEmpty) 'dimension': dimension,
       },
     );
   }
@@ -188,6 +238,73 @@ class ArtworkRepository {
   Future<ApiResponse> deleteTag(String id) {
     return client.post(
       '/school/teacher/tags/delete?id=${Uri.encodeQueryComponent(id)}',
+    );
+  }
+
+  // ── 组长 / 校长 ──────────────────────────────────────────────────────
+
+  Future<ApiResponse> getLeadReviews({
+    String status = 'PENDING',
+    String reason = '',
+    String teacherId = '',
+    required int page,
+    required int size,
+  }) {
+    return client.get(
+      '/school/leader/reviews',
+      queryParameters: <String, dynamic>{
+        'status': status,
+        'current': page,
+        'size': size,
+        if (reason.isNotEmpty) 'reason': reason,
+        if (teacherId.isNotEmpty) 'teacherId': teacherId,
+      },
+    );
+  }
+
+  Future<ApiResponse> getLeadReviewStatistics() {
+    return client.get('/school/leader/reviews/statistics');
+  }
+
+  Future<ApiResponse> submitLeadReview({
+    required String artworkId,
+    required String action,
+    double? score,
+    String reason = '',
+    String content = '',
+    required int qualityStars,
+    String qualityNote = '',
+  }) {
+    return client.post(
+      '/school/leader/reviews/${_id(artworkId)}',
+      data: <String, dynamic>{
+        'action': action,
+        'score': score,
+        'reason': reason.isEmpty ? null : reason,
+        'content': content.isEmpty ? null : content,
+        'qualityStars': qualityStars,
+        'qualityNote': qualityNote.isEmpty ? null : qualityNote,
+      },
+    );
+  }
+
+  Future<ApiResponse> principalComment({
+    required String artworkId,
+    required String content,
+  }) {
+    return client.post(
+      '/school/principal/artworks/${_id(artworkId)}/comment',
+      data: <String, dynamic>{'content': content},
+    );
+  }
+
+  Future<ApiResponse> principalFeature({
+    required String artworkId,
+    required bool featured,
+  }) {
+    return client.post(
+      '/school/principal/artworks/${_id(artworkId)}/feature',
+      data: <String, dynamic>{'featured': featured},
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:the_road_of_art_flutter/core/demo/data/demo_artwork_store.dart';
 import 'package:the_road_of_art_flutter/core/demo/data/demo_campus_data.dart';
 import 'package:the_road_of_art_flutter/core/demo/data/demo_marking_data.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_accounts.dart';
@@ -21,6 +22,7 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await DemoStore.init();
     await DemoStore.reset();
+    DemoArtworkStore.clearCache();
     router = DemoRouter('marking-consistency-test');
     registerMarkingStudyFixtures(router);
     registerMarkingArtworkFixtures(router);

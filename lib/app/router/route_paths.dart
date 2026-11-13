@@ -13,6 +13,12 @@ abstract final class RoutePaths {
   /// 作品档案：学生上传日常作品、查看点评；老师角色为「作品点评」。
   static const artworks = '/artworks';
 
+  /// 优秀作品墙（校长推优，全校可见）。
+  static const excellentArtworks = '/artworks/excellent';
+
+  /// 组长复核池。
+  static const leadReviews = '/artworks/lead-reviews';
+
   /// 范画库：素描 / 色彩 / 速写 / 高分卷。
   static const gallery = '/gallery';
 

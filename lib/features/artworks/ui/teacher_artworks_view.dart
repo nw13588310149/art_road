@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/router/route_paths.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
+import '../../shell/state/shell_controller.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/teacher_artworks_controller.dart';
@@ -155,12 +157,17 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
 
   Widget _buildList(TeacherArtworksState state) {
     final pending = state.stats.pending;
+    final user = ref.watch(shellControllerProvider.select((s) => s.user));
+    final isLeader = user.isGroupLeader;
+    final isPrincipal = user.role == 'principal' || user.role == 'admin';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppPageHeader(
-          title: '作品点评',
-          subtitle: '多位老师独立点评，保存自己的点评后可查看其他老师的意见',
+          title: isPrincipal ? '全部作品' : '作品点评',
+          subtitle: isPrincipal
+              ? '查看全校作品，可点评与推优'
+              : '责任老师点评后学生立即可见；需要时请组长复核',
           bottom: Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -219,8 +226,27 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
                     size: AppButtonSize.sm,
                     onTap: () => showArtworkTagManager(context),
                   ),
+                  if (isLeader)
+                    AppButton(
+                      label: '复核池',
+                      icon: Icons.fact_check_outlined,
+                      variant: AppButtonVariant.secondary,
+                      size: AppButtonSize.sm,
+                      onTap: () => Navigator.of(
+                        context,
+                      ).pushNamed(RoutePaths.leadReviews),
+                    ),
                   AppButton(
-                    label: '开始点评',
+                    label: '优秀作品墙',
+                    icon: Icons.star_outline_rounded,
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.sm,
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(RoutePaths.excellentArtworks),
+                  ),
+                  AppButton(
+                    label: isPrincipal ? '查看作品' : '开始点评',
                     icon: Icons.rate_review_outlined,
                     size: AppButtonSize.sm,
                     loading: _starting,

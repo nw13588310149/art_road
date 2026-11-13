@@ -30,6 +30,9 @@ const Map<String, String?> _ownerRoutes = {
   RoutePaths.campOver: null,
   RoutePaths.mock: null,
   RoutePaths.designSystem: null,
+  // 作品相关二级页：从作品档案 / 首页入口进入，不高亮侧栏。
+  RoutePaths.excellentArtworks: null,
+  RoutePaths.leadReviews: null,
 };
 
 String _pathOf(String route) {

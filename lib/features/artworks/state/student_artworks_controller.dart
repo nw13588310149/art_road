@@ -236,6 +236,8 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
       drawingDate: draft.drawingDate,
       description: draft.description,
       imageIds: imageIds,
+      taskId: draft.taskId,
+      parentId: draft.parentId,
     );
     if (!response.isSuccess) {
       return response.errorOr('作品提交失败，请稍后重试');

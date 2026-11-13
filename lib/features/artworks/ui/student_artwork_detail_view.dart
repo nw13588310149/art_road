@@ -7,6 +7,7 @@ import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/artwork_detail_controller.dart';
 import 'artwork_compare_page.dart';
+import 'artwork_upload_dialog.dart';
 import 'widgets/artwork_annotation.dart';
 import 'widgets/artwork_widgets.dart';
 
@@ -235,30 +236,108 @@ class _InfoColumn extends StatelessWidget {
     final reviewed = artworkReviewsByTime(
       detail.reviews.where((r) => r.reviewed),
     );
+    final leadLabel = work.leadStatus.label;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ScoreCard(detail: detail),
         const SizedBox(height: AppSpace.s12),
         _WorkInfoCard(work: work),
+        if (work.reviewed) ...[
+          const SizedBox(height: AppSpace.s12),
+          AppButton(
+            label: '改画重交',
+            icon: Icons.brush_outlined,
+            variant: AppButtonVariant.secondary,
+            onTap: () async {
+              final ok = await showArtworkUploadDialog(
+                context,
+                parentId: work.id,
+                title: work.title,
+                subject: work.subject,
+              );
+              if (ok == true && context.mounted) {
+                AppToast.showSuccess(context, '改画已提交');
+              }
+            },
+          ),
+        ],
         const SizedBox(height: AppSpace.s20),
         AppSectionHeader(
           title: '老师点评',
           trailing: Text(
-            '${work.reviewedCount}/${work.teacherCount} 位老师已点评',
+            work.reviewed
+                ? (leadLabel.isEmpty
+                      ? (work.teacherName.isEmpty
+                            ? '已点评'
+                            : '${work.teacherName}老师')
+                      : leadLabel)
+                : '待点评',
             style: AppText.caption12,
           ),
         ),
         const SizedBox(height: AppSpace.s12),
         if (!work.reviewed)
-          _PendingNote(teachers: detail.teachers)
+          const AppNotice(
+            tone: AppTone.warning,
+            icon: Icons.lock_clock_outlined,
+            message: '责任老师点评后，即可查看分数、评语和批注',
+          )
         else
           for (var i = 0; i < reviewed.length; i++) ...[
             if (i > 0) const SizedBox(height: AppSpace.s8),
             ArtworkReviewCard(review: reviewed[i]),
           ],
+        if (detail.timeline.isNotEmpty) ...[
+          const SizedBox(height: AppSpace.s20),
+          const AppSectionHeader(title: '点评时间线'),
+          const SizedBox(height: AppSpace.s8),
+          for (final event in detail.timeline)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpace.s8),
+              child: AppListRow(
+                title: '${event.name} · ${_timelineLabel(event.type)}',
+                subtitle: [
+                  if (event.time.isNotEmpty)
+                    ArtworkRules.shortTime(event.time),
+                  if (event.score != null)
+                    '分数 ${ArtworkRules.displayScore(event.score)}',
+                  if (event.fromScore != null && event.toScore != null)
+                    '${ArtworkRules.displayScore(event.fromScore)} → ${ArtworkRules.displayScore(event.toScore)}',
+                  if (event.content.isNotEmpty) event.content,
+                ].where((e) => e.isNotEmpty).join(' · '),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpace.s4,
+                  vertical: AppSpace.s8,
+                ),
+              ),
+            ),
+        ],
       ],
     );
+  }
+
+  static String _timelineLabel(String type) {
+    switch (type) {
+      case 'SUBMIT':
+        return '提交';
+      case 'REVIEW':
+        return '点评';
+      case 'SUPPLEMENT':
+        return '补充点评';
+      case 'LEAD_KEEP':
+        return '复核维持';
+      case 'LEAD_ADJUST':
+        return '复核调分';
+      case 'LEAD_SUPPLEMENT':
+        return '复核补充';
+      case 'PRINCIPAL_COMMENT':
+        return '校长点评';
+      case 'FEATURE':
+        return '推优';
+      default:
+        return type;
+    }
   }
 }
 
@@ -291,17 +370,13 @@ class _ScoreCard extends StatelessWidget {
                   )
                 else
                   Text(
-                    reviewed
-                        ? '老师没有打分，请查看评语'
-                        : '${work.reviewedCount}/${work.teacherCount} 位老师已点评',
+                    reviewed ? '老师没有打分，请查看评语' : '等待责任老师点评',
                     style: AppText.body14Strong,
                   ),
-                if (reviewed && score != null && work.teacherCount > 1) ...[
+                if (reviewed &&
+                    work.leadStatus == ArtworkLeadStatus.inReview) ...[
                   const SizedBox(height: AppSpace.s4),
-                  Text(
-                    '${work.teacherCount} 位老师评分的平均分',
-                    style: AppText.caption12,
-                  ),
+                  Text('复核中', style: AppText.caption12),
                 ],
               ],
             ),
@@ -358,36 +433,6 @@ class _WorkInfoCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PendingNote extends StatelessWidget {
-  const _PendingNote({required this.teachers});
-
-  final List<ArtworkTeacher> teachers;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const AppNotice(
-          tone: AppTone.warning,
-          icon: Icons.lock_clock_outlined,
-          message: '全部老师点评完成后，即可查看分数、评语和批注',
-        ),
-        for (final teacher in teachers)
-          AppListRow(
-            title: '${teacher.teacherName}老师',
-            leading: AppAvatar(name: teacher.teacherName, size: 28),
-            trailing: ArtworkStatusTag(done: teacher.reviewed),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpace.s4,
-              vertical: AppSpace.s8,
-            ),
-          ),
-      ],
     );
   }
 }

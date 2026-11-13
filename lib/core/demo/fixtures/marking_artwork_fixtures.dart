@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 
 import '../data/demo_artwork_data.dart';
+import '../data/demo_artwork_seed.dart';
+import '../data/demo_artwork_store.dart';
+import '../data/demo_campus_data.dart';
 import '../data/demo_marking_data.dart';
 import '../demo_accounts.dart';
 import '../demo_backend.dart';
@@ -15,12 +18,14 @@ const _strokesPerImage = 200;
 const _pointsPerStroke = 2000;
 const _keptUploads = 60;
 
-/// 作品档案（学生 `/app/artworks*`）与作品点评（教职 `/school/teacher/*`）演示接口。
+/// 作品点评链演示接口（阅卷一侧，口径见实施规格 2.6）。
 void registerMarkingArtworkFixtures(DemoRouter marking) {
   // ── 学生：作品档案 ──────────────────────────────────────────────────
   marking.get('/app/artworks/statistics', (req) {
-    final works = _worksOf(_studentIndex(req));
-    final reviewed = works.where(_isReviewed).length;
+    final works = _studentLatest(_studentIndex(req));
+    final reviewed = works
+        .where((w) => DemoArtworkData.isReviewed(w))
+        .length;
     return <String, dynamic>{
       'total': works.length,
       'reviewed': reviewed,
@@ -29,38 +34,62 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
   });
 
   marking.get('/app/artworks/insights', (req) {
-    return DemoArtworkData.insightsOf(_worksOf(_studentIndex(req)));
+    final person = _studentIndex(req);
+    return DemoArtworkData.insightsOf(
+      DemoArtworkStore.works()
+          .where((w) => DemoArtworkData.personOf(w) == person)
+          .toList(),
+      DemoArtworkStore.now(),
+    );
+  });
+
+  marking.get('/app/artworks/excellent', (req) {
+    final subject = req.str('subject');
+    final rows = DemoArtworkStore.works().where((w) {
+      if (w['featured'] != true) {
+        return false;
+      }
+      return subject.isEmpty || DemoArtworkData.text(w['subject']) == subject;
+    }).toList()
+      ..sort(
+        (a, b) => DemoArtworkData.text(
+          b['featuredTime'],
+        ).compareTo(DemoArtworkData.text(a['featuredTime'])),
+      );
+    return demoPage([
+      for (final w in rows)
+        DemoArtworkStore.projectSummary(w, req.account),
+    ], req);
   });
 
   marking.get('/app/artworks', (req) {
     final status = _statusFilter(req);
-    final rows = _worksOf(_studentIndex(req))
-        .where(
-          (w) =>
-              status == 'ALL' || DemoArtworkData.aggregate(w).status == status,
-        )
-        .map(_studentSummary)
-        .toList();
-    return demoPage(rows, req);
+    final revised = req.str('revised').toLowerCase();
+    var rows = _studentLatest(_studentIndex(req));
+    if (status != 'ALL') {
+      rows = rows
+          .where((w) => DemoArtworkData.statusOf(w) == status)
+          .toList();
+    }
+    if (revised == '1' || revised == 'true') {
+      rows = rows
+          .where((w) => ((w['versionCount'] as num?)?.toInt() ?? 1) > 1)
+          .toList();
+    }
+    return demoPage([
+      for (final w in rows)
+        DemoArtworkStore.projectSummary(
+          w,
+          req.account,
+          versionCount: (w['versionCount'] as num?)?.toInt(),
+        ),
+    ], req);
   });
 
   marking.get('/app/artworks/{id}', (req) {
-    final id = req.param('id');
-    final work = _worksOf(
-      _studentIndex(req),
-    ).where((w) => w['id'] == id).firstOrNull;
-    if (work == null) {
-      throw const DemoApiException('没有找到这份作品，请返回列表刷新', code: 404);
-    }
-    final visible = _isReviewed(work);
-    return <String, dynamic>{
-      'work': _studentSummary(work),
-      'images': _imagesOf(work),
-      'reviews': <Map<String, dynamic>>[
-        for (final teacherId in DemoArtworkData.teacherIdsOf(work))
-          _studentReview(work, teacherId, visible: visible),
-      ],
-    };
+    final person = _studentIndex(req);
+    final work = _readableWork(req, req.param('id'), studentPerson: person);
+    return DemoArtworkStore.projectDetail(work, req.account);
   });
 
   marking.post('/app/artworks/images/upload', (req) async {
@@ -79,12 +108,12 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     }
     final ref = await DemoMedia.host(file.bytes, file.fileName);
     final id = DemoStore.nextId('img-');
-    final uploads = _uploads();
+    final uploads = DemoArtworkStore.uploads();
     uploads[id] = <String, dynamic>{'ref': ref, 'personIndex': person};
     while (uploads.length > _keptUploads) {
       uploads.remove(uploads.keys.first);
     }
-    DemoStore.save(DemoArtworkData.uploadsKey);
+    DemoArtworkStore.saveUploads();
     return <String, dynamic>{'id': id, 'url': DemoMedia.url(ref)};
   });
 
@@ -95,6 +124,8 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final subject = _text(body['subject']);
     final drawingDate = _text(body['drawingDate']);
     final description = _text(body['description']);
+    final taskId = _text(body['taskId']);
+    final parentId = _text(body['parentId']);
     final imageIds = req.listOf('imageIds').map((e) => e.toString()).toList();
     if (title.isEmpty || title.runes.length > 100) {
       throw const DemoApiException('请填写 1 至 100 个字的作品名称', code: 400);
@@ -114,7 +145,32 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     if (imageIds.toSet().length != imageIds.length) {
       throw const DemoApiException('作品照片重复，请重新选择', code: 400);
     }
-    final uploads = _uploads();
+
+    Map<String, dynamic>? parent;
+    if (parentId.isNotEmpty) {
+      parent = DemoArtworkStore.workById(parentId);
+      if (parent == null || DemoArtworkData.personOf(parent) != person) {
+        throw const DemoApiException('没有找到要改画的原作品', code: 404);
+      }
+    }
+
+    String teacherId;
+    if (taskId.isNotEmpty) {
+      final task = DemoArtworkStore.taskById(taskId);
+      if (task == null) {
+        throw const DemoApiException('没有找到对应的作业', code: 404);
+      }
+      teacherId = _text(task['teacherId']);
+    } else if (parent != null) {
+      teacherId = _text(parent['teacherId']);
+    } else {
+      teacherId = DemoArtworkData.responsibleTeacherId(
+        DemoArtworkData.classOf(person).id,
+        subject,
+      );
+    }
+
+    final uploads = DemoArtworkStore.uploads();
     final images = <Map<String, dynamic>>[];
     for (final imageId in imageIds) {
       final upload = uploads[imageId];
@@ -123,50 +179,115 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       }
       images.add(<String, dynamic>{'id': imageId, 'ref': upload['ref']});
     }
+
     final id = DemoStore.nextId('aw-');
-    _works().insert(0, <String, dynamic>{
+    final version = parent == null ? 1 : DemoArtworkData.versionOf(parent) + 1;
+    final rootId = parent == null ? id : DemoArtworkData.rootOf(parent);
+    final createTime = DemoArtworkData.fmt(DemoArtworkStore.now());
+    final work = <String, dynamic>{
       'id': id,
+      'rootId': rootId,
+      'version': version,
+      'parentId': parentId,
       'personIndex': person,
       'title': title,
-      'subject': subject,
+      'subject': parent == null ? subject : _text(parent['subject']),
       'drawingDate': drawingDate,
-      'createTime': _now(),
+      'createTime': createTime,
       'description': description,
       'images': images,
-      'teacherIds': DemoArtworkData.teachersForNewWork(subject),
-      'reviews': <Map<String, dynamic>>[],
-    });
+      'taskId': taskId,
+      'teacherId': teacherId,
+      'review': null,
+      'supplements': <Map<String, dynamic>>[],
+      'leadReview': null,
+      'principalComments': <Map<String, dynamic>>[],
+      'featured': false,
+      'featuredTime': '',
+      'featuredBy': '',
+      if (!DemoArtworkData.hasDemoAccount(teacherId))
+        'seedReviewAt': DemoArtworkData.fmt(
+          DemoArtworkStore.now().add(DemoArtworkData.autoDelay),
+        ),
+    };
+    DemoArtworkStore.saveWork(work);
     imageIds.forEach(uploads.remove);
-    DemoStore.save(DemoArtworkData.worksKey);
-    DemoStore.save(DemoArtworkData.uploadsKey);
+    DemoArtworkStore.saveUploads();
+    DemoArtworkStore.notifyTeacherOfSubmit(work);
     return id;
+  });
+
+  marking.get('/app/tasks', (req) {
+    final person = _studentIndex(req);
+    final classId = DemoArtworkData.classOf(person).id;
+    final status = req.str('status').toUpperCase();
+    final now = DemoArtworkStore.now();
+    final mine = DemoArtworkStore.tasks().where((task) {
+      final classes = task['classIds'];
+      if (classes is! List || !classes.map((e) => '$e').contains(classId)) {
+        return false;
+      }
+      final state = _taskStatus(task, person, now);
+      return status.isEmpty || status == 'ALL' || state == status;
+    });
+    return <Map<String, dynamic>>[
+      for (final task in mine) _taskJson(task, person, now),
+    ];
   });
 
   // ── 教职：作品点评 ──────────────────────────────────────────────────
   marking.get('/school/teacher/artworks/statistics', (req) {
-    final teacherId = _teacherId(req);
-    final mine = _assigned(teacherId);
-    final reviewed = mine
-        .where((w) => DemoArtworkData.reviewOf(w, teacherId) != null)
+    final mine = _visibleWorks(req.account);
+    final pending = mine.where((w) => !DemoArtworkData.isReviewed(w)).toList();
+    final overdue = pending
+        .where(
+          (w) => DemoArtworkData.isOverdue(
+            w,
+            DemoArtworkStore.now(),
+            DemoArtworkStore.settings(),
+          ),
+        )
         .length;
+    final reviewed = mine.where(DemoArtworkData.isReviewed).length;
     return <String, dynamic>{
       'total': mine.length,
-      'pending': mine.length - reviewed,
+      'pending': pending.length,
       'reviewed': reviewed,
+      'overdue': overdue,
     };
   });
 
   marking.get('/school/teacher/artworks', (req) {
-    final teacherId = _teacherId(req);
     final status = _statusFilter(req);
+    final subject = req.str('subject');
+    final campus = req.str('campus');
+    final teacherFilter = req.str('teacherId');
     final archiveId = req.str('archiveId');
-    final rows = _assigned(teacherId).where((w) {
-      final mineReviewed = DemoArtworkData.reviewOf(w, teacherId) != null;
-      final statusOk =
-          status == 'ALL' || (status == 'REVIEWED') == mineReviewed;
-      return statusOk &&
-          (archiveId.isEmpty || _personOf(w)?.archiveId == archiveId);
-    }).toList();
+    var rows = _visibleWorks(req.account);
+    if (status != 'ALL') {
+      rows = rows
+          .where((w) => DemoArtworkData.statusOf(w) == status)
+          .toList();
+    }
+    if (subject.isNotEmpty) {
+      rows = rows
+          .where((w) => DemoArtworkData.text(w['subject']) == subject)
+          .toList();
+    }
+    if (teacherFilter.isNotEmpty) {
+      rows = rows
+          .where((w) => DemoArtworkData.text(w['teacherId']) == teacherFilter)
+          .toList();
+    }
+    if (campus.isNotEmpty) {
+      rows = rows.where((w) {
+        final person = _personOf(w);
+        return person?.organizationName.contains(campus) ?? false;
+      }).toList();
+    }
+    if (archiveId.isNotEmpty) {
+      rows = rows.where((w) => _personOf(w)?.archiveId == archiveId).toList();
+    }
     final matched = demoSearch(rows, req.str('keyword'), (w) {
       final person = _personOf(w);
       return <String>[
@@ -174,31 +295,42 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         _text(w['subject']),
         person?.name ?? '',
         person?.organizationName ?? '',
+        DemoArtworkData.teacherName(_text(w['teacherId'])),
       ];
     });
     return demoPage([
-      for (final w in matched) _teacherSummary(w, teacherId),
+      for (final w in matched)
+        DemoArtworkStore.projectSummary(w, req.account),
     ], req);
   });
 
   marking.get('/school/teacher/artworks/{id}', (req) {
-    final teacherId = _teacherId(req);
-    final work = _assignedWork(teacherId, req.param('id'));
-    return _teacherDetail(work, teacherId, req.account);
+    final work = _readableWork(req, req.param('id'));
+    return DemoArtworkStore.projectDetail(work, req.account);
   });
 
   marking.post('/school/teacher/artworks/review', (req) {
-    final teacherId = _teacherId(req);
+    final account = req.account;
+    final teacherId = _requireReviewTeacher(account);
     final body = req.bodyMap;
-    final work = _assignedWork(teacherId, _text(body['artworkId']));
+    final work = DemoArtworkStore.workById(_text(body['artworkId']));
+    if (work == null) {
+      throw const DemoApiException('没有找到这份作品', code: 404);
+    }
+    final access = DemoArtworkData.accessOf(account, work);
+    if (!access.canReview) {
+      throw const DemoApiException('只有责任老师可以保存点评', code: 403);
+    }
+
     final score = _optionalNumber(body['score'], '分数须为数字，最多两位小数');
     final maxScore = _optionalNumber(body['maxScore'], '满分须为大于 0 的数字') ?? 100;
     final content = _text(body['content']);
-    final tagIds = req
-        .listOf('tagIds')
-        .map((e) => e.toString())
-        .toSet()
-        .toList();
+    final requestLead = body['requestLeadReview'] == true;
+    final voiceRef = _text(body['voiceUrl'] ?? body['voiceRef']);
+    final voiceSeconds = (body['voiceSeconds'] as num?)?.toInt() ?? 0;
+    final tagIds = req.listOf('tagIds').map((e) => e.toString()).toSet().toList();
+    final dimensions = _parseDimensions(body['dimensions'], work);
+    final tagResolutions = _parseResolutions(body['tagResolutions']);
 
     if (content.runes.length > 2000) {
       throw const DemoApiException('评语最多 2000 个字', code: 400);
@@ -219,17 +351,10 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       if (score > maxScore) {
         throw const DemoApiException('分数不能超过满分', code: 400);
       }
-      final required = _requiredFullScore(work, teacherId);
-      if (required != null && required != maxScore) {
-        throw DemoApiException(
-          '其他老师已按 ${_scoreText(required)} 分满分评分，满分须保持一致',
-          code: 400,
-        );
-      }
     }
 
-    final myTags = _tags(teacherId);
-    final previous = DemoArtworkData.reviewOf(work, teacherId);
+    final myTags = DemoArtworkStore.tagsOf(teacherId);
+    final previous = DemoArtworkData.reviewOf(work);
     final previousTags = previous == null
         ? const <Map<String, dynamic>>[]
         : DemoArtworkData.tagsOf(previous);
@@ -252,43 +377,137 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         tag['usageCount'] = count > 0 ? count - 1 : 0;
       }
     }
-    DemoStore.save(DemoArtworkData.tagsKey(teacherId));
+    DemoArtworkStore.saveTags(teacherId);
 
-    final review = <String, dynamic>{
+    final workId = _text(work['id']);
+    final hasAnno = DemoArtworkStore.hasAnnotations(workId, teacherId);
+    final reasons = DemoArtworkData.leadReasons(
+      id: workId,
+      requested: requestLead,
+      score: score,
+      maxScore: maxScore,
+      recentFinals: DemoArtworkStore.recentFinalRatios(
+        personIndex: DemoArtworkData.personOf(work),
+        subject: _text(work['subject']),
+        excludeId: workId,
+      ),
+      content: content,
+      hasAnnotations: hasAnno,
+      spotCheckPercent: DemoArtworkStore.settings().spotCheckPercent,
+    );
+    // 组长本人负责的作品不进复核池。
+    final leaderId = DemoArtworkData.leaderIdFor(teacherId);
+    final enterLead = reasons.isNotEmpty && leaderId != null;
+
+    work['review'] = <String, dynamic>{
       'teacherId': teacherId,
       'score': score,
       'maxScore': maxScore,
       'content': content,
-      'reviewedTime': _now(),
+      'reviewedTime': DemoArtworkData.fmt(DemoArtworkStore.now()),
+      'dimensions': dimensions,
       'tags': applied,
+      'voiceRef': voiceRef,
+      'voiceSeconds': voiceSeconds,
+      'requestLeadReview': requestLead,
+      'tagResolutions': tagResolutions,
     };
-    work['reviews'] = <Map<String, dynamic>>[
-      ...DemoArtworkData.reviewsOf(
-        work,
-      ).where((r) => r['teacherId'] != teacherId),
-      review,
-    ];
-    _simulatePeerReviews(work, review);
-    DemoStore.save(DemoArtworkData.worksKey);
+    work.remove('seedReviewAt');
+    if (enterLead) {
+      final auto = !DemoArtworkData.hasDemoAccount(leaderId);
+      final entered = DemoArtworkStore.now();
+      final lead = <String, dynamic>{
+        'reasons': reasons,
+        'enteredTime': DemoArtworkData.fmt(entered),
+        'leaderId': leaderId,
+        'action': null,
+        'score': null,
+        'reason': '',
+        'content': '',
+        'qualityStars': 0,
+        'qualityNote': '',
+        'time': '',
+        if (auto)
+          'seedLeadAt': DemoArtworkData.fmt(
+            entered.add(DemoArtworkData.autoDelay),
+          ),
+      };
+      work['leadReview'] = lead;
+      if (auto &&
+          !entered.add(DemoArtworkData.autoDelay).isAfter(DemoArtworkStore.now())) {
+        DemoArtworkSeed.autoLead(
+          work,
+          lead,
+          at: entered.add(DemoArtworkData.autoDelay),
+          recentFinals: DemoArtworkStore.recentFinalRatios(
+            personIndex: DemoArtworkData.personOf(work),
+            subject: _text(work['subject']),
+            excludeId: workId,
+          ),
+        );
+        lead.remove('seedLeadAt');
+      }
+    } else {
+      work['leadReview'] = null;
+    }
+    DemoArtworkStore.saveWork(work);
+    DemoArtworkStore.notifyStudentOfReview(work);
 
-    final id = _text(work['id']);
     return <String, dynamic>{
-      'artworkId': id,
-      'nextArtworkId': req.boolOf('next') ? _nextPending(teacherId, id) : null,
+      'artworkId': workId,
+      'nextArtworkId': req.boolOf('next')
+          ? _nextPending(account, workId)
+          : null,
+      'leadStatus': DemoArtworkData.leadStatusOf(work),
     };
   });
 
+  marking.post('/school/teacher/artworks/{id}/supplement', (req) {
+    final work = _readableWork(req, req.param('id'));
+    final access = DemoArtworkData.accessOf(req.account, work);
+    if (!access.canSupplement) {
+      throw const DemoApiException('当前身份不能补充点评', code: 403);
+    }
+    if (!DemoArtworkData.isReviewed(work)) {
+      throw const DemoApiException('责任老师点评后才能补充点评', code: 400);
+    }
+    final teacherId = req.account.teacherId ?? '';
+    final content = _text(req.bodyMap['content']);
+    if (content.runes.length < 5) {
+      throw const DemoApiException('补充评语至少 5 个字', code: 400);
+    }
+    final supplements = DemoArtworkData.supplementsOf(work);
+    supplements.add(<String, dynamic>{
+      'teacherId': teacherId,
+      'content': content,
+      'time': DemoArtworkData.fmt(DemoArtworkStore.now()),
+    });
+    work['supplements'] = supplements;
+    DemoArtworkStore.saveWork(work);
+    return true;
+  });
+
   marking.get('/school/teacher/artworks/{id}/annotations', (req) {
-    final teacherId = _teacherId(req);
-    final work = _assignedWork(teacherId, req.param('id'));
+    final work = _readableWork(req, req.param('id'));
+    final teacherId = _text(work['teacherId']);
+    // 组长、校长可读责任老师的批注；责任老师读写自己的。
+    final viewer = req.account.teacherId ?? '';
+    final access = DemoArtworkData.accessOf(req.account, work);
+    final owner = viewer == teacherId || access.leader || access.principal;
+    if (!owner && !access.admin && !access.headTeacher) {
+      throw const DemoApiException('没有权限查看批注', code: 403);
+    }
     return <String, dynamic>{
-      'strokes': _strokesOf(_text(work['id']), teacherId),
+      'strokes': DemoArtworkStore.strokesOf(_text(work['id']), teacherId),
     };
   });
 
   marking.post('/school/teacher/artworks/{id}/annotations', (req) {
-    final teacherId = _teacherId(req);
-    final work = _assignedWork(teacherId, req.param('id'));
+    final teacherId = _requireReviewTeacher(req.account);
+    final work = DemoArtworkStore.workById(req.param('id'));
+    if (work == null || _text(work['teacherId']) != teacherId) {
+      throw const DemoApiException('只有责任老师可以保存批注', code: 403);
+    }
     final imageIndex = req.intOf('imageIndex', -1);
     if (imageIndex < 0 || imageIndex >= DemoArtworkData.imagesOf(work).length) {
       throw const DemoApiException('图片序号无效，请刷新后重试', code: 400);
@@ -299,88 +518,485 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     }
     final strokes = _normalizeStrokes(raw, imageIndex);
     final workId = _text(work['id']);
-    final all = _annotations();
-    final byTeacher = all[workId] is Map
-        ? (all[workId] as Map).map((k, v) => MapEntry(k.toString(), v))
-        : <String, dynamic>{};
-    byTeacher[teacherId] = <Map<String, dynamic>>[
-      ..._strokesOf(
+    final kept = <Map<String, dynamic>>[
+      ...DemoArtworkStore.strokesOf(
         workId,
         teacherId,
       ).where((s) => s['imageIndex'] != imageIndex),
       ...strokes,
     ];
-    all[workId] = byTeacher;
-    DemoStore.save(DemoArtworkData.annotationsKey);
+    DemoArtworkStore.saveAnnotations(workId, teacherId, kept);
     return true;
   });
 
-  // ── 教职：点评标签（老师私有） ──────────────────────────────────────
+  // ── 作业 ────────────────────────────────────────────────────────────
+  marking.get('/school/teacher/tasks', (req) {
+    final account = req.account;
+    final teacherId = account.teacherId ?? '';
+    final all = DemoArtworkStore.tasks().where((task) {
+      if (account.role == DemoRole.principal || account.role == DemoRole.admin) {
+        return true;
+      }
+      return _text(task['teacherId']) == teacherId;
+    });
+    return <Map<String, dynamic>>[
+      for (final task in all) _taskJson(task, null, DemoArtworkStore.now()),
+    ];
+  });
+
+  marking.post('/school/teacher/tasks', (req) {
+    final teacherId = _requireReviewTeacher(req.account);
+    final body = req.bodyMap;
+    final title = _text(body['title']);
+    final subject = _text(body['subject']);
+    final requirement = _text(body['requirement']);
+    final dueTime = _text(body['dueTime']);
+    final classIds = req.listOf('classIds').map((e) => e.toString()).toList();
+    if (title.isEmpty) {
+      throw const DemoApiException('请填写作业标题', code: 400);
+    }
+    if (!DemoArtworkData.subjects.contains(subject)) {
+      throw const DemoApiException('请选择素描、色彩或速写', code: 400);
+    }
+    if (classIds.isEmpty) {
+      throw const DemoApiException('请选择班级', code: 400);
+    }
+    if (DemoArtworkData.parseTime(dueTime) == null) {
+      throw const DemoApiException('请填写截止时间', code: 400);
+    }
+    final id = DemoStore.nextId('tk-');
+    final task = <String, dynamic>{
+      'id': id,
+      'teacherId': teacherId,
+      'classIds': classIds,
+      'subject': subject,
+      'title': title,
+      'requirement': requirement,
+      'dueTime': dueTime,
+      'createTime': DemoArtworkData.fmt(DemoArtworkStore.now()),
+      'referenceWorkId': _text(body['referenceWorkId']),
+    };
+    DemoArtworkStore.saveTask(task);
+    return id;
+  });
+
+  // ── 组长复核 ────────────────────────────────────────────────────────
+  marking.get('/school/leader/reviews/statistics', (req) {
+    final queue = _leadQueue(req.account);
+    final pending = queue
+        .where(
+          (w) =>
+              DemoArtworkData.leadStatusOf(w) == DemoArtworkData.leadInReview,
+        )
+        .length;
+    final overdue = queue
+        .where(
+          (w) => DemoArtworkData.isLeadOverdue(
+            w,
+            DemoArtworkStore.now(),
+            DemoArtworkStore.settings(),
+          ),
+        )
+        .length;
+    final done = queue
+        .where(
+          (w) => DemoArtworkData.leadStatusOf(w) == DemoArtworkData.leadDone,
+        )
+        .length;
+    return <String, dynamic>{
+      'total': queue.length,
+      'pending': pending,
+      'overdue': overdue,
+      'done': done,
+    };
+  });
+
+  marking.get('/school/leader/reviews', (req) {
+    final status = req.str('status', 'PENDING').toUpperCase();
+    final reason = req.str('reason').toUpperCase();
+    final teacherFilter = req.str('teacherId');
+    var rows = _leadQueue(req.account);
+    if (status == 'PENDING' || status == 'IN_REVIEW') {
+      rows = rows
+          .where(
+            (w) =>
+                DemoArtworkData.leadStatusOf(w) == DemoArtworkData.leadInReview,
+          )
+          .toList();
+    } else if (status == 'DONE') {
+      rows = rows
+          .where(
+            (w) => DemoArtworkData.leadStatusOf(w) == DemoArtworkData.leadDone,
+          )
+          .toList();
+    }
+    if (reason.isNotEmpty) {
+      rows = rows.where((w) {
+        final reasons = DemoArtworkData.leadOf(w)?['reasons'];
+        return reasons is List && reasons.map((e) => '$e').contains(reason);
+      }).toList();
+    }
+    if (teacherFilter.isNotEmpty) {
+      rows = rows
+          .where((w) => DemoArtworkData.text(w['teacherId']) == teacherFilter)
+          .toList();
+    }
+    return demoPage([
+      for (final w in rows) ...[
+        <String, dynamic>{
+          ...DemoArtworkStore.projectSummary(w, req.account),
+          'leadReasons': DemoArtworkData.leadOf(w)?['reasons'] ?? const [],
+          'enteredTime': DemoArtworkData.leadOf(w)?['enteredTime'] ?? '',
+        },
+      ],
+    ], req);
+  });
+
+  marking.post('/school/leader/reviews/{artworkId}', (req) {
+    final account = req.account;
+    if (account.groupLeaderSubjects.isEmpty) {
+      throw const DemoApiException('只有教学组长可以提交复核', code: 403);
+    }
+    final work = DemoArtworkStore.workById(req.param('artworkId'));
+    if (work == null) {
+      throw const DemoApiException('没有找到这份作品', code: 404);
+    }
+    final access = DemoArtworkData.accessOf(account, work);
+    if (!access.leader) {
+      throw const DemoApiException('只能复核本组作品', code: 403);
+    }
+    if (DemoArtworkData.leadStatusOf(work) != DemoArtworkData.leadInReview) {
+      throw const DemoApiException('这份作品不在复核池中', code: 400);
+    }
+    final body = req.bodyMap;
+    final action = _text(body['action']).toUpperCase();
+    if (!DemoArtworkData.actions.contains(action)) {
+      throw const DemoApiException('请选择复核结果：维持、调分或补充评语', code: 400);
+    }
+    final stars = (body['qualityStars'] as num?)?.toInt() ?? 0;
+    if (stars < 1 || stars > 5) {
+      throw const DemoApiException('请为这次点评选择 1 至 5 星', code: 400);
+    }
+    final reason = _text(body['reason']);
+    final content = _text(body['content']);
+    final note = _text(body['qualityNote']);
+    double? score;
+    if (action == DemoArtworkData.actionAdjust) {
+      if (reason.runes.length < DemoArtworkData.adjustReasonLength) {
+        throw const DemoApiException('调分理由至少 10 个字', code: 400);
+      }
+      score = _optionalNumber(body['score'], '分数须为数字，最多两位小数');
+      if (score == null) {
+        throw const DemoApiException('请填写调整后的分数', code: 400);
+      }
+      final max = DemoArtworkData.maxScoreOf(work);
+      if (score < 0 || score > max || !_twoDecimals(score)) {
+        throw DemoApiException('分数须在 0 至 $max 之间，最多两位小数', code: 400);
+      }
+    }
+    if (action == DemoArtworkData.actionSupplement && content.runes.length < 5) {
+      throw const DemoApiException('补充评语至少 5 个字', code: 400);
+    }
+    final lead = DemoArtworkData.leadOf(work)!;
+    lead
+      ..['action'] = action
+      ..['score'] = score
+      ..['reason'] = reason
+      ..['content'] = content
+      ..['qualityStars'] = stars
+      ..['qualityNote'] = note
+      ..['time'] = DemoArtworkData.fmt(DemoArtworkStore.now())
+      ..['leaderId'] = account.teacherId;
+    lead.remove('seedLeadAt');
+    work['leadReview'] = lead;
+    DemoArtworkStore.saveWork(work);
+    DemoArtworkStore.notifyLeadResult(work);
+    return true;
+  });
+
+  // ── 校长 ────────────────────────────────────────────────────────────
+  marking.post('/school/principal/artworks/{id}/comment', (req) {
+    _requirePrincipal(req.account);
+    final work = DemoArtworkStore.workById(req.param('id'));
+    if (work == null) {
+      throw const DemoApiException('没有找到这份作品', code: 404);
+    }
+    final content = _text(req.bodyMap['content']);
+    if (content.runes.length < 5) {
+      throw const DemoApiException('校长点评至少 5 个字', code: 400);
+    }
+    final comments = DemoArtworkData.principalCommentsOf(work);
+    comments.add(<String, dynamic>{
+      'id': DemoStore.nextId('pc-'),
+      'userId': req.account.userId,
+      'name': req.account.name,
+      'content': content,
+      'time': DemoArtworkData.fmt(DemoArtworkStore.now()),
+    });
+    work['principalComments'] = comments;
+    DemoArtworkStore.saveWork(work);
+    DemoArtworkStore.notifyPrincipalAction(
+      work,
+      featured: false,
+      commented: true,
+    );
+    return true;
+  });
+
+  marking.post('/school/principal/artworks/{id}/feature', (req) {
+    _requirePrincipal(req.account);
+    final work = DemoArtworkStore.workById(req.param('id'));
+    if (work == null) {
+      throw const DemoApiException('没有找到这份作品', code: 404);
+    }
+    final featured = req.bodyMap['featured'] != false;
+    final was = work['featured'] == true;
+    work['featured'] = featured;
+    work['featuredTime'] = featured
+        ? DemoArtworkData.fmt(DemoArtworkStore.now())
+        : '';
+    work['featuredBy'] = featured ? req.account.name : '';
+    DemoArtworkStore.saveWork(work);
+    if (featured && !was) {
+      DemoArtworkStore.notifyPrincipalAction(
+        work,
+        featured: true,
+        commented: false,
+      );
+    }
+    return true;
+  });
+
+  // ── 点评设置 ────────────────────────────────────────────────────────
+  marking.get('/school/review-settings', (req) {
+    _requireSettingsReader(req.account);
+    final settings = DemoArtworkStore.settings();
+    return <String, dynamic>{
+      ...settings.toMap(),
+      'leaders': <Map<String, dynamic>>[
+        for (final teacher in DemoMarkingData.reviewTeachers)
+          if (teacher.leader)
+            <String, dynamic>{
+              'id': teacher.id,
+              'name': teacher.name,
+              'subject': teacher.subject,
+            },
+      ],
+    };
+  });
+
+  marking.post('/school/review-settings', (req) {
+    if (req.account.role != DemoRole.admin &&
+        req.account.role != DemoRole.principal) {
+      throw const DemoApiException('只有教务或校长可以修改点评设置', code: 403);
+    }
+    final body = req.bodyMap;
+    final percent = (body['spotCheckPercent'] as num?)?.toInt() ??
+        DemoArtworkStore.settings().spotCheckPercent;
+    if (percent < 10 || percent > 50) {
+      throw const DemoApiException('抽查比例须在 10% 至 50% 之间', code: 400);
+    }
+    final reviewHours = (body['reviewHours'] as num?)?.toInt() ??
+        DemoArtworkStore.settings().reviewHours;
+    final leadHours = (body['leadHours'] as num?)?.toInt() ??
+        DemoArtworkStore.settings().leadHours;
+    if (reviewHours < 1 || leadHours < 1) {
+      throw const DemoApiException('时限至少 1 小时', code: 400);
+    }
+    DemoArtworkStore.saveSettings(
+      DemoReviewSettings(
+        spotCheckPercent: percent,
+        reviewHours: reviewHours,
+        leadHours: leadHours,
+      ),
+    );
+    return true;
+  });
+
+  // ── 教职：点评标签 ──────────────────────────────────────────────────
   marking.get('/school/teacher/tags', (req) {
     return <Map<String, dynamic>>[
-      for (final tag in _tags(_teacherId(req))) <String, dynamic>{...tag},
+      for (final tag in DemoArtworkStore.tagsOf(_teacherId(req)))
+        <String, dynamic>{...tag},
     ];
   });
 
   marking.post('/school/teacher/tags', (req) {
     final teacherId = _teacherId(req);
-    final tags = _tags(teacherId);
+    final tags = DemoArtworkStore.tagsOf(teacherId);
     final input = _tagInput(req, tags);
     if (tags.length >= _tagLimit) {
       throw const DemoApiException('最多可以创建 50 个标签', code: 400);
     }
     final id = DemoStore.nextId('tag-');
     tags.add(<String, dynamic>{'id': id, ...input, 'usageCount': 0});
-    DemoStore.save(DemoArtworkData.tagsKey(teacherId));
+    DemoArtworkStore.saveTags(teacherId);
     return id;
   });
 
   marking.post('/school/teacher/tags/update', (req) {
     final teacherId = _teacherId(req);
-    final tags = _tags(teacherId);
+    final tags = DemoArtworkStore.tagsOf(teacherId);
     final id = req.str('id');
     final tag = tags.where((t) => t['id'] == id).firstOrNull;
     if (tag == null) {
       throw const DemoApiException('标签不存在，请刷新后重试', code: 404);
     }
     tag.addAll(_tagInput(req, tags, exceptId: id));
-    DemoStore.save(DemoArtworkData.tagsKey(teacherId));
+    DemoArtworkStore.saveTags(teacherId);
     return true;
   });
 
   marking.post('/school/teacher/tags/delete', (req) {
     final teacherId = _teacherId(req);
-    final tags = _tags(teacherId);
+    final tags = DemoArtworkStore.tagsOf(teacherId);
     final id = req.str('id');
     final before = tags.length;
     tags.removeWhere((t) => t['id'] == id);
     if (tags.length == before) {
       throw const DemoApiException('标签不存在，请刷新后重试', code: 404);
     }
-    DemoStore.save(DemoArtworkData.tagsKey(teacherId));
+    DemoArtworkStore.saveTags(teacherId);
     return true;
   });
 }
 
-// ── 存储 ────────────────────────────────────────────────────────────────
+// ── 查询辅助 ──────────────────────────────────────────────────────────
 
-List<Map<String, dynamic>> _works() =>
-    DemoStore.list(DemoArtworkData.worksKey, DemoArtworkData.seedWorks);
+List<Map<String, dynamic>> _studentLatest(int personIndex) =>
+    DemoArtworkStore.latestVersions(
+      DemoArtworkStore.works().where(
+        (w) => DemoArtworkData.personOf(w) == personIndex,
+      ),
+    );
 
-List<Map<String, dynamic>> _tags(String teacherId) => DemoStore.list(
-  DemoArtworkData.tagsKey(teacherId),
-  () => DemoArtworkData.seedTags(teacherId),
-);
+List<Map<String, dynamic>> _visibleWorks(DemoAccount account) {
+  final role = account.role;
+  final all = DemoArtworkStore.works();
+  if (role == DemoRole.principal || role == DemoRole.admin) {
+    return all;
+  }
+  final teacherId = account.teacherId ?? '';
+  if (role == DemoRole.headTeacher) {
+    final classId = DemoCampusData.classes
+        .where((c) => c.headTeacherId == teacherId)
+        .map((c) => c.id)
+        .toSet();
+    return all
+        .where((w) => classId.contains(DemoArtworkData.classOf(
+              DemoArtworkData.personOf(w),
+            ).id))
+        .toList();
+  }
+  if (role.teaches) {
+    // 责任老师看自己的；组长额外能在详情里看本组，列表仍以自己负责为主，
+    // 校长/管理员看全部。补充点评入口走详情。
+    return all
+        .where((w) => DemoArtworkData.text(w['teacherId']) == teacherId)
+        .toList();
+  }
+  return const <Map<String, dynamic>>[];
+}
 
-Map<String, dynamic> _annotations() => DemoStore.map(
-  DemoArtworkData.annotationsKey,
-  DemoArtworkData.seedAnnotations,
-);
+List<Map<String, dynamic>> _leadQueue(DemoAccount account) {
+  if (account.groupLeaderSubjects.isEmpty) {
+    throw const DemoApiException('只有教学组长可以查看复核池', code: 403);
+  }
+  final subjects = account.groupLeaderSubjects.toSet();
+  return DemoArtworkStore.works().where((w) {
+    final lead = DemoArtworkData.leadOf(w);
+    if (lead == null) {
+      return false;
+    }
+    final teacher = DemoArtworkData.teacherOf(_text(w['teacherId']));
+    return teacher != null && subjects.contains(teacher.subject);
+  }).toList()
+    ..sort(
+      (a, b) => DemoArtworkData.text(
+        DemoArtworkData.leadOf(b)?['enteredTime'],
+      ).compareTo(
+        DemoArtworkData.text(DemoArtworkData.leadOf(a)?['enteredTime']),
+      ),
+    );
+}
 
-Map<String, dynamic> _uploads() =>
-    DemoStore.map(DemoArtworkData.uploadsKey, () => <String, dynamic>{});
+Map<String, dynamic> _readableWork(
+  DemoRequest req,
+  String id, {
+  int? studentPerson,
+}) {
+  final work = DemoArtworkStore.workById(id);
+  if (work == null) {
+    throw const DemoApiException('没有找到这份作品，请返回列表刷新', code: 404);
+  }
+  if (studentPerson != null) {
+    if (DemoArtworkData.personOf(work) != studentPerson) {
+      throw const DemoApiException('没有找到这份作品，请返回列表刷新', code: 404);
+    }
+    return work;
+  }
+  final access = DemoArtworkData.accessOf(req.account, work);
+  if (!access.canRead && !access.artTeacher) {
+    // 非责任美术老师也可读详情以便补充点评。
+    throw const DemoApiException('没有权限查看这份作品', code: 403);
+  }
+  if (!access.canRead && access.artTeacher) {
+    return work;
+  }
+  if (!access.canRead) {
+    throw const DemoApiException('没有权限查看这份作品', code: 403);
+  }
+  return work;
+}
 
-// ── 身份 ────────────────────────────────────────────────────────────────
+String? _nextPending(DemoAccount account, String currentId) {
+  final all = _visibleWorks(account)
+      .where((w) => !DemoArtworkData.isReviewed(w))
+      .toList();
+  final position = all.indexWhere((w) => w['id'] == currentId);
+  final ordered = [
+    ...all.skip(position + 1),
+    ...all.take(position < 0 ? 0 : position),
+  ];
+  return ordered
+      .where((w) => _text(w['id']) != currentId)
+      .map((w) => _text(w['id']))
+      .firstOrNull;
+}
+
+String _taskStatus(Map<String, dynamic> task, int person, DateTime now) {
+  final submitted = DemoArtworkStore.works().where(
+    (w) =>
+        DemoArtworkData.personOf(w) == person &&
+        DemoArtworkData.text(w['taskId']) == _text(task['id']),
+  );
+  if (submitted.isEmpty) {
+    final due = DemoArtworkData.parseTime(task['dueTime']);
+    if (due != null && due.isBefore(now)) {
+      return 'OVERDUE';
+    }
+    return 'PENDING';
+  }
+  if (submitted.any(DemoArtworkData.isReviewed)) {
+    return 'REVIEWED';
+  }
+  return 'SUBMITTED';
+}
+
+Map<String, dynamic> _taskJson(
+  Map<String, dynamic> task,
+  int? person,
+  DateTime now,
+) {
+  final status = person == null ? '' : _taskStatus(task, person, now);
+  return <String, dynamic>{
+    ...task,
+    'teacherName': DemoArtworkData.teacherName(_text(task['teacherId'])),
+    if (person != null) 'status': status,
+  };
+}
+
+// ── 身份 ──────────────────────────────────────────────────────────────
 
 int _studentIndex(DemoRequest req) {
   final index = req.account.personIndex;
@@ -390,7 +1006,6 @@ int _studentIndex(DemoRequest req) {
   return index;
 }
 
-/// 没有阅卷老师身份的教职账号（如宿管）用账号 id 兜底：没有指派作品，标签单独保存。
 String _teacherId(DemoRequest req) {
   final account = req.account;
   if (!account.role.isStaff) {
@@ -399,24 +1014,36 @@ String _teacherId(DemoRequest req) {
   return account.teacherId ?? 'u-${account.userId}';
 }
 
-String _teacherNameOf(String teacherId, [DemoAccount? viewer]) {
-  if (viewer != null &&
-      viewer.teacherId == teacherId &&
-      !DemoArtworkData.isReviewTeacher(teacherId)) {
-    return viewer.name;
+String _requireReviewTeacher(DemoAccount account) {
+  final teacherId = account.teacherId ?? '';
+  if (!account.role.teaches || teacherId.isEmpty) {
+    throw const DemoApiException('仅任课老师可以操作', code: 403);
   }
-  return DemoArtworkData.teacherName(teacherId);
+  return teacherId;
 }
 
-// ── 查询 ────────────────────────────────────────────────────────────────
-
-String _text(Object? value) {
-  final text = value?.toString().trim() ?? '';
-  return text == 'null' ? '' : text;
+void _requirePrincipal(DemoAccount account) {
+  if (account.role != DemoRole.principal) {
+    throw const DemoApiException('只有校长可以执行此操作', code: 403);
+  }
 }
 
-bool _isReviewed(Map<String, dynamic> work) =>
-    DemoArtworkData.aggregate(work).status == DemoArtworkData.statusReviewed;
+void _requireSettingsReader(DemoAccount account) {
+  if (!account.role.isStaff) {
+    throw const DemoApiException('没有权限查看点评设置', code: 403);
+  }
+}
+
+DemoPerson? _personOf(Map<String, dynamic> work) {
+  final index = DemoArtworkData.personOf(work);
+  return DemoMarkingData.instance.persons
+      .where((p) => p.index == index)
+      .firstOrNull;
+}
+
+// ── 校验工具 ──────────────────────────────────────────────────────────
+
+String _text(Object? value) => DemoArtworkData.text(value);
 
 String _statusFilter(DemoRequest req) {
   final status = req.str('status', 'ALL').toUpperCase();
@@ -426,212 +1053,64 @@ String _statusFilter(DemoRequest req) {
   return status;
 }
 
-int _newestDrawn(Map<String, dynamic> a, Map<String, dynamic> b) {
-  final byDate = _text(b['drawingDate']).compareTo(_text(a['drawingDate']));
-  return byDate != 0 ? byDate : _newestSubmitted(a, b);
-}
-
-int _newestSubmitted(Map<String, dynamic> a, Map<String, dynamic> b) {
-  final byTime = _text(b['createTime']).compareTo(_text(a['createTime']));
-  return byTime != 0 ? byTime : _text(b['id']).compareTo(_text(a['id']));
-}
-
-List<Map<String, dynamic>> _worksOf(int personIndex) =>
-    _works().where((w) => w['personIndex'] == personIndex).toList()
-      ..sort(_newestDrawn);
-
-List<Map<String, dynamic>> _assigned(String teacherId) =>
-    _works()
-        .where((w) => DemoArtworkData.teacherIdsOf(w).contains(teacherId))
-        .toList()
-      ..sort(_newestSubmitted);
-
-Map<String, dynamic> _assignedWork(String teacherId, String id) {
-  final work = _assigned(teacherId).where((w) => w['id'] == id).firstOrNull;
-  if (work == null) {
-    throw const DemoApiException('作品不存在或未分配给你，请返回列表刷新', code: 404);
+bool _isPastOrToday(String drawingDate) {
+  final day = DateTime.tryParse(drawingDate);
+  if (day == null) {
+    return false;
   }
-  return work;
+  final today = DemoArtworkData.dateOnly(DemoArtworkStore.now());
+  return !DemoArtworkData.dateOnly(day).isAfter(today);
 }
 
-DemoPerson? _personOf(Map<String, dynamic> work) {
-  final index = (work['personIndex'] as num?)?.toInt();
-  return DemoMarkingData.instance.persons
-      .where((p) => p.index == index)
-      .firstOrNull;
+bool _twoDecimals(double value) =>
+    ((value * 100) - (value * 100).roundToDouble()).abs() < 1e-6;
+
+double? _optionalNumber(Object? raw, String error) {
+  if (raw == null || '$raw'.trim().isEmpty) {
+    return null;
+  }
+  final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
+  if (value == null || !value.isFinite) {
+    throw DemoApiException(error, code: 400);
+  }
+  return DemoArtworkData.round2(value);
 }
 
-/// 已点评后保存会让当前作品离开队列，按列表顺序取它之后的下一份，没有再从头找。
-String? _nextPending(String teacherId, String currentId) {
-  final all = _assigned(teacherId);
-  bool pending(Map<String, dynamic> w) =>
-      w['id'] != currentId && DemoArtworkData.reviewOf(w, teacherId) == null;
-  final position = all.indexWhere((w) => w['id'] == currentId);
-  final ordered = [
-    ...all.skip(position + 1),
-    ...all.take(position < 0 ? 0 : position),
-  ];
-  return ordered.where(pending).map((w) => _text(w['id'])).firstOrNull;
-}
-
-double? _requiredFullScore(Map<String, dynamic> work, String teacherId) {
-  final teacherIds = DemoArtworkData.teacherIdsOf(work);
-  for (final review in DemoArtworkData.reviewsOf(work)) {
-    final id = _text(review['teacherId']);
-    if (id != teacherId && teacherIds.contains(id) && review['score'] is num) {
-      return ((review['maxScore'] as num?) ?? 100).toDouble();
+Map<String, int> _parseDimensions(Object? raw, Map<String, dynamic> work) {
+  final defs = DemoArtworkData.dimensionsOf(_text(work['subject']));
+  if (raw == null) {
+    return <String, int>{};
+  }
+  if (raw is! Map) {
+    throw const DemoApiException('分项格式无效', code: 400);
+  }
+  final result = <String, int>{};
+  for (final def in defs) {
+    final value = raw[def.key];
+    if (value == null) {
+      continue;
     }
+    final level = value is num ? value.toInt() : int.tryParse('$value');
+    if (level == null || level < 1 || level > 5) {
+      throw DemoApiException('${def.name}须为 1 至 5 级', code: 400);
+    }
+    result[def.key] = level;
   }
-  return null;
+  return result;
 }
 
-// ── 视图 ────────────────────────────────────────────────────────────────
-
-List<Map<String, dynamic>> _imagesOf(Map<String, dynamic> work) =>
-    <Map<String, dynamic>>[
-      for (final image in DemoArtworkData.imagesOf(work))
+List<Map<String, dynamic>> _parseResolutions(Object? raw) {
+  if (raw is! List) {
+    return const <Map<String, dynamic>>[];
+  }
+  return <Map<String, dynamic>>[
+    for (final item in raw)
+      if (item is Map)
         <String, dynamic>{
-          'id': _text(image['id']),
-          'url': DemoMedia.url(_text(image['ref'])),
+          'tag': _text(item['tag']),
+          'resolved': item['resolved'] == true,
         },
-    ];
-
-Map<String, dynamic> _studentSummary(Map<String, dynamic> work) {
-  final summary = DemoArtworkData.aggregate(work);
-  final images = _imagesOf(work);
-  return <String, dynamic>{
-    'id': _text(work['id']),
-    'title': _text(work['title']),
-    'subject': _text(work['subject']),
-    'drawingDate': _text(work['drawingDate']),
-    'createTime': _text(work['createTime']),
-    'description': _text(work['description']),
-    'status': summary.status,
-    'imageCount': images.length,
-    'teacherCount': summary.teacherCount,
-    'reviewedCount': summary.reviewedCount,
-    'coverUrl': images.isEmpty ? '' : images.first['url'],
-    'finalScore': summary.finalScore,
-    'maxScore': summary.maxScore,
-  };
-}
-
-/// 学生端：全部老师点评完成前只展示每位老师是否已点评，不透出分数与评语。
-Map<String, dynamic> _studentReview(
-  Map<String, dynamic> work,
-  String teacherId, {
-  required bool visible,
-}) {
-  final review = DemoArtworkData.reviewOf(work, teacherId);
-  final shown = visible ? review : null;
-  return <String, dynamic>{
-    'teacherId': teacherId,
-    'teacherName': _teacherNameOf(teacherId),
-    'reviewed': review != null,
-    'score': shown?['score'],
-    'maxScore': review?['maxScore'] ?? 100,
-    'content': shown == null ? '' : _text(shown['content']),
-    'reviewedTime': shown?['reviewedTime'],
-    'tags': <Map<String, dynamic>>[
-      if (shown != null)
-        for (final tag in DemoArtworkData.tagsOf(shown))
-          <String, dynamic>{
-            'name': tag['name'],
-            'explanation': tag['explanation'] ?? '',
-            'color': tag['color'],
-          },
-    ],
-    'annotations': shown == null
-        ? const <Map<String, dynamic>>[]
-        : _strokesOf(_text(work['id']), teacherId),
-  };
-}
-
-Map<String, dynamic> _teacherSummary(
-  Map<String, dynamic> work,
-  String teacherId,
-) {
-  final summary = DemoArtworkData.aggregate(work);
-  final person = _personOf(work);
-  final images = _imagesOf(work);
-  return <String, dynamic>{
-    'id': _text(work['id']),
-    'archiveId': person?.archiveId ?? '',
-    'studentNo': person?.studentNo ?? '',
-    'studentName': person?.name ?? '学生',
-    'organizationName': person?.organizationName ?? '',
-    'avatarUrl': DemoMedia.url(person?.avatarRef ?? ''),
-    'title': _text(work['title']),
-    'subject': _text(work['subject']),
-    'drawingDate': _text(work['drawingDate']),
-    'createTime': _text(work['createTime']),
-    'status': summary.status,
-    'coverUrl': images.isEmpty ? '' : images.first['url'],
-    'imageCount': images.length,
-    'myReviewed': DemoArtworkData.reviewOf(work, teacherId) != null,
-    'finalScore': summary.finalScore,
-    'maxScore': summary.maxScore,
-  };
-}
-
-/// 教师端：保存自己的点评前，其他老师的分数、评语与标签不可见（避免相互影响）。
-Map<String, dynamic> _teacherDetail(
-  Map<String, dynamic> work,
-  String teacherId,
-  DemoAccount viewer,
-) {
-  final teacherIds = DemoArtworkData.teacherIdsOf(work);
-  final myReviewed = DemoArtworkData.reviewOf(work, teacherId) != null;
-  return <String, dynamic>{
-    'work': <String, dynamic>{
-      ..._teacherSummary(work, teacherId),
-      'description': _text(work['description']),
-      'requiredFullScore': _requiredFullScore(work, teacherId),
-      'teachers': <Map<String, dynamic>>[
-        for (final id in teacherIds)
-          <String, dynamic>{
-            'teacherId': id,
-            'teacherName': _teacherNameOf(id, viewer),
-            'reviewed': DemoArtworkData.reviewOf(work, id) != null,
-          },
-      ],
-    },
-    'images': _imagesOf(work),
-    'reviews': <Map<String, dynamic>>[
-      for (final id in teacherIds)
-        _teacherReview(
-          work,
-          id,
-          viewer: viewer,
-          mine: id == teacherId,
-          revealed: id == teacherId || myReviewed,
-        ),
-    ],
-  };
-}
-
-Map<String, dynamic> _teacherReview(
-  Map<String, dynamic> work,
-  String teacherId, {
-  required DemoAccount viewer,
-  required bool mine,
-  required bool revealed,
-}) {
-  final review = DemoArtworkData.reviewOf(work, teacherId);
-  final shown = revealed ? review : null;
-  return <String, dynamic>{
-    'teacherId': teacherId,
-    'teacherName': _teacherNameOf(teacherId, viewer),
-    'mine': mine,
-    'reviewed': review != null,
-    'score': shown?['score'],
-    'maxScore': review?['maxScore'] ?? 100,
-    'content': shown == null ? null : _text(shown['content']),
-    'reviewedTime': shown?['reviewedTime'],
-    'tags': shown == null
-        ? const <Map<String, dynamic>>[]
-        : DemoArtworkData.tagsOf(shown).map(_tagSnapshot).toList(),
-  };
+  ];
 }
 
 Map<String, dynamic> _tagSnapshot(Map<String, dynamic> tag) =>
@@ -639,208 +1118,98 @@ Map<String, dynamic> _tagSnapshot(Map<String, dynamic> tag) =>
       'id': tag['id'],
       'name': tag['name'],
       'explanation': tag['explanation'] ?? '',
-      'color': tag['color'],
+      'color': tag['color'] ?? DemoArtworkData.problemColor,
+      'dimension': tag['dimension'] ?? '',
     };
-
-List<Map<String, dynamic>> _strokesOf(String workId, String teacherId) {
-  final byTeacher = _annotations()[workId];
-  if (byTeacher is! Map) {
-    return const <Map<String, dynamic>>[];
-  }
-  return DemoArtworkData.mapsOf(byTeacher[teacherId]);
-}
-
-// ── 校验 ────────────────────────────────────────────────────────────────
-
-final _hexColor = RegExp(r'^#[0-9A-Fa-f]{6}$');
-
-bool _twoDecimals(double value) =>
-    ((value * 100) - (value * 100).roundToDouble()).abs() < 1e-6;
-
-String _scoreText(double value) => value == value.roundToDouble()
-    ? value.toStringAsFixed(0)
-    : DemoArtworkData.round2(value).toString();
-
-double? _optionalNumber(Object? raw, String message) {
-  if (raw == null || (raw is String && raw.trim().isEmpty)) {
-    return null;
-  }
-  final value = raw is num
-      ? raw.toDouble()
-      : double.tryParse(raw.toString().trim());
-  if (value == null || !value.isFinite) {
-    throw DemoApiException(message, code: 400);
-  }
-  return value;
-}
-
-bool _isPastOrToday(String text) {
-  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(text);
-  if (match == null) {
-    return false;
-  }
-  final parts = [for (var i = 1; i <= 3; i++) int.parse(match.group(i)!)];
-  final date = DateTime(parts[0], parts[1], parts[2]);
-  if (date.year != parts[0] || date.month != parts[1] || date.day != parts[2]) {
-    return false;
-  }
-  final now = DateTime.now();
-  return !date.isAfter(DateTime(now.year, now.month, now.day));
-}
-
-bool _isSupportedImage(Uint8List b) {
-  bool startsWith(List<int> sig, [int offset = 0]) {
-    if (b.length < offset + sig.length) {
-      return false;
-    }
-    for (var i = 0; i < sig.length; i++) {
-      if (b[offset + i] != sig[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  return startsWith(const [0xFF, 0xD8, 0xFF]) ||
-      startsWith(const [0x89, 0x50, 0x4E, 0x47]) ||
-      startsWith(const [0x47, 0x49, 0x46, 0x38]) ||
-      (startsWith(const [0x52, 0x49, 0x46, 0x46]) &&
-          startsWith(const [0x57, 0x45, 0x42, 0x50], 8));
-}
 
 Map<String, dynamic> _tagInput(
   DemoRequest req,
-  List<Map<String, dynamic>> tags, {
-  String? exceptId,
+  List<Map<String, dynamic>> existing, {
+  String exceptId = '',
 }) {
-  final name = req.str('name');
-  final explanation = _text(req.bodyMap['explanation']);
-  final color = req.str('color').toUpperCase();
+  final name = req.str('name').trim();
+  final explanation = req.str('explanation');
+  final color = req.str('color', DemoArtworkData.problemColor);
+  final dimension = req.str('dimension');
   if (name.isEmpty || name.runes.length > 50) {
     throw const DemoApiException('请填写 1 至 50 个字的标签名称', code: 400);
   }
   if (explanation.runes.length > 500) {
     throw const DemoApiException('标签解释最多 500 个字', code: 400);
   }
-  if (!_hexColor.hasMatch(color)) {
+  if (!RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(color)) {
     throw const DemoApiException('请选择标签颜色', code: 400);
   }
-  final duplicated = tags.any(
+  final lower = name.toLowerCase();
+  if (existing.any(
     (t) =>
         t['id'] != exceptId &&
-        _text(t['name']).toLowerCase() == name.toLowerCase(),
-  );
-  if (duplicated) {
-    throw const DemoApiException('已有同名标签，请换一个名称', code: 409);
+        _text(t['name']).toLowerCase() == lower,
+  )) {
+    throw const DemoApiException('已有同名标签，请换一个名称', code: 400);
   }
   return <String, dynamic>{
     'name': name,
     'explanation': explanation,
     'color': color,
+    'dimension': dimension,
   };
 }
 
-List<Map<String, dynamic>> _normalizeStrokes(
-  List<dynamic> raw,
-  int imageIndex,
-) {
-  double unit(num v) => (v.toDouble().clamp(0.0, 1.0) * 10000).round() / 10000;
+List<Map<String, dynamic>> _normalizeStrokes(List<dynamic> raw, int imageIndex) {
   final strokes = <Map<String, dynamic>>[];
   for (final item in raw) {
     if (item is! Map) {
       continue;
     }
-    final points = <List<double>>[];
-    final rawPoints = item['points'];
-    if (rawPoints is List) {
-      for (final p in rawPoints.take(_pointsPerStroke)) {
-        if (p is List && p.length >= 2 && p[0] is num && p[1] is num) {
-          points.add(<double>[unit(p[0] as num), unit(p[1] as num)]);
-        }
-      }
+    final points = item['points'];
+    if (points is! List || points.isEmpty || points.length > _pointsPerStroke) {
+      throw const DemoApiException('批注笔迹点数无效', code: 400);
     }
-    if (points.isEmpty) {
+    final normalized = <List<double>>[];
+    for (final p in points) {
+      if (p is! List || p.length < 2) {
+        continue;
+      }
+      final x = p[0] is num ? (p[0] as num).toDouble() : double.tryParse('${p[0]}');
+      final y = p[1] is num ? (p[1] as num).toDouble() : double.tryParse('${p[1]}');
+      if (x == null || y == null) {
+        continue;
+      }
+      normalized.add(<double>[
+        (x * 10000).round() / 10000,
+        (y * 10000).round() / 10000,
+      ]);
+    }
+    if (normalized.isEmpty) {
       continue;
     }
-    final color = _text(item['color']).toUpperCase();
-    final width = item['width'] is num
-        ? (item['width'] as num).toDouble()
-        : 4.0;
     strokes.add(<String, dynamic>{
-      'color': _hexColor.hasMatch(color) ? color : '#E5323B',
-      'width': width.clamp(1.0, 24.0),
+      'color': _text(item['color']).isEmpty ? '#E5323B' : _text(item['color']),
+      'width': (item['width'] as num?)?.toDouble() ?? 4,
       'imageIndex': imageIndex,
-      'points': points,
+      'points': normalized,
     });
   }
   return strokes;
 }
 
-String _now() {
-  final now = DateTime.now();
-  String two(int v) => v.toString().padLeft(2, '0');
-  return '${now.year}-${two(now.month)}-${two(now.day)} '
-      '${two(now.hour)}:${two(now.minute)}:${two(now.second)}';
-}
-
-// ── 演示：模拟其他老师 ──────────────────────────────────────────────────
-
-const _peerTagPreference = <String, List<String>>{
-  '素描': ['明暗层次弱', '暗部偏闷', '结构错误'],
-  '色彩': ['环境色不足', '色调不统一'],
-  '速写': ['线条生硬', '动态僵硬'],
-};
-
-/// 没有体验账号的指派老师（张明远、刘芳）在有老师保存点评后自动补上点评，
-/// 让学生端能看到完整的多师点评；有体验账号的老师（李静、赵雪）需要登录点评。
-void _simulatePeerReviews(
-  Map<String, dynamic> work,
-  Map<String, dynamic> trigger,
-) {
-  final loginTeachers = <String>{
-    for (final account in DemoAccounts.all) ?account.teacherId,
-  };
-  final reviews = DemoArtworkData.reviewsOf(work);
-  final subject = _text(work['subject']);
-  final personIndex = (work['personIndex'] as num?)?.toInt() ?? 1;
-  final added = <Map<String, dynamic>>[];
-  for (final peerId in DemoArtworkData.teacherIdsOf(work)) {
-    if (loginTeachers.contains(peerId) ||
-        reviews.any((r) => r['teacherId'] == peerId)) {
-      continue;
+bool _isSupportedImage(Uint8List b) {
+  bool at(int offset, List<int> signature) {
+    if (b.length < offset + signature.length) {
+      return false;
     }
-    final maxScore = ((trigger['maxScore'] as num?) ?? 100).toDouble();
-    final base = trigger['score'] is num
-        ? (trigger['score'] as num).toDouble()
-        : null;
-    final offset = (_text(work['id']).hashCode + peerId.hashCode) % 5 - 2;
-    final score = base == null
-        ? null
-        : DemoArtworkData.round2((base + offset).clamp(0, maxScore).toDouble());
-    final peerTags = _tags(peerId);
-    final preferred = _peerTagPreference[subject] ?? const <String>[];
-    final tag = preferred
-        .map((name) => peerTags.where((t) => t['name'] == name).firstOrNull)
-        .nonNulls
-        .firstOrNull;
-    if (tag != null) {
-      tag['usageCount'] = ((tag['usageCount'] as num?)?.toInt() ?? 0) + 1;
-      DemoStore.save(DemoArtworkData.tagsKey(peerId));
+    for (var i = 0; i < signature.length; i++) {
+      if (b[offset + i] != signature[i]) {
+        return false;
+      }
     }
-    added.add(<String, dynamic>{
-      'teacherId': peerId,
-      'score': score,
-      'maxScore': maxScore,
-      'content': DemoMarkingData.commentFor(
-        subject,
-        personIndex,
-        added.length + 1,
-      ),
-      'reviewedTime': _now(),
-      'tags': <Map<String, dynamic>>[if (tag != null) _tagSnapshot(tag)],
-    });
+    return true;
   }
-  if (added.isNotEmpty) {
-    work['reviews'] = <Map<String, dynamic>>[...reviews, ...added];
-  }
+
+  return at(0, const [0xFF, 0xD8, 0xFF]) ||
+      at(0, const [0x89, 0x50, 0x4E, 0x47]) ||
+      at(0, const [0x47, 0x49, 0x46, 0x38]) ||
+      (at(0, const [0x52, 0x49, 0x46, 0x46]) &&
+          at(8, const [0x57, 0x45, 0x42, 0x50]));
 }

@@ -9,6 +9,7 @@ import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/artwork_review_controller.dart';
 import '../state/artwork_tags_controller.dart';
+import '../state/principal_artwork_actions_controller.dart';
 import 'artwork_tag_manager_dialog.dart';
 import 'widgets/artwork_annotation.dart';
 import 'widgets/artwork_widgets.dart';
@@ -44,6 +45,8 @@ class _ArtworkReviewWorkspaceState
   final _comment = TextEditingController();
   final _transform = TransformationController();
   final _tagIds = <String>[];
+  final _dimensions = <String, int>{};
+  bool _requestLeadReview = false;
   bool _formReady = false;
   String _savedForm = '';
   int _imageIndex = 0;
@@ -51,6 +54,7 @@ class _ArtworkReviewWorkspaceState
   String _penColor = kAnnotationPenColors.first;
   double _penWidth = kAnnotationPenWidths[1];
   bool _savingNext = false;
+  final _principalComment = TextEditingController();
 
   AutoDisposeStateNotifierProvider<ArtworkReviewController, ArtworkReviewState>
   get _provider => artworkReviewControllerProvider(widget.artworkId);
@@ -60,6 +64,7 @@ class _ArtworkReviewWorkspaceState
     _score.dispose();
     _maxScore.dispose();
     _comment.dispose();
+    _principalComment.dispose();
     _transform.dispose();
     super.dispose();
   }
@@ -68,7 +73,9 @@ class _ArtworkReviewWorkspaceState
     _score.text.trim(),
     _maxScore.text.trim(),
     _comment.text.trim(),
+    '$_requestLeadReview',
     ..._tagIds,
+    ..._dimensions.entries.map((e) => '${e.key}:${e.value}'),
   ].join('\u0001');
 
   bool get _formDirty => _formReady && _formSignature() != _savedForm;
@@ -78,6 +85,10 @@ class _ArtworkReviewWorkspaceState
     final saved = mine != null && mine.reviewed ? mine : null;
     final score = saved?.score;
     _score.text = score == null ? '' : ArtworkRules.formatScore(score);
+    _dimensions
+      ..clear()
+      ..addAll(saved?.dimensions ?? const <String, int>{});
+    _requestLeadReview = saved?.requestLeadReview ?? false;
     _maxScore.text = ArtworkRules.formatScore(
       detail.requiredFullScore ??
           saved?.maxScore ??
@@ -173,6 +184,8 @@ class _ArtworkReviewWorkspaceState
           content: _comment.text.trim(),
           tagIds: List<String>.of(_tagIds),
           next: next,
+          dimensions: Map<String, int>.of(_dimensions),
+          requestLeadReview: _requestLeadReview,
         );
     if (!mounted || result == null) {
       return;
@@ -602,13 +615,93 @@ class _ArtworkReviewWorkspaceState
               maxLines: 8,
               maxLength: ArtworkRules.commentLimit,
             ),
+            if (detail.dimensions.isNotEmpty) ...[
+              const SizedBox(height: AppSpace.s16),
+              AppSectionHeader(title: '分项评价', titleStyle: AppText.title16),
+              const SizedBox(height: AppSpace.s8),
+              for (final def in detail.dimensions)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpace.s8),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 72, child: Text(def.name, style: AppText.body13)),
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          children: [
+                            for (var level = 1; level <= 5; level++)
+                              AppChip(
+                                label: '$level',
+                                selected: _dimensions[def.key] == level,
+                                onTap: () => setState(() {
+                                  if (_dimensions[def.key] == level) {
+                                    _dimensions.remove(def.key);
+                                  } else {
+                                    _dimensions[def.key] = level;
+                                  }
+                                }),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            const SizedBox(height: AppSpace.s12),
+            AppPressable(
+              onTap: () =>
+                  setState(() => _requestLeadReview = !_requestLeadReview),
+              child: Row(
+                children: [
+                  Icon(
+                    _requestLeadReview
+                        ? Icons.check_box_rounded
+                        : Icons.check_box_outline_blank_rounded,
+                    color: AppColors.brand,
+                    size: 22,
+                  ),
+                  const SizedBox(width: AppSpace.s8),
+                  Expanded(
+                    child: Text('请组长复核', style: AppText.body14),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
+      if (detail.canComment || detail.canFeature) ...[
+        const SizedBox(height: AppSpace.s12),
+        AppCard(
+          title: '校长点评与推优',
+          child: _PrincipalActions(
+            detail: detail,
+            artworkId: widget.artworkId,
+            commentController: _principalComment,
+          ),
+        ),
+      ],
+      if (detail.timeline.isNotEmpty) ...[
+        const SizedBox(height: AppSpace.s12),
+        AppCard(
+          title: '时间线',
+          child: Column(
+            children: [
+              for (final event in detail.timeline)
+                AppListRow(
+                  title: '${event.name} · ${event.type}',
+                  subtitle: event.content,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                ),
+            ],
+          ),
+        ),
+      ],
       if (detail.otherReviews.isNotEmpty) ...[
         const SizedBox(height: AppSpace.s12),
         AppCard(
-          title: '其他老师的点评',
+          title: '补充点评',
           child: _OtherReviews(detail: detail),
         ),
       ],
@@ -917,6 +1010,82 @@ class _PendingTeacherRow extends StatelessWidget {
         horizontal: AppSpace.s4,
         vertical: AppSpace.s8,
       ),
+    );
+  }
+}
+
+class _PrincipalActions extends ConsumerWidget {
+  const _PrincipalActions({
+    required this.detail,
+    required this.artworkId,
+    required this.commentController,
+  });
+
+  final ArtworkDetail detail;
+  final String artworkId;
+  final TextEditingController commentController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final actions = ref.watch(principalArtworkActionsProvider(artworkId));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (detail.canComment) ...[
+          AppInputField(
+            controller: commentController,
+            hint: '写下校长点评',
+            multiline: true,
+            minLines: 2,
+            maxLines: 4,
+          ),
+          const SizedBox(height: AppSpace.s8),
+          AppButton(
+            label: '提交校长点评',
+            size: AppButtonSize.sm,
+            onTap: () async {
+              final error = await actions.comment(commentController.text);
+              if (!context.mounted) {
+                return;
+              }
+              if (error != null) {
+                AppToast.showError(context, error);
+              } else {
+                AppToast.showSuccess(context, '校长点评已提交');
+                commentController.clear();
+                await ref
+                    .read(artworkReviewControllerProvider(artworkId).notifier)
+                    .load();
+              }
+            },
+          ),
+        ],
+        if (detail.canFeature) ...[
+          const SizedBox(height: AppSpace.s12),
+          AppButton(
+            label: detail.work.featured ? '取消推优' : '推优到优秀作品墙',
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: () async {
+              final error = await actions.setFeatured(!detail.work.featured);
+              if (!context.mounted) {
+                return;
+              }
+              if (error != null) {
+                AppToast.showError(context, error);
+              } else {
+                AppToast.showSuccess(
+                  context,
+                  detail.work.featured ? '已取消推优' : '已推优',
+                );
+                await ref
+                    .read(artworkReviewControllerProvider(artworkId).notifier)
+                    .load();
+              }
+            },
+          ),
+        ],
+      ],
     );
   }
 }

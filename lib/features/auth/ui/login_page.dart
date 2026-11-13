@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/demo/data/demo_artwork_store.dart';
 import '../../../core/demo/demo_accounts.dart';
 import '../../../core/demo/demo_config.dart';
 import '../../../core/demo/demo_store.dart';
@@ -158,6 +159,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       return;
     }
     await DemoStore.reset();
+    DemoArtworkStore.clearCache();
     if (!mounted) {
       return;
     }
