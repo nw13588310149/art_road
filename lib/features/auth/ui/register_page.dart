@@ -30,6 +30,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     return AuthPageFrame(
       card: AuthCard(
         title: '账号注册',
+        bottomPadding: 45,
         children: [
           AppIconInputField(
             iconAsset: AppAssets.authPhone,
@@ -43,13 +44,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             errorText: state.errorOf(AuthField.mobile),
             onChanged: controller.setMobile,
           ),
-          const SizedBox(height: AppSpace.s20),
+          const SizedBox(height: 21),
           AuthSmsCodeRow(
             state: state,
             onChanged: controller.setSmsCode,
             onSend: _onSendSms,
           ),
-          const SizedBox(height: AppSpace.s20),
+          const SizedBox(height: 21),
           AppIconInputField(
             iconAsset: AppAssets.authPassword,
             hint: '请设置密码',
@@ -63,11 +64,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             errorText: passwordError,
             onChanged: controller.setPassword,
           ),
-          if (passwordError == null) ...[
-            const SizedBox(height: AppSpace.s4),
-            Text('密码为 6–20 位，建议同时包含字母和数字', style: AppText.caption12),
-          ],
-          const SizedBox(height: AppSpace.s16),
+          const SizedBox(height: 21),
           AppIconInputField(
             iconAsset: AppAssets.authPassword,
             hint: '请再次输入密码',
@@ -82,21 +79,32 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             onChanged: controller.setConfirmPassword,
             onSubmitted: (_) => _onRegister(),
           ),
-          const SizedBox(height: AppSpace.s20),
-          AppButton(
+          if (passwordError == null) ...[
+            const SizedBox(height: 11),
+            Text(
+              '密码为 6–20 位，建议同时包含字母和数字',
+              style: AppText.caption12.copyWith(height: 1),
+            ),
+          ],
+          const SizedBox(height: 23),
+          AuthPrimaryButton(
             label: '立即注册',
-            expand: true,
             loading: state.isSubmitting,
             onTap: _onRegister,
           ),
-          const SizedBox(height: AppSpace.s12),
+          const SizedBox(height: 30),
           AuthAgreementRow(
             checked: state.agreeTerms,
             onChanged: controller.setAgreeTerms,
             onOpenTerms: _openTerms,
           ),
-          const SizedBox(height: AppSpace.s12),
-          AuthSwitchLine(prompt: '已有账号？', action: '立即登录', onTap: _backToLogin),
+          const SizedBox(height: 37),
+          AuthSwitchLine(
+            prompt: '已有账号？',
+            action: '立即登录',
+            divided: false,
+            onTap: _backToLogin,
+          ),
         ],
       ),
     );
