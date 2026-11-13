@@ -6,6 +6,8 @@ const nav = (label) => ({ click: label, after: 1800 });
 // 身份第一次进首页会弹新手引导（弹出即记为已看过），截首页本身前先关掉；没弹就跳过这一步。
 const skipGuide = { click: '跳过', optional: true, attempts: 4, after: 800 };
 const homeStep = { id: 'home', route: '/', actions: [skipGuide], settle: 1800 };
+// 首页周历会滚到「今天」，后半周时周一在可视区外、点不到，所以点今天这一格。
+const todayChip = new RegExp(`^周${'日一二三四五六'[new Date().getDay()]}`);
 const guideStep = {
   id: 'guide',
   route: '/help-guide',
@@ -229,7 +231,7 @@ export const ROLES = [
       homeStep,
       {
         id: 'home-schedule', route: '/', actions: [
-          skipGuide, { click: /^周[一二三四五六日]/, after: 1500 },
+          skipGuide, { click: todayChip, after: 1500 },
           { check: /^节次$/ }, { check: '教学周' },
         ],
       },
