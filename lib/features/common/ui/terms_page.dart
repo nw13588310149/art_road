@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
+
+const _appBarForeground = Color(0xFF171A20);
+const _paragraphColor = Color(0xFF333333);
 
 /// 服务协议与隐私政策（登录 / 注册页打开的公开页面）。
 ///
 /// 路由参数传 [TermsPage.privacyAnchor] 时直接定位到隐私政策；
-/// 底部「我已阅读并同意」返回 `true`，左上角返回为 `false`。
+/// 底部「我已知晓并同意上述协议」返回 `true`，左上角返回为 `false`。
 class TermsPage extends StatelessWidget {
   const TermsPage({super.key});
 
@@ -28,7 +32,7 @@ class TermsPage extends StatelessWidget {
   }
 }
 
-/// 协议正文 + 页头，可嵌在外壳内（不带同意按钮）或公开页面里使用。
+/// 协议正文 + 原版白色标题栏，可嵌在外壳内（不带同意按钮）或公开页面里使用。
 class TermsContent extends StatefulWidget {
   const TermsContent({
     this.onBack,
@@ -66,54 +70,136 @@ class _TermsContentState extends State<TermsContent> {
   @override
   Widget build(BuildContext context) {
     final onAgree = widget.onAgree;
-    return AppCard(
-      padding: EdgeInsets.zero,
-      bordered: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppPageHeader(
-            title: '服务协议与隐私政策',
-            subtitle: '更新日期 2026-11-01 · 生效日期 2026-11-01',
-            onBack: widget.onBack,
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final section in _sections)
-                    _TermsSectionView(
-                      key: section.anchor == TermsPage.privacyAnchor
-                          ? _privacyKey
-                          : null,
-                      section: section,
+    return ClipRRect(
+      borderRadius: onAgree == null ? AppRadius.br16 : BorderRadius.zero,
+      child: ColoredBox(
+        color: AppColors.surface,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TermsAppBar(title: '服务协议与隐私政策', onBack: widget.onBack),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 20,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final section in _sections)
+                              _TermsSectionView(
+                                key: section.anchor == TermsPage.privacyAnchor
+                                    ? _privacyKey
+                                    : null,
+                                section: section,
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                ],
-              ),
-            ),
-          ),
-          if (onAgree != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpace.s16,
-                AppSpace.s8,
-                AppSpace.s16,
-                AppSpace.s20,
-              ),
-              child: Center(
-                child: SizedBox(
-                  width: 230,
-                  child: AppButton(
-                    label: '我已阅读并同意',
-                    onTap: onAgree,
-                    expand: true,
-                  ),
+                    if (onAgree != null) ...[
+                      const SizedBox(height: AppSpace.s20),
+                      Center(child: _AgreeButton(onTap: onAgree)),
+                    ],
+                  ],
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 原版 Material 标题栏：56 高白底，左侧 56 宽返回，标题 20/500 居中。
+class _TermsAppBar extends StatelessWidget {
+  const _TermsAppBar({required this.title, this.onBack});
+
+  final String title;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final back = onBack;
+    return SizedBox(
+      height: kToolbarHeight,
+      child: Row(
+        children: [
+          SizedBox.square(
+            dimension: kToolbarHeight,
+            child: back == null
+                ? null
+                : AppPressable(
+                    onTap: back,
+                    semanticLabel: '返回',
+                    child: const Center(
+                      child: IconTheme(
+                        data: IconThemeData(
+                          color: _appBarForeground,
+                          size: 24,
+                        ),
+                        child: BackButtonIcon(),
+                      ),
+                    ),
+                  ),
+          ),
+          Expanded(
+            child: Semantics(
+              header: true,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: AppFont.w500,
+                  color: _appBarForeground,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: kToolbarHeight),
         ],
+      ),
+    );
+  }
+}
+
+/// 原版底部按钮：230×40、圆角 12、实底主题色、16/500 字距 1.2。
+class _AgreeButton extends StatelessWidget {
+  const _AgreeButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        width: 230,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: AppColors.brand,
+          borderRadius: AppRadius.br12,
+        ),
+        child: Text(
+          '我已知晓并同意上述协议',
+          style: TextStyle(
+            color: AppColors.onBrand,
+            fontSize: 16,
+            fontWeight: AppFont.w500,
+            letterSpacing: 1.2,
+          ),
+        ),
       ),
     );
   }
@@ -141,17 +227,14 @@ class _TermsSectionView extends StatelessWidget {
   final _TermsSection section;
 
   static final _paragraphStyle = AppText.body14.copyWith(
-    height: 1.7,
-    color: AppColors.textSecondary,
+    height: 1.8,
+    color: _paragraphColor,
   );
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-        top: section.major ? AppSpace.s8 : 0,
-        bottom: AppSpace.s12,
-      ),
+      padding: EdgeInsets.only(top: section.major ? AppSpace.s8 : 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -159,12 +242,20 @@ class _TermsSectionView extends StatelessWidget {
             section.title,
             style: section.major ? AppText.title20 : AppText.title16,
           ),
-          const SizedBox(height: AppSpace.s8),
+          if (section.major)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpace.s4),
+              child: Text(
+                '更新日期 2026-11-01　生效日期 2026-11-01',
+                style: AppText.caption12,
+              ),
+            ),
           for (final paragraph in section.paragraphs)
             Padding(
-              padding: const EdgeInsets.only(bottom: AppSpace.s8),
+              padding: const EdgeInsets.only(top: AppSpace.s12),
               child: Text(paragraph, style: _paragraphStyle),
             ),
+          const SizedBox(height: AppSpace.s12),
         ],
       ),
     );

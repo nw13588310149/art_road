@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
-import '../../../core/constants/app_assets.dart';
+import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/class_share_drawer.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -58,44 +58,37 @@ class _ConsultationDetailPageState
       }
     });
 
+    final ui = DashboardScaleScope.of(context).ui;
     final detail = state.detail;
-    final Widget body;
-    if (detail != null) {
-      body = _DetailBody(detail: detail);
-    } else if (state.loading) {
-      body = const _DetailSkeleton();
-    } else {
-      body = AppErrorState(
-        title: '资讯加载失败',
-        description: state.errorMessage.isEmpty
-            ? '内容可能已下架，请返回列表查看其他资讯'
-            : state.errorMessage,
-        onRetry: controller.reload,
-      );
-    }
-
-    return AppCard(
+    return ShellPageSurface(
       padding: EdgeInsets.zero,
-      bordered: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppPageHeader(
-            title: '资讯',
-            subtitle: detail?.source,
-            onBack: () => GroupChatReturnNavigator.pop(context, ref: ref),
-            actions: [
-              AppButton(
-                label: '分享',
-                iconAsset: AppAssets.videoV2Share,
-                variant: AppButtonVariant.quiet,
-                size: AppButtonSize.sm,
-                onTap: detail == null ? null : controller.openShareDialog,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(ui(16)),
+        child: PageInitLoadingShell(
+          loading: state.loading && detail == null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _DetailHeader(
+                onBack: () => GroupChatReturnNavigator.pop(context, ref: ref),
+                onShare: detail == null ? null : controller.openShareDialog,
+              ),
+              Expanded(
+                child: detail == null
+                    ? (state.loading
+                          ? const SizedBox.shrink()
+                          : AppErrorState(
+                              title: '资讯加载失败',
+                              description: state.errorMessage.isEmpty
+                                  ? '内容可能已下架，请返回列表查看其他资讯'
+                                  : state.errorMessage,
+                              onRetry: controller.reload,
+                            ))
+                    : _DetailBody(detail: detail),
               ),
             ],
           ),
-          Expanded(child: body),
-        ],
+        ),
       ),
     );
   }
@@ -164,13 +157,90 @@ class _ConsultationShareDrawer extends ConsumerWidget {
   }
 }
 
-/// 发布时间统一为「YYYY-MM-DD HH:mm」，不显示秒。
-String _formatPublishTime(String raw) {
-  final parsed = DateTime.tryParse(raw.trim());
-  if (parsed == null) return raw;
-  String two(int v) => v.toString().padLeft(2, '0');
-  return '${parsed.year}-${two(parsed.month)}-${two(parsed.day)} '
-      '${two(parsed.hour)}:${two(parsed.minute)}';
+class _DetailHeader extends StatelessWidget {
+  const _DetailHeader({required this.onBack, required this.onShare});
+
+  final VoidCallback onBack;
+  final VoidCallback? onShare;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      height: ui(56),
+      padding: EdgeInsets.symmetric(horizontal: ui(20)),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFF3F2F3), width: 1)),
+      ),
+      child: Row(
+        children: [
+          ConsultationBackButton(onTap: onBack),
+          Expanded(
+            child: Center(
+              child: Text(
+                '资讯',
+                style: TextStyle(
+                  color: const Color(0xFF0B081A),
+                  fontSize: ui(16),
+                  fontWeight: AppFont.w600,
+                  fontFamily: 'PingFang SC',
+                ),
+              ),
+            ),
+          ),
+          _ShareButton(onTap: onShare),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShareButton extends StatelessWidget {
+  const _ShareButton({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Opacity(
+      opacity: onTap == null ? 0.45 : 1,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: ui(28),
+          padding: EdgeInsets.fromLTRB(ui(12), ui(4), ui(13), ui(4)),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F6FA),
+            borderRadius: BorderRadius.circular(ui(8)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/images/home/dictation/10.png',
+                width: ui(20),
+                height: ui(20),
+                fit: BoxFit.contain,
+              ),
+              SizedBox(width: ui(4)),
+              Text(
+                '分享',
+                style: TextStyle(
+                  color: const Color(0xFF0B081A),
+                  fontSize: ui(12),
+                  fontFamily: 'PingFang SC',
+                  fontWeight: AppFont.w500,
+                  height: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _DetailBody extends StatelessWidget {
@@ -180,69 +250,81 @@ class _DetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final time = _formatPublishTime(detail.updateTime);
-    return Scrollbar(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.page,
-          AppSpace.s4,
-          AppSpace.page,
-          AppSpace.s24,
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: AppCard(
-              padding: const EdgeInsets.all(AppSpace.s24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final ui = DashboardScaleScope.of(context).ui;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: ui(12)),
+      child: Scrollbar(
+        child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(ui(20), ui(12), ui(20), ui(20)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                detail.title,
+                style: TextStyle(
+                  color: const Color(0xFF0B081A),
+                  fontSize: ui(16),
+                  fontFamily: 'PingFang SC',
+                  fontWeight: AppFont.w500,
+                  height: 24 / 16,
+                ),
+              ),
+              SizedBox(height: ui(8)),
+              Row(
                 children: [
-                  Text(detail.title, style: AppText.title24),
-                  const SizedBox(height: AppSpace.s8),
-                  Wrap(
-                    spacing: AppSpace.s12,
-                    runSpacing: AppSpace.s4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (detail.source.isNotEmpty)
-                        Text(detail.source, style: AppText.body13),
-                      if (time.isNotEmpty)
-                        Text(
-                          time,
-                          style: AppText.number(
-                            size: 13,
-                            color: AppColors.textTertiary,
-                          ),
-                        ),
-                      ViewCountLabel(count: detail.viewCount),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpace.s20),
-                  HtmlWidget(
-                    detail.htmlContent.isEmpty
-                        ? '<p>暂无内容</p>'
-                        : detail.htmlContent,
-                    textStyle: AppText.body14.copyWith(height: 1.8),
-                    // 拦截 <img>：默认实现会按原始分辨率解码整张大图，iPad 上快速
-                    // 滚动时多张高清图同时解码容易 OOM，改用受限 memCacheWidth 的图片。
-                    customWidgetBuilder: (element) {
-                      if (element.localName != 'img') return null;
-                      final src = element.attributes['src']?.trim() ?? '';
-                      if (src.isEmpty) return null;
-                      return _ConsultationHtmlImage(
-                        url: src,
-                        designWidth: double.tryParse(
-                          element.attributes['width'] ?? '',
-                        ),
-                        designHeight: double.tryParse(
-                          element.attributes['height'] ?? '',
-                        ),
-                      );
-                    },
-                  ),
+                  if (detail.source.isNotEmpty)
+                    Text(
+                      detail.source,
+                      style: TextStyle(
+                        color: const Color(0xFF6D6B75),
+                        fontSize: ui(14),
+                        fontFamily: 'PingFang SC',
+                        height: 20 / 14,
+                      ),
+                    ),
+                  if (detail.source.isNotEmpty) SizedBox(width: ui(11)),
+                  if (detail.updateTime.isNotEmpty)
+                    Text(
+                      detail.updateTime,
+                      style: TextStyle(
+                        color: const Color(0xFF6D6B75),
+                        fontSize: ui(14),
+                        fontFamily: 'PingFang SC',
+                        height: 20 / 14,
+                      ),
+                    ),
+                  SizedBox(width: ui(16)),
+                  ViewCountLabel(count: detail.viewCount, fontSize: 14),
                 ],
               ),
-            ),
+              SizedBox(height: ui(20)),
+              HtmlWidget(
+                detail.htmlContent.isEmpty
+                    ? '<p>暂无内容</p>'
+                    : detail.htmlContent,
+                textStyle: TextStyle(
+                  color: const Color(0xFF0B081A),
+                  fontSize: ui(13),
+                  fontFamily: 'PingFang SC',
+                  height: 24 / 13,
+                ),
+                customWidgetBuilder: (element) {
+                  if (element.localName != 'img') return null;
+                  final src = element.attributes['src']?.trim() ?? '';
+                  if (src.isEmpty) return null;
+                  return _ConsultationHtmlImage(
+                    url: src,
+                    designWidth: double.tryParse(
+                      element.attributes['width'] ?? '',
+                    ),
+                    designHeight: double.tryParse(
+                      element.attributes['height'] ?? '',
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
@@ -284,70 +366,31 @@ class _ConsultationHtmlImage extends StatelessWidget {
         }
         final memCacheW = (width * dpr).clamp(1.0, 1600.0).toInt();
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpace.s8),
-          child: RepaintBoundary(
-            child: ClipRRect(
-              borderRadius: AppRadius.br8,
-              child: CachedNetworkImage(
-                imageUrl: url,
-                width: width,
-                height: height,
-                fit: BoxFit.contain,
-                memCacheWidth: memCacheW,
-                fadeInDuration: Duration.zero,
-                fadeOutDuration: Duration.zero,
-                errorWidget: (context, error, stackTrace) => Container(
-                  width: width,
-                  height: height ?? 60,
-                  alignment: Alignment.center,
-                  color: AppColors.surfaceSubtle,
-                  child: const Icon(
-                    Icons.broken_image_outlined,
-                    color: AppColors.textPlaceholder,
-                  ),
-                ),
+        return RepaintBoundary(
+          child: CachedNetworkImage(
+            imageUrl: url,
+            width: width,
+            height: height,
+            fit: BoxFit.contain,
+            memCacheWidth: memCacheW,
+            fadeInDuration: const Duration(milliseconds: 120),
+            fadeOutDuration: const Duration(milliseconds: 80),
+            errorWidget: (context, error, stackTrace) => Container(
+              width: width,
+              height: height ?? 60,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F6FA),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Icon(
+                Icons.broken_image_rounded,
+                color: Color(0xFFC9C6D8),
               ),
             ),
           ),
         );
       },
-    );
-  }
-}
-
-class _DetailSkeleton extends StatelessWidget {
-  const _DetailSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.page,
-        AppSpace.s4,
-        AppSpace.page,
-        AppSpace.s24,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: const AppCard(
-            padding: EdgeInsets.all(AppSpace.s24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppSkeleton(width: 420, height: 28),
-                SizedBox(height: AppSpace.s12),
-                AppSkeleton(width: 240, height: 14),
-                SizedBox(height: AppSpace.s24),
-                AppSkeletonText(lines: 6, lineHeight: 16),
-                SizedBox(height: AppSpace.s16),
-                AppSkeleton(height: 220, radius: AppRadius.control),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

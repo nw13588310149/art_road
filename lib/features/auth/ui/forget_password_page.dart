@@ -64,32 +64,30 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
             _ForgetStep.sms => _smsStep(state),
             _ForgetStep.password => _passwordStep(state),
           },
-          const SizedBox(height: AppSpace.s20),
-          AppButton(
+          SizedBox(height: _step == _ForgetStep.mobile ? 18 : 27),
+          AuthPrimaryButton(
             label: _step == _ForgetStep.password ? '确认修改' : '下一步',
-            expand: true,
+            fontFamily: 'PingFang SC',
             loading: state.isSubmitting,
             onTap: _onPrimaryTap,
           ),
-          const SizedBox(height: AppSpace.s8),
+          const SizedBox(height: AppSpace.s20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (_step != _ForgetStep.mobile) ...[
-                AppButton(
+                AuthTextLink(
                   label: '上一步',
-                  variant: AppButtonVariant.text,
-                  size: AppButtonSize.sm,
+                  color: AppColors.textSecondary,
                   onTap: () => setState(
                     () => _step = _ForgetStep.values[_step.index - 1],
                   ),
                 ),
-                const SizedBox(width: AppSpace.s16),
+                const SizedBox(width: AppSpace.s24),
               ],
-              AppButton(
+              AuthTextLink(
                 label: '返回登录',
-                variant: AppButtonVariant.text,
-                size: AppButtonSize.sm,
+                color: AppColors.brand,
                 onTap: _backToLogin,
               ),
             ],
@@ -105,7 +103,7 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
         key: const ValueKey('mobile'),
         controller: _mobile,
         iconAsset: AppAssets.authPhone,
-        hint: '请输入注册时使用的手机号',
+        hint: '请输入手机号',
         keyboardType: TextInputType.phone,
         textInputAction: TextInputAction.done,
         inputFormatters: [
@@ -123,9 +121,12 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
     return [
       Text(
         '点击「获取验证码」，验证码将以短信发送到 ${_maskMobile(state.mobile)}。',
-        style: AppText.body13,
+        style: authLineText.copyWith(
+          color: AppColors.textPlaceholder,
+          height: 20 / 14,
+        ),
       ),
-      const SizedBox(height: AppSpace.s12),
+      const SizedBox(height: AppSpace.s16),
       AuthSmsCodeRow(
         key: const ValueKey('smsCode'),
         controller: _smsCode,
@@ -153,15 +154,18 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
         onChanged: _controller.setPassword,
       ),
       if (passwordError == null) ...[
-        const SizedBox(height: AppSpace.s4),
-        Text('密码为 6–20 位，建议同时包含字母和数字', style: AppText.caption12),
+        const SizedBox(height: 11),
+        Text(
+          '密码为 6–20 位，建议同时包含字母和数字',
+          style: AppText.caption12.copyWith(height: 1),
+        ),
       ],
-      const SizedBox(height: AppSpace.s12),
+      const SizedBox(height: 21),
       AppIconInputField(
         key: const ValueKey('confirmPassword'),
         controller: _confirmPassword,
         iconAsset: AppAssets.authPassword,
-        hint: '请再次输入新密码',
+        hint: '请确认密码',
         obscureText: true,
         textInputAction: TextInputAction.done,
         inputFormatters: [

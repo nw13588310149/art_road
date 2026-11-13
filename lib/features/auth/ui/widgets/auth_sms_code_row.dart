@@ -5,7 +5,7 @@ import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
 import '../../state/auth_state.dart';
 
-/// 短信验证码输入 + 「获取验证码」次按钮；倒计时期间按钮禁用并显示「60 秒后重发」。
+/// 短信验证码输入 + 117×45 深色「获取验证码」按钮，间距 8；倒计时期间按钮禁用并显示「60 秒后重发」。
 class AuthSmsCodeRow extends StatelessWidget {
   const AuthSmsCodeRow({
     required this.state,
@@ -41,7 +41,7 @@ class AuthSmsCodeRow extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
-        const SizedBox(width: AppSpace.s12),
+        const SizedBox(width: AppSpace.s8),
         AppPressable(
           enabled: enabled,
           onTap: onSend,
@@ -51,14 +51,17 @@ class AuthSmsCodeRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
             alignment: Alignment.center,
             decoration: const BoxDecoration(
-              color: Color(0xFF0D1535),
+              color: AppColors.navSelection,
               borderRadius: AppRadius.br12,
             ),
             child: Text(
               state.smsButtonText,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppText.body14.copyWith(color: AppColors.onBrand),
+              style: AppText.body14.copyWith(
+                color: AppColors.onBrand,
+                height: 12 / 14,
+              ),
             ),
           ),
         ),

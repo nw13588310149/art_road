@@ -11,6 +11,7 @@ import 'package:the_road_of_art_flutter/features/auth/state/auth_state.dart';
 import 'package:the_road_of_art_flutter/features/auth/ui/forget_password_page.dart';
 import 'package:the_road_of_art_flutter/features/auth/ui/login_page.dart';
 import 'package:the_road_of_art_flutter/features/auth/ui/register_page.dart';
+import 'package:the_road_of_art_flutter/features/auth/ui/widgets/auth_layout.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   int loginCalls = 0;
@@ -59,8 +60,9 @@ Future<_FakeAuthRepository> _pumpPage(WidgetTester tester, Widget page) async {
   return repository;
 }
 
-bool _agreed(WidgetTester tester) =>
-    tester.widget<AppCheckbox>(find.byType(AppCheckbox)).value;
+bool _agreed(WidgetTester tester) => tester
+    .widget<AuthAgreementCheckbox>(find.byType(AuthAgreementCheckbox))
+    .value;
 
 /// 轻提示 2.2 秒后消失，跑完计时器再结束用例。
 Future<void> _settleToast(WidgetTester tester) =>

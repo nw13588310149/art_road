@@ -36,6 +36,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return AuthPageFrame(
       card: AuthCard(
         title: '账号登录',
+        bottomPadding: 36,
         children: [
           AppIconInputField(
             iconAsset: AppAssets.authPhone,
@@ -59,29 +60,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             onChanged: controller.setPassword,
             onSubmitted: (_) => _onLogin(),
           ),
+          const SizedBox(height: 18),
           Align(
             alignment: Alignment.centerRight,
-            child: AppButton(
+            child: AuthTextLink(
               label: '忘记密码？',
-              variant: AppButtonVariant.text,
-              size: AppButtonSize.sm,
               onTap: () => Navigator.pushNamed(context, RoutePaths.forget),
             ),
           ),
-          const SizedBox(height: AppSpace.s20),
-          AppButton(
+          const SizedBox(height: 23),
+          AuthPrimaryButton(
             label: '立即登录',
-            expand: true,
             loading: state.isSubmitting,
             onTap: _onLogin,
           ),
-          const SizedBox(height: AppSpace.s24),
+          const SizedBox(height: 30),
           AuthAgreementRow(
             checked: state.agreeTerms,
             onChanged: controller.setAgreeTerms,
             onOpenTerms: _openTerms,
           ),
-          const SizedBox(height: AppSpace.s24),
+          const SizedBox(height: 34),
           AuthSwitchLine(
             prompt: '没有账号？',
             action: '立即注册',
@@ -196,7 +195,7 @@ class _DemoIdentityPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      radius: AppRadius.panel,
+      radius: AppRadius.dialog,
       padding: const EdgeInsets.fromLTRB(
         AppSpace.s16,
         AppSpace.s8,

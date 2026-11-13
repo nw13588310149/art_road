@@ -3,20 +3,21 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_font.dart';
 import '../../../../core/ui/ui.dart';
 import '../../data/qr_image_saver.dart';
 import '../../state/profile_format.dart';
 
-/// 我的二维码内容：头像 + 姓名 + 脱敏手机号 + 二维码 + 说明。
+/// 我的二维码内容：头像 + 姓名 + 脱敏手机号 + 紫渐变框二维码 + 说明。
 ///
-/// 个人中心的弹窗与 `/qrcode` 页面共用。
+/// 个人中心的弹窗与 `/qrcode` 页面共用；版式对齐原版弹窗内卡（380×294 量级）。
 class MyQrCodeCard extends StatelessWidget {
   const MyQrCodeCard({
     required this.nickname,
     required this.mobile,
     required this.avatarUrl,
     required this.imageUrl,
-    this.qrSize = 168,
+    this.qrSize = 122,
     super.key,
   });
 
@@ -30,11 +31,11 @@ class MyQrCodeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final phone = maskMobile(mobile);
     return Container(
-      padding: const EdgeInsets.all(AppSpace.s20),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceSubtle,
-        borderRadius: AppRadius.br12,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6FA),
+        borderRadius: BorderRadius.circular(12),
       ),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -42,7 +43,7 @@ class MyQrCodeCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AppAvatar(name: nickname, url: avatarUrl, size: 44),
-              const SizedBox(width: AppSpace.s12),
+              const SizedBox(width: 12),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,44 +53,73 @@ class MyQrCodeCard extends StatelessWidget {
                       nickname,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppText.title16,
+                      style: TextStyle(
+                        color: const Color(0xFF0B081A),
+                        fontSize: 16,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: AppFont.w400,
+                      ),
                     ),
-                    if (phone.isNotEmpty)
+                    if (phone.isNotEmpty) ...[
+                      const SizedBox(height: 2),
                       Text(
                         phone,
-                        style: AppText.number(
-                          size: 13,
-                          color: AppColors.textTertiary,
+                        style: const TextStyle(
+                          color: Color(0xFF6D6B75),
+                          fontSize: 14,
+                          fontFamily: 'PingFang SC',
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpace.s16),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(AppSpace.s12),
+            width: 152,
+            height: 154,
             decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.br12,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFF2EAFF), Color(0x00F2EAFF)],
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
-            child: SizedBox.square(
-              dimension: qrSize,
-              child: MyQrImage(url: imageUrl),
+            alignment: Alignment.topCenter,
+            padding: const EdgeInsets.only(top: 15),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: qrSize,
+                height: qrSize,
+                child: MyQrImage(url: imageUrl),
+              ),
             ),
           ),
-          const SizedBox(height: AppSpace.s12),
-          Text(
-            '扫码下载美育集，和我一起学画',
+          const SizedBox(height: 10),
+          const Text(
+            '快来与我一起在美育集学习吧～',
             textAlign: TextAlign.center,
-            style: AppText.body14Strong,
+            style: TextStyle(
+              color: Color(0xFF0B081A),
+              fontSize: 16,
+              fontFamily: 'PingFang SC',
+              height: 20 / 16,
+            ),
           ),
-          const SizedBox(height: AppSpace.s4),
-          Text(
-            '好友扫描二维码即可下载美育集并添加你为好友',
+          const SizedBox(height: 6),
+          const Text(
+            '好友可直接通过扫描二维码下载美育集并添加你为好友',
             textAlign: TextAlign.center,
-            style: AppText.caption12,
+            style: TextStyle(
+              color: Color(0xFFCECED1),
+              fontSize: 12,
+              fontFamily: 'PingFang SC',
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -123,8 +153,15 @@ class MyQrImage extends StatelessWidget {
 
   static Widget _fallback(IconData icon) {
     return ColoredBox(
-      color: AppColors.surface,
-      child: Center(child: Icon(icon, color: AppColors.textPlaceholder)),
+      color: Colors.white,
+      child: Center(
+        child: Icon(
+          icon,
+          color: icon == Icons.qr_code_2_rounded
+              ? AppColors.brand
+              : const Color(0xFFCECED1),
+        ),
+      ),
     );
   }
 }
@@ -161,7 +198,7 @@ Future<bool> saveMyQrCode(
 }) async {
   final bytes = decodeQrImage(imageUrl.trim());
   if (bytes == null) {
-    AppToast.showError(context, '暂不支持直接保存，请截屏保存');
+    AppToast.showError(context, '二维码暂不支持保存，请截屏');
     return false;
   }
   final safe = nickname.trim().replaceAll(RegExp(r'[\\/:*?"<>|\s]'), '_');

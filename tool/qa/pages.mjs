@@ -166,17 +166,20 @@ const sharedContent = [
   { id: 'personal-edit', route: '/personal-center', actions: [/^编辑资料$/, { check: '姓名' }] },
   { id: 'personal-gender', route: '/info', actions: [/^性别/, { check: '请选择性别' }] },
   { id: 'info', route: '/info' },
-  { id: 'feedback', route: '/', actions: [nav('意见反馈')] },
-  { id: 'help', route: '/help-guide' },
-  { id: 'news', route: '/', actions: [{ click: '更多', after: 2000 }] },
+  { id: 'feedback', route: '/', actions: [nav('意见反馈'), { check: '写新反馈' }, { check: '提交反馈' }] },
+  { id: 'help', route: '/help-guide', actions: [{ check: '操作指南' }, { check: /^新手引导$/ }] },
+  { id: 'news', route: '/', actions: [{ click: '更多', after: 2000 }, { check: '资讯' }] },
   {
     id: 'news-detail',
     route: '/',
-    actions: [{ click: /素描评分标准/, after: 2500 }],
+    actions: [{ click: /素描评分标准/, after: 2500 }, { check: '分享' }],
   },
   { id: 'circle', route: '/circle' },
-  { id: 'school-website', route: '/school-website' },
-  { id: 'qrcode', route: '/qrcode' },
+  { id: 'school-website', route: '/school-website', settle: 2500, actions: [
+    { check: '官网加载失败', absent: true },
+    { check: '我的学情' },
+  ] },
+  { id: 'qrcode', route: '/qrcode', actions: [{ check: '我的二维码' }, { check: /保存/ }] },
   {
     id: 'search',
     route: '/',
@@ -212,14 +215,24 @@ export const ROLES = [
   {
     id: 'guest',
     steps: [
-      { id: 'login', route: '/login' },
+      { id: 'login', route: '/login', actions: [
+        { check: '立即登录' },
+        { check: '校长' },
+        { check: '重置演示数据' },
+      ] },
       { id: 'register', route: '/login', actions: [
         { click: '立即注册', after: 500 },
         { check: '请输入短信验证码', role: 'textbox' },
         { check: /^获取验证码$/, role: 'button' },
       ] },
-      { id: 'forget', route: '/login', actions: [{ click: '忘记密码', after: 1800 }] },
-      { id: 'terms', route: '/login', actions: [{ click: '用户服务协议', after: 1800 }] },
+      { id: 'forget', route: '/login', actions: [
+        { click: '忘记密码', after: 1800 },
+        { check: /找回|重置|验证码|新密码/ },
+      ] },
+      { id: 'terms', route: '/login', actions: [
+        { click: '用户服务协议', after: 1800 },
+        { check: /服务协议|隐私/ },
+      ] },
     ],
   },
   {
@@ -295,7 +308,7 @@ export const ROLES = [
       { id: 'quiz', route: '/camp', actions: [{ check: '练习方式' }] },
       { id: 'school-quiz', route: '/school-camp' },
       { id: 'school-video', route: '/school-video' },
-      { id: 'mock', route: '/mock' },
+      { id: 'mock', route: '/mock', actions: [{ check: '模拟考试' }, { check: '功能开发中' }] },
       { id: 'design-system', route: '/design-system' },
       {
         id: 'quiz-answer', route: '/camp', actions: [
