@@ -364,6 +364,21 @@ export const ROLES = [
     ],
   },
   {
+    // 教学组长：任课老师 + 组长权限，首页与任课老师同构。
+    id: 'groupLeader',
+    chip: '组长 · 张明远',
+    steps: [
+      homeStep,
+      guideStep,
+      noticeStep,
+      { id: 'study', route: '/study' },
+      { id: 'artworks', route: '/artworks' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
+      campusAction('schedule', '授课课表'),
+      campusAction('group-chat', '群聊'),
+    ],
+  },
+  {
     id: 'headTeacher',
     chip: '班主任 · 赵雪',
     steps: [
@@ -411,6 +426,22 @@ export const ROLES = [
       campusAction('teacher-leave', '教师请'),
       campusAction('face', '人脸库'),
       campusAction('notice', '通知管理'),
+      campusAction('group-chat', '群聊'),
+      campusAction('mailbox', '校长信箱'),
+      campusAction('circle-governance', '校圈治理'),
+    ],
+  },
+  {
+    id: 'principal',
+    chip: '校长 · 陈建华',
+    steps: [
+      homeStep,
+      guideStep,
+      noticeStep,
+      { id: 'study', route: '/study' },
+      { id: 'campus', route: '/smart-campus', settle: 1800 },
+      campusAction('teachers', '教师管理'),
+      campusAction('students', '学生管理'),
       campusAction('group-chat', '群聊'),
       campusAction('mailbox', '校长信箱'),
       campusAction('circle-governance', '校圈治理'),

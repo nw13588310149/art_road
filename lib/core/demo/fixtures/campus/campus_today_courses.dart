@@ -28,8 +28,7 @@ List<Map<String, dynamic>> demoTodayCoursesFor(
         _withNested(CampusASign.courseRow(account, course, at)),
     ];
   }
-  if (account.role != DemoRole.teacher &&
-      account.role != DemoRole.headTeacher) {
+  if (!account.role.teaches) {
     return const <Map<String, dynamic>>[];
   }
   final staff =

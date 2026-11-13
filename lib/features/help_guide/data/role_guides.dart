@@ -33,12 +33,14 @@ class RoleGuide {
 }
 
 /// 有新手引导的身份（与 `/myInfo` 的 role 取值一致）。
+/// 教学组长的 role 仍是 teacher，与任课老师共用引导。
 const roleGuideRoles = <String>[
   'student',
   'teacher',
   'headTeacher',
   'dormManager',
   'admin',
+  'principal',
 ];
 
 /// 各身份的新手引导，每步都指向该身份真实可见的入口；未知身份按学生处理。
@@ -47,6 +49,7 @@ RoleGuide roleGuideFor(String role) => switch (role.trim()) {
   'headTeacher' => _headTeacher,
   'dormManager' => _dormManager,
   'admin' => _admin,
+  'principal' => _principal,
   _ => _student,
 };
 
@@ -198,6 +201,31 @@ const _admin = RoleGuide(
       title: '班级学情',
       body: '按考试查看全画室的分数分布、各科均分与校区对比。',
       where: '左侧导航「班级学情」',
+    ),
+  ],
+);
+
+const _principal = RoleGuide(
+  role: 'principal',
+  roleLabel: '校长',
+  steps: [
+    RoleGuideStep(
+      iconAsset: AppAssets.leftNavXueqing,
+      title: '全校学情',
+      body: '按考试查看三个校区的分数分布、各科均分与校区对比，点开学生可以看成绩报告与成长曲线。',
+      where: '左侧导航「全校学情」',
+    ),
+    RoleGuideStep(
+      iconAsset: AppAssets.leftNavXiaoyuan,
+      title: '智慧校园',
+      body: '学生、教师、班级管理与排课都在这里，「校长信箱」里可以查看并回复师生来信。',
+      where: '左侧导航「智慧校园」',
+    ),
+    RoleGuideStep(
+      iconAsset: '${AppAssets.campusHomeActions}/admin/dorm_leave_approval.png',
+      title: '今日待办',
+      body: '首页汇总待审批的请假、待确认的小课和未读消息，点一下直接进入。',
+      where: '首页「今日待办」',
     ),
   ],
 );

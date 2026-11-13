@@ -158,6 +158,7 @@ void main() {
     expect(homeRoleHasTimetable('headTeacher'), isTrue);
     expect(homeRoleHasTimetable('dormManager'), isFalse);
     expect(homeRoleHasTimetable('admin'), isFalse);
+    expect(homeRoleHasTimetable('principal'), isFalse);
   });
 
   test('student and staff home entries follow the nine-button order', () {
@@ -199,6 +200,19 @@ void main() {
     expect(
       admin.map((a) => a.name),
       containsAll(['学生管理', '教师管理', '排课与课表', '人脸库', '通知管理', '班级学情']),
+    );
+  });
+
+  test('the principal gets the management entries with 全校学情', () {
+    final principal = buildQuickActions(isStaff: true, role: 'principal');
+    expect(
+      principal.map((a) => a.name),
+      containsAll(['学生管理', '教师管理', '通知管理', '全校学情']),
+    );
+    expect(principal.map((a) => a.name), isNot(contains('班级学情')));
+    expect(
+      principal.firstWhere((a) => a.name == '全校学情').route,
+      RoutePaths.studyCenter,
     );
   });
 

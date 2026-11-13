@@ -5,15 +5,27 @@
 enum DemoRole {
   student('学生'),
   teacher('任课老师'),
+  groupLeader('组长'),
   headTeacher('班主任'),
   dormManager('宿管'),
-  admin('管理员');
+  admin('管理员'),
+  principal('校长');
 
   const DemoRole(this.label);
 
   final String label;
 
   bool get isStaff => this != DemoRole.student;
+
+  /// 带课的老师：任课老师、教学组长（也带课）与班主任。
+  bool get teaches =>
+      this == DemoRole.teacher ||
+      this == DemoRole.groupLeader ||
+      this == DemoRole.headTeacher;
+
+  /// 看全校数据、用管理端的身份：管理员与校长。
+  bool get managesSchool =>
+      this == DemoRole.admin || this == DemoRole.principal;
 }
 
 class DemoAccount {
@@ -25,6 +37,7 @@ class DemoAccount {
     required this.gender,
     this.personIndex,
     this.teacherId,
+    this.groupLeaderSubjects = const <String>[],
   });
 
   final DemoRole role;
@@ -41,8 +54,16 @@ class DemoAccount {
   /// 老师在阅卷演示数据中的 id（作品点评、标签归属）。
   final String? teacherId;
 
-  /// 后端 `myInfo.user.role` 取值。
-  String get roleKey => role.name;
+  /// 教学组长所管科目（如素描组）。空列表表示不是组长。
+  final List<String> groupLeaderSubjects;
+
+  /// 是否教学组长（任课老师 + 组长权限）。
+  bool get isGroupLeader => groupLeaderSubjects.isNotEmpty;
+
+  /// 后端 `myInfo.user.role` 取值。组长在后端仍是任课老师，组长身份另由
+  /// `myInfo.user.groupLeader` 下发。
+  String get roleKey =>
+      role == DemoRole.groupLeader ? DemoRole.teacher.name : role.name;
 
   String get token => 'demo.${role.name}.$mobile';
 
@@ -54,6 +75,7 @@ class DemoAccount {
     gender: gender,
     personIndex: personIndex,
     teacherId: teacherId,
+    groupLeaderSubjects: groupLeaderSubjects,
   );
 }
 
@@ -73,6 +95,17 @@ abstract final class DemoAccounts {
     userId: '1880000000000000002',
     gender: '女',
     teacherId: 't-1',
+  );
+
+  /// 素描组长：自己也带课，另负责复核本组老师的点评。
+  static const groupLeader = DemoAccount(
+    role: DemoRole.groupLeader,
+    mobile: '13809310012',
+    name: '张明远',
+    userId: '1880000000000000012',
+    gender: '男',
+    teacherId: 't-2',
+    groupLeaderSubjects: <String>['素描'],
   );
   static const headTeacher = DemoAccount(
     role: DemoRole.headTeacher,
@@ -98,12 +131,24 @@ abstract final class DemoAccounts {
     teacherId: 't-9',
   );
 
+  /// 总校长：看三个校区的全部数据，可以点评、推优任何作品。
+  static const principal = DemoAccount(
+    role: DemoRole.principal,
+    mobile: '13809310006',
+    name: '陈建华',
+    userId: '1880000000000000006',
+    gender: '男',
+    teacherId: 'p-1',
+  );
+
   static const all = <DemoAccount>[
     student,
     teacher,
+    groupLeader,
     headTeacher,
     dormManager,
     admin,
+    principal,
   ];
 
   /// 登录：预置手机号命中对应身份；其他手机号一律以学生身份进入。

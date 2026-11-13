@@ -257,50 +257,50 @@ List<HomeQuickAction> buildQuickActions({
       ),
     ];
   }
-  if (role == 'admin') {
-    return const <HomeQuickAction>[
-      HomeQuickAction(
+  if (role == 'admin' || role == 'principal') {
+    return <HomeQuickAction>[
+      const HomeQuickAction(
         name: '学生管理',
         iconAsset: '$campusIcons/admin/student_management.png',
         campus: HomeCampusTarget.studentManagement,
       ),
-      HomeQuickAction(
+      const HomeQuickAction(
         name: '教师管理',
         iconAsset: '$campusIcons/admin/teacher_management.png',
         campus: HomeCampusTarget.teacherManagement,
       ),
-      HomeQuickAction(
+      const HomeQuickAction(
         name: '班级管理',
         iconAsset: '$campusIcons/admin/class_management.png',
         campus: HomeCampusTarget.classManagement,
       ),
-      HomeQuickAction(
+      const HomeQuickAction(
         name: '排课与课表',
         iconAsset: '$campusIcons/admin/schedule_management.png',
         campus: HomeCampusTarget.scheduleManagement,
       ),
-      HomeQuickAction(
+      const HomeQuickAction(
         name: '签课管理',
         iconAsset: '$campusIcons/admin/schedule_management.png',
         campus: HomeCampusTarget.signManagement,
       ),
-      HomeQuickAction(
+      const HomeQuickAction(
         name: '教师请假审批',
         iconAsset: '$campusIcons/admin/dorm_leave_approval.png',
         campus: HomeCampusTarget.leaveApproval,
       ),
-      HomeQuickAction(
+      const HomeQuickAction(
         name: '人脸库',
         iconAsset: '$campusIcons/admin/face_library.png',
         campus: HomeCampusTarget.faceLibrary,
       ),
-      HomeQuickAction(
+      const HomeQuickAction(
         name: '通知管理',
         iconAsset: '$campusIcons/admin/notification_management.png',
         campus: HomeCampusTarget.notificationManagement,
       ),
       HomeQuickAction(
-        name: '班级学情',
+        name: role == 'principal' ? '全校学情' : '班级学情',
         iconAsset: '$campusIcons/student/my_grades.png',
         route: RoutePaths.studyCenter,
       ),

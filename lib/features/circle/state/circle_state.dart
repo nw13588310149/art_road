@@ -28,7 +28,8 @@ class CirclePermissions {
   }
 
   static bool shellUserIsAdmin({required String role, required String identity}) {
-    if (role.trim().toLowerCase() == 'admin') return true;
+    final key = role.trim().toLowerCase();
+    if (key == 'admin' || key == 'principal') return true;
     if (identity.contains('教务老师') || identity.contains('管理员')) return true;
     if (identity.contains('校长')) return true;
     return false;

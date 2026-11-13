@@ -204,6 +204,7 @@ class ShellController extends StateNotifier<ShellState> {
           secondary: userMap['secondary']?.toString() ?? '',
           school: userMap['school']?.toString() ?? '',
           targetSchool: userMap['targetSchool']?.toString() ?? '',
+          groupLeaderSubjects: _parseGroupLeaderSubjects(userMap['groupLeader']),
           vipExpireDate: _parseVipExpireDate(userMap['vipExpireDate']),
         ),
         navItems: buildDefaultNavItems(
@@ -442,6 +443,24 @@ class ShellController extends StateNotifier<ShellState> {
       return data['user'] as Map<String, dynamic>;
     }
     return const {};
+  }
+
+  /// 解析 `myInfo.user.groupLeader`：`{subjects: [...]}`，也兼容直接下发
+  /// 科目数组或以逗号分隔的字符串。不是组长时返回空列表。
+  static List<String> _parseGroupLeaderSubjects(dynamic raw) {
+    final source = raw is Map ? raw['subjects'] : raw;
+    final Iterable<dynamic> values;
+    if (source is List) {
+      values = source;
+    } else if (source is String) {
+      values = source.split(RegExp('[,，、]'));
+    } else {
+      return const <String>[];
+    }
+    return [
+      for (final value in values)
+        if ('$value'.trim().isNotEmpty) '$value'.trim(),
+    ];
   }
 
   /// 将 `myInfo.user.vipExpireDate` 字段（可能是 `null` / 时间字符串 /

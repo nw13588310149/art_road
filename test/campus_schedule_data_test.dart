@@ -93,5 +93,26 @@ void main() {
 
     expect(demoTodayCoursesFor(DemoAccounts.admin, now: now), isEmpty);
     expect(demoTodayCoursesFor(DemoAccounts.dormManager, now: now), isEmpty);
+    expect(demoTodayCoursesFor(DemoAccounts.principal, now: now), isEmpty);
+  });
+
+  test('the group leader teaches too, so the home course card follows the '
+      'timetable', () {
+    const leader = DemoAccounts.groupLeader;
+    final staff = DemoCampusData.staffById(leader.teacherId!)!;
+    var taught = 0;
+    for (final day in week) {
+      final rows = demoTodayCoursesFor(
+        leader,
+        now: DateTime(day.year, day.month, day.day, 7, 30),
+      );
+      final expected = [
+        for (final c in cbCoursesOn(day))
+          if (c.teacherUserId == staff.userId) c.id,
+      ];
+      expect(rows, hasLength(expected.length), reason: '$day');
+      taught += rows.length;
+    }
+    expect(taught, greaterThan(0));
   });
 }

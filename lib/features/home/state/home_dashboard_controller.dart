@@ -40,7 +40,7 @@ List<HomeWeekDayItem> alignWeekWithCourses(
   ];
 }
 
-/// 有个人课表的角色：学生、任课老师、班主任。
+/// 有个人课表的角色：学生、任课老师（含教学组长）、班主任。
 bool homeRoleHasTimetable(String role) =>
     role == 'student' || role == 'teacher' || role == 'headTeacher';
 

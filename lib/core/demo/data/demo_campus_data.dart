@@ -54,9 +54,13 @@ class DemoCampusStaff {
   /// 任教科目；管理人员为空串。
   final String subject;
 
-  /// 角色标识：teacher / headTeacher / dormManager / admin。
+  /// 角色标识：teacher / headTeacher / groupLeader / dormManager / admin /
+  /// principal。groupLeader 是任课老师附带的组长权限，所管科目即 [subject]。
   final List<String> roles;
   final String organizationName;
+
+  /// 教学组长（任课老师 + 组长权限），负责复核本科目组老师的点评。
+  bool get isGroupLeader => roles.contains('groupLeader');
 
   /// 任教班级 id。
   final List<String> classIds;
@@ -174,7 +178,7 @@ abstract final class DemoCampusData {
       gender: '男',
       phone: '13809310012',
       subject: '素描',
-      roles: ['teacher'],
+      roles: ['teacher', 'groupLeader'],
       organizationName: '城西校区',
       classIds: ['502', '503'],
     ),
@@ -262,6 +266,16 @@ abstract final class DemoCampusData {
       phone: '13809310005',
       subject: '',
       roles: ['admin'],
+      organizationName: '城东校区',
+    ),
+    DemoCampusStaff(
+      id: 'p-1',
+      userId: '1880000000000000006',
+      name: '陈建华',
+      gender: '男',
+      phone: '13809310006',
+      subject: '',
+      roles: ['principal'],
       organizationName: '城东校区',
     ),
   ];

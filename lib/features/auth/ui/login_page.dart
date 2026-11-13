@@ -178,9 +178,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
-/// 演示版「体验身份」：一键以学生 / 老师 / 班主任 / 宿管 / 管理员身份进入。
+/// 演示版「体验身份」：一键以学生 / 任课老师 / 组长 / 班主任 / 宿管 / 管理员 / 校长
+/// 身份进入（[DemoAccounts.all]）。
 ///
-/// 五个身份同一样式，不预设选中；演示身份只读写本机演示数据。
+/// 七个身份同一样式，不预设选中；演示身份只读写本机演示数据。
 class _DemoIdentityPanel extends StatelessWidget {
   const _DemoIdentityPanel({
     required this.enabled,

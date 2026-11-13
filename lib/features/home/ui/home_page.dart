@@ -301,7 +301,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
     );
   }
 
-  /// 右栏今日待办底部的主操作：宿管直接开始查寝，管理员进入智慧校园工作台。
+  /// 右栏今日待办底部的主操作：宿管直接开始查寝，管理员与校长进入智慧校园工作台。
   Widget? _sideTodoFooter(String role) {
     return switch (role) {
       'dormManager' => AppButton(
@@ -309,7 +309,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
         expand: true,
         onTap: () => _onTodo(HomeTodoAction.dormCheckByRoom),
       ),
-      'admin' => AppButton(
+      'admin' || 'principal' => AppButton(
         label: '进入智慧校园',
         variant: AppButtonVariant.secondary,
         expand: true,

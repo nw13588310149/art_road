@@ -314,13 +314,13 @@ void main() {
       );
     });
 
-    test('only admins can list or handle reports', () {
+    test('only admins and the principal can list or handle reports', () {
       expect(
         () => _call(
           '/app/school/v2/manager/postsReportList',
           DemoAccounts.student,
         ),
-        _demoError('只有管理员可以处理校圈举报'),
+        _demoError('只有管理员和校长可以处理校圈举报'),
       );
       expect(
         () => _call(
@@ -328,7 +328,24 @@ void main() {
           DemoAccounts.teacher,
           {'id': _pendingRecordOf(_examRumor)['id'], 'result': 1},
         ),
-        _demoError('只有管理员可以处理校圈举报'),
+        _demoError('只有管理员和校长可以处理校圈举报'),
+      );
+      expect(
+        () => _call(
+          '/app/school/v2/manager/postsReportList',
+          DemoAccounts.groupLeader,
+        ),
+        _demoError('只有管理员和校长可以处理校圈举报'),
+      );
+      // 校长与管理员看到同一份举报记录。
+      final principalPage =
+          _call('/app/school/v2/manager/postsReportList', DemoAccounts.principal, {
+                'size': 50,
+              })
+              as Map;
+      expect(
+        _records(principalPage).map((r) => r['id']),
+        _records(_reportPage()).map((r) => r['id']),
       );
     });
 

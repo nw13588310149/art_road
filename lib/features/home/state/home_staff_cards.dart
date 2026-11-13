@@ -153,6 +153,7 @@ List<HomeTodoItem> buildHomeTodos(String role, HomeTodoInput input) {
         notices,
       ];
     case 'admin':
+    case 'principal':
       final leaves = input.leaveApprovals;
       final signs = input.signConfirmations;
       return [

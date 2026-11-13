@@ -8,6 +8,7 @@
 
 - 本机没有 Xcode / Android SDK，原生改动无法在这里编译，需到 Mac 上验证。
 - `flutter analyze` 在本机会崩溃，统一改用 `dart analyze`，必须 0 issue。
+  - 在仓库根目录直接跑 `dart analyze` 要十分钟左右（`build/` 里有大量走查产物要遍历），日常用 `dart analyze lib test`，几秒出结果，检查范围相同。
 - 依赖只能离线解析：`flutter pub get --offline`；未经允许不得新增 package。
 - 每次改动后必须跑 `flutter test --no-pub`。
 - Web QA：`tool/build_web.ps1` 构建，`node tool/qa/screens.mjs --out=build/qa/after` 截图。

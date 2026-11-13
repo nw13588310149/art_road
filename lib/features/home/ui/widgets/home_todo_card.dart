@@ -48,6 +48,7 @@ class HomeTodoCard extends ConsumerWidget {
           checkLoading: config.isLoading && !config.hasValue,
         );
       case 'admin':
+      case 'principal':
         final summary = ref.watch(homeAdminTodoProvider);
         return HomeTodoInput(
           unreadNotices: unread,

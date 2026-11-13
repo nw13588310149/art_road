@@ -21,7 +21,7 @@ String demoCampusOf(DemoAccount account) {
 Map<String, dynamic> demoUserInfo(DemoAccount account) {
   final profile = DemoStore.map('profile:${account.userId}', () => {});
   final isStudent = account.role == DemoRole.student;
-  return <String, dynamic>{
+  final info = <String, dynamic>{
     'id': account.userId,
     'nickname': profile['nickname'] ?? account.name,
     'realname': account.name,
@@ -37,7 +37,12 @@ Map<String, dynamic> demoUserInfo(DemoAccount account) {
     'role': account.roleKey,
     'identity': account.role.label,
     'primary': profile['primary'] ?? (isStudent ? '美术' : '美术教育'),
-    'secondary': profile['secondary'] ?? (isStudent ? '素描' : '素描'),
+    'secondary': profile['secondary'] ??
+        (isStudent
+            ? '素描'
+            : (account.groupLeaderSubjects.isNotEmpty
+                  ? account.groupLeaderSubjects.first
+                  : '素描')),
     'school': '示范画室',
     'campus': demoCampusOf(account),
     'targetSchool': profile['targetSchool'] ?? (isStudent ? '西安美术学院' : ''),
@@ -46,6 +51,12 @@ Map<String, dynamic> demoUserInfo(DemoAccount account) {
         (isStudent ? '目标：联考素描 90+，色彩稳定在 85 分以上。' : '示范画室教学团队'),
     'vipExpireDate': profile['vipExpireDate'] ?? '2027-12-31 23:59:59',
   };
+  if (account.isGroupLeader) {
+    info['groupLeader'] = <String, dynamic>{
+      'subjects': account.groupLeaderSubjects,
+    };
+  }
+  return info;
 }
 
 Map<String, dynamic> demoSchool() => <String, dynamic>{
@@ -180,9 +191,7 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
   final role = account.role;
   final student = role == DemoRole.student;
   final staffStudy =
-      role == DemoRole.teacher ||
-      role == DemoRole.headTeacher ||
-      role == DemoRole.admin;
+      role.teaches || role.managesSchool;
   final notices = <Map<String, dynamic>>[];
 
   final personIndex = account.personIndex;
@@ -206,8 +215,7 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
     }
   }
   final teacherId = account.teacherId;
-  if (teacherId != null &&
-      (role == DemoRole.teacher || role == DemoRole.headTeacher)) {
+  if (teacherId != null && role.teaches) {
     final queue = _latestPendingFor(teacherId);
     if (queue != null) {
       final work = queue.work;
@@ -231,6 +239,8 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
         _targetStudy,
         student
             ? '【学情】9 月月考的原卷与评分标准已上线，可在「我的学情」查看各科原卷和档位说明。'
+            : role == DemoRole.principal
+            ? '【学情】9 月月考的原卷已全部上线，可在「全校学情」查看分数分布与校区对比。'
             : '【学情】9 月月考的原卷已全部上线，可在「班级学情」查看分数分布与校区对比。',
         _noticeTime(null, const Duration(hours: 3)),
         targetId: _latestPublishedExamId,
@@ -240,10 +250,12 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
 
   final campus = switch (role) {
     DemoRole.student => '【校园】班主任发布了新的班级通知，可在「智慧校园」查看。',
-    DemoRole.teacher => '【校园】学校发布了新的教学通知，可在「智慧校园」查看。',
+    DemoRole.teacher || DemoRole.groupLeader =>
+      '【校园】学校发布了新的教学通知，可在「智慧校园」查看。',
     DemoRole.headTeacher => '【校园】班级有新的请假申请与考勤记录，可在「智慧校园」的班级工作台查看。',
     DemoRole.dormManager => '【校园】今晚晚查寝 21:30 开始、$_eveningCheckTime 截止，请按时到岗。',
     DemoRole.admin => '【校园】有新的请假审批与小课签课待处理，可在「智慧校园」查看。',
+    DemoRole.principal => '【校园】校长信箱有新的来信，可在「智慧校园」查看并回复。',
   };
   notices.add(
     _notice(
@@ -254,7 +266,7 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
     ),
   );
 
-  if (role != DemoRole.dormManager && role != DemoRole.admin) {
+  if (role != DemoRole.dormManager && !role.managesSchool) {
     notices.add(
       _notice(
         4,

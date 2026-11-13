@@ -93,6 +93,7 @@ class ShellUser {
     this.secondary = '',
     this.school = '',
     this.targetSchool = '',
+    this.groupLeaderSubjects = const <String>[],
     this.vipExpireDate,
   });
 
@@ -108,12 +109,18 @@ class ShellUser {
   final String province;
 
   /// `myInfo` 接口的 `user.role` 原文，例如 `student` / `teacher` /
-  /// `headTeacher` / `dormManager` / `admin` 等，用于上层做身份分发。
+  /// `headTeacher` / `dormManager` / `admin` / `principal` 等，用于上层做身份分发。
   final String role;
 
   /// `myInfo` 接口的 `user.identity` 原文（中文身份），如「学生 / 老师 /
-  /// 班主任 / 宿管 / 管理员」，作为 `role` 字段的兜底。
+  /// 班主任 / 宿管 / 管理员 / 校长」，作为 `role` 字段的兜底。
   final String identity;
+
+  /// `myInfo.user.groupLeader.subjects`：教学组长所管科目；空表示不是组长。
+  final List<String> groupLeaderSubjects;
+
+  /// 是否教学组长（任课老师 + 组长权限）。
+  bool get isGroupLeader => groupLeaderSubjects.isNotEmpty;
 
   /// `myInfo.user.gender`，如「男 / 女」。
   final String gender;
@@ -174,6 +181,7 @@ class ShellUser {
     String? secondary,
     String? school,
     String? targetSchool,
+    List<String>? groupLeaderSubjects,
     DateTime? vipExpireDate,
   }) {
     return ShellUser(
@@ -189,6 +197,7 @@ class ShellUser {
       secondary: secondary ?? this.secondary,
       school: school ?? this.school,
       targetSchool: targetSchool ?? this.targetSchool,
+      groupLeaderSubjects: groupLeaderSubjects ?? this.groupLeaderSubjects,
       vipExpireDate: vipExpireDate ?? this.vipExpireDate,
     );
   }
@@ -293,7 +302,9 @@ List<ShellNavItem> buildDefaultNavItems({
     ),
     if (academic)
       ShellNavItem(
-        label: isStaff ? '班级学情' : '我的学情',
+        label: role.trim() == 'principal'
+            ? '全校学情'
+            : (isStaff ? '班级学情' : '我的学情'),
         route: RoutePaths.studyCenter,
         icon: AppAssets.leftNavXueqing,
         activeIcon: AppAssets.leftNavXueqing,

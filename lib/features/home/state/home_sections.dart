@@ -54,6 +54,12 @@ HomeSections homeSectionsFor(String role) => switch (role.trim()) {
     sideTodo: true,
     studySnapshot: true,
   ),
+  // 校长首页在第二期换成完整驾驶舱；第 0 期先给管理端同款区块，避免空首页。
+  'principal' => const HomeSections(
+    courses: false,
+    sideTodo: true,
+    studySnapshot: true,
+  ),
   'dormManager' => const HomeSections(
     subjects: false,
     courses: false,

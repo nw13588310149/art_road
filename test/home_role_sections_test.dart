@@ -254,6 +254,10 @@ void main() {
       expect(admin.sideTodo && admin.studySnapshot, isTrue);
       expect(admin.courses, isFalse);
 
+      final principal = homeSectionsFor('principal');
+      expect(principal.sideTodo && principal.studySnapshot, isTrue);
+      expect(principal.courses || principal.practice, isFalse);
+
       final dorm = homeSectionsFor('dormManager');
       expect(dorm.sideTodo, isTrue);
       expect(dorm.studySnapshot || dorm.courses || dorm.subjects, isFalse);
@@ -274,6 +278,23 @@ void main() {
           demoMode: true,
         ),
         'dormManager',
+      );
+      // 教学组长的后端身份仍是任课老师，首页与任课老师同构。
+      expect(
+        resolveHomeRole(
+          '',
+          token: 'demo.groupLeader.13809310012',
+          demoMode: true,
+        ),
+        'teacher',
+      );
+      expect(
+        resolveHomeRole(
+          '',
+          token: 'demo.principal.13809310006',
+          demoMode: true,
+        ),
+        'principal',
       );
       expect(resolveHomeRole('', token: '', demoMode: true), '');
       expect(resolveHomeRole('', token: 'real-token', demoMode: false), '');

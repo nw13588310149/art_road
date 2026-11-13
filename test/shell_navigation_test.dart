@@ -113,6 +113,14 @@ void main() {
     ).map((item) => item.label).toList();
     expect(teacher, contains('班级学情'));
     expect(teacher, isNot(contains('作品点评')));
+    final principal = buildDefaultNavItems(
+      schoolCoursewareEnabled: true,
+      isStaff: true,
+      role: 'principal',
+    ).map((item) => item.label).toList();
+    expect(principal, contains('全校学情'));
+    expect(principal, isNot(contains('班级学情')));
+    expect(principal, hasLength(teacher.length));
     expect(
       buildDefaultNavItems(
         schoolCoursewareEnabled: true,
