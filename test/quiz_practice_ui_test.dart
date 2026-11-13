@@ -13,7 +13,7 @@ import 'package:the_road_of_art_flutter/features/quiz_practice/ui/quiz_practice_
 void main() {
   setUpAll(registerDemoFixtures);
 
-  testWidgets('quiz practice mode counts align at the 1024 content width', (
+  testWidgets('quiz practice ring cards share one baseline at 1024 width', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
@@ -30,7 +30,10 @@ void main() {
         overrides: [appStorageProvider.overrideWithValue(AppStorage(prefs))],
         child: const MaterialApp(
           home: Scaffold(
-            body: QuizPracticeView(schoolId: kPublicQuizSchoolId, subtitle: ''),
+            body: QuizPracticeView(
+              schoolId: kPublicQuizSchoolId,
+              subtitle: '',
+            ),
           ),
         ),
       ),
@@ -39,11 +42,19 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
     }
 
-    final counts = find.textContaining(RegExp(r'^已(?:做|复习) \d+ / \d+$'));
-    expect(counts, findsNWidgets(4));
-    final baseline = tester.getTopLeft(counts.first).dy;
-    for (var index = 1; index < 4; index++) {
-      expect(tester.getTopLeft(counts.at(index)).dy, baseline);
+    expect(find.text('练习方式'), findsOneWidget);
+    final labels = [
+      find.text('顺序练习'),
+      find.text('随机练习'),
+      find.text('高频考点'),
+      find.text('错题本'),
+    ];
+    for (final finder in labels) {
+      expect(finder, findsOneWidget);
+    }
+    final baseline = tester.getTopLeft(labels.first).dy;
+    for (var index = 1; index < labels.length; index++) {
+      expect(tester.getTopLeft(labels[index]).dy, baseline);
     }
     expect(tester.takeException(), isNull);
   });

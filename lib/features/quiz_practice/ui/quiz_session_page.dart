@@ -1,16 +1,15 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
-
 import '../../../app/router/route_paths.dart';
 import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
+import '../../shell/ui/shell_layout.dart';
 import '../data/quiz_html.dart';
 import '../state/quiz_practice_state.dart';
 import '../state/quiz_session_controller.dart';
 import '../state/quiz_session_state.dart';
-import 'quiz_stats.dart';
 
 class QuizSessionPage extends ConsumerStatefulWidget {
   const QuizSessionPage({super.key, this.openCompletion = false});
@@ -51,6 +50,7 @@ class _QuizSessionPageState extends ConsumerState<QuizSessionPage> {
     final controller = ref.read(provider.notifier);
 
     ref.listen<QuizSessionState>(provider, (previous, next) {
+      // 错误吐司
       final msg = next.errorMessage;
       if (msg.isNotEmpty && msg != previous?.errorMessage) {
         AppToast.show(context, msg);
@@ -59,6 +59,7 @@ class _QuizSessionPageState extends ConsumerState<QuizSessionPage> {
         });
       }
 
+      // 完成/退出弹窗
       if (next.completionDialogVisible && !_dialogShowing) {
         _dialogShowing = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,55 +68,32 @@ class _QuizSessionPageState extends ConsumerState<QuizSessionPage> {
       }
     });
 
-    final total = state.questions.length;
-    final Widget body;
-    if (state.loading) {
-      body = const Center(child: AppLoadingIndicator());
-    } else if (total == 0) {
-      body = const AppEmptyState(
-        icon: Icons.quiz_outlined,
-        title: '这组练习还没有题目',
-        description: '返回题库换一种练习方式试试',
-      );
-    } else {
-      body = _SessionBody(
-        state: state,
-        onSelect: controller.selectAnswer,
-        onPrevious: controller.previousQuestion,
-        onNext: controller.nextQuestion,
-      );
-    }
-
-    return AppCard(
+    // DashboardScaffold 已提供外层 padding + #EFF3FC 背景，这里只需要单层白卡。
+    return ShellPageSurface(
       padding: EdgeInsets.zero,
-      bordered: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppPageHeader(
-            title: state.args.practiceType.label,
-            subtitle: total == 0
-                ? null
-                : '第 ${state.currentIndex + 1} / $total 题 · 已做 ${state.answeredCount} 题',
-            onBack: controller.openExitDialog,
-            actions: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('自动下一题', style: AppText.body14),
-                  const SizedBox(width: AppSpace.s8),
-                  AppSwitch(
-                    value: state.autoNext,
-                    onChanged: controller.setAutoNext,
-                    semanticLabel: '答完自动进入下一题',
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Expanded(child: body),
-        ],
-      ),
+      child: state.loading
+          ? const Center(child: AppLoadingIndicator())
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _SessionHeader(
+                  title: state.args.practiceType.label,
+                  autoNext: state.autoNext,
+                  onBack: controller.openExitDialog,
+                  onAutoNextChanged: controller.setAutoNext,
+                ),
+                Expanded(
+                  child: state.questions.isEmpty
+                      ? const Center(child: Text('暂无题目'))
+                      : _SessionBody(
+                          state: state,
+                          onSelect: controller.selectAnswer,
+                          onPrevious: controller.previousQuestion,
+                          onNext: controller.nextQuestion,
+                        ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -124,11 +102,22 @@ class _QuizSessionPageState extends ConsumerState<QuizSessionPage> {
     QuizSessionController controller,
   ) async {
     if (!mounted) return;
-    await showAppDialog<void>(
+    // showDialog 走 root Overlay，不会继承 ShellScaffold 内层的 DashboardScaleScope，
+    // 这里把当前页面的 scale 数据捕获后再透传给 dialog。
+    final scale = DashboardScaleScope.of(context);
+    await showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.20),
       barrierDismissible: false,
-      builder: (dialogContext) =>
-          _CompletionDialog(controller: controller, providerArgs: _args!),
+      builder: (dialogContext) {
+        return DashboardScaleScope(
+          data: scale,
+          child: _CompletionDialog(
+            controller: controller,
+            providerArgs: _args!,
+          ),
+        );
+      },
     );
     _dialogShowing = false;
     if (mounted) controller.closeCompletionDialog();
@@ -136,7 +125,152 @@ class _QuizSessionPageState extends ConsumerState<QuizSessionPage> {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 主体：题型 / 题干 / 选项 / 解析 / 上下一题按钮
+// 顶部 56px header
+// ─────────────────────────────────────────────────────────────────────
+
+class _SessionHeader extends StatelessWidget {
+  const _SessionHeader({
+    required this.title,
+    required this.autoNext,
+    required this.onBack,
+    required this.onAutoNextChanged,
+  });
+
+  final String title;
+  final bool autoNext;
+  final VoidCallback onBack;
+  final ValueChanged<bool> onAutoNextChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      height: ui(56),
+      padding: EdgeInsets.symmetric(horizontal: ui(20)),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFF3F2F3), width: 1)),
+      ),
+      child: Row(
+        children: [
+          _BackButton(onTap: onBack),
+          Expanded(
+            child: Center(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: const Color(0xFF0B081A),
+                  fontSize: ui(16),
+                  fontWeight: AppFont.w600,
+                  fontFamily: 'PingFang SC',
+                ),
+              ),
+            ),
+          ),
+          Text(
+            '自动下一题',
+            style: TextStyle(
+              color: const Color(0xFF0B081A),
+              fontSize: ui(14),
+              fontFamily: 'PingFang SC',
+              height: 1.0,
+            ),
+          ),
+          SizedBox(width: ui(8)),
+          _AutoNextSwitch(value: autoNext, onChanged: onAutoNextChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _AutoNextSwitch extends StatelessWidget {
+  const _AutoNextSwitch({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final trackWidth = ui(40);
+    final trackHeight = ui(24);
+    final thumbSize = ui(18);
+    final inset = ui(3);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onChanged(!value),
+      child: SizedBox(
+        width: trackWidth,
+        height: trackHeight,
+        child: Stack(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              width: trackWidth,
+              height: trackHeight,
+              decoration: BoxDecoration(
+                color: value ? AppColors.brand : const Color(0xFFE6E9F1),
+                borderRadius: BorderRadius.circular(ui(13.5)),
+              ),
+            ),
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              left: value ? trackWidth - thumbSize - inset : inset,
+              top: inset,
+              child: Container(
+                width: thumbSize,
+                height: thumbSize,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BackButton extends StatelessWidget {
+  const _BackButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Semantics(
+      button: true,
+      label: '返回',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: ui(32),
+          height: ui(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(ui(8)),
+            border: Border.all(color: const Color(0xFFF3F2F3), width: 1),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.chevron_left,
+            color: const Color(0xFF1C274C),
+            size: ui(20),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 主体：题型 chip / 题干 / 选项 / 解析 / 上下一题按钮
 // ─────────────────────────────────────────────────────────────────────
 
 class _SessionBody extends StatefulWidget {
@@ -166,69 +300,56 @@ class _SessionBodyState extends State<_SessionBody> {
     super.dispose();
   }
 
-  /// 题目切换时把滚动条复位到顶部，否则新题仍停在上一题滚到的位置。
+  /// 题目切换时把滚动条复位到顶部。否则上一题滑到底，新一题
+  /// 进来仍停在底，看起来就是一片"白屏"。
   void _maybeResetScrollOnQuestionChange(int? newQuestionId) {
     if (newQuestionId == _lastQuestionId) return;
     _lastQuestionId = newQuestionId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_scrollController.hasClients) return;
+      // jumpTo 0；用 jumpTo 而不是 animateTo——题目切换是"跳变"，
+      // 不要带动画，免得用户看到上一题的内容滑出去。
       _scrollController.jumpTo(0);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     final question = widget.state.currentQuestion;
     _maybeResetScrollOnQuestionChange(question?.itemId);
 
     if (question == null) {
-      return const AppEmptyState(icon: Icons.quiz_outlined, title: '这组练习还没有题目');
+      return const Center(child: Text('暂无题目'));
     }
-    final isLast =
-        widget.state.currentIndex >= widget.state.questions.length - 1;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.page,
-        0,
-        AppSpace.page,
-        AppSpace.s24,
-      ),
+      padding: EdgeInsets.fromLTRB(ui(20), ui(12), ui(20), ui(20)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: AppCard(
-              padding: EdgeInsets.zero,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.all(AppSpace.s24),
-                // ValueKey(itemId)：题目一变整棵子树重建，HtmlWidget / 图片
-                // 等带内部状态的组件不会把上一题的内容留到这一题。
-                child: _QuestionContent(
-                  key: ValueKey<int>(question.itemId),
-                  question: question,
-                  questionNumber: widget.state.currentIndex + 1,
-                  onSelect: widget.onSelect,
-                ),
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              physics: const ClampingScrollPhysics(),
+              // ValueKey(itemId) 是这次重构最关键的一笔——题目
+              // ID 一变，_QuestionContent 整棵子树会被 Element 层
+              // unmount + remount，HtmlWidget / Image 等带内部状
+              // 态的 widget 全部新建，杜绝"上一题的字 / 图遗留
+              // 到这一题"。
+              child: _QuestionContent(
+                key: ValueKey<int>(question.itemId),
+                question: question,
+                questionNumber: widget.state.currentIndex + 1,
+                onSelect: widget.onSelect,
               ),
             ),
           ),
-          const SizedBox(height: AppSpace.s16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppButton(
-                label: '上一题',
-                variant: AppButtonVariant.secondary,
-                enabled: widget.state.currentIndex > 0,
-                onTap: widget.onPrevious,
-              ),
-              const SizedBox(width: AppSpace.s12),
-              AppButton(label: isLast ? '完成练习' : '下一题', onTap: widget.onNext),
-            ],
+          SizedBox(height: ui(20)),
+          _NavButtons(
+            onPrevious: widget.onPrevious,
+            onNext: widget.onNext,
           ),
         ],
       ),
@@ -236,8 +357,11 @@ class _SessionBodyState extends State<_SessionBody> {
   }
 }
 
-/// 题目主体（题型 + 题干 + 选项 + 解析），本身不持有状态，
-/// 切题时由外层的 `ValueKey(question.itemId)` 触发整棵子树重建。
+/// 题目主体（题型 chip + 题干 + 选项 + 解析）。
+///
+/// 内部不持有任何状态——所有"切题需要 reset"的副作用都靠外层
+/// 给本 widget 传入的 `ValueKey(question.itemId)` 触发整棵子树
+/// 在 Element 层 unmount + remount。
 class _QuestionContent extends StatelessWidget {
   const _QuestionContent({
     super.key,
@@ -252,57 +376,120 @@ class _QuestionContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stemStyle = AppText.body16.copyWith(
-      color: AppColors.ink,
-      fontWeight: AppFont.w500,
-      height: 1.6,
-    );
-    final parseStyle = AppText.body14.copyWith(
-      color: AppColors.textSecondary,
-      height: 1.7,
-    );
+    final ui = DashboardScaleScope.of(context).ui;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _TypeChip(),
+        SizedBox(height: ui(20)),
+        // 题干：左侧"第 N 题"前缀 + 富文本（可能含 <img>、
+        // <sup>/<sub> 等）。
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const AppTag(label: '单选题'),
-            const SizedBox(width: AppSpace.s8),
-            Text('第 $questionNumber 题', style: AppText.caption12),
+            Text(
+              '第 $questionNumber 题',
+              style: TextStyle(
+                color: const Color(0xFF0B081A),
+                fontSize: ui(16),
+                fontWeight: AppFont.w500,
+                fontFamily: 'PingFang SC',
+                height: 1.5,
+              ),
+            ),
+            Expanded(
+              child: _QuizHtml(
+                html: question.questionHtml,
+                fallbackText: question.questionStripped,
+                hasMedia: question.questionHasMedia,
+                hasInlineRich: question.questionHasInlineRich,
+                textStyle: TextStyle(
+                  color: const Color(0xFF0B081A),
+                  fontSize: ui(16),
+                  fontWeight: AppFont.w500,
+                  fontFamily: 'PingFang SC',
+                  height: 1.5,
+                ),
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: AppSpace.s12),
-        _QuizHtml(
-          html: question.questionHtml,
-          fallbackText: question.questionStripped,
-          hasMedia: question.questionHasMedia,
-          hasInlineRich: question.questionHasInlineRich,
-          textStyle: stemStyle,
-        ),
-        const SizedBox(height: AppSpace.s20),
+        SizedBox(height: ui(24)),
         _OptionsGrid(question: question, onSelect: onSelect),
         if (question.answered) ...[
-          const SizedBox(height: AppSpace.s24),
-          const Divider(height: 1, thickness: 1, color: AppColors.lineSoft),
-          const SizedBox(height: AppSpace.s16),
+          SizedBox(height: ui(28)),
+          const Divider(height: 1, color: Color(0xFFF3F2F3)),
+          SizedBox(height: ui(20)),
           _AnswerRow(question: question),
-          const SizedBox(height: AppSpace.s16),
-          Text('题目解析', style: AppText.title16),
-          const SizedBox(height: AppSpace.s8),
+          SizedBox(height: ui(24)),
+          Text(
+            '题目解析',
+            style: TextStyle(
+              color: const Color(0xFF6D6B75),
+              fontSize: ui(16),
+              fontWeight: AppFont.w600,
+              fontFamily: 'PingFang SC',
+            ),
+          ),
+          SizedBox(height: ui(10)),
           if (question.parseStripped.isEmpty &&
               !question.parseHasMedia &&
               !question.parseHasInlineRich)
-            Text('这道题暂未提供解析', style: parseStyle)
+            Text(
+              '暂无解析',
+              style: TextStyle(
+                color: const Color(0xFFB6B5BB),
+                fontSize: ui(14),
+                fontFamily: 'PingFang SC',
+                height: 1.6,
+              ),
+            )
           else
             _QuizHtml(
               html: question.parseHtml,
               fallbackText: question.parseStripped,
               hasMedia: question.parseHasMedia,
               hasInlineRich: question.parseHasInlineRich,
-              textStyle: parseStyle,
+              textStyle: TextStyle(
+                color: const Color(0xFFB6B5BB),
+                fontSize: ui(14),
+                fontFamily: 'PingFang SC',
+                height: 1.6,
+              ),
             ),
         ],
       ],
+    );
+  }
+}
+
+class _TypeChip extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(3)),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAE5FF),
+          borderRadius: BorderRadius.circular(ui(4)),
+        ),
+        child: Text.rich(
+          TextSpan(
+            style: TextStyle(
+              color: const Color(0xFF0B081A),
+              fontSize: ui(12),
+              fontFamily: 'PingFang SC',
+              height: 1.0,
+            ),
+            children: const [
+              TextSpan(text: '当前题型：'),
+              TextSpan(text: '单选题'),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -315,44 +502,52 @@ class _OptionsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget row(int first) => IntrinsicHeight(
-      // stretch 让同一行两个选项等高（一边文字、一边图片时也一样）。
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: _Option(
-              question: question,
-              index: first,
-              onSelect: onSelect,
-            ),
-          ),
-          const SizedBox(width: AppSpace.s16),
-          Expanded(
-            child: _Option(
-              question: question,
-              index: first + 1,
-              onSelect: onSelect,
-            ),
-          ),
-        ],
-      ),
-    );
+    final ui = DashboardScaleScope.of(context).ui;
     return Column(
       children: [
-        row(0),
-        const SizedBox(height: AppSpace.s12),
-        row(2),
+        // crossAxisAlignment.stretch 让每行的两个选项高度对齐——
+        // 如果一边是文字、一边是图片，两个卡片仍然一样高。
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _Option(question: question, index: 0, onSelect: onSelect)),
+              SizedBox(width: ui(20)),
+              Expanded(child: _Option(question: question, index: 1, onSelect: onSelect)),
+            ],
+          ),
+        ),
+        SizedBox(height: ui(20)),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _Option(question: question, index: 2, onSelect: onSelect)),
+              SizedBox(width: ui(20)),
+              Expanded(child: _Option(question: question, index: 3, onSelect: onSelect)),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
-/// 单个选项（A/B/C/D）。key 带 itemId + index，切题时整块重建，
-/// 不会复用上一题选项里的 HtmlWidget / 图片。
+/// 单个选项卡（A/B/C/D 之一）。
+///
+/// 拆成独立 widget + key（itemId+index）让 Flutter 在题目切换 /
+/// 选项内容变化时彻底走 unmount → mount，避免 Element 复用把上
+/// 一题选项里的 HtmlWidget DOM / 图片留给新题用。
 class _Option extends StatelessWidget {
-  _Option({required this.question, required this.index, required this.onSelect})
-    : super(key: ValueKey<String>('opt-${question.itemId}-$index'));
+  _Option({
+    required this.question,
+    required this.index,
+    required this.onSelect,
+  }) : super(
+         key: ValueKey<String>(
+           'opt-${question.itemId}-$index',
+         ),
+       );
 
   final QuizQuestion question;
   final int index;
@@ -362,6 +557,7 @@ class _Option extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     final letter = _letters[index];
     final rawHtml = index < question.options.length
         ? question.options[index]
@@ -382,61 +578,72 @@ class _Option extends StatelessWidget {
     final showCorrect = answered && isCorrectOption;
     final showWrong = answered && isUserPick && !isCorrectOption;
 
-    var background = AppColors.surfaceSubtle;
-    var textColor = AppColors.ink;
-    IconData? mark;
+    Color bg = const Color(0xFFF5F6FA);
+    Color textColor = const Color(0xFF0B081A);
+    Widget? trailing;
     if (showCorrect) {
-      background = AppColors.successSoft;
-      textColor = AppColors.success;
-      mark = Icons.check_rounded;
+      bg = const Color(0xFFE8F5EC);
+      textColor = const Color(0xFF1AAB5B);
+      trailing = Icon(Icons.check_rounded, color: textColor, size: ui(20));
     } else if (showWrong) {
-      background = AppColors.dangerSoft;
-      textColor = AppColors.danger;
-      mark = Icons.close_rounded;
+      bg = const Color(0xFFFCEBEB);
+      textColor = const Color(0xFFE0494B);
+      trailing = Icon(Icons.close_rounded, color: textColor, size: ui(20));
     }
 
-    return AppPressable(
-      onTap: answered ? null : () => onSelect(index),
-      semanticLabel: '选项 $letter',
+    return Semantics(
       checked: isUserPick,
-      child: Container(
-        // 最小 48，纯图片选项可以撑高。
-        constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpace.s16,
-          vertical: AppSpace.s8,
-        ),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: AppRadius.br8,
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 24,
-              child: Text(
-                '$letter.',
-                style: AppText.body16.copyWith(
-                  color: textColor,
-                  fontWeight: AppFont.w600,
+      label: '选项 $letter',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(ui(8)),
+          onTap: answered ? null : () => onSelect(index),
+          child: Container(
+            // 最小 44，让纯图片选项可以撑大；IntrinsicHeight 在外面
+            // 保证同一行两个选项卡片等高。
+            constraints: BoxConstraints(minHeight: ui(44)),
+            padding: EdgeInsets.symmetric(
+              horizontal: ui(20),
+              vertical: ui(8),
+            ),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(ui(8)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: ui(22),
+                  child: Text(
+                    '$letter.',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: ui(16),
+                      fontWeight: AppFont.w600,
+                      fontFamily: 'PingFang SC',
+                    ),
+                  ),
                 ),
-              ),
+                SizedBox(width: ui(9)),
+                Expanded(
+                  child: _QuizHtml(
+                    html: rawHtml,
+                    fallbackText: stripped,
+                    hasMedia: hasMedia,
+                    hasInlineRich: hasInlineRich,
+                    textStyle: TextStyle(
+                      color: textColor,
+                      fontSize: ui(16),
+                      fontFamily: 'PingFang SC',
+                    ),
+                  ),
+                ),
+                if (trailing != null) ...[SizedBox(width: ui(8)), trailing],
+              ],
             ),
-            const SizedBox(width: AppSpace.s8),
-            Expanded(
-              child: _QuizHtml(
-                html: rawHtml,
-                fallbackText: stripped,
-                hasMedia: hasMedia,
-                hasInlineRich: hasInlineRich,
-                textStyle: AppText.body16.copyWith(color: textColor),
-              ),
-            ),
-            if (mark != null) ...[
-              const SizedBox(width: AppSpace.s8),
-              Icon(mark, color: textColor, size: 20),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -450,29 +657,147 @@ class _AnswerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const letters = ['A', 'B', 'C', 'D'];
+    final ui = DashboardScaleScope.of(context).ui;
+    final letters = ['A', 'B', 'C', 'D'];
     final correctLetter = letters[question.correctAnswer.clamp(0, 3)];
     final pickIndex = question.userAnswer ?? -1;
     final pickLetter = (pickIndex >= 0 && pickIndex < 4)
         ? letters[pickIndex]
         : '-';
     final pickColor = question.status == 1
-        ? AppColors.success
-        : AppColors.danger;
-    final labelStyle = AppText.body14.copyWith(color: AppColors.textSecondary);
-    final valueStyle = AppText.body14Strong;
+        ? const Color(0xFF1AAB5B)
+        : const Color(0xFFE0494B);
+
+    final labelStyle = TextStyle(
+      color: const Color(0xFF0B081A),
+      fontSize: ui(16),
+      fontWeight: AppFont.w500,
+      fontFamily: 'PingFang SC',
+    );
+    final valueStyle = TextStyle(
+      fontSize: ui(16),
+      fontWeight: AppFont.w600,
+      fontFamily: 'PingFang SC',
+    );
 
     return Row(
       children: [
         Text('正确答案：', style: labelStyle),
         Text(
           correctLetter,
-          style: valueStyle.copyWith(color: AppColors.success),
+          style: valueStyle.copyWith(color: const Color(0xFF1AAB5B)),
         ),
-        const SizedBox(width: AppSpace.s32),
-        Text('你的答案：', style: labelStyle),
+        SizedBox(width: ui(36)),
+        Text('已选答案：', style: labelStyle),
         Text(pickLetter, style: valueStyle.copyWith(color: pickColor)),
       ],
+    );
+  }
+}
+
+class _NavButtons extends StatelessWidget {
+  const _NavButtons({required this.onPrevious, required this.onNext});
+
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Center(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _GhostButton(label: '上一题', onTap: onPrevious),
+          SizedBox(width: ui(16)),
+          _PrimaryButton(label: '下一题', onTap: onNext),
+        ],
+      ),
+    );
+  }
+}
+
+class _GhostButton extends StatelessWidget {
+  const _GhostButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: ui(182),
+        height: ui(45),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(ui(12)),
+          border: Border.all(color: const Color(0xFFF3F2F3), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0x59B5B5B5),
+              blurRadius: ui(20),
+              offset: Offset(0, ui(16)),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: const Color(0xFF0B081A),
+            fontSize: ui(16),
+            fontFamily: 'PingFang SC',
+            height: 1.0,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryButton extends StatelessWidget {
+  const _PrimaryButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: ui(182),
+        height: ui(45),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerRight,
+            end: Alignment.centerLeft,
+            colors: const [Color(0xFFA99BFF), AppColors.brand],
+          ),
+          borderRadius: BorderRadius.circular(ui(12)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brand.withValues(alpha: 0.35),
+              blurRadius: ui(20),
+              offset: Offset(0, ui(16)),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: ui(16),
+            fontFamily: 'PingFang SC',
+            height: 1.0,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -493,6 +818,7 @@ class _CompletionDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(quizSessionControllerProvider(providerArgs));
+    final ui = DashboardScaleScope.of(context).ui;
 
     final summary = _summaryOf(state, providerArgs.practiceType);
     final notDone = summary?.notDoneCount ?? state.notDoneCount;
@@ -501,91 +827,71 @@ class _CompletionDialog extends ConsumerWidget {
     final accuracyPercent = summary?.accuracyPercent ?? state.accuracyPercent;
 
     final isExam = providerArgs.practiceType == QuizPracticeType.exam;
-    final recommended = isExam
-        ? QuizPracticeType.random
-        : QuizPracticeType.exam;
-    final showRecommended =
-        providerArgs.practiceType != recommended &&
-        providerArgs.practiceType != QuizPracticeType.error;
+    final recommendedLabel = isExam ? '随机练习' : '高频考点';
 
-    return AppDialog(
-      title: notDone == 0 ? '本轮练习完成' : '还有 $notDone 题未做',
-      message: notDone == 0 ? '做错的题已收进错题本，可以随时回来复习。' : '进度已保存，下次会从未做的题继续。',
-      actions: [
-        AppButton(
-          label: '退出练习',
-          variant: AppButtonVariant.secondary,
-          onTap: () {
-            final navigator = Navigator.of(context);
-            navigator.pop();
-            navigator.pop(true);
-          },
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.zero,
+      child: Container(
+        width: ui(428),
+        padding: EdgeInsets.fromLTRB(ui(19), ui(28), ui(19), ui(28)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(ui(24)),
         ),
-        AppButton(label: '继续练习', onTap: () => Navigator.of(context).pop()),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          QuizStats(
-            notDone: notDone,
-            done: done,
-            wrong: wrong,
-            accuracyPercent: accuracyPercent,
-            spacing: AppSpace.s8,
-          ),
-          if (showRecommended) ...[
-            const SizedBox(height: AppSpace.s16),
-            AppCard(
-              bordered: true,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpace.s16,
-                vertical: AppSpace.s12,
-              ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _StatGrid(
+              notDone: notDone,
+              done: done,
+              wrong: wrong,
+              accuracyPercent: accuracyPercent,
+            ),
+            SizedBox(height: ui(20)),
+            _RecommendedSwitchCard(
+              label: recommendedLabel,
               onTap: () async {
                 final next = await controller.switchToRecommended();
-                if (!context.mounted) return;
                 if (next == null) {
-                  AppToast.showInfo(context, '暂无可切换的练习');
+                  if (context.mounted) {
+                    AppToast.show(context, '暂无可切换的练习');
+                  }
                   return;
                 }
-                final navigator = Navigator.of(context);
-                navigator.pop();
-                navigator.pushReplacementNamed(
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+                Navigator.pushReplacementNamed(
+                  context,
                   RoutePaths.campAnswer,
                   arguments: next,
                 );
               },
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.swap_horiz_rounded,
-                    size: 20,
-                    color: AppColors.textSecondary,
+            ),
+            SizedBox(height: ui(20)),
+            Row(
+              children: [
+                Expanded(
+                  child: _GhostButton(
+                    label: '退出练习',
+                    onTap: () {
+                      final navigator = Navigator.of(context);
+                      navigator.pop();
+                      navigator.pop(true);
+                    },
                   ),
-                  const SizedBox(width: AppSpace.s12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '换一种练习：${recommended.label}',
-                          style: AppText.body14Strong,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(recommended.description, style: AppText.caption12),
-                      ],
-                    ),
+                ),
+                SizedBox(width: ui(16)),
+                Expanded(
+                  child: _PrimaryButton(
+                    label: '继续练习',
+                    onTap: () => Navigator.of(context).pop(),
                   ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: AppColors.textTertiary,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -598,6 +904,144 @@ class _CompletionDialog extends ConsumerWidget {
       if (s.type == type) return s;
     }
     return null;
+  }
+}
+
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({
+    required this.notDone,
+    required this.done,
+    required this.wrong,
+    required this.accuracyPercent,
+  });
+
+  final int notDone;
+  final int done;
+  final int wrong;
+  final int accuracyPercent;
+
+  @override
+  Widget build(BuildContext context) {
+    // 设计宽度 = 弹窗宽 428 - 左右各 19 padding = 390
+    // 4 个统计格 90×86 + 3 个间距 10 = 360 + 30 = 390，正好填满。
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _StatCell(value: '$notDone', label: '未做题'),
+        _StatCell(value: '$done', label: '已做题'),
+        _StatCell(value: '$wrong', label: '错题'),
+        _StatCell(value: '$accuracyPercent%', label: '正确率'),
+      ],
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  const _StatCell({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      width: ui(90),
+      height: ui(86),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6FA),
+        borderRadius: BorderRadius.circular(ui(12)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: const Color(0xFF0B081A),
+              fontSize: ui(24),
+              fontWeight: AppFont.w500,
+              fontFamily: 'PingFang SC',
+            ),
+          ),
+          SizedBox(height: ui(8)),
+          Text(
+            label,
+            style: TextStyle(
+              color: const Color(0xFF6D6B75),
+              fontSize: ui(12),
+              fontFamily: 'PingFang SC',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendedSwitchCard extends StatelessWidget {
+  const _RecommendedSwitchCard({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    // Stack 让"推荐 badge + 下指小三角"作为浮层"挂"在卡片右上方，
+    // badge 顶部超出卡片 5px，三角紧贴 badge 底部指向卡片，
+    // 形成消息气泡的视觉。clipBehavior.none 允许超出。
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // 卡片本体
+          Container(
+            height: ui(66),
+            padding: EdgeInsets.symmetric(horizontal: ui(20)),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFF5F6FA), Colors.white],
+              ),
+              borderRadius: BorderRadius.circular(ui(12)),
+              border: Border.all(
+                color: const Color(0xFFF3F2F3),
+                width: 1,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: const Color(0xFF0B081A),
+                fontSize: ui(16),
+                fontFamily: 'PingFang SC',
+                height: 1.0,
+              ),
+            ),
+          ),
+          // 浮层"推荐"气泡：定位参考设计稿
+          //   弹窗 428、内容宽 390（左右 19 padding）
+          //   badge 全局 left=246, top=90；卡片 left=19, top=95
+          //   ⇒ badge 在卡片内 right ≈ 390-(246-19)-38 = 125, top = -5
+          Positioned(
+            right: ui(125),
+            top: ui(-5),
+            child: Image.asset(
+              'assets/images/quiz/tj.png',
+              width: ui(38),
+              height: ui(30),
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -843,7 +1287,8 @@ List<InlineSpan> _parseInlineSpans(String html, TextStyle textStyle) {
   flushText();
 
   // 去掉首尾的纯空白 TextSpan（包括首尾 "\n"）。
-  bool isBlank(InlineSpan s) => s is TextSpan && (s.text ?? '').trim().isEmpty;
+  bool isBlank(InlineSpan s) =>
+      s is TextSpan && (s.text ?? '').trim().isEmpty;
   while (spans.isNotEmpty && isBlank(spans.first)) {
     spans.removeAt(0);
   }
@@ -878,7 +1323,8 @@ class _InlineNetworkImage extends StatelessWidget {
       fit: BoxFit.contain,
       fadeInDuration: Duration.zero,
       fadeOutDuration: Duration.zero,
-      placeholder: (context, _) => SizedBox(width: w ?? 40, height: h ?? 40),
+      placeholder: (context, _) =>
+          SizedBox(width: w ?? 40, height: h ?? 40),
       errorWidget: (context, _, _) => Container(
         width: w ?? 60,
         height: h ?? 60,
@@ -887,7 +1333,10 @@ class _InlineNetworkImage extends StatelessWidget {
           color: const Color(0xFFF5F6FA),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: const Icon(Icons.broken_image_rounded, color: Color(0xFFC9C6D8)),
+        child: const Icon(
+          Icons.broken_image_rounded,
+          color: Color(0xFFC9C6D8),
+        ),
       ),
     );
   }
@@ -932,7 +1381,10 @@ class _ResponsiveNetworkImage extends StatelessWidget {
       fit: BoxFit.contain,
       fadeInDuration: Duration.zero,
       fadeOutDuration: Duration.zero,
-      placeholder: (context, _) => SizedBox(width: w ?? 40, height: h ?? 40),
+      placeholder: (context, _) => SizedBox(
+        width: w ?? 40,
+        height: h ?? 40,
+      ),
       errorWidget: (context, _, _) => Container(
         width: w ?? 60,
         height: h ?? 60,
@@ -941,7 +1393,10 @@ class _ResponsiveNetworkImage extends StatelessWidget {
           color: const Color(0xFFF5F6FA),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: const Icon(Icons.broken_image_rounded, color: Color(0xFFC9C6D8)),
+        child: const Icon(
+          Icons.broken_image_rounded,
+          color: Color(0xFFC9C6D8),
+        ),
       ),
     );
 

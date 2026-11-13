@@ -4,140 +4,158 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/app_refresh_indicator.dart';
+import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_controller.dart';
 import '../../state/circle_state.dart';
 import 'circle_post_actions.dart';
 import 'circle_post_card.dart';
 
-/// 卡片模式：瀑布流。按列累计估算高度，把每张卡片放到当前最矮的那一列。
+/// 列表模式：瀑布流。沿 Y 方向按列累计高度，把每个卡片填到当前最矮的那一列。
 class CircleListView extends StatelessWidget {
   const CircleListView({
     super.key,
     required this.state,
     required this.controller,
     required this.menuActions,
-    this.onPublish,
+    this.reservePublishSpace = false,
   });
 
   final CircleState state;
   final CircleController controller;
   final CirclePostMenuActions menuActions;
 
-  /// 为空时（校圈治理）空状态不引导发布。
-  final VoidCallback? onPublish;
+  /// 右下角有发布按钮时，列表末尾多留出按钮的高度，最后一张卡片的操作不被挡住。
+  final bool reservePublishSpace;
 
-  static const _gap = AppSpace.s16;
-
-  static int _columnCount(double width) {
-    if (width < 520) return 1;
-    if (width < 900) return 2;
+  static int _columnCount(double width, double Function(double) ui) {
+    if (width < ui(520)) return 1;
+    if (width < ui(900)) return 2;
     return 3;
   }
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     final posts = state.visiblePosts;
 
     if (state.listLoading && posts.isEmpty) {
-      return const _CircleListSkeleton();
+      return Container(
+        color: const Color(0xFFEFF3FC),
+        alignment: Alignment.center,
+        child: const AppLoadingIndicator(),
+      );
     }
 
     if (posts.isEmpty) {
       final searching = state.searchKeyword.trim().isNotEmpty;
-      final canPublish = onPublish != null;
-      return AppRefreshIndicator(
-        onRefresh: () => controller.refreshPosts(),
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
+      return Container(
+        color: const Color(0xFFEFF3FC),
+        child: AppRefreshIndicator(
+          onRefresh: () => controller.refreshPosts(),
+          child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            child: SizedBox(
-              height: constraints.maxHeight,
-              child: AppEmptyState(
-                icon: Icons.forum_outlined,
-                title: searching ? '没有找到相关动态' : '还没有动态',
-                description: searching
-                    ? '换个关键词试试'
-                    : (canPublish
-                          ? '分享一张作品或写生日记，同学和老师都能看到'
-                          : '同学和老师发布的动态会出现在这里'),
-                actionLabel: searching || !canPublish ? null : '发布动态',
-                onAction: searching ? null : onPublish,
+            children: [
+              SizedBox(height: ui(120)),
+              Center(
+                child: Text(
+                  searching ? '没有找到相关动态' : '暂无动态',
+                  style: const TextStyle(
+                    color: Color(0xFFB6B5BB),
+                    fontSize: 14,
+                    fontFamily: 'PingFang SC',
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       );
     }
+    return Container(
+      color: const Color(0xFFEFF3FC),
+      // 外层 AnimatedSwitcher 默认按 center 对齐子节点；列表内容不满一屏时
+      // SingleChildScrollView 会收缩到内容高度并被垂直居中，导致顶部凭空多出
+      // 一段间距。这里强制铺满并顶对齐，让首张卡片紧贴顶部。
+      alignment: Alignment.topCenter,
+      child: AppRefreshIndicator(
+        onRefresh: () => controller.refreshPosts(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final gap = ui(16);
+            final available = constraints.maxWidth;
+            final columns = _columnCount(available, ui);
+            final colWidth = (available - gap * (columns - 1)) / columns;
 
-    return AppRefreshIndicator(
-      onRefresh: () => controller.refreshPosts(),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final available = constraints.maxWidth - AppSpace.page * 2;
-          final columns = _columnCount(available);
-          final colWidth = (available - _gap * (columns - 1)) / columns;
+            final columnsContent = List<List<CirclePost>>.generate(
+              columns,
+              (_) => <CirclePost>[],
+            );
+            final columnsHeight = List<double>.filled(columns, 0);
 
-          final columnsContent = List<List<CirclePost>>.generate(
-            columns,
-            (_) => <CirclePost>[],
-          );
-          final columnsHeight = List<double>.filled(columns, 0);
-
-          for (final post in posts) {
-            final estImgH = colWidth / post.imageAspectRatio;
-            final estCardH = 12 + 44 + 8 + 72 + estImgH + 60;
-            var target = 0;
-            for (var i = 1; i < columns; i++) {
-              if (columnsHeight[i] < columnsHeight[target]) target = i;
+            for (final post in posts) {
+              final estTextH = ui(72);
+              final estImgH = colWidth / post.imageAspectRatio;
+              final estCardH =
+                  ui(12) + ui(44) + ui(8) + estTextH + estImgH + ui(60);
+              var target = 0;
+              for (var i = 1; i < columns; i++) {
+                if (columnsHeight[i] < columnsHeight[target]) target = i;
+              }
+              columnsContent[target].add(post);
+              columnsHeight[target] += estCardH + gap;
             }
-            columnsContent[target].add(post);
-            columnsHeight[target] += estCardH + _gap;
-          }
 
-          return SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: ClampingScrollPhysics(),
-            ),
-            padding: EdgeInsets.fromLTRB(
-              AppSpace.page,
-              AppSpace.s4,
-              AppSpace.page,
-              onPublish == null ? AppSpace.s24 : 72,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = 0; i < columns; i++) ...[
-                  if (i > 0) const SizedBox(width: _gap),
-                  SizedBox(
-                    width: colWidth,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (final post in columnsContent[i]) ...[
-                          CirclePostCard(
-                            post: post,
-                            onLike: () => _withToast(
-                              context,
-                              () => controller.toggleLike(post.id),
-                            ),
-                            onComment: () => _onCommentTap(post.id),
-                            onFavorite: () =>
-                                controller.toggleFavorite(post.id),
-                            onTap: () => _onCardTap(post.id),
-                            onDeletePost: menuActions.deleteFor(context, post),
-                            onReportPost: menuActions.reportFor(context, post),
-                          ),
-                          const SizedBox(height: _gap),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          );
-        },
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: ClampingScrollPhysics(),
+              ),
+              padding: EdgeInsets.only(
+                bottom: reservePublishSpace ? ui(72) : gap,
+              ),
+              child: SizedBox(
+                width: available,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < columns; i++) ...[
+                      if (i > 0) SizedBox(width: gap),
+                      SizedBox(
+                        width: colWidth,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final post in columnsContent[i]) ...[
+                              CirclePostCard(
+                                post: post,
+                                onLike: () => _withToast(
+                                  context,
+                                  () => controller.toggleLike(post.id),
+                                ),
+                                onComment: () => _onCommentTap(post.id),
+                                onFavorite: () =>
+                                    controller.toggleFavorite(post.id),
+                                onTap: () => _onCardTap(post.id),
+                                onDeletePost: menuActions.deleteFor(
+                                  context,
+                                  post,
+                                ),
+                                onReportPost: menuActions.reportFor(
+                                  context,
+                                  post,
+                                ),
+                              ),
+                              SizedBox(height: gap),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -166,55 +184,5 @@ class CircleListView extends StatelessWidget {
       ..setImmersiveIndex(index)
       ..setMode(CircleMode.immersive);
     unawaited(controller.openCommentPanel(postId));
-  }
-}
-
-class _CircleListSkeleton extends StatelessWidget {
-  const _CircleListSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final available = constraints.maxWidth - AppSpace.page * 2;
-        final columns = CircleListView._columnCount(available);
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpace.page,
-            AppSpace.s4,
-            AppSpace.page,
-            0,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (var i = 0; i < columns; i++) ...[
-                if (i > 0) const SizedBox(width: CircleListView._gap),
-                const Expanded(
-                  child: AppCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            AppSkeleton.circle(size: 40),
-                            SizedBox(width: AppSpace.s12),
-                            Expanded(child: AppSkeletonText(lines: 2)),
-                          ],
-                        ),
-                        SizedBox(height: AppSpace.s12),
-                        AppSkeletonText(lines: 2),
-                        SizedBox(height: AppSpace.s12),
-                        AppSkeleton(height: 200, radius: AppRadius.card),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
   }
 }

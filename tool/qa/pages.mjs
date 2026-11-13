@@ -29,6 +29,9 @@ const campusAction = (id, label) => ({
       { check: '已提交 14 人，共 14 人' },
       { check: /^评分$/, role: 'button' },
     ] : []),
+    ...(id === 'circle-governance' ? [
+      { check: '待处理' }, { check: '已处理' }, { check: '全部动态' },
+    ] : []),
   ],
 });
 
@@ -174,7 +177,16 @@ const sharedContent = [
     route: '/',
     actions: [{ click: /素描评分标准/, after: 2500 }],
   },
-  { id: 'circle', route: '/circle' },
+  {
+    id: 'circle',
+    route: '/circle',
+    actions: [{ check: '沉浸' }, { check: '列表' }],
+  },
+  {
+    id: 'circle-list',
+    route: '/circle',
+    actions: [{ click: '列表', after: 600 }, { check: '列表' }],
+  },
   { id: 'school-website', route: '/school-website' },
   { id: 'qrcode', route: '/qrcode' },
   {
@@ -292,15 +304,28 @@ export const ROLES = [
       },
       ...toolSteps,
       ...sharedContent,
-      { id: 'quiz', route: '/camp', actions: [{ check: '练习方式' }] },
-      { id: 'school-quiz', route: '/school-camp' },
+      { id: 'quiz', route: '/camp', actions: [{ check: '练习方式' }, { check: '顺序练习' }] },
+      { id: 'school-quiz', route: '/school-camp', actions: [{ check: '练习方式' }] },
       { id: 'school-video', route: '/school-video' },
       { id: 'mock', route: '/mock' },
       { id: 'design-system', route: '/design-system' },
       {
         id: 'quiz-answer', route: '/camp', actions: [
-          /顺序练习/, { click: /^选项 A/, role: 'checkbox' }, /^下一题$/,
-          { check: /^第 \d+ 题$/ },
+          { click: /顺序练习/, after: 1200 },
+          { check: '自动下一题' },
+          { check: '当前题型' },
+          { click: /^选项 A/, role: 'checkbox', after: 400 },
+          { click: /^下一题$/, after: 600 },
+          { check: /^下一题$/ },
+        ],
+      },
+      {
+        id: 'quiz-result', route: '/camp', actions: [
+          { click: /顺序练习/, after: 1200 },
+          { check: '自动下一题' },
+          { click: /^返回$/, role: 'button', after: 800 },
+          { check: '继续练习' },
+          { check: '退出练习' },
         ],
       },
       { id: 'campus', route: '/smart-campus', settle: 1800 },

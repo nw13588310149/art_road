@@ -17,7 +17,6 @@ import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_theme.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_asset_graphic.dart';
-import 'package:the_road_of_art_flutter/features/circle/state/circle_governance_state.dart';
 import 'package:the_road_of_art_flutter/features/circle/state/circle_permissions_provider.dart';
 import 'package:the_road_of_art_flutter/features/circle/state/circle_state.dart';
 import 'package:the_road_of_art_flutter/features/circle/ui/circle_page.dart';
@@ -157,10 +156,13 @@ Future<void> _withCirclePage(
   }
 }
 
-Finder get _governanceTabs => find.byType(AppTabs<CircleGovernanceTab>);
+Finder get _governanceTabs => find.byType(CircleGovernanceTabs);
 
 Finder _tab(String label) =>
     find.descendant(of: _governanceTabs, matching: find.text(label));
+
+/// 原版沉浸／列表切换已从 AppSegmented 还原为独立控件，用文案定位。
+Finder get _modeSwitch => find.text('沉浸');
 
 Finder _caseCardOf(String text) => find.ancestor(
   of: find.textContaining(text),
@@ -170,9 +172,10 @@ Finder _caseCardOf(String text) => find.ancestor(
 Finder _inDialog(Finder finder) =>
     find.descendant(of: find.byType(AppDialog), matching: finder);
 
-Finder get _moreButtons => find.byWidgetPredicate(
-  (w) => w is AppIconButton && w.semanticLabel == '更多操作',
-);
+/// 原版「···」入口（可举报时）；仅可删除时改为原版删除图标。
+Finder get _moreButtons => find.bySemanticsLabel('更多操作');
+
+Finder get _directDeleteButtons => find.bySemanticsLabel('删除动态');
 
 void main() {
   setUpAll(() async {
@@ -439,13 +442,14 @@ void main() {
     ) async {
       final expected = _workbenchCount();
       await _withCirclePage(tester, DemoAccounts.admin, governance: true, () async {
-        expect(find.text('校圈治理'), findsNothing);
+        // 页头按原版横幅显示可见标题「校圈治理」。
+        expect(find.text('校圈治理'), findsOneWidget);
         expect(find.bySemanticsLabel('发布动态'), findsNothing);
         expect(_tab('待处理'), findsOneWidget);
         expect(_tab('($expected)'), findsOneWidget);
         expect(_tab('已处理'), findsOneWidget);
         expect(_tab('全部动态'), findsOneWidget);
-        expect(find.byType(AppSegmented<CircleMode>), findsNothing);
+        expect(_modeSwitch, findsNothing);
 
         final first = _caseCardOf(_ghostDrawing);
         expect(first, findsOneWidget);
@@ -471,10 +475,11 @@ void main() {
         await tester.tap(_tab('全部动态'));
         await _settle(tester, steps: 3);
         expect(find.byType(CirclePostCard), findsWidgets);
-        expect(find.byType(AppSegmented<CircleMode>), findsOneWidget);
+        expect(_modeSwitch, findsOneWidget);
         expect(find.bySemanticsLabel('发布动态'), findsNothing);
+        // 治理「全部动态」里任意帖都可删，右上角是原版删除图标。
         expect(
-          _moreButtons.evaluate().length,
+          _directDeleteButtons.evaluate().length,
           find.byType(CirclePostCard).evaluate().length,
         );
       });
@@ -584,7 +589,8 @@ void main() {
     ) async {
       final before = _workbenchCount();
       await _withCirclePage(tester, DemoAccounts.student, () async {
-        expect(find.text('校圈'), findsNothing);
+        // 页头按原版横幅显示可见标题「校圈」。
+        expect(find.text('校圈'), findsOneWidget);
         expect(find.bySemanticsLabel('发布动态'), findsOneWidget);
         expect(find.text('校圈治理'), findsNothing);
         expect(_governanceTabs, findsNothing);
@@ -592,27 +598,29 @@ void main() {
         expect(find.byType(CircleReportCaseCard), findsNothing);
 
         final semantics = tester.ensureSemantics();
-        expect(find.bySemanticsLabel('更多操作'), findsWidgets);
-        semantics.dispose();
+        expect(_moreButtons, findsWidgets);
+        expect(_directDeleteButtons, findsWidgets);
 
-        Finder moreOf(String text) => find.descendant(
+        Finder menuOf(String text, Finder button) => find.descendant(
           of: find.ancestor(
             of: find.textContaining(text),
             matching: find.byType(CirclePostCard),
           ),
-          matching: _moreButtons,
+          matching: button,
         );
 
-        await tester.ensureVisible(moreOf(_ownSketchDiary));
-        await tester.tap(moreOf(_ownSketchDiary));
+        // 自己的动态：原版删除图标，点开即确认删除。
+        await tester.ensureVisible(menuOf(_ownSketchDiary, _directDeleteButtons));
+        await tester.tap(menuOf(_ownSketchDiary, _directDeleteButtons));
         await _settle(tester, steps: 2);
         expect(find.text('删除动态'), findsOneWidget);
         expect(find.text('举报'), findsNothing);
-        await tester.tapAt(const Offset(4, 4));
+        await tester.tap(find.widgetWithText(AppButton, '取消'));
         await _settle(tester, steps: 2);
 
-        await tester.ensureVisible(moreOf(_davidCritique));
-        await tester.tap(moreOf(_davidCritique));
+        // 别人的动态：··· 菜单里只有举报。
+        await tester.ensureVisible(menuOf(_davidCritique, _moreButtons));
+        await tester.tap(menuOf(_davidCritique, _moreButtons));
         await _settle(tester, steps: 2);
         expect(find.text('删除动态'), findsNothing);
         await tester.tap(find.text('举报'));
@@ -624,6 +632,7 @@ void main() {
         await _settle(tester, steps: 4);
         expect(find.byType(AppDialog), findsNothing);
         expect(_workbenchCount(), before + 1);
+        semantics.dispose();
       });
     });
 
@@ -635,9 +644,13 @@ void main() {
           .length;
       expect(own, greaterThan(0));
       await _withCirclePage(tester, DemoAccounts.admin, () async {
+        final semantics = tester.ensureSemantics();
         expect(find.bySemanticsLabel('发布动态'), findsOneWidget);
         expect(_governanceTabs, findsNothing);
-        expect(_moreButtons, findsNWidgets(own));
+        // 管理员在普通校圈只能删自己的帖，右上角是删除图标。
+        expect(_directDeleteButtons, findsNWidgets(own));
+        expect(_moreButtons, findsNothing);
+        semantics.dispose();
       });
     });
   });
