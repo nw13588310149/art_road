@@ -310,7 +310,8 @@ class _TabsAndSearchRow extends StatelessWidget {
       children: [
         SmartCampusDarkTabs<_TopTab>(
           segments: [
-            for (final t in _TopTab.values) AppSegment(value: t, label: t.label),
+            for (final t in _TopTab.values)
+              AppSegment(value: t, label: t.label),
           ],
           value: current,
           onChanged: onTabChanged,
@@ -1617,11 +1618,7 @@ class _InputBar extends StatelessWidget {
                     ),
                   ),
                   SizedBox(width: ui(4)),
-                  Icon(
-                    Icons.send_rounded,
-                    size: ui(14),
-                    color: Colors.white,
-                  ),
+                  Icon(Icons.send_rounded, size: ui(14), color: Colors.white),
                 ],
               ),
             ),

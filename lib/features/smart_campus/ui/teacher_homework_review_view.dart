@@ -1951,7 +1951,10 @@ class _SubmissionRow extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(flex: flex.status, child: _StatusPill(state: item.state)),
+          Expanded(
+            flex: flex.status,
+            child: _StatusPill(state: item.state),
+          ),
           Expanded(flex: flex.subject, child: _CellText(subjectCell)),
           Expanded(flex: flex.time, child: _CellText(item.uploadAt)),
           SizedBox(
@@ -2273,179 +2276,157 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return Material(
-      color: Colors.white,
-      child: SizedBox(
-        width: ui(600),
-        height: double.infinity,
-        child: Stack(
+    // 原版 600 宽右抽屉骨架（紫条标题 + 分隔线 + 可滚动表单 + 底部渐变按钮），
+    // 由共享的 SmartCampusSideDrawerShell 提供。
+    return SmartCampusSideDrawerShell(
+      title: '发布作业',
+      footer: SmartCampusDrawerGradientButton(
+        icon: Icons.send_rounded,
+        label: _publishing ? '发布中…' : '发布',
+        onTap: _publishing ? null : _publish,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(ui(20), ui(20), ui(20), ui(80)),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SmartCampusDrawerTitleBar(title: '发布作业'),
-                    SizedBox(height: ui(20)),
-                    Container(height: 1, color: _kBorderSoft),
-                    SizedBox(height: ui(20)),
-                    _FieldLabel('作业标题'),
-                    SizedBox(height: ui(12)),
-                    _PlainInputField(hint: '请输入作业标题', controller: _titleCtrl),
-                    SizedBox(height: ui(20)),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _FieldLabel('学科'),
-                              SizedBox(height: ui(12)),
-                              if (_loadingSubjects)
-                                SizedBox(
-                                  height: ui(48),
-                                  child: Center(child: AppLoadingIndicator()),
-                                )
-                              else if (_subjects.isEmpty)
-                                SizedBox(
-                                  height: ui(48),
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      '暂无科目，请先勾选发布班级',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: ui(13),
-                                        color: _kTextHint,
-                                        fontWeight: AppFont.w400,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              else
-                                PopupSelectorField<String>(
-                                  value: _selectedSubjectName,
-                                  items: _subjects.map((s) => s.name).toList(),
-                                  itemLabel: (v) => v,
-                                  onChanged: (v) {
-                                    for (final s in _subjects) {
-                                      if (s.name == v) {
-                                        setState(
-                                          () => _selectedSubjectId = s.id,
-                                        );
-                                        break;
-                                      }
-                                    }
-                                  },
-                                ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: ui(32)),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _FieldLabel('期望提交格式'),
-                              SizedBox(height: ui(12)),
-                              PopupSelectorField<String>(
-                                value: _medium,
-                                items: _mediumOptions,
-                                itemLabel: (v) => v,
-                                onChanged: (v) => setState(() => _medium = v),
+            // 原版分隔线到第一个字段是 20（骨架里已留 16）。
+            SizedBox(height: ui(4)),
+            _FieldLabel('作业标题'),
+            SizedBox(height: ui(12)),
+            _PlainInputField(hint: '请输入作业标题', controller: _titleCtrl),
+            SizedBox(height: ui(20)),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FieldLabel('学科'),
+                      SizedBox(height: ui(12)),
+                      if (_loadingSubjects)
+                        SizedBox(
+                          height: ui(48),
+                          child: Center(child: AppLoadingIndicator()),
+                        )
+                      else if (_subjects.isEmpty)
+                        SizedBox(
+                          height: ui(48),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '暂无科目，请先勾选发布班级',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: ui(13),
+                                color: _kTextHint,
+                                fontWeight: AppFont.w400,
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: ui(20)),
-                    _FieldLabel('截止时间'),
-                    SizedBox(height: ui(12)),
-                    _DeadlinePicker(
-                      value: _deadlineDisplay,
-                      onTap: () async {
-                        final now = DateTime.now();
-                        final picked = await showAppDatePicker(
-                          context: context,
-                          initialDate: now,
-                          firstDate: now,
-                          lastDate: now.add(const Duration(days: 365)),
-                          helpText: '选择日期',
-                          cancelText: '取消',
-                          confirmText: '确定',
-                        );
-                        if (picked == null || !context.mounted) return;
-                        final t = await showAppTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                          helpText: '选择时间',
-                          cancelText: '取消',
-                          confirmText: '确定',
-                        );
-                        if (t == null) return;
-                        setState(() {
-                          _deadlineDate = DateTime(
-                            picked.year,
-                            picked.month,
-                            picked.day,
-                            t.hour,
-                            t.minute,
-                          );
-                        });
-                      },
-                    ),
-                    SizedBox(height: ui(20)),
-                    _FieldLabel('发布对象'),
-                    SizedBox(height: ui(12)),
-                    if (_loadingClasses)
-                      Center(child: AppLoadingIndicator())
-                    else
-                      for (var i = 0; i < _classList.length; i++) ...[
-                        if (i > 0) SizedBox(height: ui(8)),
-                        _ClassCheckRow(
-                          title: _classList[i]['name']?.toString() ?? '班级$i',
-                          kind: _classList[i]['type']?.toString() == '1'
-                              ? '小班'
-                              : '行政班',
-                          people: '${_classList[i]['studentCount'] ?? ''}人',
-                          tag: _classList[i]['type']?.toString() == '1'
-                              ? '小课'
-                              : '大课',
-                          checked: _selectedClassIndices.contains(i),
-                          onTap: () => setState(() {
-                            if (_selectedClassIndices.contains(i)) {
-                              _selectedClassIndices.remove(i);
-                            } else {
-                              _selectedClassIndices.add(i);
+                        )
+                      else
+                        PopupSelectorField<String>(
+                          value: _selectedSubjectName,
+                          items: _subjects.map((s) => s.name).toList(),
+                          itemLabel: (v) => v,
+                          onChanged: (v) {
+                            for (final s in _subjects) {
+                              if (s.name == v) {
+                                setState(() => _selectedSubjectId = s.id);
+                                break;
+                              }
                             }
-                          }),
+                          },
                         ),
-                      ],
-                    SizedBox(height: ui(20)),
-                    _FieldLabel('作业要求'),
-                    SizedBox(height: ui(12)),
-                    _PlainTextArea(
-                      hint: '说明题目范围、命名规则、提交格式等',
-                      height: ui(80),
-                      controller: _descCtrl,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                SizedBox(width: ui(32)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FieldLabel('期望提交格式'),
+                      SizedBox(height: ui(12)),
+                      PopupSelectorField<String>(
+                        value: _medium,
+                        items: _mediumOptions,
+                        itemLabel: (v) => v,
+                        onChanged: (v) => setState(() => _medium = v),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Positioned(
-              left: ui(20),
-              right: ui(20),
-              bottom: ui(20),
-              child: SmartCampusDrawerGradientButton(
-                icon: Icons.send_rounded,
-                label: _publishing ? '发布中…' : '发布',
-                onTap: _publishing ? null : _publish,
-              ),
+            SizedBox(height: ui(20)),
+            _FieldLabel('截止时间'),
+            SizedBox(height: ui(12)),
+            _DeadlinePicker(
+              value: _deadlineDisplay,
+              onTap: () async {
+                final now = DateTime.now();
+                final picked = await showAppDatePicker(
+                  context: context,
+                  initialDate: now,
+                  firstDate: now,
+                  lastDate: now.add(const Duration(days: 365)),
+                  helpText: '选择日期',
+                  cancelText: '取消',
+                  confirmText: '确定',
+                );
+                if (picked == null || !context.mounted) return;
+                final t = await showAppTimePicker(
+                  context: context,
+                  initialTime: TimeOfDay.now(),
+                  helpText: '选择时间',
+                  cancelText: '取消',
+                  confirmText: '确定',
+                );
+                if (t == null) return;
+                setState(() {
+                  _deadlineDate = DateTime(
+                    picked.year,
+                    picked.month,
+                    picked.day,
+                    t.hour,
+                    t.minute,
+                  );
+                });
+              },
+            ),
+            SizedBox(height: ui(20)),
+            _FieldLabel('发布对象'),
+            SizedBox(height: ui(12)),
+            if (_loadingClasses)
+              Center(child: AppLoadingIndicator())
+            else
+              for (var i = 0; i < _classList.length; i++) ...[
+                if (i > 0) SizedBox(height: ui(8)),
+                _ClassCheckRow(
+                  title: _classList[i]['name']?.toString() ?? '班级$i',
+                  kind: _classList[i]['type']?.toString() == '1' ? '小班' : '行政班',
+                  people: '${_classList[i]['studentCount'] ?? ''}人',
+                  tag: _classList[i]['type']?.toString() == '1' ? '小课' : '大课',
+                  checked: _selectedClassIndices.contains(i),
+                  onTap: () => setState(() {
+                    if (_selectedClassIndices.contains(i)) {
+                      _selectedClassIndices.remove(i);
+                    } else {
+                      _selectedClassIndices.add(i);
+                    }
+                  }),
+                ),
+              ],
+            SizedBox(height: ui(20)),
+            _FieldLabel('作业要求'),
+            SizedBox(height: ui(12)),
+            _PlainTextArea(
+              hint: '说明题目范围、命名规则、提交格式等',
+              height: ui(80),
+              controller: _descCtrl,
             ),
           ],
         ),
@@ -3064,168 +3045,146 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final bottomPad = _isReviewed ? ui(20) : ui(80);
 
-    return Material(
-      color: Colors.white,
-      child: SizedBox(
-        width: ui(600),
-        height: double.infinity,
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(ui(20), ui(20), ui(20), bottomPad),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SmartCampusDrawerTitleBar(title: '作业点评'),
-                    SizedBox(height: ui(20)),
-                    Container(height: 1, color: _kBorderSoft),
-                    SizedBox(height: ui(16)),
-                    _ReviewProfileRow(
-                      submission: widget.submission,
-                      item: widget.item,
-                      homeworkSubjectDisplay: widget.homeworkSubjectDisplay,
-                    ),
-                    SizedBox(height: ui(16)),
-                    if (!_loadingDetail && _studentSubmitNote.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: ui(12)),
-                        child: Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(ui(10)),
-                          decoration: BoxDecoration(
-                            color: _kPageGrey,
-                            borderRadius: BorderRadius.circular(ui(8)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '学生提交说明',
-                                style: TextStyle(
-                                  fontSize: ui(12),
-                                  color: _kTextMuted,
-                                  fontWeight: AppFont.w400,
-                                ),
-                              ),
-                              SizedBox(height: ui(4)),
-                              Text(
-                                _studentSubmitNote,
-                                style: TextStyle(
-                                  fontSize: ui(13),
-                                  color: _kTextDark,
-                                  fontWeight: AppFont.w400,
-                                  height: 1.45,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    if (_loadingDetail)
-                      Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: ui(12)),
-                          child: AppLoadingIndicator(),
-                        ),
-                      )
-                    else if (_hasAttachment)
-                      _AttachmentCard(
-                        filename: _fileName,
-                        size: _fileSize,
-                        badgeLabel: _attachmentBadgeLabel(_fileName),
-                        onPreview: () => showStudentHomeworkSubmissionPreview(
-                          context,
-                          ref: ref,
-                          fileUrl: _resolvedSubmitUrl,
-                          title: _fileName,
-                          typeTag:
-                              '${widget.item.expectedExtRaw} $_submitTypeForPreview'
-                                  .trim(),
-                          mediumLabel: _submitTypeForPreview.isNotEmpty
-                              ? _submitTypeForPreview
-                              : widget.item.suggested,
-                          attachmentName: _fileName,
-                        ),
-                        onDownload: () => openCoursewareUrl(_resolvedSubmitUrl),
-                      ),
-                    SizedBox(height: ui(20)),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          '批改与点评',
-                          style: TextStyle(
-                            fontSize: ui(16),
-                            color: _kTextDark,
-                            fontWeight: AppFont.w600,
-                            height: 1,
-                          ),
-                        ),
-                        SizedBox(width: ui(12)),
-                        Expanded(
-                          child: Container(height: 1, color: _kBorderSoft),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: ui(16)),
-                    _FieldLabel('分数/100'),
-                    SizedBox(height: ui(8)),
-                    _ScoreInput(controller: _scoreCtrl, readOnly: _isReviewed),
-                    SizedBox(height: ui(16)),
-                    _FieldLabel('点评'),
-                    SizedBox(height: ui(8)),
-                    _PlainTextArea(
-                      hint: '请输入对该次作业的点评内容…',
-                      height: ui(100),
-                      controller: _commentCtrl,
-                      readOnly: _isReviewed,
-                    ),
-                    SizedBox(height: ui(16)),
-                    _FieldLabel('语音点评'),
-                    SizedBox(height: ui(8)),
-                    _VoiceCommentField(
-                      key: ValueKey(
-                        'voice-${widget.submission.id}-$_voicePath-$_voiceDuration',
-                      ),
-                      initialPath: _voicePath,
-                      initialDuration: _voiceDuration,
-                      readOnly: _isReviewed,
-                      onUpload: (bytes, filename) async {
-                        final res = await ref
-                            .read(teacherRepositoryProvider)
-                            .uploadHomeworkVoice(
-                              bytes: bytes,
-                              filename: filename,
-                            );
-                        if (!res.isSuccess) return null;
-                        final saved = parseUploadResult(res.data).savable;
-                        return saved.isEmpty ? null : saved;
-                      },
-                      onChanged: (path, duration) {
-                        setState(() {
-                          _voicePath = path;
-                          _voiceDuration = duration;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
+    // 原版 600 宽右抽屉骨架：内距 20；紫条标题 → 20 → 分隔线 → 16 → 正文；
+    // 未批改时底部 48 高渐变按钮距底 20（正文底部相应留 80），已批改时只留 20。
+    // 骨架由共享的 SmartCampusSideDrawerShell 提供。
+    return SmartCampusSideDrawerShell(
+      title: '作业点评',
+      footer: _isReviewed
+          ? null
+          : SmartCampusDrawerGradientButton(
+              icon: Icons.check_circle_outline_rounded,
+              label: _submitting ? '提交中…' : '发布批改',
+              onTap: _submitting ? null : _submitReview,
             ),
-            if (!_isReviewed)
-              Positioned(
-                left: ui(20),
-                right: ui(20),
-                bottom: ui(20),
-                child: SmartCampusDrawerGradientButton(
-                  icon: Icons.check_circle_outline_rounded,
-                  label: _submitting ? '提交中…' : '发布批改',
-                  onTap: _submitting ? null : _submitReview,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ReviewProfileRow(
+              submission: widget.submission,
+              item: widget.item,
+              homeworkSubjectDisplay: widget.homeworkSubjectDisplay,
+            ),
+            SizedBox(height: ui(16)),
+            if (!_loadingDetail && _studentSubmitNote.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(bottom: ui(12)),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(ui(10)),
+                  decoration: BoxDecoration(
+                    color: _kPageGrey,
+                    borderRadius: BorderRadius.circular(ui(8)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '学生提交说明',
+                        style: TextStyle(
+                          fontSize: ui(12),
+                          color: _kTextMuted,
+                          fontWeight: AppFont.w400,
+                        ),
+                      ),
+                      SizedBox(height: ui(4)),
+                      Text(
+                        _studentSubmitNote,
+                        style: TextStyle(
+                          fontSize: ui(13),
+                          color: _kTextDark,
+                          fontWeight: AppFont.w400,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+            if (_loadingDetail)
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: ui(12)),
+                  child: AppLoadingIndicator(),
+                ),
+              )
+            else if (_hasAttachment)
+              _AttachmentCard(
+                filename: _fileName,
+                size: _fileSize,
+                badgeLabel: _attachmentBadgeLabel(_fileName),
+                onPreview: () => showStudentHomeworkSubmissionPreview(
+                  context,
+                  ref: ref,
+                  fileUrl: _resolvedSubmitUrl,
+                  title: _fileName,
+                  typeTag:
+                      '${widget.item.expectedExtRaw} $_submitTypeForPreview'
+                          .trim(),
+                  mediumLabel: _submitTypeForPreview.isNotEmpty
+                      ? _submitTypeForPreview
+                      : widget.item.suggested,
+                  attachmentName: _fileName,
+                ),
+                onDownload: () => openCoursewareUrl(_resolvedSubmitUrl),
+              ),
+            SizedBox(height: ui(20)),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  '批改与点评',
+                  style: TextStyle(
+                    fontSize: ui(16),
+                    color: _kTextDark,
+                    fontWeight: AppFont.w600,
+                    height: 1,
+                  ),
+                ),
+                SizedBox(width: ui(12)),
+                Expanded(child: Container(height: 1, color: _kBorderSoft)),
+              ],
+            ),
+            SizedBox(height: ui(16)),
+            _FieldLabel('分数/100'),
+            SizedBox(height: ui(8)),
+            _ScoreInput(controller: _scoreCtrl, readOnly: _isReviewed),
+            SizedBox(height: ui(16)),
+            _FieldLabel('点评'),
+            SizedBox(height: ui(8)),
+            _PlainTextArea(
+              hint: '请输入对该次作业的点评内容…',
+              height: ui(100),
+              controller: _commentCtrl,
+              readOnly: _isReviewed,
+            ),
+            SizedBox(height: ui(16)),
+            _FieldLabel('语音点评'),
+            SizedBox(height: ui(8)),
+            _VoiceCommentField(
+              key: ValueKey(
+                'voice-${widget.submission.id}-$_voicePath-$_voiceDuration',
+              ),
+              initialPath: _voicePath,
+              initialDuration: _voiceDuration,
+              readOnly: _isReviewed,
+              onUpload: (bytes, filename) async {
+                final res = await ref
+                    .read(teacherRepositoryProvider)
+                    .uploadHomeworkVoice(bytes: bytes, filename: filename);
+                if (!res.isSuccess) return null;
+                final saved = parseUploadResult(res.data).savable;
+                return saved.isEmpty ? null : saved;
+              },
+              onChanged: (path, duration) {
+                setState(() {
+                  _voicePath = path;
+                  _voiceDuration = duration;
+                });
+              },
+            ),
           ],
         ),
       ),
