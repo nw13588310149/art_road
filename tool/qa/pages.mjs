@@ -21,7 +21,7 @@ const noticeStep = {
 // 进入二级页后必须能看到的控件（工作台上没有），避免停在工作台也算通过。
 const campusPageChecks = {
   classes: [{ check: /^创建班级$/, role: 'button' }],
-  face: [{ check: /^人脸库$/, role: 'heading' }],
+  face: [{ check: /^上传照片$/, role: 'button' }],
   'my-class': [{ check: /^我的班级$/, role: 'heading' }],
   'check-in': [{ check: /^历史记录$/, role: 'button' }],
   grades: [{ check: /^全部考试$/, role: 'button' }],
@@ -659,7 +659,10 @@ export const ROLES = [
       campusAction('teachers', '教师管理'),
       campusAction('students', '学生管理'),
       campusAction('group-chat', '群聊'),
-      campusAction('mailbox', '校长信箱'),
+      campusSub('mailbox', '校长信箱', [
+        { check: /^待回复$/, role: 'button' }, { check: /^已回复$/, role: 'button' },
+        { click: /^已回复$/, after: 700 }, { check: '已回复' },
+      ]),
       campusAction('circle-governance', '校圈治理'),
     ],
   },

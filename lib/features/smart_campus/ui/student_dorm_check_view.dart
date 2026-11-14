@@ -397,7 +397,7 @@ class _DormStatsRow extends StatelessWidget {
           Expanded(
             child: SmartCampusStatCard(
               backgroundAsset: AppAssets.dormCheckStatCard3,
-              label: '异常（未打卡 / 晚归）',
+              label: '未打卡 / 晚归',
               value: abnormal,
             ),
           ),

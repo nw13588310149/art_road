@@ -13,6 +13,7 @@ import '../../shell/ui/shell_layout.dart';
 import '../data/principal_inbox_data.dart';
 import '../data/principal_mailbox_repository.dart';
 import 'mailbox_attachment_widgets.dart';
+import 'widgets/smart_campus_page_banner.dart';
 
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kInnerGray = AppColors.surfaceSubtle;
@@ -149,7 +150,7 @@ class _PrincipalInboxViewState extends ConsumerState<PrincipalInboxView> {
           color: AppColors.surface,
           child: Column(
             children: [
-              AppPageHeader(title: '校长信箱', onBack: widget.onBack),
+              SmartCampusPageBanner(title: '校长信箱', onBack: widget.onBack),
               Padding(
                 padding: EdgeInsets.fromLTRB(ui(16), ui(14), ui(16), ui(12)),
                 child: _StatusFilterRow(

@@ -235,7 +235,7 @@ class _TeacherLessonScheduleViewState
   String get _subtitle {
     final end = _weekStart.add(const Duration(days: 6));
     return '第 $_currentWeek 周 · ${campusMonthDay(_weekStart)} – '
-        '${campusMonthDay(end)} · 大课不可编辑，编辑模式下可在空白格申请小课';
+        '${campusMonthDay(end)} · 编辑时点空白格申请小课';
   }
 
   DateTime _mondayOf(DateTime d) => scheduleMondayOf(d);
