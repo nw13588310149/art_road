@@ -198,8 +198,9 @@ class _PreviewTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 标题栏照原版：白底、内距 8×4；标题 15/600；右侧 22 关闭图标。
     return Material(
-      color: AppColors.surface,
+      color: Colors.white,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(4)),
         child: Row(
@@ -210,16 +211,18 @@ class _PreviewTitleBar extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: ui(16),
+                  fontSize: ui(15),
                   fontWeight: FontWeight.w600,
-                  color: AppColors.ink,
+                  fontFamily: 'PingFang SC',
+                  color: const Color(0xFF0B081A),
                 ),
               ),
             ),
             IconButton(
               onPressed: onClose,
+              tooltip: '关闭',
               icon: Icon(Icons.close_rounded, size: ui(22)),
-              color: AppColors.textSecondary,
+              color: const Color(0xFF6D6B75),
             ),
           ],
         ),
@@ -598,16 +601,16 @@ class _HomeworkPlayDisc extends StatelessWidget {
       width: ui(72),
       height: ui(72),
       decoration: BoxDecoration(
-        color: AppColors.ink.withValues(alpha: 0.45),
+        color: Colors.black.withValues(alpha: 0.45),
         shape: BoxShape.circle,
         border: Border.all(
-          color: AppColors.surface.withValues(alpha: 0.55),
+          color: Colors.white.withValues(alpha: 0.55),
           width: 1,
         ),
       ),
       child: Icon(
         playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-        color: AppColors.surface,
+        color: Colors.white,
         size: ui(40),
       ),
     );

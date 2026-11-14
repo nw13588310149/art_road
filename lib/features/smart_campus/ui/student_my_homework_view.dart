@@ -5,14 +5,27 @@
 //      → mainView == myHomework + role == student → SmartCampusPage 路由到
 //      本视图。返回：banner 左上角返回按钮 → onBack。
 //
-// 结构：AppPageHeader → 3 张统计卡（作业均分 / 已提交 / 已批阅）→ 各科作业均分
-//      柱图 + 分数段分布 → 状态 AppTabs（全部 / 待提交 / 已逾期 / 已提交 /
-//      已批阅）→ 作业卡 2 列网格。
+// 视觉（数值照原版同路径文件，970 设计宽）：
+//   1. 横幅：共享 [SmartCampusPageBanner]（62 高，居中标题 + 副标题，左 32 返回）。
+//   2. 3 张 100 高插图统计卡（flex 1，gap 12）：作业均分 / 已提交 / 已批阅，
+//      标签 14/500、数值 Barlow 32/500；后两张右上角白底小徽标（待提交 / 逾期）。
+//   3. 双列卡：左 640「各科作业均分」（按科目 / 按老师浅灰分段 + 条纹柱图），
+//      右 318「分数段分布」（82 高灰底面板）。分区标题 18/500。
+//   4. 状态页签：共享 [SmartCampusDarkTabs]（全部 / 待提交 / 已逾期 / 已提交 /
+//      已批阅，44 高，带数量）。
+//   5. 作业卡 2 列网格（#FAF0FF→白渐变 + 背景图，12 圆角，内距 12）：标题 +
+//      方角科目标签 + 方角状态标签 + 蓝色得分；发布老师 / 截止时间；作业说明；
+//      提交文件链接 / 教师点评气泡；右下 80×32「查看详情」「提交作业」。
+//
+// 颜色：白卡 / #F5F6FA 浅灰 / 品牌紫 / #325BFF 蓝（提交链接 / 分数）
+//      / #0CAC40 绿（已提交）/ #FF6A00 橙（待提交）/ #FF323C 红（已逾期）
+//      / #12CE51 绿（无逾期）。科目标签取 [ArtSubject] 的科目色。
+// 字体：PingFang SC + Barlow（数值 32）
 //
 // 弹窗：
 //   · "提交作业"（_showSubmitDialog）：复用 [GradientHeaderDialog]（紫渐变
-//     顶部 + 装饰图 + 24/500 标题），内含作业标题、提交类型（照片 / 视频 /
-//     文档）、上传文件区（走 [cloudDriveControllerProvider] 与 courseware
+//     顶部 + 装饰图 + 24/500 标题），内含作业标题、提交类型 chips（照片 /
+//     视频 / 文档）、上传文件区（走 [cloudDriveControllerProvider] 与 courseware
 //     共享同一上传通道）、备注 textarea。提交成功后把卡片状态切到「已提交·
 //     批阅中」并填充提交文件名。
 //   · "作业详情"（_showDetailDialog）：同款 GradientHeaderDialog，只读展示
@@ -38,28 +51,39 @@ import '../../courseware/ui/courseware_file_picker.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
+import '../../../core/art/art_subject.dart';
 import '../data/campus_format.dart';
 import '../data/student_repository.dart';
 import '../data/student_academic_data.dart';
+import 'widgets/smart_campus_dark_tabs.dart';
 import 'widgets/smart_campus_equal_height_grid.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_square_tag.dart';
+import 'widgets/smart_campus_stat_card.dart';
 import 'widgets/smart_campus_stripe_bar_chart.dart';
 import 'widgets/homework_voice_comment.dart';
 
-const Color _kCardBg = AppColors.surface;
-const Color _kInnerGray = AppColors.surfaceSubtle;
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kBorderHair = AppColors.line;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextSection = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kTextDivider = AppColors.textTertiary;
+// —— 颜色（原版色值；紫色统一为品牌紫）——————————————————————————————
+const Color _kCardBg = Colors.white;
+const Color _kInnerGray = Color(0xFFF5F6FA);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kBorderHair = Color(0xFFE6E9F1);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextSection = Color(0xFF1A1A1A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kTextDivider = Color(0xFFCECED1);
 const Color _kPurple = AppColors.brand;
 const Color _kPurpleLight = AppColors.brandSoft;
-const Color _kPurpleSoftBg = AppColors.brandTint;
+const Color _kPurpleSoftBg = Color(0xFFEAE5FF);
 const Color _kBlueLink = Color(0xFF325BFF);
-const Color _kOverdueRed = AppColors.danger;
+const Color _kSubmittedGreen = Color(0xFF0CAC40);
+const Color _kSubmittedGreenBg = Color(0xFFDFFCF0);
+const Color _kPendingOrange = Color(0xFFFF6A00);
+const Color _kPendingOrangeBg = Color(0xFFFFEDD3);
+const Color _kOverdueRed = Color(0xFFFF323C);
+const Color _kOverdueRedBg = Color(0xFFFFE4E5);
+const Color _kRiseGreen = Color(0xFF12CE51);
 
 DateTime? _tryParseStudentHwDate(String? raw) {
   if (raw == null) return null;
@@ -350,7 +374,7 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
     }
     final ok = await showScaledDialog<bool>(
       context: context,
-      barrierColor: AppColors.ink.withValues(alpha: 0.18),
+      barrierColor: Colors.black.withValues(alpha: 0.18),
       builder: (dialogCtx) => _SubmitHomeworkDialog(data: data),
     );
     if (!mounted || ok != true) return;
@@ -363,7 +387,7 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
     final snapshot = _latestHomeworkSnapshot(data);
     await showScaledDialog<void>(
       context: context,
-      barrierColor: AppColors.ink.withValues(alpha: 0.18),
+      barrierColor: Colors.black.withValues(alpha: 0.18),
       builder: (dialogCtx) => _HomeworkDetailDialog(data: snapshot),
     );
   }
@@ -384,7 +408,7 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
       bodyScrollable: false,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
         title: '我的作业',
         subtitle: '老师布置的作业在这里提交照片、视频或文档，批阅结果和点评也在这里查看',
         onBack: widget.onBack,
@@ -439,12 +463,19 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
 }
 
 // =============================================================================
-// Banner
-// =============================================================================
-
-// =============================================================================
 // 3 张统计卡
 // =============================================================================
+
+/// 作业页统计卡数值：Barlow 32 / w500（与原版成绩页排名卡一致）。
+TextStyle _homeworkStatValueTextStyle(double Function(double) ui) {
+  return TextStyle(
+    fontSize: ui(32),
+    color: _kTextDark,
+    fontFamily: smartCampusStatValueFontFamily,
+    fontWeight: FontWeight.w500,
+    height: 1,
+  );
+}
 
 class _OverviewStatsRow extends StatelessWidget {
   const _OverviewStatsRow({required this.summary});
@@ -453,28 +484,31 @@ class _OverviewStatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     final s = summary;
     final overdue = s?.overdue ?? 0;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: _AverageScoreCard(avg: s?.overallAvgScore ?? 0)),
-        const SizedBox(width: AppSpace.s12),
+        SizedBox(width: ui(12)),
         Expanded(
           child: _HomeworkCountCard(
+            backgroundAsset: AppAssets.studentHomeworkStatCard2,
             title: '已提交',
             value: '${s?.submitted ?? 0}',
-            tag: AppTag(label: '待提交 ${s?.pending ?? 0}', tone: AppTone.warning),
+            badgeText: '待提交 ${s?.pending ?? 0}',
+            badgeColor: _kPendingOrange,
           ),
         ),
-        const SizedBox(width: AppSpace.s12),
+        SizedBox(width: ui(12)),
         Expanded(
           child: _HomeworkCountCard(
+            backgroundAsset: AppAssets.studentHomeworkStatCard3,
             title: '已批阅',
             value: '${s?.reviewed ?? 0}',
-            tag: overdue > 0
-                ? AppTag(label: '已逾期 $overdue', tone: AppTone.danger)
-                : const AppTag(label: '无逾期'),
+            badgeText: overdue > 0 ? '已逾期 $overdue' : '无逾期',
+            badgeColor: overdue > 0 ? _kOverdueRed : _kRiseGreen,
           ),
         ),
       ],
@@ -490,40 +524,83 @@ class _AverageScoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasData = avg > 0;
     return _HomeworkCountCard(
+      backgroundAsset: AppAssets.studentHomeworkStatCard1,
       title: '作业均分',
-      value: hasData ? campusScore(avg) : '—',
-      unit: hasData ? '分' : null,
+      value: avg > 0 ? campusScore(avg) : '—',
     );
   }
 }
 
-/// 作业统计卡：AppStatTile + 右上角次级计数标签（待提交 / 逾期）。
+/// 作业统计卡：插图底 + 左上标签 14/500 + 数值 Barlow 32；[badgeText] 不为空
+/// 时右上角显示白底小徽标（待提交 / 逾期等次级计数）。
 class _HomeworkCountCard extends StatelessWidget {
   const _HomeworkCountCard({
+    required this.backgroundAsset,
     required this.title,
     required this.value,
-    this.unit = '份',
-    this.tag,
+    this.badgeText = '',
+    this.badgeColor = _kTextDark,
   });
 
+  final String backgroundAsset;
   final String title;
   final String value;
-  final String? unit;
-  final Widget? tag;
+  final String badgeText;
+  final Color badgeColor;
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpace.s16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final ui = DashboardScaleScope.of(context).ui;
+    return SmartCampusStatCard.custom(
+      backgroundAsset: backgroundAsset,
+      contentPadding: EdgeInsets.zero,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Expanded(
-            child: AppStatTile(label: title, value: value, unit: unit),
+          Positioned(
+            left: ui(16),
+            top: ui(16),
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: ui(14),
+                color: Colors.black,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w500,
+                height: 1,
+              ),
+            ),
           ),
-          ?tag,
+          Positioned(
+            left: ui(16),
+            top: ui(44),
+            child: Text(value, style: _homeworkStatValueTextStyle(ui)),
+          ),
+          if (badgeText.isNotEmpty)
+            Positioned(
+              right: ui(12),
+              top: ui(14),
+              child: Container(
+                height: ui(24),
+                padding: EdgeInsets.symmetric(horizontal: ui(8)),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(ui(6)),
+                ),
+                child: Text(
+                  badgeText,
+                  style: TextStyle(
+                    fontSize: ui(11),
+                    color: badgeColor,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w400,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -638,18 +715,19 @@ class _AverageBarChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSegmented<_ChartGroup>(
-            neutral: true,
-            segments: const [
-              AppSegment(value: _ChartGroup.bySubject, label: '按科目'),
-              AppSegment(value: _ChartGroup.byTeacher, label: '按老师'),
-            ],
+          _SegmentedControl<_ChartGroup>(
             value: group,
+            options: const [
+              (_ChartGroup.bySubject, '按科目'),
+              (_ChartGroup.byTeacher, '按老师'),
+            ],
             onChanged: onGroupChanged,
           ),
           SizedBox(height: ui(24)),
           Expanded(
             child: SmartCampusStripeBarChart(
+              // 纵轴等距 0–100（原版 100/95/90/85/80/0 会从 0 直接跳到 80，
+              // 把各科差距放大，见走查 S-184）。
               ticks: const [100, 80, 60, 40, 20, 0],
               tickGap: 28,
               yAxisWidth: 20,
@@ -733,6 +811,7 @@ class _ScoreDistributionEmpty extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextSecondary,
+              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 16 / 14,
             ),
@@ -811,6 +890,7 @@ class _ScoreSegmentTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextDark,
+                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                   ),
@@ -821,6 +901,7 @@ class _ScoreSegmentTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
+                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1,
                 ),
@@ -833,9 +914,19 @@ class _ScoreSegmentTile extends StatelessWidget {
             child: Stack(
               children: [
                 Container(height: ui(8), color: _kBorderHair),
+                // 进度条按百分比实算（原版按 50% 封顶），渐变照原版。
                 FractionallySizedBox(
                   widthFactor: (item.percent / 100).clamp(0.0, 1.0),
-                  child: Container(height: ui(8), color: _kPurple),
+                  child: Container(
+                    height: ui(8),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [_kPurple, _kPurpleSoftBg],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -848,6 +939,7 @@ class _ScoreSegmentTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kPurple,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -898,19 +990,24 @@ class _StatusTabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SmartCampusStatusTabs<_StatusTab>(
-      segments: [
-        for (final o in _options)
-          AppSegment(
-            value: o.$1,
-            label: switch (_countOf(o.$1)) {
-              final int count => '${o.$2} ($count)',
-              null => o.$2,
-            },
-          ),
-      ],
-      value: selected,
-      onChanged: onSelected,
+    // 原版黑底页签（44 高、无描边），数量跟在名称后（「全部 12」）。
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: SmartCampusDarkTabs<_StatusTab>(
+        bordered: false,
+        segments: [
+          for (final o in _options)
+            AppSegment(
+              value: o.$1,
+              label: switch (_countOf(o.$1)) {
+                final int count => '${o.$2} $count',
+                null => o.$2,
+              },
+            ),
+        ],
+        value: selected,
+        onChanged: onSelected,
+      ),
     );
   }
 }
@@ -930,11 +1027,102 @@ class _HomeworkEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: AppEmptyState(
-        icon: Icons.assignment_outlined,
-        title: _message,
-        description: '老师布置新作业后会出现在这里',
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: ui(48)),
+      decoration: BoxDecoration(
+        color: _kCardBg,
+        borderRadius: BorderRadius.circular(ui(12)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.assignment_outlined, size: ui(48), color: _kTextHint),
+          SizedBox(height: ui(12)),
+          Text(
+            _message,
+            style: TextStyle(
+              fontSize: ui(14),
+              color: _kTextSecondary,
+              fontFamily: 'PingFang SC',
+              fontWeight: AppFont.w400,
+              height: 16 / 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 浅灰底分段（「按科目 / 按老师」）：容器 #F5F6FA + 1px 描边、圆角 8；选项高
+/// 36、左右 16、间距 16；选中白底带柔和投影，14/500。
+class _SegmentedControl<T> extends StatelessWidget {
+  const _SegmentedControl({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final T value;
+  final List<(T, String)> options;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    Widget pill(T tab, String label) {
+      final active = tab == value;
+      return AppPressable(
+        onTap: () => onChanged(tab),
+        selected: active,
+        child: Container(
+          height: ui(36),
+          padding: EdgeInsets.symmetric(horizontal: ui(16)),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(ui(active ? 6 : 8)),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFB5B5B5).withValues(alpha: 0.35),
+                      offset: Offset(0, ui(8)),
+                      blurRadius: ui(20),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: ui(14),
+              color: active ? _kTextDark : _kTextSecondary,
+              fontFamily: 'PingFang SC',
+              fontWeight: AppFont.w500,
+              height: 1,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(ui(4), ui(4), ui(3), ui(4)),
+      decoration: BoxDecoration(
+        color: _kInnerGray,
+        borderRadius: BorderRadius.circular(ui(8)),
+        border: Border.all(color: _kBorderSoft),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < options.length; i++) ...[
+            if (i > 0) SizedBox(width: ui(16)),
+            pill(options[i].$1, options[i].$2),
+          ],
+        ],
       ),
     );
   }
@@ -1347,36 +1535,67 @@ class _HomeworkCard extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onDetail;
 
+  static const _cardBgGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFFFAF0FF), Colors.white],
+  );
+
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return AppCard(
-      padding: EdgeInsets.all(ui(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _CardHeaderRow(data: data),
-          SizedBox(height: ui(8)),
-          _CardMetaRow(
-            teacher: data.teacher,
-            deadline: data.deadline,
-            mediumLabel: data.mediumLabel,
-            deadlineHighlight:
-                data.status == _HomeworkStatus.pending ||
-                data.status == _HomeworkStatus.overdue,
-          ),
-          SizedBox(height: ui(8)),
-          _CardBody(data: data),
-          SizedBox(height: ui(8)),
-          _CardActionRow(
-            showSubmit:
-                data.status == _HomeworkStatus.pending ||
-                data.status == _HomeworkStatus.overdue,
-            onSubmit: onSubmit,
-            onDetail: onDetail,
-          ),
-        ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(ui(12)),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: _cardBgGradient,
+          borderRadius: BorderRadius.circular(ui(12)),
+          border: Border.all(color: Colors.white),
+        ),
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: [
+            Positioned.fill(
+              child: Transform.scale(
+                scale: 1.14,
+                child: Image.asset(
+                  AppAssets.studentHomeworkCardBg,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.all(ui(12)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _CardHeaderRow(data: data),
+                  SizedBox(height: ui(8)),
+                  _CardMetaRow(
+                    teacher: data.teacher,
+                    deadline: data.deadline,
+                    mediumLabel: data.mediumLabel,
+                    deadlineHighlight:
+                        data.status == _HomeworkStatus.pending ||
+                        data.status == _HomeworkStatus.overdue,
+                  ),
+                  SizedBox(height: ui(8)),
+                  _CardBody(data: data),
+                  SizedBox(height: ui(8)),
+                  _CardActionRow(
+                    showSubmit:
+                        data.status == _HomeworkStatus.pending ||
+                        data.status == _HomeworkStatus.overdue,
+                    onSubmit: onSubmit,
+                    onDetail: onDetail,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1401,6 +1620,7 @@ class _CardHeaderRow extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(14),
               color: _kTextDark,
+              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1,
             ),
@@ -1416,7 +1636,8 @@ class _CardHeaderRow extends StatelessWidget {
             data.score!,
             style: TextStyle(
               fontSize: ui(14),
-              color: AppColors.brand,
+              color: _kBlueLink,
+              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1,
             ),
@@ -1427,6 +1648,31 @@ class _CardHeaderRow extends StatelessWidget {
   }
 }
 
+/// 原版方角小标签（内距 4×2、圆角 4、12 号字 → 高 19.24），用共享组件。
+class _SquareTag extends StatelessWidget {
+  const _SquareTag({
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return SmartCampusSquareTag(
+      label: label,
+      background: background,
+      foreground: foreground,
+      height: 19.24,
+      horizontalPadding: 4,
+    );
+  }
+}
+
+/// 科目标签：方角，颜色取 [ArtSubject] 的科目色；其他科目用品牌紫。
 class _SubjectTag extends StatelessWidget {
   const _SubjectTag({required this.subject});
 
@@ -1434,12 +1680,17 @@ class _SubjectTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppTag.subject(switch (subject) {
-      _HomeworkSubject.sketch => '素描',
-      _HomeworkSubject.color => '色彩',
-      _HomeworkSubject.speed => '速写',
-      _HomeworkSubject.other => '综合',
-    });
+    final art = switch (subject) {
+      _HomeworkSubject.sketch => ArtSubject.sketch,
+      _HomeworkSubject.color => ArtSubject.color,
+      _HomeworkSubject.speed => ArtSubject.speed,
+      _HomeworkSubject.other => null,
+    };
+    return _SquareTag(
+      label: _subjectLabelOf(subject),
+      background: art?.accentSoft ?? _kPurpleSoftBg,
+      foreground: art?.accent ?? _kPurple,
+    );
   }
 }
 
@@ -1450,24 +1701,38 @@ class _StatusTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (status) {
-      _HomeworkStatus.pending => const AppStatusTag(
-        label: '待提交',
-        tone: AppTone.warning,
-      ),
-      _HomeworkStatus.overdue => const AppStatusTag(
-        label: '已逾期',
-        tone: AppTone.danger,
-      ),
-      _HomeworkStatus.submitted => const AppStatusTag(
-        label: '已提交',
-        tone: AppTone.brand,
-      ),
-      _HomeworkStatus.reviewed => const AppStatusTag(
-        label: '已批阅',
-        tone: AppTone.success,
-      ),
-    };
+    final ui = DashboardScaleScope.of(context).ui;
+    // 已逾期的作业照原版同时显示「待提交」「已逾期」两枚标签。
+    final items = <(Color bg, Color fg, String text)>[
+      ...switch (status) {
+        _HomeworkStatus.pending => const [
+          (_kPendingOrangeBg, _kPendingOrange, '待提交'),
+        ],
+        _HomeworkStatus.overdue => const [
+          (_kPendingOrangeBg, _kPendingOrange, '待提交'),
+          (_kOverdueRedBg, _kOverdueRed, '已逾期'),
+        ],
+        _HomeworkStatus.submitted => const [
+          (_kSubmittedGreenBg, _kSubmittedGreen, '已提交'),
+        ],
+        _HomeworkStatus.reviewed => const [
+          (_kSubmittedGreenBg, _kSubmittedGreen, '已批阅'),
+        ],
+      },
+    ];
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) SizedBox(width: ui(4)),
+          _SquareTag(
+            label: items[i].$3,
+            background: items[i].$1,
+            foreground: items[i].$2,
+          ),
+        ],
+      ],
+    );
   }
 }
 
@@ -1500,6 +1765,7 @@ class _CardMetaRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextDark,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -1509,6 +1775,7 @@ class _CardMetaRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextSecondary,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -1523,6 +1790,7 @@ class _CardMetaRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextDark,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -1532,6 +1800,7 @@ class _CardMetaRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: deadlineHighlight ? _kPurple : _kTextSecondary,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -1545,6 +1814,7 @@ class _CardMetaRow extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
+              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -1567,12 +1837,14 @@ class _CardBody extends StatelessWidget {
     final descStyle = TextStyle(
       fontSize: ui(12),
       color: _kTextDark,
+      fontFamily: 'PingFang SC',
       fontWeight: AppFont.w400,
       height: 1.35,
     );
     final hintStyle = TextStyle(
       fontSize: ui(12),
       color: _kTextHint,
+      fontFamily: 'PingFang SC',
       fontWeight: AppFont.w400,
       height: 1.35,
     );
@@ -1597,6 +1869,7 @@ class _CardBody extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextSecondary,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -1663,6 +1936,7 @@ class _SubmittedFileRow extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
+            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1675,6 +1949,7 @@ class _SubmittedFileRow extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kBlueLink,
+              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
               decoration: TextDecoration.underline,
@@ -1723,8 +1998,9 @@ class _ReviewBubble extends StatelessWidget {
                     Text(
                       '教师点评',
                       style: TextStyle(
-                        fontSize: ui(12),
+                        fontSize: ui(10),
                         color: _kTextSecondary,
+                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1,
                       ),
@@ -1737,6 +2013,7 @@ class _ReviewBubble extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextDark,
+                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.3,
                       ),
@@ -1767,8 +2044,9 @@ class _ReviewBubble extends StatelessWidget {
                   _ReviewMediaType.none => '语音',
                 }} $duration',
                 style: TextStyle(
-                  fontSize: ui(12),
+                  fontSize: ui(10),
                   color: _kPurple,
+                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1,
                 ),
@@ -1794,7 +2072,7 @@ class _ReviewMediaTile extends StatelessWidget {
         width: ui(40),
         height: ui(40),
         decoration: BoxDecoration(
-          color: AppColors.brandWash,
+          color: _kPurpleSoftBg,
           borderRadius: BorderRadius.circular(ui(8)),
         ),
         alignment: Alignment.center,
@@ -1807,8 +2085,9 @@ class _ReviewMediaTile extends StatelessWidget {
           child: Text(
             '视频',
             style: TextStyle(
-              fontSize: ui(12),
-              color: AppColors.surface,
+              fontSize: ui(9),
+              color: Colors.white,
+              fontFamily: 'PingFang SC',
               fontWeight: FontWeight.w700,
               height: 1,
             ),
@@ -1843,8 +2122,9 @@ class _ReviewMediaTile extends StatelessWidget {
               child: Text(
                 '语音',
                 style: TextStyle(
-                  fontSize: ui(12),
-                  color: AppColors.surface,
+                  fontSize: ui(8),
+                  color: Colors.white,
+                  fontFamily: 'PingFang SC',
                   fontWeight: FontWeight.w700,
                   height: 1,
                 ),
@@ -1870,20 +2150,77 @@ class _CardActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        AppButton(
+        _SmallButton(
           label: '查看详情',
-          variant: AppButtonVariant.secondary,
-          size: AppButtonSize.sm,
+          background: _kInnerGray,
+          foreground: _kTextDark,
           onTap: onDetail,
         ),
         if (showSubmit) ...[
-          const SizedBox(width: AppSpace.s8),
-          AppButton(label: '提交作业', size: AppButtonSize.sm, onTap: onSubmit),
+          SizedBox(width: ui(12)),
+          _SmallButton(
+            label: '提交作业',
+            useGradient: true,
+            foreground: Colors.white,
+            onTap: onSubmit,
+          ),
         ],
       ],
+    );
+  }
+}
+
+/// 作业卡右下按钮：80×32、圆角 8；灰底 12/500 或品牌紫渐变 12/600。
+class _SmallButton extends StatelessWidget {
+  const _SmallButton({
+    required this.label,
+    required this.foreground,
+    required this.onTap,
+    this.background,
+    this.useGradient = false,
+  });
+
+  final String label;
+  final Color foreground;
+  final VoidCallback onTap;
+  final Color? background;
+  final bool useGradient;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        width: ui(80),
+        height: ui(32),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: useGradient ? null : background,
+          gradient: useGradient
+              ? const LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [_kPurpleLight, _kPurple],
+                )
+              : null,
+          borderRadius: BorderRadius.circular(ui(8)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: ui(12),
+            color: foreground,
+            fontFamily: 'PingFang SC',
+            fontWeight: useGradient ? AppFont.w600 : AppFont.w500,
+            height: 16 / 12,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1903,8 +2240,9 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        fontSize: ui(16),
+        fontSize: ui(18),
         color: _kTextSection,
+        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w500,
         height: 1,
       ),
@@ -2227,13 +2565,60 @@ class _SubmitKindRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSegmented<_SubmitKind>(
-      segments: [
-        for (final kind in _SubmitKind.values)
-          AppSegment(value: kind, label: kind.label),
+    final ui = DashboardScaleScope.of(context).ui;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < _SubmitKind.values.length; i++) ...[
+          if (i > 0) SizedBox(width: ui(12)),
+          _SubmitKindChip(
+            label: _SubmitKind.values[i].label,
+            active: _SubmitKind.values[i] == value,
+            onTap: () => onChanged(_SubmitKind.values[i]),
+          ),
+        ],
       ],
-      value: value,
-      onChanged: onChanged,
+    );
+  }
+}
+
+/// 提交类型选项：高 32、左右 24、圆角 8；选中墨色底白字，未选浅灰底。
+class _SubmitKindChip extends StatelessWidget {
+  const _SubmitKindChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return AppPressable(
+      onTap: onTap,
+      selected: active,
+      child: Container(
+        height: ui(32),
+        padding: EdgeInsets.symmetric(horizontal: ui(24)),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? _kTextDark : _kInnerGray,
+          borderRadius: BorderRadius.circular(ui(8)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: ui(14),
+            color: active ? Colors.white : _kTextDark,
+            fontFamily: 'PingFang SC',
+            fontWeight: AppFont.w400,
+            height: 1,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -2255,7 +2640,7 @@ class _UploadDropZone extends StatelessWidget {
         width: double.infinity,
         height: ui(120),
         decoration: BoxDecoration(
-          color: AppColors.brandWash,
+          color: const Color(0xFFF4F4FF),
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft, width: 1),
         ),
@@ -2391,8 +2776,9 @@ class _UploadFileTile extends StatelessWidget {
                       ? '上传中 ${(progress * 100).toStringAsFixed(0)}%'
                       : (done ? '上传完成' : '准备上传')),
             style: TextStyle(
-              fontSize: ui(12),
+              fontSize: ui(11),
               color: hasError ? _kOverdueRed : _kTextHint,
+              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -2414,7 +2800,7 @@ class _NoteInput extends StatelessWidget {
     return Container(
       height: ui(48),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(8)),
         border: Border.all(color: _kBorderSoft, width: 1),
       ),
@@ -2677,8 +3063,9 @@ class _HomeworkDetailDialogState extends ConsumerState<_HomeworkDetailDialog> {
                 Text(
                   '语音点评',
                   style: TextStyle(
-                    fontSize: ui(12),
+                    fontSize: ui(11),
                     color: _kTextSecondary,
+                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                   ),
                 ),
@@ -2710,15 +3097,12 @@ class _DetailStatusTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppStatusTag(
-      label: label,
-      tone: switch (label) {
-        '已批阅' => AppTone.success,
-        '已提交' => AppTone.brand,
-        '已逾期' => AppTone.danger,
-        _ => AppTone.warning,
-      },
-    );
+    final (bg, fg) = switch (label) {
+      '已提交' || '已批阅' => (_kSubmittedGreenBg, _kSubmittedGreen),
+      '已逾期' => (_kOverdueRedBg, _kOverdueRed),
+      _ => (_kPendingOrangeBg, _kPendingOrange),
+    };
+    return _SquareTag(label: label, background: bg, foreground: fg);
   }
 }
 
