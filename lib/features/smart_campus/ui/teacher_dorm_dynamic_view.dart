@@ -15,9 +15,9 @@
 //      B. 「今晚已归寝口径」绿渐变 rgba(70,255,119,.09)→0 + 同图标
 //      C. 「异常（未打/晚归）」红渐变 rgba(255,70,70,.09)→0 + 紫色 alert
 //      D. 「补卡待审」紫渐变 rgba(147,70,255,.14)→0 + "需协同审核" 12 副标题
-//   3. Tabs row（44 高）：白底圆角 8 + 2 个 pill：本班查纪 / 补卡审核
-//      （后者带 22×15 #F04545 红底徽章 "10+"）；右侧搜索框 324×44。
-//   4. Sub-toolbar：「全部异常记录 N 条」(N 紫色) + 全部 / 异常 toggle。
+//   3. Tabs row（44 高）：白底圆角 8 + 2 个 pill：查寝记录 / 补卡审核
+//      （后者带红底待审数角标）；右侧搜索框 324×44。
+//   4. Sub-toolbar：「共 N 条 · 异常 M 条」(M 品牌紫) + 全部 / 异常 toggle。
 //   5. 卡片网格 3 列（每张 312×width，padding 12，白底，圆角 16，gap 16）：
 //      · 学生口径卡：头像 40 + 姓名 14/500 + 学号 12/#B6B5BB + "查寝"
 //        12/#6D6B75 + 状态徽章 16 高（正常 #D7D5FF/#715EFE / 未打卡
@@ -26,6 +26,9 @@
 //      · 宿舍口径卡：晨查寝 / 晚查寝 18 Barlow/600 标题 + 大色块状态徽章
 //        正常 #8E7FFF / 未打卡 #FF323C / 迟到 #325BFF 全为白字；下行
 //        宿舍 13/#6D6B75 + 日期；灰底块同；底部 备注。
+//
+// 版式按音乐之路原版还原：横幅、黑底页签、搜索框用智慧校园共享组件，状态配色
+// 回到原版（正常浅紫、晚归浅蓝、未打卡浅红）；文案按宿管视角改写过，保留。
 // =============================================================================
 
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
@@ -36,10 +39,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
-import '../../../core/widgets/app_text_field.dart';
 import '../data/campus_format.dart';
+import '../data/smart_campus_count_badge.dart';
 import '../../shell/ui/shell_layout.dart';
+import 'widgets/smart_campus_dark_tabs.dart';
+import 'widgets/smart_campus_filter_bar.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import '../data/student_dormitory_data.dart' show DormitoryDetailField;
 import '../data/teacher_dormitory_data.dart';
@@ -52,15 +56,16 @@ import 'widgets/dormitory_detail_dialog.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-// —— 颜色 ————————————————————————————————————————————————————————
-const Color _kCardGreyBg = AppColors.surfaceSubtle;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kTextPlaceholder = AppColors.textPlaceholder;
+// —— 颜色（原版色值；紫色统一为品牌紫）————————————————————————————————
+const Color _kCardGreyBg = Color(0xFFF5F6FA);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kPurple = AppColors.brand;
-const Color _kRed = AppColors.danger;
-const Color _kRedSoftBg = AppColors.dangerSoft;
+const Color _kPurpleSoftBg = Color(0xFFDAD2FF);
+const Color _kRed = Color(0xFFFF323C);
+const Color _kRedSoftBg = Color(0xFFFEE4E8);
+const Color _kBlue = Color(0xFF325BFF);
 
 // —— 顶部 tab 枚举 ——————————————————————————————————————————————
 enum _TopTab {
@@ -80,12 +85,10 @@ enum _FilterTab {
   final String label;
 }
 
-// —— 学生口径状态 ——————————————————————————————————————————————————
-// Figma 学生口径卡只出现 "正常 / 未打卡" 两种；如需扩展（如"迟到"），
-// 可参考 _DormStatus 加入蓝底 _kBlue 配色。
+// —— 学生口径状态（原版配色：正常浅紫、晚归浅蓝、未打卡浅红）————————————
 enum _StudentStatus {
-  normal('正常', AppColors.successSoft, AppColors.success),
-  late_('晚归', AppColors.warningSoft, AppColors.warning),
+  normal('正常', _kPurpleSoftBg, _kPurple),
+  late_('晚归', Color(0xFFDBE2FF), _kBlue),
   absent('未打卡', _kRedSoftBg, _kRed);
 
   const _StudentStatus(this.label, this.bg, this.fg);
@@ -98,9 +101,9 @@ enum _StudentStatus {
 
 // —— 宿舍口径状态（实色徽章）—————————————————————————————————————
 enum _DormStatus {
-  normal('正常', AppColors.success),
+  normal('正常', AppColors.brandSoft),
   absent('未打卡', _kRed),
-  late_('晚归', AppColors.warning);
+  late_('晚归', _kBlue);
 
   const _DormStatus(this.label, this.solidBg);
   final String label;
@@ -111,15 +114,15 @@ enum _DormStatus {
 
 // —— 补卡审核状态 —————————————————————————————————————————————
 // 待审核 / 已通过 / 已驳回；徽章为柔和底 + 实色字。
-const Color _kOrange = AppColors.warning;
-const Color _kOrangeSoftBg = AppColors.warningSoft;
-const Color _kGreenAudit = AppColors.success;
-const Color _kGreenAuditSoftBg = AppColors.successSoft;
+const Color _kOrange = Color(0xFFFF6A00);
+const Color _kOrangeSoftBg = Color(0xFFFFEDD3);
+const Color _kGreenAudit = Color(0xFF12CE51);
+const Color _kGreenAuditSoftBg = Color(0xFFE4FFED);
 
 enum _PunchAuditStatus {
   pending('待审核', _kOrangeSoftBg, _kOrange),
   approved('已通过', _kGreenAuditSoftBg, _kGreenAudit),
-  rejected('已驳回', AppColors.dangerSoft, _kRed);
+  rejected('已驳回', Color(0xFFFFE4E5), _kRed);
 
   const _PunchAuditStatus(this.label, this.bg, this.fg);
   final String label;
@@ -211,6 +214,13 @@ class _TeacherDormDynamicViewState
   _TopTab _topTab = _TopTab.classRoster;
   _FilterTab _filterTab = _FilterTab.all;
   String _searchQuery = '';
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -273,7 +283,10 @@ class _TeacherDormDynamicViewState
     final exceptionCount = students.where((r) => r.status.isException).length;
     final batchDate = students.isEmpty ? '' : students.first.date;
     return SmartCampusSecondaryPageShell(
-      header: AppPageHeader(
+      // 原版横幅与统计卡之间留 12。
+      headerGap: 12,
+      bodyTopClipRadius: 8,
+      header: SmartCampusPageBanner(
         title: '查寝动态',
         subtitle: '管辖楼栋的晚查寝结果、异常跟进与补卡审核',
         onBack: widget.onBack,
@@ -297,7 +310,7 @@ class _TeacherDormDynamicViewState
           _TabsRow(
             current: _topTab,
             pendingPunchCount: pendingPunchCount,
-            searchValue: _searchQuery,
+            searchController: _searchCtrl,
             onSearchChanged: (v) => setState(() => _searchQuery = v),
             onTap: (t) => setState(() => _topTab = t),
           ),
@@ -477,8 +490,6 @@ List<_PunchAuditRecord> _punchAuditRecords(
   ];
 }
 
-// —— Banner ————————————————————————————————————————————————————————
-
 // —— 4 张统计卡 ——————————————————————————————————————————————————————
 
 class _StatsRow extends StatelessWidget {
@@ -548,137 +559,49 @@ class _TabsRow extends StatelessWidget {
     required this.current,
     required this.pendingPunchCount,
     required this.onTap,
-    required this.searchValue,
+    required this.searchController,
     required this.onSearchChanged,
   });
 
   final _TopTab current;
   final int pendingPunchCount;
   final ValueChanged<_TopTab> onTap;
-  final String searchValue;
+  final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
 
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    // 注意：tabs 容器和搜索框都不再写死 height，让其根据子 pill 的 padding
-    // 自然撑高。中文（PingFang SC）在 line-height: 1.0 + 固定 44/32 高度
-    // 容器内会出现 baseline 被裁、字体看上去"被压扁"的视觉错觉，因此采用
-    // 内容驱动高度 + 较宽的 line-height(1.2) 的策略。
+    // 原版：左黑底状态页签（带描边，「补卡审核」带红色待审数）+ 右 324×44 搜索。
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Flexible(
-          child: SmartCampusStatusTabs<_TopTab>(
-            segments: [
-              const AppSegment(value: _TopTab.classRoster, label: '查寝记录'),
-              AppSegment(
-                value: _TopTab.punchAudit,
-                label: pendingPunchCount > 0
-                    ? '补卡审核（$pendingPunchCount）'
-                    : '补卡审核',
-              ),
-            ],
-            value: current,
-            onChanged: onTap,
-          ),
+        SmartCampusDarkTabs<_TopTab>(
+          segments: [
+            AppSegment(
+              value: _TopTab.classRoster,
+              label: _TopTab.classRoster.label,
+            ),
+            AppSegment(
+              value: _TopTab.punchAudit,
+              label: _TopTab.punchAudit.label,
+              badge: smartCampusCountBadgeLabel(pendingPunchCount),
+            ),
+          ],
+          value: current,
+          onChanged: onTap,
         ),
-        SizedBox(width: ui(16)),
-        Container(
-          width: ui(324),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(12)),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: ui(24), vertical: ui(12)),
-          child: Row(
-            children: [
-              AppAssetGraphic(
-                AppAssets.shellV2Search,
-                width: ui(16),
-                height: ui(16),
-                fit: BoxFit.contain,
-              ),
-              SizedBox(width: ui(8)),
-              Expanded(
-                child: _DormDynamicSearchField(
-                  value: searchValue,
-                  onChanged: onSearchChanged,
-                ),
-              ),
-            ],
+        SizedBox(width: ui(12)),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: SmartCampusFilterSearchField(
+              controller: searchController,
+              hintText: '搜索姓名、学号、手机、宿舍、家长',
+              onChanged: onSearchChanged,
+            ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _DormDynamicSearchField extends StatefulWidget {
-  const _DormDynamicSearchField({required this.value, required this.onChanged});
-
-  final String value;
-  final ValueChanged<String> onChanged;
-
-  @override
-  State<_DormDynamicSearchField> createState() =>
-      _DormDynamicSearchFieldState();
-}
-
-class _DormDynamicSearchFieldState extends State<_DormDynamicSearchField> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.value);
-  }
-
-  @override
-  void didUpdateWidget(covariant _DormDynamicSearchField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.value != _controller.text) {
-      _controller.text = widget.value;
-      _controller.selection = TextSelection.collapsed(
-        offset: widget.value.length,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return AppTextField(
-      controller: _controller,
-      onChanged: widget.onChanged,
-      cursorColor: _kPurple,
-      cursorWidth: 1.5,
-      cursorHeight: ui(16),
-      style: TextStyle(
-        fontSize: ui(14),
-        color: _kTextDark,
-        fontWeight: AppFont.w400,
-        height: 1.2,
-      ),
-      decoration: InputDecoration(
-        hintText: '搜索姓名、学号、手机、宿舍、家长',
-        hintStyle: TextStyle(
-          fontSize: ui(14),
-          color: _kTextPlaceholder,
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-        isCollapsed: true,
-        contentPadding: EdgeInsets.zero,
-        border: InputBorder.none,
-      ),
     );
   }
 }
@@ -715,7 +638,7 @@ class _FilterToolbar extends StatelessWidget {
                 TextSpan(text: '共 $total 条 · 异常 '),
                 TextSpan(
                   text: '$exceptions',
-                  style: const TextStyle(color: AppColors.danger),
+                  style: const TextStyle(color: _kPurple),
                 ),
                 const TextSpan(text: ' 条'),
               ],
@@ -723,7 +646,7 @@ class _FilterToolbar extends StatelessWidget {
           ),
         ),
         SizedBox(width: ui(12)),
-        SmartCampusStatusTabs<_FilterTab>(
+        SmartCampusDarkTabs<_FilterTab>(
           segments: [
             for (final t in _FilterTab.values)
               AppSegment(value: t, label: t.label),
@@ -801,7 +724,7 @@ class _CardsGrid extends StatelessWidget {
 // —— 卡片背景（共用）—————————————————————————————————————————————
 
 BoxDecoration _cardDecoration(double radius) => BoxDecoration(
-  color: AppColors.surface,
+  color: Colors.white,
   borderRadius: BorderRadius.circular(radius),
 );
 
@@ -857,7 +780,7 @@ class _DormStudentAvatar extends StatelessWidget {
               initial,
               style: TextStyle(
                 fontSize: ui(size * 0.38),
-                color: AppColors.surface,
+                color: Colors.white,
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -865,7 +788,7 @@ class _DormStudentAvatar extends StatelessWidget {
           : Icon(
               Icons.person_rounded,
               size: ui(size * 0.5),
-              color: AppColors.surface,
+              color: Colors.white,
             ),
     );
   }
@@ -1052,8 +975,8 @@ class _DormCard extends StatelessWidget {
               Text(
                 record.title,
                 style: TextStyle(
-                  fontSize: ui(16),
-                  color: AppColors.ink,
+                  fontSize: ui(18),
+                  color: const Color(0xFF1A1A1A),
                   fontFamily: 'Barlow',
                   fontWeight: FontWeight.w600,
                   height: 1.0,
@@ -1131,7 +1054,7 @@ class _DormStatusBadge extends StatelessWidget {
         status.label,
         style: TextStyle(
           fontSize: ui(12),
-          color: AppColors.surface,
+          color: Colors.white,
           fontWeight: AppFont.w400,
           height: 1.2,
         ),
@@ -1572,7 +1495,7 @@ class _PunchActionButton extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(12),
-            color: isPrimary ? AppColors.surface : _kTextDark,
+            color: isPrimary ? Colors.white : _kTextDark,
             fontWeight: isPrimary ? AppFont.w600 : AppFont.w500,
             height: 16 / 12,
           ),
