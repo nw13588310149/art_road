@@ -5,12 +5,12 @@
 //      → mainView == studentRoster + role == teacher/headTeacher → SmartCampusPage
 //      路由到本视图。返回：banner 左上角返回按钮 → onBack。
 //
-// 视觉（Figma 970 设计宽）：
+// 视觉（按音乐之路 80e9dd3c 同路径文件还原，Figma 970 设计宽）：
 //   1. 顶部 banner（62 高）：背景图 xiaoquan/bg.png；左返回；居中 "学生名册"
-//   2. 筛选行：班级 dropdown + 搜索框
-//   3. 三张统计卡：当前列表 / 男 / 女
-//   4. 学生卡 3 列网格：头像 + 姓名(蓝色消息图标) + 右上「详情 ›」链接；
-//      宿舍 / 学号 两行信息；底部标签行（班级·方向灰底 tag + 住宿·学籍标签
+//   2. 筛选行：120×44 班级 dropdown + 324×44 搜索框
+//   3. 三张统计卡：学生人数 / 男生 / 女生
+//   4. 学生卡 3 列网格：方头像 + 姓名(性别图标) + 右上「详情 ›」链接；
+//      宿舍 / 学号 两行信息；底部方角标签（班级·方向灰底 tag + 住宿·学籍标签
 //      紫底 tag，学籍异动用状态色 tag）；整卡可点 → 右侧「学生档案」抽屉。
 // =============================================================================
 
@@ -18,7 +18,6 @@ import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -30,19 +29,24 @@ import '../../../core/widgets/scaled_dialog.dart';
 import '../data/admin_student_exam_data.dart';
 import '../data/teacher_repository.dart';
 import '../../shell/ui/shell_layout.dart';
+import 'widgets/smart_campus_dark_tabs.dart';
+import 'widgets/smart_campus_filter_bar.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_side_drawer.dart';
+import 'widgets/smart_campus_square_avatar.dart';
+import 'widgets/smart_campus_square_tag.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-// ---- 配色 -------------------------------------------------------------------
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextPrimary = AppColors.ink;
-const Color _kTextHint = AppColors.textPlaceholder;
+// ---- 配色（原版色值；紫色统一为品牌紫）--------------------------------------
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextPrimary = Color(0xFF0B081A);
+const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleSoft = AppColors.brandTint;
-const Color _kPageBgChip = AppColors.surfaceSubtle;
-const Color _kTextSecondary = AppColors.textSecondary;
+const Color _kPurpleSoft = Color(0xFFDAD2FF);
+const Color _kPageBgChip = Color(0xFFF5F6FA);
+const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kPurpleTag = AppColors.brandSoft;
 
 // ---- 学籍状态 ---------------------------------------------------------------
@@ -103,7 +107,7 @@ extension on _StudentStatus {
       case _StudentStatus.transferring:
         return const Color(0xFF1F77E0);
       case _StudentStatus.graduated:
-        return AppColors.textSecondary;
+        return const Color(0xFF6D6B75);
     }
   }
 }
@@ -503,11 +507,7 @@ class _TeacherStudentRosterViewState
     final totalForStats = _listTotal > 0 ? _listTotal : list.length;
 
     return SmartCampusSecondaryPageShell(
-      header: AppPageHeader(
-        title: '学生名册',
-        subtitle: '任教班级学生的学籍、宿舍与家长联系方式',
-        onBack: widget.onBack,
-      ),
+      header: SmartCampusPageBanner(title: '学生名册', onBack: widget.onBack),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -523,15 +523,21 @@ class _TeacherStudentRosterViewState
           _StatsRow(total: totalForStats, male: maleCount, female: femaleCount),
           SizedBox(height: ui(20)),
           if (!_loadingStudents && list.isEmpty)
-            AppCard(
-              child: AppEmptyState(
-                icon: Icons.groups_outlined,
-                title: _debouncedKeyword.isEmpty
-                    ? '这个班级还没有学生'
-                    : '没有找到「$_debouncedKeyword」',
-                description: _debouncedKeyword.isEmpty
-                    ? '学生分班后会出现在这里'
-                    : '可以换个姓名、学号或宿舍号再试',
+            // 原版空状态：顶部留 48 的一行灰字，不套卡片。
+            Center(
+              child: Padding(
+                padding: EdgeInsets.only(top: ui(48)),
+                child: Text(
+                  _debouncedKeyword.isEmpty
+                      ? '这个班级还没有学生，学生分班后会出现在这里'
+                      : '没有找到「$_debouncedKeyword」，可以换个姓名、学号或宿舍号再试',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: ui(14),
+                    color: _kTextHint,
+                    fontFamily: 'PingFang SC',
+                  ),
+                ),
               ),
             )
           else if (list.isNotEmpty)
@@ -569,29 +575,16 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _ClassFilterButton(
-          selectedId: selectedId,
-          value: selectedLabel,
-          options: classOptions,
-          onChanged: onClassPicked,
-        ),
-        const SizedBox(width: AppSpace.s12),
-        Expanded(
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: SizedBox(
-              width: 324,
-              height: 44,
-              child: _RosterSearchField(
-                value: query,
-                onChanged: onQueryChanged,
-              ),
-            ),
-          ),
-        ),
-      ],
+    // 原版：左 120×44 班级下拉，右 324×44 搜索，两端对齐；放不下时折行（窄横屏）。
+    return SmartCampusFilterRow(
+      useWrap: true,
+      dropdown: _ClassFilterButton(
+        selectedId: selectedId,
+        value: selectedLabel,
+        options: classOptions,
+        onChanged: onClassPicked,
+      ),
+      search: _RosterSearchField(value: query, onChanged: onQueryChanged),
     );
   }
 }
@@ -682,7 +675,7 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
         height: ui(44),
         padding: EdgeInsets.symmetric(horizontal: ui(16)),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(ui(12)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -696,17 +689,21 @@ class _ClassFilterButtonState extends State<_ClassFilterButton> {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
+                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.4,
                 ),
               ),
             ),
-            Icon(
-              _open
-                  ? Icons.keyboard_arrow_up_rounded
-                  : Icons.keyboard_arrow_down_rounded,
-              size: ui(22),
-              color: _kTextDark,
+            // 与共享筛选下拉一致：箭头随菜单开合翻转（160ms）。
+            AnimatedRotation(
+              turns: _open ? 0.5 : 0,
+              duration: const Duration(milliseconds: 160),
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: ui(22),
+                color: _kTextDark,
+              ),
             ),
           ],
         ),
@@ -731,12 +728,12 @@ class _ClassFilterMenuPanel extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(12)),
         border: Border.all(color: _kBorderSoft),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textTertiary.withValues(alpha: 0.10),
+            color: const Color(0xFF95A6C8).withValues(alpha: 0.10),
             blurRadius: ui(20),
             offset: Offset(0, ui(8)),
           ),
@@ -848,9 +845,9 @@ class _RosterSearchFieldState extends State<_RosterSearchField> {
 
   @override
   Widget build(BuildContext context) {
-    return AppSearchField(
+    return SmartCampusFilterSearchField(
       controller: _ctrl,
-      hint: '搜索姓名、学号、宿舍',
+      hintText: '搜索姓名、学号、宿舍',
       onChanged: widget.onChanged,
     );
   }
@@ -881,7 +878,6 @@ class _StatsRow extends StatelessWidget {
             backgroundAsset: AppAssets.teacherStudentRosterStatCard1,
             label: '学生人数',
             value: total,
-            valueSuffix: '人',
           ),
         ),
         SizedBox(width: ui(12)),
@@ -890,7 +886,6 @@ class _StatsRow extends StatelessWidget {
             backgroundAsset: AppAssets.teacherStudentRosterStatCard2,
             label: '男生',
             value: male,
-            valueSuffix: '人',
           ),
         ),
         SizedBox(width: ui(12)),
@@ -899,7 +894,6 @@ class _StatsRow extends StatelessWidget {
             backgroundAsset: AppAssets.teacherStudentRosterStatCard3,
             label: '女生',
             value: female,
-            valueSuffix: '人',
           ),
         ),
       ],
@@ -1017,11 +1011,11 @@ class _StudentCard extends StatelessWidget {
       );
     }
     specs.add(
-      _RosterTagSpec(_isResident ? '住校' : '走读', _kPurpleTag, AppColors.surface),
+      _RosterTagSpec(_isResident ? '住校' : '走读', _kPurpleTag, Colors.white),
     );
     for (final tag in student.tags) {
       if (tag.trim().isEmpty) continue;
-      specs.add(_RosterTagSpec(tag, _kPurpleTag, AppColors.surface));
+      specs.add(_RosterTagSpec(tag, _kPurpleTag, Colors.white));
     }
     return specs;
   }
@@ -1029,96 +1023,111 @@ class _StudentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return AppCard(
+    // 原版学生卡：白底圆角 12、无描边，内距 12×8；方头像 40。
+    return AppPressable(
       onTap: onTap,
-      padding: EdgeInsets.fromLTRB(ui(12), ui(12), ui(12), ui(12)),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppAvatar(name: student.name, url: student.avatarUrl, size: 40),
-          SizedBox(width: ui(8)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              student.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: ui(14),
-                                height: 1.2,
-                                fontWeight: AppFont.w500,
-                                color: _kTextPrimary,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(ui(12)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        padding: EdgeInsets.fromLTRB(ui(12), ui(8), ui(12), ui(8)),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SmartCampusSquareAvatar(
+              name: student.name,
+              url: student.avatarUrl,
+            ),
+            SizedBox(width: ui(8)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                student.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: ui(14),
+                                  height: 1.2,
+                                  fontWeight: AppFont.w500,
+                                  color: _kTextPrimary,
+                                  fontFamily: 'PingFang SC',
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(width: ui(4)),
-                          Image.asset(
-                            student.isMale
-                                ? AppAssets.iconGenderMale
-                                : AppAssets.iconGenderFemale,
-                            width: ui(14),
-                            height: ui(14),
-                            fit: BoxFit.contain,
-                          ),
-                        ],
+                            SizedBox(width: ui(4)),
+                            Image.asset(
+                              student.isMale
+                                  ? AppAssets.iconGenderMale
+                                  : AppAssets.iconGenderFemale,
+                              width: ui(14),
+                              height: ui(14),
+                              fit: BoxFit.contain,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    SizedBox(width: ui(8)),
-                    Text(
-                      '详情',
-                      style: TextStyle(
-                        fontSize: ui(14),
-                        height: 1.2,
-                        fontWeight: AppFont.w400,
+                      SizedBox(width: ui(8)),
+                      Text(
+                        '详情',
+                        style: TextStyle(
+                          fontSize: ui(14),
+                          height: 1.2,
+                          fontWeight: AppFont.w400,
+                          color: _kPurple,
+                          fontFamily: 'PingFang SC',
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: ui(16),
                         color: _kPurple,
                       ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: ui(16),
-                      color: _kPurple,
-                    ),
-                  ],
-                ),
-                SizedBox(height: ui(8)),
-                Text(
-                  _dormLine,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    height: 1.2,
-                    color: _kTextPrimary,
+                    ],
                   ),
-                ),
-                SizedBox(height: ui(6)),
-                Text(
-                  student.studentId.isEmpty ? '—' : student.studentId,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: ui(12),
-                    height: 1.2,
-                    color: _kTextHint,
+                  SizedBox(height: ui(8)),
+                  Text(
+                    _dormLine,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: ui(12),
+                      height: 1.2,
+                      color: _kTextPrimary,
+                      fontFamily: 'PingFang SC',
+                    ),
                   ),
-                ),
-                SizedBox(height: ui(8)),
-                _RosterTagRow(tags: _buildTags()),
-              ],
+                  SizedBox(height: ui(6)),
+                  Text(
+                    student.studentId.isEmpty ? '—' : student.studentId,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: ui(12),
+                      height: 1.2,
+                      color: _kTextHint,
+                      fontFamily: 'PingFang SC',
+                    ),
+                  ),
+                  SizedBox(height: ui(6)),
+                  _RosterTagRow(tags: _buildTags()),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1133,7 +1142,8 @@ class _RosterTagSpec {
   final Color fg;
 }
 
-/// 单行标签流：与档案抽屉一致，溢出时静默水平裁剪（不换行、不报溢出）。
+/// 标签流：原版方角标签（高 16、内距 4、圆角 4）。原版单行排列、放不下的静默
+/// 裁掉；这里放不下时换行，任何宽度下都不截断。
 class _RosterTagRow extends StatelessWidget {
   const _RosterTagRow({required this.tags});
 
@@ -1141,11 +1151,11 @@ class _RosterTagRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (tags.isEmpty) return const SizedBox.shrink();
-    // 标签换行排列，任何宽度下都不截断（AppTag 从不截断）。
+    final ui = DashboardScaleScope.of(context).ui;
+    if (tags.isEmpty) return SizedBox(height: ui(16));
     return Wrap(
-      spacing: AppSpace.s4,
-      runSpacing: AppSpace.s4,
+      spacing: ui(4),
+      runSpacing: ui(4),
       children: [for (final tag in tags) _RosterTag(spec: tag)],
     );
   }
@@ -1156,17 +1166,19 @@ class _RosterTag extends StatelessWidget {
 
   final _RosterTagSpec spec;
 
-  /// 学籍异动（非在籍）用警示色，其余信息标签一律中性浅底。
   @override
   Widget build(BuildContext context) {
-    final neutral = spec.bg == _kPageBgChip || spec.bg == _kPurpleTag;
-    return AppTag(
+    return SmartCampusSquareTag(
       label: spec.label,
-      tone: neutral ? AppTone.neutral : AppTone.warning,
+      background: spec.bg,
+      foreground: spec.fg,
+      height: 16,
+      horizontalPadding: 4,
     );
   }
 }
 
+/// 原版方头像（圆角 8，空图时浅紫底 + 品牌紫首字）。
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.name, this.avatarUrl = '', this.size = 40});
 
@@ -1176,39 +1188,7 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final initial = name.isEmpty ? '·' : name.characters.first;
-    final placeholder = Container(
-      width: ui(size),
-      height: ui(size),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: _kPurpleSoft,
-        borderRadius: BorderRadius.circular(ui(8)),
-      ),
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: ui(size * 0.4),
-          fontWeight: AppFont.w500,
-          color: _kPurple,
-        ),
-      ),
-    );
-    if (avatarUrl.trim().isEmpty) return placeholder;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: SizedBox(
-        width: ui(size),
-        height: ui(size),
-        child: CachedNetworkImage(
-          imageUrl: avatarUrl,
-          fit: BoxFit.cover,
-          placeholder: (_, _) => placeholder,
-          errorWidget: (_, _, _) => placeholder,
-        ),
-      ),
-    );
+    return SmartCampusSquareAvatar(name: name, url: avatarUrl, size: size);
   }
 }
 
@@ -1237,7 +1217,7 @@ void _openStudentDetailDrawer(BuildContext context, _Student data) {
     context: context,
     barrierDismissible: true,
     barrierLabel: '关闭学生档案',
-    barrierColor: AppColors.ink.withValues(alpha: 0.32),
+    barrierColor: Colors.black.withValues(alpha: 0.32),
     transitionDuration: const Duration(milliseconds: 240),
     pageBuilder: (ctx, anim, sec) {
       return Align(
@@ -1420,28 +1400,7 @@ class _DrawerTitleBar extends StatelessWidget {
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: _kBorderSoft)),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: ui(3.25),
-            height: ui(14.85),
-            decoration: BoxDecoration(
-              color: _kPurple,
-              borderRadius: BorderRadius.circular(ui(6)),
-            ),
-          ),
-          SizedBox(width: ui(4)),
-          Text(
-            '学生档案',
-            style: TextStyle(
-              fontSize: ui(16),
-              color: _kTextDark,
-              fontWeight: AppFont.w600,
-              height: 1,
-            ),
-          ),
-        ],
-      ),
+      child: const SmartCampusDrawerTitleBar(title: '学生档案'),
     );
   }
 }
@@ -1486,7 +1445,8 @@ class _ProfileBlock extends StatelessWidget {
                     displayName,
                     style: TextStyle(
                       fontSize: ui(16),
-                      color: AppColors.ink,
+                      color: Colors.black,
+                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w600,
                       height: 1.2,
                     ),
@@ -1964,43 +1924,14 @@ class _SubjectToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(44),
-      padding: EdgeInsets.all(ui(4)),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(8)),
-        border: Border.all(color: _kBorderSoft),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < subjects.length; i++)
-            InkWell(
-              onTap: () => onTap(i),
-              borderRadius: BorderRadius.circular(ui(6)),
-              child: Container(
-                height: ui(36),
-                padding: EdgeInsets.symmetric(horizontal: ui(16)),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: i == activeIdx ? _kTextDark : Colors.transparent,
-                  borderRadius: BorderRadius.circular(ui(6)),
-                ),
-                child: Text(
-                  subjects[i],
-                  style: TextStyle(
-                    fontSize: ui(14),
-                    color: i == activeIdx ? AppColors.surface : _kTextSecondary,
-                    fontWeight: AppFont.w500,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+    // 原版黑底页签（带描边）：容器高 44、选项高 36。
+    return SmartCampusDarkTabs<int>(
+      segments: [
+        for (var i = 0; i < subjects.length; i++)
+          AppSegment(value: i, label: subjects[i]),
+      ],
+      value: activeIdx,
+      onChanged: onTap,
     );
   }
 }
@@ -2143,7 +2074,7 @@ class _ScoreLinePainter extends CustomPainter {
     final innerLeft = size.width * 0.04;
     final innerRight = size.width * 0.96;
     final gridPaint = Paint()
-      ..color = AppColors.line
+      ..color = const Color(0xFFE6E9F1)
       ..strokeWidth = 1;
 
     for (final tick in kYTicks) {
@@ -2260,41 +2191,11 @@ class _ContactParentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    // 原版抽屉主按钮：高 48、圆角 12、品牌紫渐变。
+    return SmartCampusDrawerGradientButton(
+      icon: Icons.phone_rounded,
+      label: '联系家长',
       onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        width: double.infinity,
-        height: ui(48),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(ui(12)),
-          gradient: const LinearGradient(
-            // Figma：270° 渐变（从右到左）；Flutter 用 centerRight→centerLeft。
-            begin: Alignment.centerRight,
-            end: Alignment.centerLeft,
-            colors: [AppColors.brandSoft, AppColors.brand],
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.phone_rounded, size: ui(16), color: AppColors.surface),
-            SizedBox(width: ui(8)),
-            Text(
-              '联系家长',
-              style: TextStyle(
-                fontSize: ui(14),
-                color: AppColors.surface,
-                fontWeight: AppFont.w500,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -2341,7 +2242,7 @@ void _showParentContactDialog(
   // 关闭时不会连带关掉抽屉。
   showScaledDialog<void>(
     context: context,
-    barrierColor: AppColors.ink.withValues(alpha: 0.32),
+    barrierColor: Colors.black.withValues(alpha: 0.32),
     builder: (ctx) {
       final ui = DashboardScaleScope.of(ctx).ui;
       return GradientHeaderDialog(
@@ -2425,8 +2326,9 @@ void _showParentContactDialog(
                             Text(
                               parentName,
                               style: TextStyle(
-                                fontSize: ui(16),
+                                fontSize: ui(15),
                                 color: _kTextDark,
+                                fontFamily: 'PingFang SC',
                                 fontWeight: AppFont.w500,
                                 height: 1.2,
                               ),
