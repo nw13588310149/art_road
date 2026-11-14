@@ -104,9 +104,11 @@ DateTime? _parseTime(Object? raw) =>
 /// 有对应事件的消息记在事件发生后片刻；事件晚于演示当前时刻（或没有事件）时，
 /// 按 [fallback] 从 [DemoClock.now] 往前推。
 String _noticeTime(DateTime? event, Duration fallback) {
-  final at = event?.add(const Duration(minutes: 2));
-  if (at != null && !at.isAfter(DemoClock.now())) {
-    return ContentDemo.dateTime(at);
+  final now = DemoClock.now();
+  if (event != null && !event.isAfter(now)) {
+    // 刚刚发生的事（比如学生一分钟前交的作品）记在此刻，不往前推到 [fallback]。
+    final at = event.add(const Duration(minutes: 2));
+    return ContentDemo.dateTime(at.isAfter(now) ? now : at);
   }
   return ContentDemo.dateTime(DemoClock.ago(fallback));
 }
@@ -376,10 +378,16 @@ void registerPlatformCoreFixtures(DemoRouter r) {
 
   // ── 消息 ────────────────────────────────────────────────────────────
   // v2：消息带跳转目标（targetType + targetId），旧的本地消息不再沿用。
+  // 作品库往别人的消息里追加时（学生提交、老师点评等），对方的列表可能还没生成，
+  // 那时也用这里的完整种子，不会只剩作品消息。
+  DemoArtworkStore.noticeSeeder = _seedNotices;
   String noticesKey(DemoRequest req) =>
       DemoArtworkStore.noticesKey(req.account.userId);
-  List<Map<String, dynamic>> notices(DemoRequest req) =>
-      DemoStore.list(noticesKey(req), () => _seedNotices(req.account));
+  List<Map<String, dynamic>> notices(DemoRequest req) {
+    // 先把到点的代点评、代复核落下来：它们会往消息里追加，要赶在生成种子之前。
+    DemoArtworkStore.sync();
+    return DemoStore.list(noticesKey(req), () => _seedNotices(req.account));
+  }
   r.any('/app/msg/getUnReadMsgCount', (req) {
     final count = notices(req).where((n) => n['read'] != true).length;
     return <String, dynamic>{'unReadMsgCount': count};

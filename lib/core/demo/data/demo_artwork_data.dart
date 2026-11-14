@@ -272,14 +272,16 @@ abstract final class DemoArtworkData {
 
   // ── 状态（读取时计算） ───────────────────────────────────────────────
 
+  // 下面几个判断在列表筛选里逐条调用，直接读字段，不经 [reviewOf] / [leadOf]
+  // 拷贝一份。
   static String statusOf(Map<String, dynamic> work) =>
-      reviewOf(work) == null ? statusPending : statusReviewed;
+      isReviewed(work) ? statusReviewed : statusPending;
 
-  static bool isReviewed(Map<String, dynamic> work) => reviewOf(work) != null;
+  static bool isReviewed(Map<String, dynamic> work) => work['review'] is Map;
 
   static String leadStatusOf(Map<String, dynamic> work) {
-    final lead = leadOf(work);
-    if (lead == null || reviewOf(work) == null) {
+    final lead = work['leadReview'];
+    if (lead is! Map || !isReviewed(work)) {
       return leadNone;
     }
     return text(lead['action']).isEmpty ? leadInReview : leadDone;
@@ -287,12 +289,12 @@ abstract final class DemoArtworkData {
 
   /// 组长调分后取组长的分数，否则取责任老师的分数；未点评或没有打分时为 null。
   static double? finalScoreOf(Map<String, dynamic> work) {
-    final review = reviewOf(work);
-    if (review == null) {
+    final review = work['review'];
+    if (review is! Map) {
       return null;
     }
-    final lead = leadOf(work);
-    if (lead != null &&
+    final lead = work['leadReview'];
+    if (lead is Map &&
         text(lead['action']) == actionAdjust &&
         lead['score'] is num) {
       return (lead['score'] as num).toDouble();
@@ -302,7 +304,8 @@ abstract final class DemoArtworkData {
   }
 
   static double maxScoreOf(Map<String, dynamic> work) {
-    final max = reviewOf(work)?['maxScore'];
+    final review = work['review'];
+    final max = review is Map ? review['maxScore'] : null;
     return max is num && max > 0 ? max.toDouble() : 100;
   }
 

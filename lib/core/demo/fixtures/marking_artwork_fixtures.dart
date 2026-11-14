@@ -56,10 +56,11 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
           b['featuredTime'],
         ).compareTo(DemoArtworkData.text(a['featuredTime'])),
       );
-    return demoPage([
-      for (final w in rows)
-        DemoArtworkStore.projectSummary(w, req.account),
-    ], req);
+    return _projectPage(
+      rows,
+      req,
+      (w) => DemoArtworkStore.projectSummary(w, req.account),
+    );
   });
 
   marking.get('/app/artworks', (req) {
@@ -76,14 +77,15 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
           .where((w) => ((w['versionCount'] as num?)?.toInt() ?? 1) > 1)
           .toList();
     }
-    return demoPage([
-      for (final w in rows)
-        DemoArtworkStore.projectSummary(
-          w,
-          req.account,
-          versionCount: (w['versionCount'] as num?)?.toInt(),
-        ),
-    ], req);
+    return _projectPage(
+      rows,
+      req,
+      (w) => DemoArtworkStore.projectSummary(
+        w,
+        req.account,
+        versionCount: (w['versionCount'] as num?)?.toInt(),
+      ),
+    );
   });
 
   marking.get('/app/artworks/{id}', (req) {
@@ -222,17 +224,30 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final classId = DemoArtworkData.classOf(person).id;
     final status = req.str('status').toUpperCase();
     final now = DemoArtworkStore.now();
-    final mine = DemoArtworkStore.tasks().where((task) {
+    // 这名学生交过的作品先按作业归好，不逐份作业去翻整个作品库。
+    final submitted = <String, List<Map<String, dynamic>>>{};
+    for (final work in DemoArtworkStore.works()) {
+      final taskId = _text(work['taskId']);
+      if (taskId.isNotEmpty && DemoArtworkData.personOf(work) == person) {
+        (submitted[taskId] ??= <Map<String, dynamic>>[]).add(work);
+      }
+    }
+    final result = <Map<String, dynamic>>[];
+    for (final task in DemoArtworkStore.tasks()) {
       final classes = task['classIds'];
       if (classes is! List || !classes.map((e) => '$e').contains(classId)) {
-        return false;
+        continue;
       }
-      final state = _taskStatus(task, person, now);
-      return status.isEmpty || status == 'ALL' || state == status;
-    });
-    return <Map<String, dynamic>>[
-      for (final task in mine) _taskJson(task, person, now),
-    ];
+      final state = _taskStatus(
+        task,
+        submitted[_text(task['id'])] ?? const <Map<String, dynamic>>[],
+        now,
+      );
+      if (status.isEmpty || status == 'ALL' || state == status) {
+        result.add(_taskJson(task, status: state));
+      }
+    }
+    return result;
   });
 
   // ── 教职：作品点评 ──────────────────────────────────────────────────
@@ -298,10 +313,11 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         DemoArtworkData.teacherName(_text(w['teacherId'])),
       ];
     });
-    return demoPage([
-      for (final w in matched)
-        DemoArtworkStore.projectSummary(w, req.account),
-    ], req);
+    return _projectPage(
+      matched,
+      req,
+      (w) => DemoArtworkStore.projectSummary(w, req.account),
+    );
   });
 
   marking.get('/school/teacher/artworks/{id}', (req) {
@@ -539,9 +555,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       }
       return _text(task['teacherId']) == teacherId;
     });
-    return <Map<String, dynamic>>[
-      for (final task in all) _taskJson(task, null, DemoArtworkStore.now()),
-    ];
+    return <Map<String, dynamic>>[for (final task in all) _taskJson(task)];
   });
 
   marking.post('/school/teacher/tasks', (req) {
@@ -641,15 +655,14 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
           .where((w) => DemoArtworkData.text(w['teacherId']) == teacherFilter)
           .toList();
     }
-    return demoPage([
-      for (final w in rows) ...[
-        <String, dynamic>{
-          ...DemoArtworkStore.projectSummary(w, req.account),
-          'leadReasons': DemoArtworkData.leadOf(w)?['reasons'] ?? const [],
-          'enteredTime': DemoArtworkData.leadOf(w)?['enteredTime'] ?? '',
-        },
-      ],
-    ], req);
+    return _projectPage(rows, req, (w) {
+      final lead = DemoArtworkData.leadOf(w);
+      return <String, dynamic>{
+        ...DemoArtworkStore.projectSummary(w, req.account),
+        'leadReasons': lead?['reasons'] ?? const <Object?>[],
+        'enteredTime': lead?['enteredTime'] ?? '',
+      };
+    });
   });
 
   marking.post('/school/leader/reviews/{artworkId}', (req) {
@@ -863,6 +876,21 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
 
 // ── 查询辅助 ──────────────────────────────────────────────────────────
 
+/// 先分页，再整理字段：整理一条要查版本数、作业和学生信息，校长的列表有上千条，
+/// 只整理当前页要返回的那些。
+Map<String, dynamic> _projectPage(
+  List<Map<String, dynamic>> rows,
+  DemoRequest req,
+  Map<String, dynamic> Function(Map<String, dynamic> work) project,
+) {
+  final page = demoPage(rows, req);
+  page['records'] = <Map<String, dynamic>>[
+    for (final row in page['records'] as List)
+      project(row as Map<String, dynamic>),
+  ];
+  return page;
+}
+
 List<Map<String, dynamic>> _studentLatest(int personIndex) =>
     DemoArtworkStore.latestVersions(
       DemoArtworkStore.works().where(
@@ -964,12 +992,12 @@ String? _nextPending(DemoAccount account, String currentId) {
       .firstOrNull;
 }
 
-String _taskStatus(Map<String, dynamic> task, int person, DateTime now) {
-  final submitted = DemoArtworkStore.works().where(
-    (w) =>
-        DemoArtworkData.personOf(w) == person &&
-        DemoArtworkData.text(w['taskId']) == _text(task['id']),
-  );
+/// [submitted] 是这名学生为这份作业交过的作品。
+String _taskStatus(
+  Map<String, dynamic> task,
+  List<Map<String, dynamic>> submitted,
+  DateTime now,
+) {
   if (submitted.isEmpty) {
     final due = DemoArtworkData.parseTime(task['dueTime']);
     if (due != null && due.isBefore(now)) {
@@ -983,18 +1011,12 @@ String _taskStatus(Map<String, dynamic> task, int person, DateTime now) {
   return 'SUBMITTED';
 }
 
-Map<String, dynamic> _taskJson(
-  Map<String, dynamic> task,
-  int? person,
-  DateTime now,
-) {
-  final status = person == null ? '' : _taskStatus(task, person, now);
-  return <String, dynamic>{
-    ...task,
-    'teacherName': DemoArtworkData.teacherName(_text(task['teacherId'])),
-    if (person != null) 'status': status,
-  };
-}
+Map<String, dynamic> _taskJson(Map<String, dynamic> task, {String? status}) =>
+    <String, dynamic>{
+      ...task,
+      'teacherName': DemoArtworkData.teacherName(_text(task['teacherId'])),
+      'status': ?status,
+    };
 
 // ── 身份 ──────────────────────────────────────────────────────────────
 

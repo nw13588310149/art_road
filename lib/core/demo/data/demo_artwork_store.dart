@@ -4,6 +4,8 @@
 /// 键名带 `v3`（见 [DemoArtworkData]）；旧的 `v2` 键不再读取。
 library;
 
+import 'dart:collection';
+
 import '../demo_accounts.dart';
 import '../demo_clock.dart';
 import '../demo_store.dart';
@@ -15,38 +17,57 @@ import 'demo_marking_data.dart';
 abstract final class DemoArtworkStore {
   static DateTime? _nowOverride;
   static DemoArtworkSeedResult? _seed;
-  static DateTime? _seedNow;
+  static Map<String, Map<String, dynamic>>? _seedById;
 
-  /// 测试注入「现在」；传 `null` 恢复 [DemoClock]。会清掉种子缓存。
+  /// 每次写入加一。合并后的作品与作业、它们的索引，以及「下一次代办时间」都按它判断
+  /// 是否过期。
+  static int _revision = 0;
+  static _Snapshot? _works;
+  static _Snapshot? _tasks;
+
+  /// 上一次扫描代点评、代复核时的写入版本和差异表，以及当时还没到点的最早一个时间。
+  static int _autoRevision = -1;
+  static Object? _autoSource;
+  static DateTime? _autoNextDue;
+
+  /// 测试用：合并种子与差异的次数。列表接口一次请求只该合并一次，不能逐条重新合并。
+  static int debugMergeCount = 0;
+
+  /// 测试用：被代点评、代复核改动过的作品累计份数。
+  static int debugAutoApplied = 0;
+
+  /// 测试注入「现在」；传 `null` 恢复 [DemoClock]。会清掉种子缓存，种子按新的时间重算。
   static void setNow(DateTime? value) {
     _nowOverride = value;
     clearCache();
   }
 
+  /// 测试用：把「现在」拨到 [value]，种子不重算，用来模拟演示开着一段时间后代点评、
+  /// 代复核陆续到点。
+  static void advanceNow(DateTime value) {
+    _nowOverride = value;
+  }
+
   /// 清空种子缓存（「重置演示数据」后调用，下次按新的「现在」重算）。
   static void clearCache() {
     _seed = null;
-    _seedNow = null;
+    _seedById = null;
+    _works = null;
+    _tasks = null;
+    _revision++;
   }
 
   static DateTime now() => _nowOverride ?? DemoClock.now();
 
-  static DemoArtworkSeedResult _ensureSeed() {
-    final current = now();
-    if (_seed != null && _seedNow != null) {
-      if (_nowOverride != null) {
-        if (_seedNow == _nowOverride) {
-          return _seed!;
-        }
-      } else {
-        // 同一次运行里复用首次生成的种子；跨天重启会重新进进程再生成。
-        return _seed!;
-      }
-    }
-    _seedNow = _nowOverride ?? current;
-    _seed = DemoArtworkSeed.build(current);
-    return _seed!;
-  }
+  /// 同一次运行里复用首次生成的种子；跨天重启会重新进进程再生成。
+  static DemoArtworkSeedResult _ensureSeed() =>
+      _seed ??= DemoArtworkSeed.build(now());
+
+  static Map<String, Map<String, dynamic>> _seedIndex() =>
+      _seedById ??= <String, Map<String, dynamic>>{
+        for (final work in _ensureSeed().works)
+          DemoArtworkData.text(work['id']): work,
+      };
 
   // ── 差异存储 ─────────────────────────────────────────────────────────
 
@@ -80,95 +101,142 @@ abstract final class DemoArtworkStore {
 
   // ── 读取 ─────────────────────────────────────────────────────────────
 
-  /// 合并种子与差异后的全部作品（新的在前）；读取时会推进无演示账号老师的代点评。
+  /// 把已经到点的代点评、代复核落下来（各个读取入口都会先调用，通常不需要单独调）。
+  static void sync() => _applyAutoActions();
+
+  /// 合并种子与差异后的全部作品（新的在前）；读取前先把到点的代点评、代复核落下来。
+  ///
+  /// 列表里的每份作品都是只读的（改它会抛错）。要改某份作品，用 [workById] 取一份
+  /// 可写的副本，改完交给 [saveWork]。
   static List<Map<String, dynamic>> works() {
     _applyAutoActions();
-    return _mergedWorks();
+    return List<Map<String, dynamic>>.of(_worksSnapshot().items);
   }
 
-  static List<Map<String, dynamic>> _mergedWorks() {
-    final seed = _ensureSeed();
+  /// 种子与差异合并后的只读快照。一千多份作品合并一次要几毫秒，列表接口又会逐条
+  /// 查版本数和作业，所以按写入版本缓存，有写入才重新合并。
+  static _Snapshot _worksSnapshot() {
     final overrides = _workOverrides();
-    final merged = <String, Map<String, dynamic>>{};
-    for (final work in seed.works) {
-      final id = DemoArtworkData.text(work['id']);
-      merged[id] = _clone(work);
+    final cached = _works;
+    if (cached != null && cached.fresh(_revision, overrides)) {
+      return cached;
+    }
+    debugMergeCount++;
+    final byId = <String, Map<String, dynamic>>{};
+    for (final entry in _seedIndex().entries) {
+      final override = overrides[entry.key];
+      byId[entry.key] = _freeze(override is Map ? override : entry.value);
     }
     for (final entry in overrides.entries) {
       final value = entry.value;
-      if (value is Map) {
-        merged[entry.key] = _clone(value);
+      if (value is Map && !byId.containsKey(entry.key)) {
+        byId[entry.key] = _freeze(value);
       }
     }
-    final list = merged.values.toList()
-      ..sort(
-        (a, b) => DemoArtworkData.text(
-          b['createTime'],
-        ).compareTo(DemoArtworkData.text(a['createTime'])),
+    final items = byId.values.toList()..sort(_newestFirst);
+    final byRoot = <String, List<Map<String, dynamic>>>{};
+    for (final work in items) {
+      (byRoot[DemoArtworkData.rootOf(work)] ??= <Map<String, dynamic>>[]).add(
+        work,
       );
-    return list;
+    }
+    for (final chain in byRoot.values) {
+      if (chain.length > 1) {
+        chain.sort(
+          (a, b) => DemoArtworkData.versionOf(
+            a,
+          ).compareTo(DemoArtworkData.versionOf(b)),
+        );
+      }
+    }
+    return _works = _Snapshot(
+      revision: _revision,
+      source: overrides,
+      items: items,
+      byId: byId,
+      byRoot: byRoot,
+    );
   }
 
+  static int _newestFirst(Map<String, dynamic> a, Map<String, dynamic> b) =>
+      DemoArtworkData.text(
+        b['createTime'],
+      ).compareTo(DemoArtworkData.text(a['createTime']));
+
+  /// 一份可写的副本；改完用 [saveWork] 存回去才生效。
   static Map<String, dynamic>? workById(String id) {
     final wanted = id.trim();
     if (wanted.isEmpty) {
       return null;
     }
-    for (final work in works()) {
-      if (DemoArtworkData.text(work['id']) == wanted) {
-        return work;
-      }
-    }
-    return null;
+    _applyAutoActions();
+    final work = _worksSnapshot().byId[wanted];
+    return work == null ? null : _clone(work);
   }
 
-  static Map<String, dynamic>? _workByIdRaw(String id) {
+  /// 「种子 + 差异」里这份作品的当前状态，不拷贝、只读；代办扫描中途也能用。
+  static Map<String, dynamic>? _currentById(String id) {
     final wanted = id.trim();
     if (wanted.isEmpty) {
       return null;
     }
-    for (final work in _mergedWorks()) {
-      if (DemoArtworkData.text(work['id']) == wanted) {
-        return work;
-      }
-    }
-    return null;
+    final override = _workOverrides()[wanted];
+    return override is Map ? _typed(override) : _seedIndex()[wanted];
   }
 
-  static List<Map<String, dynamic>> tasks() {
-    final seed = _ensureSeed();
-    final overrides = _taskOverrides();
-    final merged = <String, Map<String, dynamic>>{};
-    for (final task in seed.tasks) {
-      merged[DemoArtworkData.text(task['id'])] = _clone(task);
+  /// 不拷贝地遍历「种子 + 差异」的当前状态（只读）；代办扫描中途也能用。
+  static Iterable<Map<String, dynamic>> _current() sync* {
+    final overrides = _workOverrides();
+    final seeded = _seedIndex();
+    for (final entry in seeded.entries) {
+      final override = overrides[entry.key];
+      yield override is Map ? _typed(override) : entry.value;
     }
     for (final entry in overrides.entries) {
       final value = entry.value;
-      if (value is Map) {
-        merged[entry.key] = _clone(value);
+      if (value is Map && !seeded.containsKey(entry.key)) {
+        yield _typed(value);
       }
     }
-    final list = merged.values.toList()
-      ..sort(
-        (a, b) => DemoArtworkData.text(
-          b['createTime'],
-        ).compareTo(DemoArtworkData.text(a['createTime'])),
-      );
-    return list;
   }
 
-  static Map<String, dynamic>? taskById(String id) {
-    final wanted = id.trim();
-    if (wanted.isEmpty) {
-      return null;
+  static Map<String, dynamic> _typed(Map raw) => raw is Map<String, dynamic>
+      ? raw
+      : raw.map((k, v) => MapEntry(k.toString(), v));
+
+  /// 全部作业（新的在前），每条只读。
+  static List<Map<String, dynamic>> tasks() =>
+      List<Map<String, dynamic>>.of(_tasksSnapshot().items);
+
+  static _Snapshot _tasksSnapshot() {
+    final overrides = _taskOverrides();
+    final cached = _tasks;
+    if (cached != null && cached.fresh(_revision, overrides)) {
+      return cached;
     }
-    for (final task in tasks()) {
-      if (DemoArtworkData.text(task['id']) == wanted) {
-        return task;
+    final byId = <String, Map<String, dynamic>>{};
+    for (final task in _ensureSeed().tasks) {
+      final id = DemoArtworkData.text(task['id']);
+      final override = overrides[id];
+      byId[id] = _freeze(override is Map ? override : task);
+    }
+    for (final entry in overrides.entries) {
+      final value = entry.value;
+      if (value is Map && !byId.containsKey(entry.key)) {
+        byId[entry.key] = _freeze(value);
       }
     }
-    return null;
+    return _tasks = _Snapshot(
+      revision: _revision,
+      source: overrides,
+      items: byId.values.toList()..sort(_newestFirst),
+      byId: byId,
+    );
   }
+
+  /// 只读。
+  static Map<String, dynamic>? taskById(String id) =>
+      _tasksSnapshot().byId[id.trim()];
 
   /// `{artworkId: {teacherId: [stroke…]}}`
   static Map<String, dynamic> annotations() {
@@ -216,6 +284,7 @@ abstract final class DemoArtworkStore {
       return;
     }
     _workOverrides()[id] = _clone(work);
+    _revision++;
     DemoStore.save(DemoArtworkData.worksKey);
   }
 
@@ -225,6 +294,7 @@ abstract final class DemoArtworkStore {
       return;
     }
     _taskOverrides()[id] = _clone(task);
+    _revision++;
     DemoStore.save(DemoArtworkData.tasksKey);
   }
 
@@ -254,16 +324,13 @@ abstract final class DemoArtworkStore {
 
   // ── 同链版本 ─────────────────────────────────────────────────────────
 
+  /// 同一条改画链上的全部版本（第 1 版在前），每份只读。
   static List<Map<String, dynamic>> versionsOf(Map<String, dynamic> work) {
-    final root = DemoArtworkData.rootOf(work);
-    final chain =
-        works().where((w) => DemoArtworkData.rootOf(w) == root).toList()
-          ..sort(
-            (a, b) => DemoArtworkData.versionOf(
-              a,
-            ).compareTo(DemoArtworkData.versionOf(b)),
-          );
-    return chain;
+    _applyAutoActions();
+    final chain = _worksSnapshot().byRoot[DemoArtworkData.rootOf(work)];
+    return chain == null
+        ? <Map<String, dynamic>>[]
+        : List<Map<String, dynamic>>.of(chain);
   }
 
   /// 学生列表：每条链只保留最新一版，并带 `versionCount`。
@@ -314,7 +381,7 @@ abstract final class DemoArtworkStore {
     String excludeId = '',
   }) {
     final list =
-        _mergedWorks()
+        _current()
             .where(
               (w) =>
                   DemoArtworkData.personOf(w) == personIndex &&
@@ -324,11 +391,7 @@ abstract final class DemoArtworkStore {
                   DemoArtworkData.finalScoreOf(w) != null,
             )
             .toList()
-          ..sort(
-            (a, b) => DemoArtworkData.text(
-              b['createTime'],
-            ).compareTo(DemoArtworkData.text(a['createTime'])),
-          );
+          ..sort(_newestFirst);
     return <double>[
       for (final work in list)
         DemoArtworkData.finalScoreOf(work)! / DemoArtworkData.maxScoreOf(work),
@@ -509,19 +572,43 @@ abstract final class DemoArtworkStore {
 
   static String noticesKey(String userId) => 'notices:v2:$userId';
 
+  /// 一个账号的完整消息种子（学情、校园、书刊等），由平台接口登记。没登记时（只起了
+  /// 阅卷接口的测试）退回到只有作品消息的 [seedArtworkNotices]。
+  static List<Map<String, dynamic>> Function(DemoAccount account)? noticeSeeder;
+
   /// 给某个用户追加一条消息；对方还没打开过消息列表时也能看到（先落种子再追加）。
+  ///
+  /// 「学生提交」「老师点评」这两种消息在种子里本来就有一条（最近一份待点评、最近一次
+  /// 点评）。对方的列表如果是这一刻才按当前数据生成的，种子里那条说的就是同一件事，
+  /// 这时传 [seedMayCover] 为 true，不再追加第二条。
   static void appendNotice({
     required String userId,
     required String content,
     int targetType = targetArtwork,
     String targetId = '',
     DateTime? time,
+    bool seedMayCover = false,
   }) {
     if (userId.isEmpty || content.isEmpty) {
       return;
     }
     final key = noticesKey(userId);
-    final list = DemoStore.list(key, () => seedNoticesForUserId(userId));
+    var seededNow = false;
+    final list = DemoStore.list(key, () {
+      seededNow = true;
+      return seedNoticesForUserId(userId);
+    });
+    if (seedMayCover &&
+        seededNow &&
+        targetId.isNotEmpty &&
+        list.any(
+          (n) =>
+              n['targetType'] == targetType &&
+              '${n['targetId']}' == targetId &&
+              n['read'] != true,
+        )) {
+      return;
+    }
     final nextId =
         list
             .map((n) => (n['id'] as num?)?.toInt() ?? 0)
@@ -549,6 +636,7 @@ abstract final class DemoArtworkStore {
       userId: userId,
       content: '【作品】$name提交了《${work['title']}》，请尽快点评。',
       targetId: DemoArtworkData.text(work['id']),
+      seedMayCover: true,
     );
   }
 
@@ -570,6 +658,7 @@ abstract final class DemoArtworkStore {
           '【作品】$teacher老师点评了你的《${work['title']}》'
           '${clause.isEmpty ? '，可以查看分数与评语。' : '：$clause。'}',
       targetId: DemoArtworkData.text(work['id']),
+      seedMayCover: true,
     );
   }
 
@@ -712,225 +801,217 @@ abstract final class DemoArtworkStore {
     return notices;
   }
 
-  /// 仅作品相关的消息种子（[appendNotice] 在列表尚未初始化时调用）。
+  /// [appendNotice] 在对方的消息列表尚未生成时用它生成：与对方自己打开消息时看到的
+  /// 是同一份种子，不会因为先收到一条作品消息就少了其他消息。
   static List<Map<String, dynamic>> seedNoticesForUserId(String userId) {
     final account = DemoAccounts.all.where((a) => a.userId == userId).firstOrNull;
     if (account == null) {
       return <Map<String, dynamic>>[];
     }
-    return seedArtworkNotices(account);
+    return (noticeSeeder ?? seedArtworkNotices)(account);
   }
 
   // ── 无演示账号老师的代点评 / 代复核 ─────────────────────────────────
 
+  /// 没有演示账号的老师、组长，由演示后端按固定时延代点评、代复核，链路不会卡住。
+  ///
+  /// 每次读取前都会调用，所以先不拷贝地扫一遍，只展开已经到点的作品；都没到点时
+  /// 记下最近的一个时间，在那之前只要没有新的写入就直接返回。种子作品和用户新交的
+  /// 作品走同一套流程。
   static void _applyAutoActions() {
-    final seed = _ensureSeed();
-    final at = now();
     final overrides = _workOverrides();
-    var changed = false;
+    final at = now();
+    final nextDue = _autoNextDue;
+    if (_autoRevision == _revision &&
+        identical(_autoSource, overrides) &&
+        (nextDue == null || at.isBefore(nextDue))) {
+      return;
+    }
 
-    for (final raw in seed.works) {
-      final id = DemoArtworkData.text(raw['id']);
-      final current = overrides[id] is Map
-          ? _clone(overrides[id] as Map)
-          : _clone(raw);
-
-      // 种子里尚未到点评时间的作品：到点后由后端代点评。
-      final reviewAt = DemoArtworkData.parseTime(current['seedReviewAt']);
-      if (!DemoArtworkData.isReviewed(current) &&
-          reviewAt != null &&
-          !reviewAt.isAfter(at) &&
-          !DemoArtworkData.hasDemoAccount(
-            DemoArtworkData.text(current['teacherId']),
-          )) {
-        final parentId = DemoArtworkData.text(current['parentId']);
-        final parent = parentId.isEmpty ? null : _workByIdRaw(parentId);
-        current['review'] = DemoArtworkSeed.autoReview(
-          current,
-          at: reviewAt,
-          previousTags: parent == null
-              ? const <Map<String, dynamic>>[]
-              : DemoArtworkData.tagsOf(DemoArtworkData.reviewOf(parent)),
-          previousScore: parent == null
-              ? null
-              : DemoArtworkData.finalScoreOf(parent),
-        );
-        current.remove('seedReviewAt');
-        final leaderId = DemoArtworkData.leaderIdFor(
-          DemoArtworkData.text(current['teacherId']),
-        );
-        if (leaderId != null) {
-          final reasons = DemoArtworkData.leadReasons(
-            id: id,
-            requested:
-                DemoArtworkData.reviewOf(current)?['requestLeadReview'] == true,
-            score: DemoArtworkData.reviewOf(current)?['score'] is num
-                ? (DemoArtworkData.reviewOf(current)!['score'] as num)
-                      .toDouble()
-                : null,
-            maxScore: DemoArtworkData.maxScoreOf(current),
-            recentFinals: _recentFinalRatiosRaw(
-              personIndex: DemoArtworkData.personOf(current),
-              subject: DemoArtworkData.text(current['subject']),
-              excludeId: id,
-            ),
-            content: DemoArtworkData.text(
-              DemoArtworkData.reviewOf(current)?['content'],
-            ),
-            hasAnnotations: hasAnnotations(
-              id,
-              DemoArtworkData.text(current['teacherId']),
-            ),
-            spotCheckPercent: settings().spotCheckPercent,
-          );
-          if (reasons.isNotEmpty) {
-            current['leadReview'] = <String, dynamic>{
-              'reasons': reasons,
-              'enteredTime': DemoArtworkData.fmt(reviewAt),
-              'leaderId': leaderId,
-              'action': null,
-              'score': null,
-              'reason': '',
-              'content': '',
-              'qualityStars': 0,
-              'qualityNote': '',
-              'time': '',
-              'seedLeadAt': DemoArtworkData.fmt(
-                reviewAt.add(DemoArtworkData.autoDelay),
-              ),
-            };
-          }
-        }
-        overrides[id] = current;
-        changed = true;
-      }
-
-      final lead = DemoArtworkData.leadOf(current);
-      final leadAt = DemoArtworkData.parseTime(lead?['seedLeadAt']);
-      if (lead != null &&
-          DemoArtworkData.text(lead['action']).isEmpty &&
-          leadAt != null &&
-          !leadAt.isAfter(at) &&
-          !DemoArtworkData.hasDemoAccount(
-            DemoArtworkData.text(lead['leaderId']),
-          )) {
-        DemoArtworkSeed.autoLead(
-          current,
-          lead,
-          at: leadAt,
-          recentFinals: _recentFinalRatiosRaw(
-            personIndex: DemoArtworkData.personOf(current),
-            subject: DemoArtworkData.text(current['subject']),
-            excludeId: id,
-          ),
-        );
-        lead.remove('seedLeadAt');
-        overrides[id] = current;
-        changed = true;
+    final spotCheckPercent = settings().spotCheckPercent;
+    // 消息放到扫描结束、状态落定之后再发：生成对方的消息种子时会回头读作品库。
+    final notices = <void Function()>[];
+    DateTime? upcoming;
+    void waitFor(DateTime time) {
+      if (upcoming == null || time.isBefore(upcoming!)) {
+        upcoming = time;
       }
     }
 
-    // 用户新交、责任老师没有演示账号：到点代点评。
-    for (final entry in overrides.entries.toList()) {
-      final current = entry.value;
-      if (current is! Map) {
-        continue;
-      }
-      final work = _clone(current);
-      final reviewAt = DemoArtworkData.parseTime(work['seedReviewAt']);
-      if (DemoArtworkData.isReviewed(work) ||
-          reviewAt == null ||
-          reviewAt.isAfter(at)) {
-        continue;
-      }
-      if (DemoArtworkData.hasDemoAccount(
-        DemoArtworkData.text(work['teacherId']),
-      )) {
-        continue;
-      }
-      // 种子作品已在上面处理；这里只处理纯差异里的新交作品。
-      final inSeed = seed.works.any(
-        (w) => DemoArtworkData.text(w['id']) == entry.key,
-      );
-      if (inSeed) {
-        continue;
-      }
-      final parentId = DemoArtworkData.text(work['parentId']);
-      final parent = parentId.isEmpty ? null : _workByIdRaw(parentId);
-      work['review'] = DemoArtworkSeed.autoReview(
-        work,
-        at: reviewAt,
-        previousTags: parent == null
-            ? const <Map<String, dynamic>>[]
-            : DemoArtworkData.tagsOf(DemoArtworkData.reviewOf(parent)),
-        previousScore: parent == null
-            ? null
-            : DemoArtworkData.finalScoreOf(parent),
-      );
-      work.remove('seedReviewAt');
-      final leaderId = DemoArtworkData.leaderIdFor(
-        DemoArtworkData.text(work['teacherId']),
-      );
-      if (leaderId != null) {
-        final reasons = DemoArtworkData.leadReasons(
-          id: DemoArtworkData.text(work['id']),
-          requested: work['review']?['requestLeadReview'] == true,
-          score: work['review']?['score'] is num
-              ? (work['review']['score'] as num).toDouble()
-              : null,
-          maxScore: DemoArtworkData.maxScoreOf(work),
-          recentFinals: _recentFinalRatiosRaw(
-            personIndex: DemoArtworkData.personOf(work),
-            subject: DemoArtworkData.text(work['subject']),
-            excludeId: DemoArtworkData.text(work['id']),
-          ),
-          content: DemoArtworkData.text(work['review']?['content']),
-          hasAnnotations: false,
-          spotCheckPercent: settings().spotCheckPercent,
-        );
-        if (reasons.isNotEmpty) {
-          final autoLead = !DemoArtworkData.hasDemoAccount(leaderId);
-          final lead = <String, dynamic>{
-            'reasons': reasons,
-            'enteredTime': DemoArtworkData.fmt(reviewAt),
-            'leaderId': leaderId,
-            'action': null,
-            'score': null,
-            'reason': '',
-            'content': '',
-            'qualityStars': 0,
-            'qualityNote': '',
-            'time': '',
-            if (autoLead)
-              'seedLeadAt': DemoArtworkData.fmt(
-                reviewAt.add(DemoArtworkData.autoDelay),
-              ),
-          };
-          work['leadReview'] = lead;
-          if (autoLead &&
-              !reviewAt.add(DemoArtworkData.autoDelay).isAfter(at)) {
-            DemoArtworkSeed.autoLead(
-              work,
-              lead,
-              at: reviewAt.add(DemoArtworkData.autoDelay),
-              recentFinals: _recentFinalRatiosRaw(
-                personIndex: DemoArtworkData.personOf(work),
-                subject: DemoArtworkData.text(work['subject']),
-                excludeId: DemoArtworkData.text(work['id']),
-              ),
-            );
-            lead.remove('seedLeadAt');
-          }
+    var changed = false;
+    void visit(String id, Map<String, dynamic> source) {
+      final reviewed = source['review'] is Map;
+      DateTime? reviewAt;
+      if (!reviewed) {
+        reviewAt = DemoArtworkData.parseTime(source['seedReviewAt']);
+        if (reviewAt != null &&
+            DemoArtworkData.hasDemoAccount(
+              DemoArtworkData.text(source['teacherId']),
+            )) {
+          // 有演示账号的老师自己来点评。
+          reviewAt = null;
         }
       }
-      overrides[entry.key] = work;
+      final leadAt = reviewed ? _autoLeadAt(source['leadReview']) : null;
+      if (reviewAt == null && leadAt == null) {
+        return;
+      }
+      final reviewDue = reviewAt != null && !reviewAt.isAfter(at);
+      final leadDue = leadAt != null && !leadAt.isAfter(at);
+      if (!reviewDue && !leadDue) {
+        waitFor((reviewAt ?? leadAt)!);
+        return;
+      }
+
+      final work = _clone(source);
+      if (reviewAt != null && reviewDue) {
+        _autoReview(work, reviewAt, spotCheckPercent);
+        notices.add(() => notifyStudentOfReview(work));
+      }
+      // 复核记录可能是刚才代点评时生成的，也可能早就在等。
+      final lead = work['leadReview'];
+      final due = _autoLeadAt(lead);
+      if (lead is Map<String, dynamic> && due != null) {
+        if (due.isAfter(at)) {
+          waitFor(due);
+        } else {
+          DemoArtworkSeed.autoLead(
+            work,
+            lead,
+            at: due,
+            recentFinals: _recentFinalRatiosRaw(
+              personIndex: DemoArtworkData.personOf(work),
+              subject: DemoArtworkData.text(work['subject']),
+              excludeId: id,
+            ),
+          );
+          lead.remove('seedLeadAt');
+          notices.add(() => notifyLeadResult(work));
+        }
+      }
+      overrides[id] = work;
       changed = true;
-      notifyStudentOfReview(work);
+      debugAutoApplied++;
+    }
+
+    final seeded = _seedIndex();
+    for (final entry in seeded.entries) {
+      final override = overrides[entry.key];
+      visit(entry.key, override is Map ? _typed(override) : entry.value);
+    }
+    for (final entry in overrides.entries.toList()) {
+      final value = entry.value;
+      if (value is Map && !seeded.containsKey(entry.key)) {
+        visit(entry.key, _typed(value));
+      }
     }
 
     if (changed) {
+      _revision++;
       DemoStore.save(DemoArtworkData.worksKey);
     }
+    _autoRevision = _revision;
+    _autoSource = overrides;
+    _autoNextDue = upcoming;
+    for (final notify in notices) {
+      notify();
+    }
+  }
+
+  /// 这条复核记录等着后端代复核的时间；已经复核、或组长有演示账号（等本人来复核）
+  /// 时为 null。
+  static DateTime? _autoLeadAt(Object? lead) {
+    if (lead is! Map || DemoArtworkData.text(lead['action']).isNotEmpty) {
+      return null;
+    }
+    final at = DemoArtworkData.parseTime(lead['seedLeadAt']);
+    if (at == null ||
+        DemoArtworkData.hasDemoAccount(DemoArtworkData.text(lead['leaderId']))) {
+      return null;
+    }
+    return at;
+  }
+
+  /// 代点评：写入点评，并按规则判断是否进入复核池。
+  static void _autoReview(
+    Map<String, dynamic> work,
+    DateTime reviewAt,
+    int spotCheckPercent,
+  ) {
+    final id = DemoArtworkData.text(work['id']);
+    final teacherId = DemoArtworkData.text(work['teacherId']);
+    final parent = _currentById(DemoArtworkData.text(work['parentId']));
+    final review = DemoArtworkSeed.autoReview(
+      work,
+      at: reviewAt,
+      previousTags: parent == null
+          ? const <Map<String, dynamic>>[]
+          : DemoArtworkData.tagsOf(DemoArtworkData.reviewOf(parent)),
+      previousScore: parent == null
+          ? null
+          : DemoArtworkData.finalScoreOf(parent),
+    );
+    work['review'] = review;
+    work.remove('seedReviewAt');
+
+    // 组长本人负责的作品不进复核池。
+    final leaderId = DemoArtworkData.leaderIdFor(teacherId);
+    if (leaderId == null) {
+      return;
+    }
+    final score = review['score'];
+    final reasons = DemoArtworkData.leadReasons(
+      id: id,
+      requested: review['requestLeadReview'] == true,
+      score: score is num ? score.toDouble() : null,
+      maxScore: DemoArtworkData.maxScoreOf(work),
+      recentFinals: _recentFinalRatiosRaw(
+        personIndex: DemoArtworkData.personOf(work),
+        subject: DemoArtworkData.text(work['subject']),
+        excludeId: id,
+      ),
+      content: DemoArtworkData.text(review['content']),
+      hasAnnotations: hasAnnotations(id, teacherId),
+      spotCheckPercent: spotCheckPercent,
+    );
+    if (reasons.isEmpty) {
+      return;
+    }
+    work['leadReview'] = <String, dynamic>{
+      'reasons': reasons,
+      'enteredTime': DemoArtworkData.fmt(reviewAt),
+      'leaderId': leaderId,
+      'action': null,
+      'score': null,
+      'reason': '',
+      'content': '',
+      'qualityStars': 0,
+      'qualityNote': '',
+      'time': '',
+      if (!DemoArtworkData.hasDemoAccount(leaderId))
+        'seedLeadAt': DemoArtworkData.fmt(
+          reviewAt.add(DemoArtworkData.autoDelay),
+        ),
+    };
+  }
+
+  /// 深拷贝成只读结构：快照里的作品被误改时立刻抛错，而不是悄悄改坏缓存。
+  static Map<String, dynamic> _freeze(Map raw) =>
+      UnmodifiableMapView<String, dynamic>(<String, dynamic>{
+        for (final entry in raw.entries)
+          entry.key.toString(): _freezeValue(entry.value),
+      });
+
+  static Object? _freezeValue(Object? value) {
+    if (value is Map) {
+      return _freeze(value);
+    }
+    if (value is List) {
+      return UnmodifiableListView<Object?>(<Object?>[
+        for (final item in value) _freezeValue(item),
+      ]);
+    }
+    return value;
   }
 
   static Map<String, dynamic> _clone(Map raw) =>
@@ -957,4 +1038,31 @@ abstract final class DemoArtworkStore {
     final capped = stamped.isAfter(now()) ? now() : stamped;
     return DemoArtworkData.fmt(capped);
   }
+}
+
+/// 种子与差异合并后的只读快照，带按 id、按改画链的索引。
+class _Snapshot {
+  _Snapshot({
+    required this.revision,
+    required this.source,
+    required this.items,
+    required this.byId,
+    this.byRoot = const <String, List<Map<String, dynamic>>>{},
+  });
+
+  /// 合并时的写入版本。
+  final int revision;
+
+  /// 合并时用的差异表。「重置演示数据」后 [DemoStore] 会换一张新表，据此判断过期。
+  final Map<String, dynamic> source;
+
+  /// 新的在前。
+  final List<Map<String, dynamic>> items;
+  final Map<String, Map<String, dynamic>> byId;
+
+  /// 改画链：根作品 id → 各版本（第 1 版在前）。
+  final Map<String, List<Map<String, dynamic>>> byRoot;
+
+  bool fresh(int revision, Map<String, dynamic> source) =>
+      this.revision == revision && identical(this.source, source);
 }
