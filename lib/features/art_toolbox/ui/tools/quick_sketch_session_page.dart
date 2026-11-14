@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/theme/app_font.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../widgets/image_tool_frame.dart';
 import '../widgets/tool_panel.dart';
@@ -33,6 +35,9 @@ String _durationText(Duration duration) =>
     _clockText((duration.inMilliseconds / 1000).round());
 
 /// 全屏速写计时：大图参考 + 环形倒计时，最后 5 秒红框提醒；结束后回顾每张实际用时。
+///
+/// 版式取自原版的录制详情：56 高的工具栏（返回、居中标题）、全幅画面、底部三段
+/// 操作栏（左侧计时与进度、中间暂停 / 继续、右侧跳过与结束）。
 class QuickSketchSessionPage extends StatefulWidget {
   const QuickSketchSessionPage({
     required this.pool,
@@ -216,15 +221,39 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
           subtitle:
               '${widget.setLabel} · 每张 ${sketchIntervalLabel(widget.interval.inSeconds)}',
           onBack: _stop,
-          actions: const [],
+          prominent: true,
+          // 右侧留出与返回按钮等宽的位置，标题保持居中（原版录制详情的写法）。
+          actions: const [SizedBox(width: LibraryIconButton.extent)],
         ),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpace.s16),
-            child: _buildReference(),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // 原版录制详情的正文：四周 20（上 25），画面左右再收 8、上收 8，
+              // 底部操作栏左右收 22、距底 40。短横屏（原版同样以 560 为界）不再
+              // 额外收上边和底边，把高度让给参考图。
+              final compact = constraints.maxHeight < 560;
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(20, 25, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(8, compact ? 0 : 8, 8, 0),
+                        child: _buildReference(),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(22, 0, 22, compact ? 0 : 40),
+                      child: _buildControls(),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
-        _buildBottomBar(),
       ],
     );
   }
@@ -238,7 +267,7 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
         return DecoratedBox(
           position: DecorationPosition.foreground,
           decoration: BoxDecoration(
-            borderRadius: AppRadius.br8,
+            borderRadius: LibraryCanvas.radius,
             border: warn ? Border.all(color: AppColors.danger, width: 3) : null,
           ),
           child: child,
@@ -293,76 +322,64 @@ class _QuickSketchSessionPageState extends State<QuickSketchSessionPage>
     );
   }
 
-  Widget _buildBottomBar() {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.lineSoft)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpace.s16,
-          vertical: AppSpace.s8,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Row(
-                children: [
-                  _CountdownRing(
-                    clock: _clock,
-                    remaining: _remaining,
-                    interval: widget.interval,
-                    paused: _paused,
-                    size: 84,
-                  ),
-                  const SizedBox(width: AppSpace.s12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '第 ${_index + 1} / ${_sequence.length} 张',
-                          style: AppText.body14Strong,
-                        ),
-                        const SizedBox(height: AppSpace.s8),
-                        _ProgressDots(total: _sequence.length, current: _index),
-                      ],
+  /// 底部三段操作栏：左侧倒计时与进度，中间暂停 / 继续，右侧跳过与结束。
+  Widget _buildControls() {
+    return Row(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              _CountdownRing(
+                clock: _clock,
+                remaining: _remaining,
+                interval: widget.interval,
+                paused: _paused,
+                size: 84,
+              ),
+              const SizedBox(width: AppSpace.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '第 ${_index + 1} / ${_sequence.length} 张',
+                      style: AppText.body14Strong,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppSpace.s8),
+                    _ProgressDots(total: _sequence.length, current: _index),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpace.s12),
-            AppButton(
-              label: _paused ? '继续' : '暂停',
-              icon: _paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-              onTap: _togglePause,
-            ),
-            const SizedBox(width: AppSpace.s12),
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  AppIconButton(
-                    icon: Icons.skip_next_rounded,
-                    semanticLabel: '跳过',
-                    size: AppButtonSize.sm,
-                    onTap: () => _next(SketchOutcome.skipped),
-                  ),
-                  const SizedBox(width: AppSpace.s8),
-                  AppIconButton(
-                    icon: Icons.stop_rounded,
-                    semanticLabel: '结束',
-                    size: AppButtonSize.sm,
-                    onTap: _stop,
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        const SizedBox(width: AppSpace.s12),
+        AppButton(
+          label: _paused ? '继续' : '暂停',
+          icon: _paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+          onTap: _togglePause,
+        ),
+        const SizedBox(width: AppSpace.s12),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              LibraryIconButton(
+                icon: Icons.skip_next_rounded,
+                semanticLabel: '跳过',
+                onTap: () => _next(SketchOutcome.skipped),
+              ),
+              const SizedBox(width: AppSpace.s8),
+              LibraryIconButton(
+                icon: Icons.stop_rounded,
+                semanticLabel: '结束',
+                onTap: _stop,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -539,30 +556,26 @@ class _SketchReview extends StatelessWidget {
         ToolDetailHeader(
           title: '练习回顾',
           subtitle: '$setLabel · 每张 ${sketchIntervalLabel(interval.inSeconds)}',
+          prominent: true,
           actions: [
-            AppButton(
+            LibraryActionPill(
               label: '完成',
               icon: Icons.check_rounded,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
+              iconSize: 18,
               onTap: onClose,
             ),
-            AppButton(
+            LibraryActionPill(
               label: '再练一组',
               icon: Icons.replay_rounded,
-              size: AppButtonSize.sm,
+              iconSize: 18,
+              primary: true,
               onTap: onRestart,
             ),
           ],
         ),
-        const SizedBox(height: AppSpace.s12),
+        // 正文左右 20、上 25，与练习页（原版录制详情的正文）一致。
         Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpace.page,
-            0,
-            AppSpace.page,
-            AppSpace.s16,
-          ),
+          padding: const EdgeInsets.fromLTRB(20, 25, 20, 16),
           child: Row(
             children: [
               Expanded(
@@ -609,16 +622,12 @@ class _SketchReview extends StatelessWidget {
                   icon: Icons.timer_outlined,
                 )
               : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpace.page,
-                    0,
-                    AppSpace.page,
-                    AppSpace.page,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  // 列缝与行缝 16，同原版的图片卡网格。
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 190,
-                    mainAxisSpacing: AppSpace.s12,
-                    crossAxisSpacing: AppSpace.s12,
+                    mainAxisSpacing: AppSpace.s16,
+                    crossAxisSpacing: AppSpace.s16,
                     childAspectRatio: 0.72,
                   ),
                   itemCount: records.length,
@@ -644,31 +653,26 @@ class _RecordTile extends StatelessWidget {
       SketchOutcome.skipped => ('跳过', AppTone.warning),
       SketchOutcome.stopped => ('提前结束', AppTone.neutral),
     };
-    return AppCard(
-      padding: EdgeInsets.zero,
+    // 图片卡取原版视频网格卡的外观：浅灰底、圆角 12、标题 13 号中等字重。
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceSubtle,
+        borderRadius: AppRadius.br12,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppRadius.card),
-              ),
-              child: Image.asset(
-                record.asset,
-                fit: BoxFit.cover,
-                cacheWidth: 400,
-                filterQuality: FilterQuality.medium,
-              ),
+            child: Image.asset(
+              record.asset,
+              fit: BoxFit.cover,
+              cacheWidth: 400,
+              filterQuality: FilterQuality.medium,
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.s12,
-              AppSpace.s8,
-              AppSpace.s12,
-              AppSpace.s12,
-            ),
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -677,12 +681,19 @@ class _RecordTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         '第 ${index + 1} 张',
-                        style: AppText.body14Strong,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: libraryText(
+                          size: 13,
+                          weight: AppFont.w500,
+                          color: AppColors.ink,
+                          height: 1.3,
+                        ),
                       ),
                     ),
                     Text(
                       _durationText(record.spent),
-                      style: AppText.number(size: 14),
+                      style: AppText.number(size: 13),
                     ),
                   ],
                 ),
