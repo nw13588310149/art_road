@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/theme/app_font.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../state/toolbox_image_controller.dart';
@@ -58,10 +60,10 @@ class ToolPageScaffold extends StatelessWidget {
           onBack: onBack,
           actions: [
             ...actions,
-            AppIconButton.asset(
-              asset: AppAssets.shellV2Help,
+            LibraryIconButton(
+              icon: Icons.help_outline_rounded,
+              iconSize: 20,
               semanticLabel: '工具用法',
-              size: AppButtonSize.sm,
               onTap: () => showAppDialog<void>(
                 context: context,
                 builder: (_) =>
@@ -81,13 +83,18 @@ class ToolPageScaffold extends StatelessWidget {
   }
 }
 
-/// 详情工具栏沿用预览页的返回、对象名称和操作布局。
+/// 详情工具栏：资料预览页的顶部工具栏（56 高、返回、居中标题、右侧操作）。
+///
+/// 没有 [subtitle] 时就是 [LibraryPreviewHeader]；有 [subtitle]（当前画作、练习
+/// 设置）时在标题右侧用 12 号浅灰字接着写，其余数值不变。[prominent] 用于全屏
+/// 练习页：标题换成原版录制详情的 16 号粗体。
 class ToolDetailHeader extends StatelessWidget {
   const ToolDetailHeader({
     required this.title,
     required this.actions,
     this.subtitle,
     this.onBack,
+    this.prominent = false,
     super.key,
   });
 
@@ -95,58 +102,83 @@ class ToolDetailHeader extends StatelessWidget {
   final String? subtitle;
   final VoidCallback? onBack;
   final List<Widget> actions;
+  final bool prominent;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 56),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpace.s12,
-        vertical: AppSpace.s8,
+    final note = subtitle ?? '';
+    if (note.isEmpty && !prominent) {
+      return LibraryPreviewHeader(
+        title: title,
+        onBack: onBack,
+        actions: actions,
+      );
+    }
+    final titleText = Semantics(
+      header: true,
+      child: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: libraryText(
+          size: prominent ? 16 : 15,
+          weight: prominent ? AppFont.w600 : AppFont.w500,
+          color: AppColors.ink,
+        ),
       ),
+    );
+    return Container(
+      height: LibraryPreviewHeader.height,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
       ),
-      alignment: Alignment.center,
-      child: LayoutBuilder(
-        builder: (context, constraints) => Row(
-          children: [
-            if (onBack != null) AppIconButton.back(onTap: onBack),
-            const SizedBox(width: AppSpace.s12),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.title16,
-                  ),
-                  if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.caption12,
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpace.s12),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: constraints.maxWidth * .55),
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: AppSpace.s8,
-                runSpacing: AppSpace.s8,
-                children: actions,
-              ),
-            ),
+      child: Row(
+        children: [
+          if (onBack != null) ...[
+            LibraryIconButton.back(onTap: onBack),
+            const SizedBox(width: 12),
           ],
-        ),
+          Expanded(
+            child: note.isEmpty
+                ? Center(child: titleText)
+                : LayoutBuilder(
+                    // 标题按自身宽度排，最多占六成；画作名占余下的位置，放不下时省略。
+                    builder: (context, constraints) => Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: constraints.maxWidth * 0.6,
+                            ),
+                            child: titleText,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              note,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: libraryText(
+                                size: 12,
+                                color: AppColors.textPlaceholder,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+          for (var i = 0; i < actions.length; i++) ...[
+            SizedBox(width: i == 0 ? 12 : 8),
+            actions[i],
+          ],
+        ],
       ),
     );
   }
@@ -165,6 +197,9 @@ class ImageToolScaffold extends ConsumerWidget {
   final ArtTool tool;
   final VoidCallback onBack;
   final Widget Function(BuildContext context, ToolboxImage image) builder;
+
+  /// 工具栏窄于这个宽度时，操作胶囊只留图标。
+  static const double compactBreakpoint = 640;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -203,94 +238,61 @@ class ImageToolScaffold extends ConsumerWidget {
       );
     }
 
-    return ToolPageScaffold(
-      tool: tool,
-      onBack: onBack,
-      subtitle: image?.label,
-      bodyTopInset: 0,
-      actions: [
-        if (workspace != null)
-          Builder(
-            builder: (anchor) => _PreviewAction(
-              label: '切换工具',
-              icon: Icons.swap_horiz_rounded,
-              onTap: () async {
-                final selected = await showAppMenu<ArtTool>(
-                  context: anchor,
-                  width: 180,
-                  items: [
-                    for (final candidate in ArtToolGroup.analysis.tools)
-                      AppMenuItem(
-                        value: candidate,
-                        label: candidate.label,
-                        icon: candidate.icon,
-                        enabled: candidate != tool,
-                      ),
-                  ],
-                );
-                if (anchor.mounted && selected != null) {
-                  workspace.onSwitchTool(selected);
-                }
-              },
-            ),
-          ),
-        if (image != null) ...[
-          _PreviewAction(
-            label: '上传图片',
-            icon: Icons.upload_rounded,
-            onTap: state.loading ? null : controller.pickFromAlbum,
-          ),
-          _PreviewAction(
-            label: '使用示例画作',
-            icon: Icons.collections_outlined,
-            onTap: state.loading ? null : pickSample,
-          ),
-        ],
-      ],
-      body: body,
-    );
-  }
-}
-
-class _PreviewAction extends StatelessWidget {
-  const _PreviewAction({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppPressable(
-      onTap: onTap,
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(color: AppColors.lineSoft),
-          borderRadius: AppRadius.br8,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: AppColors.ink),
-            const SizedBox(width: AppSpace.s4),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.body14,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < compactBreakpoint;
+        return ToolPageScaffold(
+          tool: tool,
+          onBack: onBack,
+          subtitle: image?.label,
+          bodyTopInset: 0,
+          actions: [
+            if (workspace != null)
+              Builder(
+                builder: (anchor) => LibraryActionPill(
+                  label: '切换工具',
+                  icon: Icons.swap_horiz_rounded,
+                  iconSize: 18,
+                  compact: compact,
+                  onTap: () async {
+                    final selected = await showAppMenu<ArtTool>(
+                      context: anchor,
+                      width: 180,
+                      items: [
+                        for (final candidate in ArtToolGroup.analysis.tools)
+                          AppMenuItem(
+                            value: candidate,
+                            label: candidate.label,
+                            icon: candidate.icon,
+                            enabled: candidate != tool,
+                          ),
+                      ],
+                    );
+                    if (anchor.mounted && selected != null) {
+                      workspace.onSwitchTool(selected);
+                    }
+                  },
+                ),
               ),
-            ),
+            if (image != null) ...[
+              LibraryActionPill(
+                label: '上传图片',
+                iconAsset: AppAssets.coursewareUploadFab,
+                compact: compact,
+                onTap: state.loading ? null : controller.pickFromAlbum,
+              ),
+              LibraryActionPill(
+                label: '使用示例画作',
+                icon: Icons.collections_outlined,
+                iconSize: 18,
+                compact: compact,
+                onTap: state.loading ? null : pickSample,
+              ),
+            ],
           ],
-        ),
-      ),
+          body: body,
+        );
+      },
     );
   }
 }
@@ -300,12 +302,17 @@ class ImageToolLayout extends StatelessWidget {
   const ImageToolLayout({
     required this.stage,
     required this.panel,
+    this.panelFooter,
     this.panelWidth = 320,
     super.key,
   });
 
   final WidgetBuilder stage;
   final WidgetBuilder panel;
+
+  /// 侧栏底部固定的主操作（如「开始练习」）：宽屏时固定在侧栏底部，不随参数
+  /// 滚动；窄屏侧栏很矮，改为接在参数后面一起滚动。
+  final WidgetBuilder? panelFooter;
   final double panelWidth;
 
   static const wideBreakpoint = 760.0;
@@ -320,6 +327,39 @@ class ImageToolLayout extends StatelessWidget {
           child: stage(context),
         );
         const divider = BorderSide(color: AppColors.lineSoft);
+        final footer = panelFooter;
+        Widget panelBody = SingleChildScrollView(
+          primary: false,
+          padding: const EdgeInsets.all(AppSpace.card),
+          child: footer == null || wide
+              ? panel(context)
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    panel(context),
+                    const SizedBox(height: AppSpace.s16),
+                    footer(context),
+                  ],
+                ),
+        );
+        if (footer != null && wide) {
+          panelBody = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: panelBody),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.card,
+                  10,
+                  AppSpace.card,
+                  AppSpace.card,
+                ),
+                child: footer(context),
+              ),
+            ],
+          );
+        }
         final panelBox = DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.surface,
@@ -327,11 +367,7 @@ class ImageToolLayout extends StatelessWidget {
                 ? const Border(left: divider)
                 : const Border(top: divider),
           ),
-          child: SingleChildScrollView(
-            primary: false,
-            padding: const EdgeInsets.all(AppSpace.card),
-            child: panel(context),
-          ),
+          child: panelBody,
         );
         if (wide) {
           return Row(
@@ -378,37 +414,63 @@ class ImageSourcePanel extends StatelessWidget {
       stage: (context) => ToolStage(
         child: loading
             ? const _ProcessingHint()
-            : AppEmptyState(
-                title: '选一张画作，开始使用「${tool.label}」',
+            : LibraryEmptyState(
+                message: '选一张画作，开始使用「${tool.label}」',
                 description: '从相册选图，或使用示例画作。图片只在本机处理。',
-                icon: Icons.image_outlined,
-                action: AppButton(
-                  label: '上传图片',
-                  icon: Icons.upload_rounded,
-                  onTap: onUpload,
-                ),
+                actionLabel: '上传图片',
+                onAction: onUpload,
               ),
       ),
       panel: (context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('示例画作', style: AppText.title16),
+          const LibrarySectionTitle('示例画作'),
           const SizedBox(height: AppSpace.s12),
-          Wrap(
-            spacing: AppSpace.s12,
-            runSpacing: AppSpace.s12,
-            children: [
-              for (final sample in toolboxSamples)
-                SampleThumb(
-                  sample: sample,
-                  size: 128,
-                  showLabel: true,
-                  onTap: loading ? null : () => onSample(sample),
-                ),
-            ],
+          SampleGrid(
+            samples: toolboxSamples,
+            onTap: loading ? null : onSample,
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 示例画作网格：每张约 128 宽、间距 12，按可用宽度排满。
+class SampleGrid extends StatelessWidget {
+  const SampleGrid({required this.samples, required this.onTap, super.key});
+
+  final List<ToolboxSample> samples;
+  final ValueChanged<ToolboxSample>? onTap;
+
+  static const double _gap = AppSpace.s12;
+  static const double _target = 128;
+
+  @override
+  Widget build(BuildContext context) {
+    final tap = onTap;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = ((constraints.maxWidth + _gap) / (_target + _gap))
+            .floor()
+            .clamp(1, samples.length);
+        final size =
+            ((constraints.maxWidth - _gap * (columns - 1)) / columns)
+                .floorToDouble();
+        return Wrap(
+          spacing: _gap,
+          runSpacing: _gap,
+          children: [
+            for (final sample in samples)
+              SampleThumb(
+                sample: sample,
+                size: size,
+                showLabel: true,
+                onTap: tap == null ? null : () => tap(sample),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -452,13 +514,15 @@ class SampleThumb extends StatelessWidget {
               ),
             ),
             if (showLabel) ...[
-              const SizedBox(height: AppSpace.s4),
+              const SizedBox(height: 6),
               Text(
                 sample.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.caption12.copyWith(
+                style: libraryText(
+                  size: 12,
                   color: AppColors.textSecondary,
+                  height: 1.5,
                 ),
               ),
             ],
@@ -480,7 +544,10 @@ class _ProcessingHint extends StatelessWidget {
         children: [
           const AppLoadingIndicator(size: 40),
           const SizedBox(height: AppSpace.s8),
-          Text('正在处理图片…', style: AppText.body13),
+          Text(
+            '正在处理图片…',
+            style: libraryText(size: 12, color: AppColors.textPlaceholder),
+          ),
         ],
       ),
     );

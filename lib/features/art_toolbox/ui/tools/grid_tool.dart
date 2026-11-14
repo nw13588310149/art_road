@@ -378,7 +378,6 @@ class _GridBodyState extends State<_GridBody> {
         const SizedBox(height: AppSpace.s20),
         ToolTipCard(
           title: '网格放大法',
-          icon: Icons.grid_on_rounded,
           text:
               '在参考图和画纸上画出行列数相同的网格，逐格对照，把形体的位置和角度移到画纸上：先定大的比例与位置，再深入细节。'
               '$_enlargeHint',

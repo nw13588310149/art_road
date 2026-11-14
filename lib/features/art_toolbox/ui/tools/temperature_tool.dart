@@ -133,7 +133,6 @@ class _TemperatureBodyState extends State<_TemperatureBody>
         const SizedBox(height: AppSpace.s12),
         const ToolTipCard(
           title: '判断标准',
-          icon: Icons.rule_rounded,
           text: '暖：红、橙、黄、黄绿、紫红；冷：绿、青、蓝、蓝紫；纯度很低或很暗的颜色算中性灰。',
         ),
       ],
