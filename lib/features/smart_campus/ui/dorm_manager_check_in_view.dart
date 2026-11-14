@@ -2,31 +2,58 @@
 // 宿管端「到岗打卡」
 //
 // 入口：宿管工作台快捷入口「到岗打卡」→ controller.openDormCheckInManagement()
-//      → SmartCampusPage 路由到本视图；页头返回 → onBack。
+//      → SmartCampusPage 路由到本视图；横幅返回 → onBack。
 //
-// 结构：AppPageHeader → 打卡面板（地图底 + 顶部定位信息条 + 中央圆形打卡
-//      按钮）→「我的打卡记录」双列卡片。定位成功前打卡按钮禁用。
+// 视觉（原版 970 设计宽，数值照原版同路径文件）：
+//   1. 横幅：共享 [SmartCampusPageBanner]，居中标题 + 副标题。
+//   2. 主面板（439 高白卡 + 16 圆角）：地图底 + 顶部定位信息条（定位图标 +
+//      地址 14/500 + 经纬度 11 + 状态 12）+ 右上白底胶囊「获取当前定位」+
+//      中央 160 圆形渐变打卡按钮（打卡类型 16/600 + 实时时间 20/600）。
+//   3. 「我的打卡记录」18/500 标题。
+//   4. 双列记录卡（背景图 + 12 圆角）：标题 16/500 + 右侧「正常」方角标签 +
+//      灰底块「打卡时间 / 打卡位置 / 定位坐标」。
+//
+// 相对原版保留的差异：定位成功前打卡按钮禁用并在下方说明原因；定位失败只显示
+// 中文提示，右上按钮变为「重新获取定位」；演示记录取最近一个工作日。
 // =============================================================================
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/demo/demo_clock.dart';
+import '../../shell/ui/shell_layout.dart';
 import '../data/campus_format.dart';
 import '../services/baidu_geo_service.dart';
 import '../services/geo_locator.dart';
 import 'widgets/baidu_map_view.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_square_tag.dart';
+
+// —— 颜色（原版色值；紫色统一为品牌紫）——————————————————————————————
+const Color _kCardGreyBg = Color(0xFFF5F6FA);
+const Color _kBorderLine = Color(0xFFCECED1);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextDarker = Color(0xFF1A1A1A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kGreen = Color(0xFF12CE51);
+const Color _kGreenSoftBg = Color(0xFFE4FFED);
+const Color _kRed = Color(0xFFFF323C);
+const Color _kPurple = AppColors.brand;
+const Color _kPurpleLight = AppColors.brandSoft;
+const Color _kPurpleGlow = Color(0xFFD7D2FF);
 
 /// 顶部定位文案的语义：进行中 / 成功 / 失败。
 enum _LocationStatusKind { loading, success, error }
 
 Color _statusColor(_LocationStatusKind k) => switch (k) {
-  _LocationStatusKind.loading => AppColors.textTertiary,
-  _LocationStatusKind.success => AppColors.success,
-  _LocationStatusKind.error => AppColors.danger,
+  _LocationStatusKind.loading => _kTextHint,
+  _LocationStatusKind.success => _kGreen,
+  _LocationStatusKind.error => _kRed,
 };
 
 enum _PunchKind {
@@ -103,10 +130,10 @@ class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
     super.initState();
     _now = DateTime.now();
     _records = _demoRecords();
+    // 圆形按钮上的时间照原版走到秒。
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      final next = DateTime.now();
-      if (next.minute != _now.minute) setState(() => _now = next);
+      setState(() => _now = DateTime.now());
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchLocation());
   }
@@ -183,6 +210,11 @@ class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
     return '经纬度 ${p.lat.toStringAsFixed(5)}°N, ${p.lng.toStringAsFixed(5)}°E';
   }
 
+  String _formatClock(DateTime t) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(t.hour)}:${two(t.minute)}:${two(t.second)}';
+  }
+
   void _onPunch() {
     final p = _position;
     if (p == null) return;
@@ -206,17 +238,19 @@ class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     return SmartCampusSecondaryPageShell(
-      header: AppPageHeader(
+      bodyTopClipRadius: 8,
+      header: SmartCampusPageBanner(
         title: '到岗打卡',
         subtitle: '在指定区域内打卡，下方可查看本人记录',
         onBack: widget.onBack,
       ),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _PunchPanel(
-            clock: campusClock(_now),
+            clock: _formatClock(_now),
             punchLabel: '${_PunchKind.at(_now).label}打卡',
             locationStatus: _locationStatus,
             locationStatusKind: _locationStatusKind,
@@ -228,9 +262,18 @@ class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
             onPunch: _onPunch,
             onAddressResolved: _onMapAddressResolved,
           ),
-          const SizedBox(height: AppSpace.s24),
-          const AppSectionHeader(title: '我的打卡记录'),
-          const SizedBox(height: AppSpace.s12),
+          SizedBox(height: ui(16)),
+          Text(
+            '我的打卡记录',
+            style: TextStyle(
+              fontSize: ui(18),
+              color: _kTextDarker,
+              fontFamily: 'PingFang SC',
+              fontWeight: AppFont.w500,
+              height: 1.2,
+            ),
+          ),
+          SizedBox(height: ui(16)),
           _RecordsGrid(records: _records),
         ],
       ),
@@ -239,7 +282,7 @@ class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
 }
 
 // =============================================================================
-// 打卡面板
+// 大圆形打卡主面板
 // =============================================================================
 
 class _PunchPanel extends StatelessWidget {
@@ -271,17 +314,22 @@ class _PunchPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     final statusColor = _statusColor(locationStatusKind);
     final failed = locationStatusKind == _LocationStatusKind.error;
+    final coordinates = coordinateLine;
     return Container(
-      height: 439,
+      width: double.infinity,
+      height: ui(439),
       clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.br16,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Stack(
+        alignment: Alignment.center,
         children: [
+          // 背景：地图。整体作为面板背景，圆形打卡按钮叠在中心。
           Positioned.fill(
             child: BaiduMapView(
               lat: position?.lat,
@@ -290,25 +338,21 @@ class _PunchPanel extends StatelessWidget {
               onAddressResolved: onAddressResolved,
             ),
           ),
+          // 顶部信息条：定位状态 + 详细地址 + 经纬度。
           Positioned(
             left: 0,
             right: 0,
             top: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpace.s16,
-                14,
-                AppSpace.s16,
-                AppSpace.s12,
-              ),
+              padding: EdgeInsets.fromLTRB(ui(16), ui(14), ui(16), ui(12)),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppColors.surface.withValues(alpha: 0.94),
-                    AppColors.surface.withValues(alpha: 0.72),
-                    AppColors.surface.withValues(alpha: 0),
+                    Colors.white.withValues(alpha: 0.94),
+                    Colors.white.withValues(alpha: 0.72),
+                    Colors.white.withValues(alpha: 0.0),
                   ],
                   stops: const [0, 0.55, 1],
                 ),
@@ -316,17 +360,12 @@ class _PunchPanel extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Icon(
-                      failed
-                          ? Icons.location_off_outlined
-                          : Icons.location_on_outlined,
-                      size: 22,
-                      color: statusColor,
-                    ),
+                  Icon(
+                    Icons.location_on_rounded,
+                    size: ui(22),
+                    color: statusColor,
                   ),
-                  const SizedBox(width: AppSpace.s8),
+                  SizedBox(width: ui(8)),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,40 +374,59 @@ class _PunchPanel extends StatelessWidget {
                           locationAddress,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppText.body14Strong.copyWith(height: 1.35),
+                          style: TextStyle(
+                            fontSize: ui(14),
+                            color: _kTextDark,
+                            fontFamily: 'PingFang SC',
+                            fontWeight: AppFont.w500,
+                            height: 1.35,
+                          ),
                         ),
-                        if (coordinateLine case final coordinates?) ...[
-                          const SizedBox(height: AppSpace.s4),
-                          Text(coordinates, style: AppText.caption12),
+                        if (coordinates != null) ...[
+                          SizedBox(height: ui(4)),
+                          Text(
+                            coordinates,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: ui(11),
+                              color: _kTextHint,
+                              fontFamily: 'PingFang SC',
+                              height: 1.2,
+                            ),
+                          ),
                         ],
-                        const SizedBox(height: AppSpace.s4),
+                        SizedBox(height: ui(4)),
                         Text(
                           locationStatus,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppText.caption12.copyWith(color: statusColor),
+                          style: TextStyle(
+                            fontSize: ui(12),
+                            color: statusColor,
+                            fontFamily: 'PingFang SC',
+                            height: 1.2,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: AppSpace.s12),
-                  AppButton(
+                  SizedBox(width: ui(8)),
+                  _RefreshLocationButton(
                     label: failed ? '重新获取定位' : '获取当前定位',
-                    icon: Icons.my_location_rounded,
-                    variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.sm,
-                    loading: locating,
-                    onTap: locating ? null : onRefreshLocation,
+                    onTap: onRefreshLocation,
+                    busy: locating,
                   ),
                 ],
               ),
             ),
           ),
+          // 底部半透明条，避免地图被大按钮完全挡住时仍能看到下方区域。
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            height: 48,
+            height: ui(48),
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -376,24 +434,23 @@ class _PunchPanel extends StatelessWidget {
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                     colors: [
-                      AppColors.surface.withValues(alpha: 0.85),
-                      AppColors.surface.withValues(alpha: 0),
+                      Colors.white.withValues(alpha: 0.85),
+                      Colors.white.withValues(alpha: 0.0),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          Positioned.fill(
-            child: Center(
-              child: _PunchButton(
-                label: punchLabel,
-                clock: clock,
-                hint: position == null
-                    ? (failed ? '获取定位后才能打卡' : '定位成功后可打卡')
-                    : null,
-                onTap: position == null ? null : onPunch,
-              ),
+          // 中央大圆形打卡按钮；没有定位时禁用并说明原因。
+          Center(
+            child: _BigPunchButton(
+              label: punchLabel,
+              clock: clock,
+              hint: position == null
+                  ? (failed ? '获取定位后才能打卡' : '定位成功后可打卡')
+                  : null,
+              onTap: position == null ? null : onPunch,
             ),
           ),
         ],
@@ -402,9 +459,69 @@ class _PunchPanel extends StatelessWidget {
   }
 }
 
-/// 中央圆形打卡按钮。定位不可用时展示浅色禁用态和原因。
-class _PunchButton extends StatelessWidget {
-  const _PunchButton({
+/// 右上「获取当前定位」：白底胶囊，1px `#CECED1` 描边，14 图标 + 12 号字。
+class _RefreshLocationButton extends StatelessWidget {
+  const _RefreshLocationButton({
+    required this.label,
+    required this.onTap,
+    this.busy = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return AppPressable(
+      onTap: busy ? null : onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(4)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(ui(12)),
+          border: Border.all(color: _kBorderLine, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (busy)
+              AppLoadingIndicator(size: ui(14))
+            else
+              Icon(
+                Icons.my_location_rounded,
+                size: ui(14),
+                color: const Color(0xFF1C274C),
+              ),
+            SizedBox(width: ui(4)),
+            Text(
+              busy ? '定位中…' : label,
+              style: TextStyle(
+                fontSize: ui(12),
+                color: _kTextDark,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 中央 160 圆形大按钮（原版数值）：
+///
+/// - 底圆：180° 线性渐变，品牌紫（14%）→ 浅品牌紫；
+/// - 内嵌光晕：径向渐变透明 → 半透明 `#D7D2FF`（stops 0.6 → 1.0），模拟
+///   `box-shadow: 0 0 20px #D7D2FF inset`；没有外侧阴影；
+/// - 文字：打卡类型 16/600 + 时间 20/600，白色，行高 1.0，间距 11。
+///
+/// [onTap] 为 null（还没有定位）时是浅色禁用态，[hint] 在按钮下方说明原因。
+class _BigPunchButton extends StatelessWidget {
+  const _BigPunchButton({
     required this.label,
     required this.clock,
     required this.onTap,
@@ -418,92 +535,112 @@ class _PunchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     final enabled = onTap != null;
-    final fg = enabled ? AppColors.surface : AppColors.textSecondary;
+    final fg = enabled ? Colors.white : _kTextSecondary;
+    final hintText = hint;
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: [
         AppPressable(
           onTap: onTap,
-          enabled: enabled,
           semanticLabel: label,
-          child: Container(
-            width: 160,
-            height: 160,
-            alignment: Alignment.center,
+          child: SizedBox(
+            width: ui(160),
+            height: ui(160),
             child: Stack(
-              fit: StackFit.expand,
+              alignment: Alignment.center,
               children: [
-                DecoratedBox(
+                Container(
+                  width: ui(160),
+                  height: ui(160),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: enabled
-                          ? const [AppColors.brandDeep, AppColors.brandSoft]
+                          ? const [_kPurple, _kPurpleLight]
                           : const [AppColors.brandTint, AppColors.brandWash],
-                      stops: const [0.14, 1],
+                      stops: const [0.14, 1.0],
                     ),
                   ),
                 ),
                 if (enabled)
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.brandTint.withValues(alpha: 0),
-                          AppColors.brandTint.withValues(alpha: 0.55),
-                        ],
-                        stops: const [0.6, 1],
+                  IgnorePointer(
+                    child: Container(
+                      width: ui(160),
+                      height: ui(160),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            _kPurpleGlow.withValues(alpha: 0),
+                            _kPurpleGlow.withValues(alpha: 0.55),
+                          ],
+                          stops: const [0.6, 1.0],
+                        ),
                       ),
                     ),
                   ),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        style: AppText.title16.copyWith(color: fg, height: 1),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: ui(16),
+                        color: fg,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: AppFont.w600,
+                        height: 1.0,
                       ),
-                      const SizedBox(height: 11),
-                      Text(
-                        clock,
-                        style: AppText.number(
-                          size: 20,
-                          color: fg,
-                        ).copyWith(height: 1),
+                    ),
+                    SizedBox(height: ui(11)),
+                    Text(
+                      clock,
+                      style: TextStyle(
+                        fontSize: ui(20),
+                        color: fg,
+                        fontFamily: 'PingFang SC',
+                        fontWeight: AppFont.w600,
+                        height: 1.0,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
-        if (hint != null)
+        if (hintText != null)
           Positioned(
-            top: 168,
+            top: ui(168),
             left: 0,
             right: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpace.s8,
-                  vertical: AppSpace.s4,
+                padding: EdgeInsets.symmetric(
+                  horizontal: ui(8),
+                  vertical: ui(4),
                 ),
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: AppRadius.br8,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(ui(8)),
                 ),
                 child: Text(
-                  hint!,
+                  hintText,
                   textAlign: TextAlign.center,
-                  style: AppText.caption12.copyWith(
-                    color: AppColors.textSecondary,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.visible,
+                  style: TextStyle(
+                    fontSize: ui(12),
+                    color: _kTextSecondary,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w400,
+                    height: 1.5,
                   ),
                 ),
               ),
@@ -515,7 +652,7 @@ class _PunchButton extends StatelessWidget {
 }
 
 // =============================================================================
-// 我的打卡记录（双列卡片）
+// 我的打卡记录 双列卡片网格
 // =============================================================================
 
 class _RecordsGrid extends StatelessWidget {
@@ -525,25 +662,35 @@ class _RecordsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     if (records.isEmpty) {
-      return const AppCard(
-        child: AppEmptyState(
-          icon: Icons.fact_check_outlined,
-          title: '还没有打卡记录',
-          description: '到岗后在上方打卡，记录会出现在这里',
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: ui(40)),
+        child: Center(
+          child: Text(
+            '暂无打卡记录',
+            style: TextStyle(
+              fontSize: ui(13),
+              color: _kTextHint,
+              fontFamily: 'PingFang SC',
+              fontWeight: AppFont.w400,
+            ),
+          ),
         ),
       );
     }
     return LayoutBuilder(
       builder: (context, c) {
-        final cardW = (c.maxWidth - AppSpace.s16) / 2;
+        // 970 主区 - 16 列间距，左右各 1 → 单卡宽 (W - 16) / 2。
+        final cardW = (c.maxWidth - ui(16)) / 2;
         return Wrap(
-          spacing: AppSpace.s16,
-          runSpacing: AppSpace.s12,
+          spacing: ui(16),
+          runSpacing: ui(12),
           children: [
             for (final r in records)
               SizedBox(
-                width: cardW,
+                // 向下取整到 0.01，避免浮点误差把第二列挤到下一行。
+                width: (cardW * 100).floorToDouble() / 100,
                 child: _RecordCard(record: r),
               ),
           ],
@@ -560,54 +707,71 @@ class _RecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     final lat = record.lat;
     final lng = record.lng;
     final accuracy = record.accuracyMeters;
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpace.s12),
-      bordered: false,
-      radius: 12,
-      backgroundImage: const DecorationImage(
-        image: AssetImage(
-          'assets/images/smartCampus/dorm_check/punch_record_card_bg.png',
+    return Container(
+      padding: EdgeInsets.all(ui(12)),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(ui(12)),
+        image: const DecorationImage(
+          image: AssetImage(AppAssets.dormCheckPunchRecordCardBg),
+          fit: BoxFit.fill,
+          alignment: Alignment.centerRight,
         ),
-        fit: BoxFit.fill,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  record.kind.label,
-                  style: AppText.body16.copyWith(fontWeight: FontWeight.w500),
+              Text(
+                record.kind.label,
+                style: TextStyle(
+                  fontSize: ui(16),
+                  color: Colors.black,
+                  fontFamily: 'PingFang SC',
+                  fontWeight: AppFont.w500,
+                  height: 1.2,
                 ),
               ),
-              const AppStatusTag(label: '正常', tone: AppTone.success),
+              // 原版内距 4×2、12 号字行高 1.27 → 高 19.24。
+              const SmartCampusSquareTag(
+                label: '正常',
+                background: _kGreenSoftBg,
+                foreground: _kGreen,
+                height: 19.24,
+                horizontalPadding: 4,
+              ),
             ],
           ),
-          const SizedBox(height: AppSpace.s8),
+          SizedBox(height: ui(8)),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(AppSpace.s16),
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceSubtle,
-              borderRadius: AppRadius.br12,
+            padding: EdgeInsets.all(ui(16)),
+            decoration: BoxDecoration(
+              color: _kCardGreyBg,
+              borderRadius: BorderRadius.circular(ui(12)),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 _RecordKeyValue(
-                  label: '打卡时间',
+                  label: '打卡时间：',
                   value: campusDateTime(record.time),
                 ),
-                const SizedBox(height: 6),
-                _RecordKeyValue(label: '打卡位置', value: record.location),
+                SizedBox(height: ui(6)),
+                _RecordKeyValue(label: '打卡位置：', value: record.location),
                 if (lat != null && lng != null) ...[
-                  const SizedBox(height: 6),
+                  SizedBox(height: ui(6)),
                   _RecordKeyValue(
-                    label: '定位坐标',
+                    label: '定位坐标：',
                     value:
                         '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}'
                         '${accuracy != null ? '（误差约 ${accuracy.toStringAsFixed(0)} 米）' : ''}',
@@ -630,17 +794,32 @@ class _RecordKeyValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(width: 64, child: Text(label, style: AppText.caption12)),
-        Expanded(
-          child: Text(
-            value,
-            style: AppText.caption12.copyWith(color: AppColors.ink),
+    final ui = DashboardScaleScope.of(context).ui;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: label,
+            style: TextStyle(
+              fontSize: ui(12),
+              color: _kTextHint,
+              fontFamily: 'PingFang SC',
+              fontWeight: AppFont.w400,
+              height: 1.4,
+            ),
           ),
-        ),
-      ],
+          TextSpan(
+            text: value,
+            style: TextStyle(
+              fontSize: ui(12),
+              color: _kTextDark,
+              fontFamily: 'PingFang SC',
+              fontWeight: AppFont.w400,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
