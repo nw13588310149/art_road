@@ -59,15 +59,13 @@ class ArtworkTasksController extends StateNotifier<ArtworkTasksState> {
     if (!response.isSuccess) {
       state = state.copyWith(
         loading: false,
-        errorMessage: response.errorOr('作业列表加载失败，请稍后重试'),
+        errorMessage: response.errorOr('作品列表加载失败，请稍后重试'),
       );
       return;
     }
     final raw = response.data;
     final items = raw is List
-        ? <ArtworkTask>[
-            for (final item in raw) ArtworkTask.fromJson(item),
-          ]
+        ? <ArtworkTask>[for (final item in raw) ArtworkTask.fromJson(item)]
         : const <ArtworkTask>[];
     state = state.copyWith(loading: false, items: items);
   }

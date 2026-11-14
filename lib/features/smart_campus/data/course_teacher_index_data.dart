@@ -120,7 +120,7 @@ Map<String, int> buildCourseTeacherActionBadges(
   int myLeavePendingCount = 0,
 }) {
   return <String, int>{
-    '作业批改': index.pendingHomeworkCount,
+    '作品批改': index.pendingHomeworkCount,
     '签课管理': index.pendingSignCount,
     '我的请假': myLeavePendingCount,
   };

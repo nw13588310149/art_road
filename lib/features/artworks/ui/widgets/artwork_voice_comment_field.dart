@@ -18,7 +18,7 @@ typedef ArtworkVoiceUpload =
 enum _VoicePhase { idle, recording, uploading, ready }
 
 /// 语音评语：按住右侧话筒说话，松开后上传；已有语音显示为可播放的气泡，可以重录
-/// 或删除。交互、尺寸和图标照原版作业点评抽屉里的语音点评
+/// 或删除。交互、尺寸和图标照原版作品点评抽屉里的语音点评
 /// （R `teacher_homework_review_view.dart` 3425–3800），播放气泡直接复用
 /// [HomeworkVoiceCommentBubble]。
 class ArtworkVoiceCommentField extends StatefulWidget {
@@ -533,7 +533,7 @@ class _LiveWaveform extends StatelessWidget {
   }
 }
 
-/// 36×36 的图标按钮（重录、删除），用原版作业点评的图标。
+/// 36×36 的图标按钮（重录、删除），用原版作品点评的图标。
 class _MiniAction extends StatelessWidget {
   const _MiniAction({
     required this.asset,

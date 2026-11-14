@@ -1,21 +1,21 @@
 // =============================================================================
-// 学生端「我的作业」独立页面
+// 学生端「我的作品」独立页面
 //
-// 入口：学生 dashboard 快捷区「我的作业」按钮 → controller.openMyHomework()
+// 入口：学生 dashboard 快捷区「我的作品」按钮 → controller.openMyHomework()
 //      → mainView == myHomework + role == student → SmartCampusPage 路由到
 //      本视图。返回：banner 左上角返回按钮 → onBack。
 //
 // 视觉（数值照原版同路径文件，970 设计宽）：
 //   1. 横幅：共享 [SmartCampusPageBanner]（62 高，居中标题 + 副标题，左 32 返回）。
-//   2. 3 张 100 高插图统计卡（flex 1，gap 12）：作业均分 / 已提交 / 已批阅，
+//   2. 3 张 100 高插图统计卡（flex 1，gap 12）：作品均分 / 已提交 / 已批阅，
 //      标签 14/500、数值 Barlow 32/500；后两张右上角白底小徽标（待提交 / 逾期）。
-//   3. 双列卡：左 640「各科作业均分」（按科目 / 按老师浅灰分段 + 条纹柱图），
+//   3. 双列卡：左 640「各科作品均分」（按科目 / 按老师浅灰分段 + 条纹柱图），
 //      右 318「分数段分布」（82 高灰底面板）。分区标题 18/500。
 //   4. 状态页签：共享 [SmartCampusDarkTabs]（全部 / 待提交 / 已逾期 / 已提交 /
 //      已批阅，44 高，带数量）。
-//   5. 作业卡 2 列网格（#FAF0FF→白渐变 + 背景图，12 圆角，内距 12）：标题 +
-//      方角科目标签 + 方角状态标签 + 蓝色得分；发布老师 / 截止时间；作业说明；
-//      提交文件链接 / 教师点评气泡；右下 80×32「查看详情」「提交作业」。
+//   5. 作品卡 2 列网格（#FAF0FF→白渐变 + 背景图，12 圆角，内距 12）：标题 +
+//      方角科目标签 + 方角状态标签 + 蓝色得分；发布老师 / 截止时间；作品说明；
+//      提交文件链接 / 教师点评气泡；右下 80×32「查看详情」「提交作品」。
 //
 // 颜色：白卡 / #F5F6FA 浅灰 / 品牌紫 / #325BFF 蓝（提交链接 / 分数）
 //      / #0CAC40 绿（已提交）/ #FF6A00 橙（待提交）/ #FF323C 红（已逾期）
@@ -23,13 +23,13 @@
 // 字体：PingFang SC + Barlow（数值 32）
 //
 // 弹窗：
-//   · "提交作业"（_showSubmitDialog）：复用 [GradientHeaderDialog]（紫渐变
-//     顶部 + 装饰图 + 24/500 标题），内含作业标题、提交类型 chips（照片 /
+//   · "提交作品"（_showSubmitDialog）：复用 [GradientHeaderDialog]（紫渐变
+//     顶部 + 装饰图 + 24/500 标题），内含作品标题、提交类型 chips（照片 /
 //     视频 / 文档）、上传文件区（走 [cloudDriveControllerProvider] 与 courseware
 //     共享同一上传通道）、备注 textarea。提交成功后把卡片状态切到「已提交·
 //     批阅中」并填充提交文件名。
-//   · "作业详情"（_showDetailDialog）：同款 GradientHeaderDialog，只读展示
-//     发布老师 / 截止时间 / 作业要求 / 提交情况 / 得分（已批阅）/ 教师反馈。
+//   · "作品详情"（_showDetailDialog）：同款 GradientHeaderDialog，只读展示
+//     发布老师 / 截止时间 / 作品要求 / 提交情况 / 得分（已批阅）/ 教师反馈。
 // =============================================================================
 
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
@@ -156,7 +156,7 @@ String _resolvePublishTeacherName(
   return fallback;
 }
 
-/// 学生作业行状态：`homeworkStudentStatus` 或嵌套 `homeworkStudent.status` 优先，
+/// 学生作品行状态：`homeworkStudentStatus` 或嵌套 `homeworkStudent.status` 优先，
 /// 否则回退顶层 `status`。
 int _homeworkStudentRowStatus(Map<dynamic, dynamic> m) {
   final flat = m['homeworkStudentStatus'];
@@ -184,8 +184,8 @@ bool _studentHomeworkOverdue({
   return DateTime.now().isAfter(deadline);
 }
 
-/// 学生作业详情：`data` 含 `homework` + `homeworkStudent` 时合并为单层字段供 [mergeDetail] 使用。
-/// 教师作业要求保留在 `description`；学生提交说明在 `studentSubmitDescription`。
+/// 学生作品详情：`data` 含 `homework` + `homeworkStudent` 时合并为单层字段供 [mergeDetail] 使用。
+/// 教师作品要求保留在 `description`；学生提交说明在 `studentSubmitDescription`。
 Map<dynamic, dynamic> _flattenStudentHomeworkDetail(Map<dynamic, dynamic> m) {
   final hw = m['homework'];
   final hs = m['homeworkStudent'];
@@ -360,7 +360,7 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
         _loadingList = false;
         _initialLoad = false;
       });
-      AppToast.show(context, res.msg.isNotEmpty ? res.msg : '作业列表加载失败');
+      AppToast.show(context, res.msg.isNotEmpty ? res.msg : '作品列表加载失败');
     }
   }
 
@@ -372,7 +372,7 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
 
   Future<void> _onSubmit(_HomeworkData data) async {
     if (data.recordId.isEmpty) {
-      AppToast.show(context, '缺少作业记录编号，无法提交');
+      AppToast.show(context, '缺少作品记录编号，无法提交');
       return;
     }
     final ok = kDemoMode
@@ -395,7 +395,7 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
     if (!mounted || ok != true) return;
     await Future.wait([_loadList(), _loadSummary()]);
     if (!mounted) return;
-    AppToast.show(context, '作业已提交，等待教师批阅');
+    AppToast.show(context, '作品已提交，等待教师批阅');
   }
 
   Future<void> _onDetail(_HomeworkData data) async {
@@ -432,8 +432,8 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
       bodyTopClipRadius: 8,
       bodyScrollable: false,
       header: SmartCampusPageBanner(
-        title: '我的作业',
-        subtitle: kDemoMode ? '提交作品照片，在这里查看老师点评' : '提交作业并查看老师点评',
+        title: '我的作品',
+        subtitle: kDemoMode ? '提交作品照片，在这里查看老师点评' : '提交作品并查看老师点评',
         onBack: widget.onBack,
       ),
       body: AppRefreshIndicator(
@@ -489,7 +489,7 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
 // 3 张统计卡
 // =============================================================================
 
-/// 作业页统计卡数值：Barlow 32 / w500（与原版成绩页排名卡一致）。
+/// 作品页统计卡数值：Barlow 32 / w500（与原版成绩页排名卡一致）。
 TextStyle _homeworkStatValueTextStyle(double Function(double) ui) {
   return TextStyle(
     fontSize: ui(32),
@@ -542,20 +542,20 @@ class _OverviewStatsRow extends StatelessWidget {
 class _AverageScoreCard extends StatelessWidget {
   const _AverageScoreCard({required this.avg});
 
-  /// 作业总体均分（0 表示暂无数据）。
+  /// 作品总体均分（0 表示暂无数据）。
   final double avg;
 
   @override
   Widget build(BuildContext context) {
     return _HomeworkCountCard(
       backgroundAsset: AppAssets.studentHomeworkStatCard1,
-      title: '作业均分',
+      title: '作品均分',
       value: avg > 0 ? campusScore(avg) : '—',
     );
   }
 }
 
-/// 作业统计卡：插图底 + 左上标签 14/500 + 数值 Barlow 32；[badgeText] 不为空
+/// 作品统计卡：插图底 + 左上标签 14/500 + 数值 Barlow 32；[badgeText] 不为空
 /// 时右上角显示白底小徽标（待提交 / 逾期等次级计数）。
 class _HomeworkCountCard extends StatelessWidget {
   const _HomeworkCountCard({
@@ -631,7 +631,7 @@ class _HomeworkCountCard extends StatelessWidget {
 }
 
 // =============================================================================
-// 双列：各科作业均分 + 分数段分布
+// 双列：各科作品均分 + 分数段分布
 // =============================================================================
 
 class _DualPanelRow extends StatelessWidget {
@@ -656,7 +656,7 @@ class _DualPanelRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SectionTitle(
-                chartGroup == _ChartGroup.byTeacher ? '各位老师的作业均分' : '各科作业均分',
+                chartGroup == _ChartGroup.byTeacher ? '各位老师的作品均分' : '各科作品均分',
               ),
               SizedBox(height: ui(12)),
               _AverageBarChartCard(
@@ -681,8 +681,8 @@ class _DualPanelRow extends StatelessWidget {
                 children: [
                   _SectionTitle(
                     chartGroup == _ChartGroup.byTeacher
-                        ? '各位老师的作业均分'
-                        : '各科作业均分',
+                        ? '各位老师的作品均分'
+                        : '各科作品均分',
                   ),
                   SizedBox(height: ui(12)),
                   _AverageBarChartCard(
@@ -1041,11 +1041,11 @@ class _HomeworkEmptyState extends StatelessWidget {
   final _StatusTab tab;
 
   String get _message => switch (tab) {
-    _StatusTab.all => '还没有作业',
-    _StatusTab.pending => '没有待提交的作业',
-    _StatusTab.overdue => '没有逾期的作业',
-    _StatusTab.submitted => '没有等待批阅的作业',
-    _StatusTab.reviewed => '还没有已批阅的作业',
+    _StatusTab.all => '还没有作品',
+    _StatusTab.pending => '没有待提交的作品',
+    _StatusTab.overdue => '没有逾期的作品',
+    _StatusTab.submitted => '没有等待批阅的作品',
+    _StatusTab.reviewed => '还没有已批阅的作品',
   };
 
   @override
@@ -1152,7 +1152,7 @@ class _SegmentedControl<T> extends StatelessWidget {
 }
 
 // =============================================================================
-// 作业卡（数据 + 网格 + 单卡）
+// 作品卡（数据 + 网格 + 单卡）
 // =============================================================================
 
 enum _HomeworkSubject { sketch, color, speed, other }
@@ -1160,7 +1160,7 @@ enum _HomeworkSubject { sketch, color, speed, other }
 enum _HomeworkStatus { pending, overdue, submitted, reviewed }
 
 enum _HomeworkBodyType {
-  // 待提交：占位文字 + 提交作业按钮
+  // 待提交：占位文字 + 提交作品按钮
   pending,
   // 已提交（批阅中）：提交链接 + "教师批阅中，请留意通知"
   submittedReviewing,
@@ -1197,7 +1197,7 @@ class _HomeworkData {
     this.submitFileUrl = '',
   });
 
-  /// 学生作业记录 id（列表 **`homeworkStudentId`**），用于详情 / 提交接口。
+  /// 学生作品记录 id（列表 **`homeworkStudentId`**），用于详情 / 提交接口。
   final String recordId;
   final String artworkId;
   final String title;
@@ -1218,7 +1218,7 @@ class _HomeworkData {
   /// 教师语音点评时长（秒，详情接口 `teacherParam2`）。
   final int voiceCommentDuration;
 
-  /// 教师发布的作业要求（列表或详情接口 `description`）。
+  /// 教师发布的作品要求（列表或详情接口 `description`）。
   final String requirementText;
 
   /// 教师评语（接口 `feedback` / `teacherFeedback`）。
@@ -1230,7 +1230,7 @@ class _HomeworkData {
   /// 期望提交格式（`expectedExt` → 中文，如 照片 / 文档）。
   final String mediumLabel;
 
-  /// 学生提交作业时在接口里填的说明（`homeworkStudent.description`，与教师 `homework.description` 不同）。
+  /// 学生提交作品时在接口里填的说明（`homeworkStudent.description`，与教师 `homework.description` 不同）。
   final String studentSubmitDescription;
 
   /// 提交文件名 `studentParam2`。
@@ -1262,7 +1262,7 @@ class _HomeworkData {
       return nested?.toString() ?? '';
     }
 
-    final title = pick('title').isNotEmpty ? pick('title') : '作业';
+    final title = pick('title').isNotEmpty ? pick('title') : '作品';
     final description = pick('description');
     final endRaw = pick('endTime');
     final deadline = _studentHwDeadlineLabel(endRaw.isNotEmpty ? endRaw : null);
@@ -1728,7 +1728,7 @@ class _StatusTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    // 已逾期的作业照原版同时显示「待提交」「已逾期」两枚标签。
+    // 已逾期的作品照原版同时显示「待提交」「已逾期」两枚标签。
     final items = <(Color bg, Color fg, String text)>[
       ...switch (status) {
         _HomeworkStatus.pending => const [
@@ -1879,7 +1879,7 @@ class _CardBody extends StatelessWidget {
     switch (data.bodyType) {
       case _HomeworkBodyType.pending:
         tail = desc.isEmpty
-            ? Text('暂无作业说明', style: hintStyle)
+            ? Text('暂无作品说明', style: hintStyle)
             : const SizedBox.shrink();
         break;
       case _HomeworkBodyType.submittedReviewing:
@@ -2189,7 +2189,7 @@ class _CardActionRow extends StatelessWidget {
         if (showSubmit) ...[
           SizedBox(width: ui(12)),
           _SmallButton(
-            label: '提交作业',
+            label: '提交作品',
             useGradient: true,
             foreground: Colors.white,
             onTap: onSubmit,
@@ -2200,7 +2200,7 @@ class _CardActionRow extends StatelessWidget {
   }
 }
 
-/// 作业卡右下按钮：80×32、圆角 8；灰底 12/500 或品牌紫渐变 12/600。
+/// 作品卡右下按钮：80×32、圆角 8；灰底 12/500 或品牌紫渐变 12/600。
 class _SmallButton extends StatelessWidget {
   const _SmallButton({
     required this.label,
@@ -2277,7 +2277,7 @@ class _SectionTitle extends StatelessWidget {
 }
 
 // =============================================================================
-// 弹窗：提交作业
+// 弹窗：提交作品
 // =============================================================================
 
 enum _SubmitKind { photo, video, doc }
@@ -2427,7 +2427,7 @@ class _SubmitHomeworkDialogState extends ConsumerState<_SubmitHomeworkDialog> {
   Future<void> _submit() async {
     if (!_ready || _picked == null) return;
     if (widget.data.recordId.isEmpty) {
-      AppToast.show(context, '缺少作业记录编号，无法提交');
+      AppToast.show(context, '缺少作品记录编号，无法提交');
       return;
     }
     setState(() => _submitting = true);
@@ -2456,7 +2456,7 @@ class _SubmitHomeworkDialogState extends ConsumerState<_SubmitHomeworkDialog> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return GradientHeaderDialog(
-      title: '提交作业',
+      title: '提交作品',
       width: 428,
       contentPadding: EdgeInsets.fromLTRB(ui(24), ui(60), ui(24), ui(20)),
       actionBar: AppDialogActionBar(
@@ -2860,7 +2860,7 @@ class _NoteInput extends StatelessWidget {
 }
 
 // =============================================================================
-// 弹窗：作业详情
+// 弹窗：作品详情
 // =============================================================================
 
 class _HomeworkDetailDialog extends ConsumerStatefulWidget {
@@ -2932,7 +2932,7 @@ class _HomeworkDetailDialogState extends ConsumerState<_HomeworkDetailDialog> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return GradientHeaderDialog(
-      title: '作业详情',
+      title: '作品详情',
       width: 428,
       contentPadding: EdgeInsets.fromLTRB(
         ui(24),
@@ -2994,7 +2994,7 @@ class _HomeworkDetailDialogState extends ConsumerState<_HomeworkDetailDialog> {
           ],
           SizedBox(height: ui(12)),
           _DetailGrayPanel(
-            label: '作业要求',
+            label: '作品要求',
             children: [_DetailGrayLine(text: _requirement(_d), primary: true)],
           ),
           SizedBox(height: ui(12)),

@@ -355,7 +355,7 @@ void registerPlatformCoreFixtures(DemoRouter r) {
 
   // ── 学校 ────────────────────────────────────────────────────────────
   r.any('/app/school/v2/user/schoolList', (req) => [demoSchool()]);
-  // 科目 id 与课表、考试、作业演示数据一致（素描 38 / 色彩 39 / 速写 40）。
+  // 科目 id 与课表、考试、作品演示数据一致（素描 38 / 色彩 39 / 速写 40）。
   r.any('/app/school/v2/user/subjectList', (req) {
     const names = ['素描', '色彩', '速写', '美术常识', '文化课', '模拟考试'];
     return [

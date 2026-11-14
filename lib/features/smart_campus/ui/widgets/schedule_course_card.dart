@@ -306,7 +306,7 @@ class ScheduleCourseCellAction extends StatelessWidget {
   }
 }
 
-/// 左滑卡片露出右侧删除入口（课表编辑、作业列表等 iPad 触控场景）。
+/// 左滑卡片露出右侧删除入口（课表编辑、作品列表等 iPad 触控场景）。
 class ScheduleCourseSwipeDelete extends StatefulWidget {
   const ScheduleCourseSwipeDelete({
     super.key,

@@ -5,7 +5,7 @@ import 'circle_state.dart';
 /// 举报与治理删除共用的原因；选「其他」时必须写明说明。
 const circleReportReasons = <String>[
   '广告营销',
-  '代画作业',
+  '代画作品',
   '不实考试信息',
   '攻击或嘲讽他人',
   '未经同意发布他人照片或作品',

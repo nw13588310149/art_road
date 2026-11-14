@@ -362,8 +362,8 @@ const _seedReportCases = <_SeedReportCase>[
   _SeedReportCase(
     post: 'ghost-drawing',
     reports: [
-      _SeedReport('s:7', '代画作业', 45),
-      _SeedReport('t:t-4', '代画作业', 160, '速写、色彩作业要求本人完成，代画会影响老师判断真实水平。'),
+      _SeedReport('s:7', '代画作品', 45),
+      _SeedReport('t:t-4', '代画作品', 160, '速写、色彩作品要求本人完成，代画会影响老师判断真实水平。'),
       _SeedReport('s:20', '广告营销', 1500),
     ],
   ),
@@ -376,7 +376,7 @@ const _seedReportCases = <_SeedReportCase>[
   ),
   _SeedReportCase(
     post: 'studio-wall',
-    reports: [_SeedReport('s:27', '未经同意发布他人照片或作品', 300, '照片里有我的作业。')],
+    reports: [_SeedReport('s:27', '未经同意发布他人照片或作品', 300, '照片里有我的作品。')],
   ),
   _SeedReportCase(
     post: 'milk-tea',

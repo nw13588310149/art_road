@@ -26,6 +26,8 @@ abstract final class RoutePaths {
   /// 画室工具箱：明度检查、镜像、构图网格、取色色卡、速写计时、考试倒计时。
   static const artToolbox = '/toolbox';
   static const ebooks = '/ebooks';
+  static const microLessons = '/micro-lessons';
+  static const marketplace = '/market';
 
   /// 组件库演示页：lib/core/ui 全部组件与状态，规范见 docs/设计规范.md。
   static const designSystem = '/design-system';

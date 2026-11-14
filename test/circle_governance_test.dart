@@ -24,7 +24,7 @@ import 'package:the_road_of_art_flutter/features/circle/ui/widgets/circle_action
 import 'package:the_road_of_art_flutter/features/circle/ui/widgets/circle_governance_view.dart';
 import 'package:the_road_of_art_flutter/features/circle/ui/widgets/circle_post_card.dart';
 
-const _ghostDrawing = '接速写、色彩作业代画，晚自习前交稿，需要的同学私信我。';
+const _ghostDrawing = '接速写、色彩作品代画，晚自习前交稿，需要的同学私信我。';
 const _examRumor = '听说这次月考色彩考风景、速写考场景，已经有人拿到题了，想要的私聊。';
 const _studioWall = '画室日常｜作品墙又更新了';
 const _milkTea = '校门口新开的奶茶店第二杯半价，报我名字还送小料，晚自习下课一起去。';
@@ -206,7 +206,7 @@ void main() {
       final first = records.first;
       expect(first['reportCount'], 3);
       expect(first['reasons'], [
-        {'reason': '代画作业', 'count': 2},
+        {'reason': '代画作品', 'count': 2},
         {'reason': '广告营销', 'count': 1},
       ]);
       expect(first['lastReportTime'], isNotEmpty);
@@ -247,13 +247,13 @@ void main() {
           _call(handle, DemoAccounts.admin, {
                 'id': record['id'],
                 'result': 2,
-                'reason': '代画作业',
+                'reason': '代画作品',
                 'remark': '已请班主任提醒',
               })
               as Map;
       expect(result['status'], 1);
       expect(result['result'], 2);
-      expect(result['handleReason'], '代画作业');
+      expect(result['handleReason'], '代画作品');
       expect(result['handleRemark'], '已请班主任提醒');
       expect(result['post']['content'], _ghostDrawing);
       expect(
@@ -287,7 +287,7 @@ void main() {
       final handled = _records(_reportPage(1));
       final restored = handled.firstWhere((r) => r['id'] == record['id']);
       expect(restored['result'], 2);
-      expect(restored['handleReason'], '代画作业');
+      expect(restored['handleReason'], '代画作品');
       expect(
         _circlePosts().where((p) => p['content'] == _ghostDrawing),
         isEmpty,
@@ -458,7 +458,7 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.descendant(of: first, matching: find.text('代画作业 2')),
+          find.descendant(of: first, matching: find.text('代画作品 2')),
           findsOneWidget,
         );
         expect(
@@ -504,12 +504,12 @@ void main() {
         expect(find.text('请选择删除原因'), findsOneWidget);
         expect(find.text('确定删除这条动态？'), findsNothing);
 
-        await tester.tap(_inDialog(find.widgetWithText(AppChip, '代画作业')));
+        await tester.tap(_inDialog(find.widgetWithText(AppChip, '代画作品')));
         await tester.pump();
         await tester.tap(_inDialog(find.widgetWithText(AppButton, '下一步')));
         await _settle(tester, steps: 2);
         expect(find.text('确定删除这条动态？'), findsOneWidget);
-        expect(find.textContaining('删除原因：代画作业'), findsOneWidget);
+        expect(find.textContaining('删除原因：代画作品'), findsOneWidget);
         final confirm = _inDialog(find.widgetWithText(AppButton, '删除'));
         expect(
           tester.widget<AppButton>(confirm).variant,
@@ -531,7 +531,7 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.descendant(of: handled, matching: find.text('删除原因：代画作业')),
+          find.descendant(of: handled, matching: find.text('删除原因：代画作品')),
           findsOneWidget,
         );
         expect(

@@ -1464,7 +1464,7 @@ class _PunchAuditStatusBadge extends StatelessWidget {
   }
 }
 
-// 通过/驳回按钮：与学生端「我的作业」卡 _SmallButton 一致。
+// 通过/驳回按钮：与学生端「我的作品」卡 _SmallButton 一致。
 class _PunchActionButton extends StatelessWidget {
   const _PunchActionButton({
     required this.label,

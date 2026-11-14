@@ -8,7 +8,7 @@ import '../../../../core/widgets/app_asset_graphic.dart';
 import '../../../shell/ui/shell_layout.dart';
 import 'smart_campus_dark_tabs.dart';
 
-/// 作业等页面独立的白色状态页签，选中项黑底白字。
+/// 作品等页面独立的白色状态页签，选中项黑底白字。
 ///
 /// 外观委托 [SmartCampusDarkTabs]（原版黑底页签，无描边版本）；保留旧签名，
 /// 已有页面无需改动调用。

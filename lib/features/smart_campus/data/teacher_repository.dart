@@ -273,7 +273,7 @@ class TeacherRepository {
   /// - `type`: 班级类型过滤，`0 = 大班`，`1 = 小班`；不传 = 全量（大 + 小）。
   ///   申请小课抽屉拉全量班级；`studentList` 的 `type` 与所选班级类型对齐。
   /// - `isClassTeacher`: 是不是任课老师。任课老师端（授课课表 / 签课 / 学生名册 /
-  ///   作业批改 / 考评管理等）调用统一传 `1`，让后端按"我任教的班级"过滤。
+  ///   作品批改 / 考评管理等）调用统一传 `1`，让后端按"我任教的班级"过滤。
   /// - `isHeadTeacher`: 是不是班主任。班主任端调用本接口时传 `1`，让后端按
   ///   "我担任班主任的班级"过滤；不传 = 不按该字段过滤。
   Future<ApiResponse> classList({
@@ -823,13 +823,13 @@ class TeacherRepository {
     return client.post('$_base/examFullDetail', data: body);
   }
 
-  // ============== 作业管理（任课老师端） ==============
+  // ============== 作品管理（任课老师端） ==============
 
-  /// 作业数据汇总。`data` 字段示例：
-  /// `homeworkCount` 发布作业数、`status1Count` 待批改人次、
+  /// 作品数据汇总。`data` 字段示例：
+  /// `homeworkCount` 发布作品数、`status1Count` 待批改人次、
   /// `status2Count` 已评阅人次、`completeRate` 完成率、
   /// `avgScore` / `maxScore` / `minScore` 已评分数统计，
-  /// `homeworkStatus0Count` / `homeworkStatus1Count` 进行中 / 已截止作业数。
+  /// `homeworkStatus0Count` / `homeworkStatus1Count` 进行中 / 已截止作品数。
   ///
   /// `beginDate` / `endDate` 格式 `yyyy-MM-dd`；`classId` 为 `"0"` 表示全部班级。
   /// 班级 id 须用 **字符串**（雪花 id），勿用 int 以免 Web/JSON 精度丢失。
@@ -848,7 +848,7 @@ class TeacherRepository {
     );
   }
 
-  /// 作业列表（分页）。
+  /// 作品列表（分页）。
   ///
   /// `status`：`0` 进行中、`1` 已完成、`2` 待我批改；**空字符串 `''` 表示全部**
   ///（与后端约定：全部时传入 `""`，勿省略字段）。
@@ -869,7 +869,7 @@ class TeacherRepository {
     return client.post('$_base/teacherHomeworkList', data: body);
   }
 
-  /// 发布作业。`classIds` 为目标班级 ID 列表，`endTime` 格式 `yyyy-MM-dd HH:mm:ss`
+  /// 发布作品。`classIds` 为目标班级 ID 列表，`endTime` 格式 `yyyy-MM-dd HH:mm:ss`
   ///（例 `2026-05-19 17:11:00`），`expectedExt` 为期望格式标识（如 "audio"/"video"/"doc"/"image"）。
   /// `classIds` 每项为字符串雪花 id，勿用 int。
   Future<ApiResponse> teacherHomeworkSave({
@@ -895,7 +895,7 @@ class TeacherRepository {
     );
   }
 
-  /// 作业详情（包含学生提交列表）。
+  /// 作品详情（包含学生提交列表）。
   Future<ApiResponse> teacherHomeworkDetail({required String id}) {
     return client.post(
       '$_base/teacherHomeworkDetail',
@@ -903,7 +903,7 @@ class TeacherRepository {
     );
   }
 
-  /// 批改作业。`id` 为学生作业记录 ID（studentHomeworkDetail 返回的 id），
+  /// 批改作品。`id` 为学生作品记录 ID（studentHomeworkDetail 返回的 id），
   /// `score` 为分数（0-100），`feedback` 为文字评语。
   ///
   /// 语音点评约定（与学生端解析对齐）：
@@ -957,7 +957,7 @@ class TeacherRepository {
     return client.postFormData('/app/common/v2/fileUpload', data: form);
   }
 
-  /// 删除作业。
+  /// 删除作品。
   Future<ApiResponse> teacherHomeworkDelete({required String id}) {
     return client.post(
       '$_base/teacherHomeworkDelete',
@@ -965,7 +965,7 @@ class TeacherRepository {
     );
   }
 
-  /// 某个学生的作业详情（提交内容、文件、状态等）。
+  /// 某个学生的作品详情（提交内容、文件、状态等）。
   Future<ApiResponse> studentHomeworkDetail({required String id}) {
     return client.post(
       '$_base/studentHomeworkDetail',

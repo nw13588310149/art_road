@@ -8,7 +8,7 @@ import '../../../artworks/state/artwork_tasks_controller.dart';
 import '../../../artworks/ui/artwork_upload_dialog.dart';
 import '../../state/home_student_cards.dart';
 
-/// 今日任务优先显示当天到期的作业，再给出练习建议。
+/// 今日任务优先显示当天到期的作品，再给出练习建议。
 class HomePracticeCard extends ConsumerWidget {
   const HomePracticeCard({super.key});
 
@@ -41,7 +41,7 @@ class HomePracticeCard extends ConsumerWidget {
           children: [
             if (taskState.errorMessage.isNotEmpty)
               AppButton(
-                label: '重新加载作业',
+                label: '重新加载作品',
                 variant: AppButtonVariant.text,
                 onTap: ref
                     .read(artworkTasksControllerProvider.notifier)

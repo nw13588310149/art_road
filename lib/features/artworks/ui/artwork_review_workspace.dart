@@ -1,3 +1,4 @@
+import 'widgets/artwork_review_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,6 +64,7 @@ class _ArtworkReviewWorkspaceState
   double _penWidth = kAnnotationPenWidths[1];
   bool _savingNext = false;
   final _principalComment = TextEditingController();
+  final _principalScore = TextEditingController();
 
   AutoDisposeStateNotifierProvider<ArtworkReviewController, ArtworkReviewState>
   get _provider => artworkReviewControllerProvider(widget.artworkId);
@@ -73,6 +75,7 @@ class _ArtworkReviewWorkspaceState
     _maxScore.dispose();
     _comment.dispose();
     _principalComment.dispose();
+    _principalScore.dispose();
     _transform.dispose();
     super.dispose();
   }
@@ -629,6 +632,8 @@ class _ArtworkReviewWorkspaceState
         const <ArtworkTag>[];
     return <Widget>[
       _StudentCard(detail: detail),
+      const SizedBox(height: 12),
+      ArtworkReviewSummary(detail: detail),
       const SizedBox(height: AppSpace.s12),
       if (!detail.canReview && review != null) ...[
         ArtworkReviewCard(review: review),
@@ -816,6 +821,7 @@ class _ArtworkReviewWorkspaceState
             detail: detail,
             artworkId: widget.artworkId,
             commentController: _principalComment,
+            scoreController: _principalScore,
           ),
         ),
       ],
@@ -829,7 +835,7 @@ class _ArtworkReviewWorkspaceState
       if (detail.otherReviews.isNotEmpty) ...[
         const SizedBox(height: AppSpace.s12),
         AppCard(
-          title: '补充点评',
+          title: '任课老师评价',
           child: _OtherReviews(detail: detail),
         ),
       ],
@@ -1148,19 +1154,31 @@ class _PrincipalActions extends ConsumerWidget {
     required this.detail,
     required this.artworkId,
     required this.commentController,
+    required this.scoreController,
   });
 
   final ArtworkDetail detail;
   final String artworkId;
   final TextEditingController commentController;
+  final TextEditingController scoreController;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final actions = ref.watch(principalArtworkActionsProvider(artworkId));
+    final busy = ref.watch(principalArtworkActionsProvider(artworkId));
+    final actions = ref.read(
+      principalArtworkActionsProvider(artworkId).notifier,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (detail.canComment) ...[
+          AppInputField(
+            controller: scoreController,
+            label: '校长评分（可选）',
+            hint: '0–${ArtworkRules.displayScore(detail.work.maxScore)}',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+          const SizedBox(height: 12),
           AppInputField(
             controller: commentController,
             hint: '写下校长点评',
@@ -1172,21 +1190,39 @@ class _PrincipalActions extends ConsumerWidget {
           AppButton(
             label: '提交校长点评',
             size: AppButtonSize.sm,
-            onTap: () async {
-              final error = await actions.comment(commentController.text);
-              if (!context.mounted) {
-                return;
-              }
-              if (error != null) {
-                AppToast.showError(context, error);
-              } else {
-                AppToast.showSuccess(context, '校长点评已提交');
-                commentController.clear();
-                await ref
-                    .read(artworkReviewControllerProvider(artworkId).notifier)
-                    .load();
-              }
-            },
+            onTap: busy
+                ? null
+                : () async {
+                    final rawScore = scoreController.text.trim();
+                    final score = double.tryParse(rawScore);
+                    if (rawScore.isNotEmpty &&
+                        (score == null ||
+                            !score.isFinite ||
+                            score < 0 ||
+                            score > detail.work.maxScore)) {
+                      AppToast.showError(context, '请填写有效的校长评分');
+                      return;
+                    }
+                    final error = await actions.comment(
+                      commentController.text,
+                      score: score,
+                    );
+                    if (!context.mounted) {
+                      return;
+                    }
+                    if (error != null) {
+                      AppToast.showError(context, error);
+                    } else {
+                      AppToast.showSuccess(context, '校长点评已提交');
+                      commentController.clear();
+                      scoreController.clear();
+                      await ref
+                          .read(
+                            artworkReviewControllerProvider(artworkId).notifier,
+                          )
+                          .load();
+                    }
+                  },
           ),
         ],
         if (detail.canFeature) ...[
@@ -1195,23 +1231,29 @@ class _PrincipalActions extends ConsumerWidget {
             label: detail.work.featured ? '取消推优' : '推优到优秀作品墙',
             variant: AppButtonVariant.secondary,
             size: AppButtonSize.sm,
-            onTap: () async {
-              final error = await actions.setFeatured(!detail.work.featured);
-              if (!context.mounted) {
-                return;
-              }
-              if (error != null) {
-                AppToast.showError(context, error);
-              } else {
-                AppToast.showSuccess(
-                  context,
-                  detail.work.featured ? '已取消推优' : '已推优',
-                );
-                await ref
-                    .read(artworkReviewControllerProvider(artworkId).notifier)
-                    .load();
-              }
-            },
+            onTap: busy
+                ? null
+                : () async {
+                    final error = await actions.setFeatured(
+                      !detail.work.featured,
+                    );
+                    if (!context.mounted) {
+                      return;
+                    }
+                    if (error != null) {
+                      AppToast.showError(context, error);
+                    } else {
+                      AppToast.showSuccess(
+                        context,
+                        detail.work.featured ? '已取消推优' : '已推优',
+                      );
+                      await ref
+                          .read(
+                            artworkReviewControllerProvider(artworkId).notifier,
+                          )
+                          .load();
+                    }
+                  },
           ),
         ],
       ],

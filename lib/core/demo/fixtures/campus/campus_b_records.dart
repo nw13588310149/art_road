@@ -166,7 +166,7 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       status: 3,
       created: (-4, '20:05'),
       parentReason: '同意。',
-      teacherReason: '同意请假，回来补上下午的色彩作业。',
+      teacherReason: '同意请假，回来补上下午的色彩作品。',
     ),
     leave(
       id: '3100004',
@@ -179,7 +179,7 @@ List<Map<String, dynamic>> _seedStudentLeaves() {
       status: 3,
       created: (-7, '20:40'),
       parentReason: '已带孩子就医。',
-      teacherReason: '注意休息，作业按时补交。',
+      teacherReason: '注意休息，作品按时补交。',
     ),
     leave(
       id: '3100005',
@@ -389,7 +389,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       end: (4, '17:00'),
       duration: '1',
       reason: '参加省美术联考阅卷培训。',
-      handover: '当天素描课请张明远老师代课，石膏头像长期作业照常进行。',
+      handover: '当天素描课请张明远老师代课，石膏头像长期作品照常进行。',
       status: 0,
       created: (0, '09:20'),
     ),
@@ -401,7 +401,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       end: (-11, '17:00'),
       duration: '2',
       reason: '急性肠胃炎，医院建议休息两天。',
-      handover: '素描课由刘芳老师代管，作业讲评顺延。',
+      handover: '素描课由刘芳老师代管，作品讲评顺延。',
       status: 1,
       created: (-13, '20:15'),
       auditReason: '同意，注意休息。',
@@ -464,7 +464,7 @@ List<Map<String, dynamic>> _seedTeacherLeaves() {
       end: (1, '21:00'),
       duration: '3',
       reason: '腰椎间盘突出复发，医生建议卧床休息。',
-      handover: '文化课改为录播课，作业在班级群布置。',
+      handover: '文化课改为录播课，作品在班级群布置。',
       status: 1,
       created: (-2, '20:30'),
       auditReason: '同意，祝早日康复。',
@@ -1381,7 +1381,7 @@ const Map<int, List<_Msg>> _chatScripts = {
     ('teacher', -3, '20:20', '专业课没问题，色彩最近提升很快，月考色彩进了班级前五。', ''),
   ],
   30: [
-    ('parent', -1, '23:10', '老师，昨晚孩子在画室赶作业回宿舍晚了，不是故意晚归，麻烦您见谅。', ''),
+    ('parent', -1, '23:10', '老师，昨晚孩子在画室赶作品回宿舍晚了，不是故意晚归，麻烦您见谅。', ''),
     ('parent', -1, '23:12', '他说已经提交补卡申请了。', ''),
   ],
   2: [

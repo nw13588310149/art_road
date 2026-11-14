@@ -6,7 +6,7 @@ import '../../demo_store.dart';
 import 'campus_a_common.dart';
 import 'campus_b_homework.dart';
 
-/// 学生考试、成绩与作业：`myExamList` / `myExamDetail` / `examSeat` /
+/// 学生考试、成绩与作品：`myExamList` / `myExamDetail` / `examSeat` /
 /// `examSubmit` / `examOverview` / `examRecordList` / `studentHomework*`。
 ///
 /// 成绩与排名直接取自 [DemoMarkingData]（4–10 月七场月考），与学情中心一致；
@@ -389,7 +389,7 @@ abstract final class CampusAStudy {
     };
   }
 
-  // ── 作业 ────────────────────────────────────────────────────────────
+  // ── 作品 ────────────────────────────────────────────────────────────
 
   static List<Map<String, dynamic>> homework(DemoAccount account) =>
       studentArtworkHomework(account);
@@ -636,11 +636,11 @@ abstract final class CampusAStudy {
           return _homeworkDetail(item);
         }
       }
-      throw const DemoApiException('作业不存在');
+      throw const DemoApiException('作品不存在');
     });
 
     r.post('$base/studentHomeworkSubmit', (req) {
-      throw const DemoApiException('请通过作品上传提交作业', code: 400);
+      throw const DemoApiException('请通过作品上传提交作品', code: 400);
     });
   }
 }

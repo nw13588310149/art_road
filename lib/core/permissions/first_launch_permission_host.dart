@@ -39,7 +39,7 @@ const firstLaunchPermissionItems = <({IconData icon, String name, String use})>[
   (
     icon: Icons.photo_library_outlined,
     name: '相册与文件',
-    use: '上传作品照片、课件与作业附件',
+    use: '上传作品照片、课件与作品附件',
   ),
   (icon: Icons.mic_none_rounded, name: '麦克风', use: '仅在班级群聊发送语音消息时使用'),
   (

@@ -1,3 +1,4 @@
+import 'widgets/artwork_review_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -287,6 +288,8 @@ class _InfoColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ScoreCard(detail: detail),
+        const SizedBox(height: 12),
+        ArtworkReviewSummary(detail: detail),
         if (artworkMarkTags(work).isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: AppSpace.s8),

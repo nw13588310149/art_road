@@ -6,10 +6,10 @@ import '../../../core/art/art_subject.dart';
 import '../../../core/ui/ui.dart';
 import '../../artworks/data/artwork_models.dart';
 import '../../smart_campus/state/smart_campus_controller.dart';
-import '../../smart_campus/ui/widgets/smart_campus_page_banner.dart';
 import '../../study_center/ui/growth/student_artwork_growth_view.dart';
 import '../data/teaching_overview_repository.dart';
 import '../state/teaching_overview_controller.dart';
+import 'teaching_trend_chart.dart';
 
 TeachingRequest _request(
   TeachingReport report,
@@ -98,91 +98,86 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
       ),
     );
     return Padding(
-      padding: const EdgeInsets.all(AppSpace.s16),
+      padding: const EdgeInsets.all(AppSpace.s24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: AppSpace.s16,
         children: [
-          SmartCampusPageBanner(title: '校长驾驶舱', subtitle: '教学与出勤概览'),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final scope = _buildScope(data);
-                final board = state.when(
-                  loading: () => const Center(child: AppLoadingIndicator()),
-                  error: (error, _) => AppErrorState(
-                    title: '驾驶舱加载失败',
-                    description: '$error',
-                    onRetry: _refresh,
-                  ),
-                  data: (_) => _buildBoard(data, trend),
-                );
-                if (constraints.maxWidth < 730) {
-                  return ListView(
-                    children: [
-                      scope,
-                      const SizedBox(height: AppSpace.s16),
-                      board,
-                    ],
-                  );
-                }
-                return Row(
+          Row(
+            children: [
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: AppSpace.s16,
                   children: [
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: _refresh,
-                        child: ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          children: [board],
+                    Text('校长驾驶舱', style: AppText.title24),
+                    const SizedBox(height: 4),
+                    Text(
+                      '示范画室 · ${widget.name}，今天的教学进展在这里',
+                      style: AppText.body13,
+                    ),
+                  ],
+                ),
+              ),
+              AppIconButton(
+                icon: Icons.refresh,
+                semanticLabel: '刷新教学数据',
+                onTap: _refresh,
+              ),
+              const SizedBox(width: 8),
+              AppButton(
+                label: '查看作品',
+                icon: Icons.arrow_forward,
+                onTap: () => _open(TeachingReport.reviewChain),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    AppChip(
+                      label: '全部校区',
+                      selected: _campus.isEmpty,
+                      onTap: () => setState(() => _campus = ''),
+                    ),
+                    for (final campus in _campuses)
+                      AppChip(
+                        label: teachingText(campus['name']),
+                        selected: campus['id'] == _campus,
+                        onTap: () => setState(
+                          () => _campus = teachingText(campus['id']),
                         ),
                       ),
-                    ),
-                    SizedBox(width: 256, child: scope),
                   ],
-                );
-              },
+                ),
+              ),
+              Text(teachingText(data['date']), style: AppText.caption12),
+            ],
+          ),
+          Expanded(
+            child: state.when(
+              loading: () => const Center(child: AppLoadingIndicator()),
+              error: (error, _) => AppErrorState(
+                title: '驾驶舱加载失败',
+                description: '$error',
+                onRetry: _refresh,
+              ),
+              data: (_) => RefreshIndicator(
+                onRefresh: _refresh,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [_buildBoard(data, trend)],
+                ),
+              ),
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildScope(TeachingRow data) => AppCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s12,
-      children: [
-        AppListRow(
-          leading: AppAvatar(name: widget.name, size: 44),
-          title: widget.name.isEmpty ? '校长' : widget.name,
-          subtitle: '示范画室 · 校长',
-        ),
-        Text('校区', style: AppText.body14Strong),
-        Wrap(
-          spacing: AppSpace.s4,
-          runSpacing: AppSpace.s8,
-          children: [
-            AppChip(
-              label: '全部',
-              selected: _campus.isEmpty,
-              onTap: () => setState(() => _campus = ''),
-            ),
-            for (final campus in _campuses)
-              AppChip(
-                label: teachingText(campus['name']).replaceFirst('校区', ''),
-                selected: campus['id'] == _campus,
-                onTap: () =>
-                    setState(() => _campus = teachingText(campus['id'])),
-              ),
-          ],
-        ),
-        if (data['date'] != null)
-          Text('${data['date']} · 演示数据', style: AppText.caption12),
-      ],
-    ),
-  );
 
   Widget _buildBoard(TeachingRow data, AsyncValue<Object?> trend) {
     final attendance = teachingRow(data['attendance']);
@@ -257,6 +252,16 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
       ),
     ];
     final actions = <(String, IconData, VoidCallback)>[
+      (
+        '小课件',
+        Icons.auto_stories_outlined,
+        () => Navigator.of(context).pushNamed(RoutePaths.microLessons),
+      ),
+      (
+        '集市',
+        Icons.storefront_outlined,
+        () => Navigator.of(context).pushNamed(RoutePaths.marketplace),
+      ),
       ('老师履职', Icons.fact_check_outlined, () => _open(TeachingReport.teachers)),
       ('全校学情', Icons.show_chart, () => _open(TeachingReport.classes)),
       ('作品点评链', Icons.brush_outlined, () => _open(TeachingReport.reviewChain)),
@@ -295,133 +300,151 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
         () => _campusView((c) => c.openTeacherManagement()),
       ),
     ];
+    final primary = [metrics[2], metrics[4], metrics[6], metrics[7]];
+    final operations = [metrics[0], metrics[1], metrics[3], metrics[5]];
+    final chart = AppCard(
+      title: '教学趋势',
+      subtitle: '近 7 天 · 点击数据点查看明细',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppSegmented<String>(
+            value: _metric,
+            segments: const [
+              AppSegment(value: 'submissions', label: '作品提交量'),
+              AppSegment(value: 'timely', label: '点评及时率'),
+              AppSegment(value: 'attendance', label: '学生出勤率'),
+            ],
+            onChanged: (value) => setState(() => _metric = value),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 190,
+            child: trend.when(
+              data: (raw) => TeachingTrendChart(
+                rows: teachingRows(raw),
+                percent: _metric != 'submissions',
+              ),
+              loading: () => const Center(child: AppLoadingIndicator()),
+              error: (error, _) => AppErrorState(
+                title: '趋势加载失败',
+                description: '$error',
+                onRetry: _refresh,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s16,
+      spacing: 16,
       children: [
-        GridView.count(
-          crossAxisCount: 4,
-          mainAxisExtent: 79,
-          mainAxisSpacing: AppSpace.s12,
-          crossAxisSpacing: AppSpace.s12,
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          children: [
-            for (final metric in metrics)
-              AppCard(
-                onTap: () => _open(metric.report, metric.parameter),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpace.s4,
-                  vertical: AppSpace.s4,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      metric.value,
-                      style: AppText.displayNumber(
-                        size: 24,
-                        color: metric.alert ? AppColors.danger : AppColors.ink,
-                      ),
-                    ),
-                    Text(
-                      metric.label,
-                      style: AppText.caption12,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (metric.secondary.isNotEmpty)
-                      Text(
-                        metric.secondary,
-                        style: AppText.caption12,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-          ],
-        ),
         AppCard(
-          child: GridView.count(
-            shrinkWrap: true,
-            crossAxisCount: 5,
-            mainAxisExtent: 58,
-            mainAxisSpacing: AppSpace.s8,
-            crossAxisSpacing: AppSpace.s4,
-            physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Row(
             children: [
-              for (final (label, icon, onTap) in actions)
-                AppPressable(
-                  onTap: onTap,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: AppSpace.s4,
-                    children: [
-                      Icon(icon, size: 24, color: AppColors.ink),
-                      Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        style: AppText.caption12Strong,
-                      ),
-                    ],
+              for (var i = 0; i < primary.length; i++) ...[
+                if (i > 0)
+                  Container(
+                    width: 1,
+                    height: 60,
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    color: AppColors.line,
+                  ),
+                Expanded(
+                  child: AppPressable(
+                    onTap: () => _open(primary[i].report, primary[i].parameter),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(primary[i].label, style: AppText.body13),
+                        const SizedBox(height: 8),
+                        Text(
+                          primary[i].value,
+                          style: AppText.displayNumber(size: 32),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          primary[i].secondary.isEmpty
+                              ? '查看明细 →'
+                              : primary[i].secondary,
+                          style: AppText.caption12,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-            ],
-          ),
-        ),
-        AppCard(
-          title: '数据看板',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: AppSpace.s12,
-            children: [
-              AppSegmented<String>(
-                value: _metric,
-                segments: const [
-                  AppSegment(value: 'submissions', label: '作品提交量'),
-                  AppSegment(value: 'timely', label: '点评及时率'),
-                  AppSegment(value: 'attendance', label: '学生出勤率'),
-                ],
-                onChanged: (value) => setState(() => _metric = value),
-              ),
-              SizedBox(
-                height: 155,
-                child: trend.when(
-                  data: (raw) => _TrendChart(
-                    rows: teachingRows(raw),
-                    percent: _metric != 'submissions',
-                  ),
-                  loading: () => const Center(child: AppLoadingIndicator()),
-                  error: (error, _) => AppErrorState(
-                    title: '趋势加载失败',
-                    description: '$error',
-                    onRetry: _refresh,
-                  ),
-                ),
-              ),
+              ],
             ],
           ),
         ),
         LayoutBuilder(
           builder: (context, constraints) {
-            final alerts = _buildAlerts(data);
-            final activity = _buildActivity(data);
-            if (constraints.maxWidth < 490) {
-              return Column(
-                spacing: AppSpace.s12,
-                children: [alerts, activity],
-              );
+            final rail = AppCard(
+              title: '今日待办与出勤',
+              child: Column(
+                children: [
+                  for (final metric in operations)
+                    AppListRow(
+                      title: metric.label,
+                      onTap: () => _open(metric.report, metric.parameter),
+                      trailing: Text(
+                        metric.value,
+                        style: AppText.number(
+                          size: 20,
+                          color: metric.alert
+                              ? AppColors.warning
+                              : AppColors.ink,
+                        ),
+                      ),
+                    ),
+                  const Divider(color: AppColors.line),
+                  AppListRow(
+                    title: '校长信箱',
+                    leading: const Icon(Icons.mail_outline, size: 20),
+                    onTap: () => _campusView((c) => c.openPrincipalMailbox()),
+                  ),
+                ],
+              ),
+            );
+            if (constraints.maxWidth < 740) {
+              return Column(spacing: 16, children: [chart, rail]);
             }
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: AppSpace.s12,
+              spacing: 16,
               children: [
-                Expanded(child: alerts),
-                Expanded(child: activity),
+                Expanded(flex: 7, child: chart),
+                Expanded(flex: 4, child: rail),
               ],
             );
           },
+        ),
+        AppCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final (label, icon, onTap) in actions)
+                AppButton(
+                  label: label,
+                  icon: icon,
+                  variant: AppButtonVariant.secondary,
+                  size: AppButtonSize.sm,
+                  onTap: onTap,
+                ),
+            ],
+          ),
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 16,
+          children: [
+            Expanded(child: _buildAlerts(data)),
+            Expanded(child: _buildActivity(data)),
+          ],
         ),
       ],
     );
@@ -430,7 +453,7 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
   Widget _buildAlerts(TeachingRow data) {
     final alerts = teachingRows(data['alerts']);
     return AppCard(
-      title: '预警',
+      title: '需要跟进',
       child: Column(
         children: [
           if (alerts.isEmpty) Text('暂无预警', style: AppText.body13),
@@ -464,7 +487,7 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
   Widget _buildActivity(TeachingRow data) {
     final items = teachingRows(data['activity']);
     return AppCard(
-      title: '动态',
+      title: '近期作品点评',
       child: Column(
         children: [
           if (items.isEmpty) Text('暂无动态', style: AppText.body13),
@@ -530,9 +553,29 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: AppSpace.s16,
         children: [
-          SmartCampusPageBanner(
-            title: base.report.title,
-            onBack: () => Navigator.of(context).maybePop(),
+          Row(
+            children: [
+              AppIconButton.back(onTap: () => Navigator.of(context).maybePop()),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(base.report.title, style: AppText.title24),
+                    const SizedBox(height: 4),
+                    Text(
+                      base.campus.isEmpty ? '示范画室 · 全部校区' : '示范画室 · 当前校区',
+                      style: AppText.body13,
+                    ),
+                  ],
+                ),
+              ),
+              AppIconButton(
+                icon: Icons.refresh,
+                semanticLabel: '刷新报表',
+                onTap: ref.read(provider.notifier).refresh,
+              ),
+            ],
           ),
           Expanded(
             child: state.when(
@@ -615,7 +658,7 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
     ('timely', '点评及时率', '%'),
     ('quality', '点评质量', ' 星'),
     ('punctual', '签到准时率', '%'),
-    ('taskCount', '作业数', ' 份'),
+    ('taskCount', '作品数', ' 份'),
     ('taskReviewRate', '批改率', '%'),
     ('scoreChange', '成绩变化', ' 分'),
     ('studentRating', '学生评价', ' 分'),
@@ -739,7 +782,10 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
         title: '近 7 天点评及时率',
         child: SizedBox(
           height: 172,
-          child: _TrendChart(rows: teachingRows(row['trend']), percent: true),
+          child: TeachingTrendChart(
+            rows: teachingRows(row['trend']),
+            percent: true,
+          ),
         ),
       ),
       AppCard(
@@ -783,6 +829,23 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
   Widget _classes(List<TeachingRow> rows) => Column(
     spacing: AppSpace.s12,
     children: [
+      if (rows.length > 1)
+        AppCard(
+          title: '校区学情对比',
+          subtitle: '最近一次模考均分 · 点击柱形查看分数',
+          child: SizedBox(
+            height: 210,
+            child: TeachingComparisonChart(
+              rows: [
+                for (final row in rows)
+                  {
+                    'label': row['campus'],
+                    'value': teachingRows(row['exams']).lastOrNull?['mean'],
+                  },
+              ],
+            ),
+          ),
+        ),
       for (final row in rows)
         AppCard(
           title: '${row['name']} · ${row['campus']}',
@@ -792,7 +855,8 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
             children: [
               SizedBox(
                 height: 180,
-                child: _TrendChart(
+                child: TeachingTrendChart(
+                  unit: '分',
                   rows: [
                     for (final exam in teachingRows(row['exams']))
                       {...exam, 'value': exam['mean']},
@@ -908,7 +972,7 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
             const SizedBox(height: AppSpace.s12),
             SizedBox(
               height: 160,
-              child: _TrendChart(
+              child: TeachingTrendChart(
                 rows: [
                   for (final exam in teachingRows(row['exams']))
                     {...exam, 'value': exam['mean']},
@@ -997,7 +1061,16 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
             title: '暂无作品',
             description: '可以切换日期查看其他作品',
           ),
-        for (final work in records) _workCard(ArtworkSummary.fromJson(work)),
+        if (records.isNotEmpty)
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (final work in records)
+                  _workRow(ArtworkSummary.fromJson(work)),
+              ],
+            ),
+          ),
         Center(
           child: Wrap(
             spacing: AppSpace.s12,
@@ -1026,138 +1099,42 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
     _page = 1;
   });
 
-  Widget _workCard(ArtworkSummary work) => AppCard(
+  Widget _workCard(ArtworkSummary work) =>
+      AppCard(padding: EdgeInsets.zero, child: _workRow(work));
+
+  Widget _workRow(ArtworkSummary work) => AppListRow(
     onTap: () async {
       await Navigator.of(
         context,
       ).pushNamed(RoutePaths.artworks, arguments: {'artworkId': work.id});
       if (mounted) ref.invalidate(teachingOverviewProvider);
     },
-    child: AppListRow(
-      leading: SizedBox.square(
-        dimension: 64,
-        child: AppImage(src: work.coverUrl, borderRadius: AppRadius.br8),
-      ),
-      title: work.title,
-      subtitle: '${work.studentName} · ${work.subject} · ${work.teacherName}',
-      trailing: AppTag(
-        label: work.overdue
-            ? '点评超时'
-            : work.leadOverdue
-            ? '复核超时'
-            : work.reviewed
-            ? '已点评'
-            : '待点评',
-      ),
+    divider: true,
+    chevron: true,
+    leading: SizedBox.square(
+      dimension: 56,
+      child: AppImage(src: work.coverUrl, borderRadius: AppRadius.br8),
+    ),
+    title: work.title,
+    subtitle:
+        '${work.studentName} · ${work.subject} · ${work.reviewedCount}/${work.teacherCount} 位任课老师已点评',
+    trailing: AppTag(
+      label: work.overdue
+          ? '点评超时'
+          : work.leadOverdue
+          ? '复核超时'
+          : work.hasPrincipalComment
+          ? '校长已点评'
+          : work.leadStatus == ArtworkLeadStatus.done
+          ? '组长已点评'
+          : work.reviewed
+          ? '已点评'
+          : '待点评',
+      tone: work.overdue || work.leadOverdue
+          ? AppTone.warning
+          : AppTone.neutral,
     ),
   );
-}
-
-class _TrendChart extends StatelessWidget {
-  const _TrendChart({required this.rows, this.percent = false});
-  final List<TeachingRow> rows;
-  final bool percent;
-
-  @override
-  Widget build(BuildContext context) {
-    final values = [for (final row in rows) (row['value'] as num?)?.toDouble()];
-    if (values.whereType<double>().isEmpty) {
-      return Center(child: Text('暂无趋势数据', style: AppText.body13));
-    }
-    return Column(
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              SizedBox(
-                width: 38,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      percent ? '100%' : _number(_maximum(values)),
-                      style: AppText.caption12,
-                    ),
-                    Text('0', style: AppText.caption12),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: CustomPaint(
-                  painter: _TrendPainter(
-                    values,
-                    percent ? 100 : _maximum(values),
-                  ),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 38, top: 8),
-          child: Row(
-            children: [
-              for (final row in rows)
-                Expanded(
-                  child: Tooltip(
-                    message:
-                        '${row['date']} · ${_number(row['value'], suffix: percent ? '%' : '')}',
-                    child: Text(
-                      _shortDay(teachingText(row['date'])),
-                      textAlign: TextAlign.center,
-                      style: AppText.caption12,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  double _maximum(List<double?> values) => values
-      .whereType<double>()
-      .fold(1.0, (a, b) => a > b ? a : b)
-      .ceilToDouble();
-}
-
-class _TrendPainter extends CustomPainter {
-  const _TrendPainter(this.values, this.maximum);
-  final List<double?> values;
-  final double maximum;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final grid = Paint()..color = AppColors.line;
-    for (var i = 0; i <= 4; i++) {
-      final y = 4 + (size.height - 8) * i / 4;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
-    }
-    final line = Paint()
-      ..color = AppColors.brand
-      ..strokeWidth = 2;
-    Offset? previous;
-    for (var i = 0; i < values.length; i++) {
-      final value = values[i];
-      if (value == null) {
-        previous = null;
-        continue;
-      }
-      final point = Offset(
-        size.width * (i + 0.5) / values.length,
-        4 + (size.height - 8) * (1 - value / maximum),
-      );
-      if (previous != null) canvas.drawLine(previous, point, line);
-      canvas.drawCircle(point, 4, line);
-      previous = point;
-    }
-  }
-
-  @override
-  bool shouldRepaint(_TrendPainter oldDelegate) =>
-      oldDelegate.values != values || oldDelegate.maximum != maximum;
 }
 
 List<String> _strings(Object? raw) =>

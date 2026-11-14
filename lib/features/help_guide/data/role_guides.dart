@@ -66,7 +66,7 @@ const _student = RoleGuide(
     RoleGuideStep(
       iconAsset: AppAssets.leftNavZuopin,
       title: '作品档案',
-      body: '日常作业拍照上传后，由责任老师打分、写评语、在图上批注；需要时组长会复核，校长也可点评或推优。',
+      body: '日常作品拍照上传后，由责任老师打分、写评语、在图上批注；需要时组长会复核，校长也可点评或推优。',
       where: '首页「作品库」',
     ),
     RoleGuideStep(
@@ -103,7 +103,7 @@ const _teacher = RoleGuide(
     RoleGuideStep(
       iconAsset: AppAssets.leftNavXiaoyuan,
       title: '智慧校园',
-      body: '授课课表、签课管理、作业批改与考评管理都在这里，班级群聊也在这里。',
+      body: '授课课表、签课管理、作品批改与考评管理都在这里，班级群聊也在这里。',
       where: '左侧导航「智慧校园」',
     ),
   ],

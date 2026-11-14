@@ -6,7 +6,7 @@ import 'smart_campus_state.dart';
 
 /// SmartCampus 全局状态：刻意 **不** 用 `autoDispose`。
 ///
-/// - 进入智慧校园 → 切到「班主任」→ 进入「班级工作台 / 学生名册 / 作业批改 /
+/// - 进入智慧校园 → 切到「班主任」→ 进入「班级工作台 / 学生名册 / 作品批改 /
 ///   考评管理」等子页 → 返回 dashboard 时，期望保持「班主任」视角。
 /// - 如果加上 `autoDispose`，shell 顶部 tab 切到首页再切回来 / 某次 build 期
 ///   间没有 watcher，controller 就会被销毁；下次重建时 state 重置为默认
@@ -430,8 +430,8 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
     state = state.copyWith(mainView: SmartCampusMainView.checkIn);
   }
 
-  /// 学生端「我的作业」独立入口：打开作业总览页（顶部 banner + 3 项统计 +
-  /// 均分柱形图 + 分数段分布 + 状态分类 tabs + 作业卡 2 列网格）。
+  /// 学生端「我的作品」独立入口：打开作品总览页（顶部 banner + 3 项统计 +
+  /// 均分柱形图 + 分数段分布 + 状态分类 tabs + 作品卡 2 列网格）。
   void openMyHomework() {
     if (state.mainView == SmartCampusMainView.myHomework) {
       return;
@@ -486,8 +486,8 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
     state = state.copyWith(mainView: SmartCampusMainView.classAttendance);
   }
 
-  /// 任课老师 / 班主任端「作业批改」独立入口：进入作业与批改总览页（4 状态
-  /// tabs + 班级筛选 + 累计/本学期/本月 + 6 项统计 + 左作业列表 + 右作业详情
+  /// 任课老师 / 班主任端「作品批改」独立入口：进入作品与批改总览页（4 状态
+  /// tabs + 班级筛选 + 累计/本学期/本月 + 6 项统计 + 左作品列表 + 右作品详情
   /// 与学生提交表）。
   void openHomeworkReview() {
     if (state.mainView == SmartCampusMainView.homeworkReview) {
@@ -709,7 +709,7 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
     );
   }
 
-  /// 宿管端「按宿舍查寝」入口：进入今晚 / 今晨的按宿舍打卡作业页面。
+  /// 宿管端「按宿舍查寝」入口：进入今晚 / 今晨的按宿舍打卡作品页面。
   ///   - banner（白→#F9EDFF 渐变）+ 标题 "按宿舍查寝" + 副标题
   ///   - 当前查寝截止时间（如 "2026-04-22 23:00前"）顶置
   ///   - 4 张统计卡（在册床位 / 正常口径 / 晚归 / 未打卡）

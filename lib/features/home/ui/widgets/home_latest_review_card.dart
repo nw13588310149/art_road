@@ -56,7 +56,7 @@ class HomeLatestReviewCard extends ConsumerWidget {
                 child: AppEmptyState(
                   icon: Icons.rate_review_outlined,
                   title: '还没有点评完成的作品',
-                  description: '上传日常作业，老师点评后会显示在这里',
+                  description: '上传日常作品，老师点评后会显示在这里',
                 ),
               )
             : _ReviewBody(

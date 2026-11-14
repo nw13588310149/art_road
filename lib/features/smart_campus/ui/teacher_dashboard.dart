@@ -117,7 +117,7 @@ class TeacherDashboardLayout extends ConsumerStatefulWidget {
   /// `_TeacherActionPanel` 会在 label 命中但回调为空时走兜底 SnackBar。
   final VoidCallback? onOpenCheckIn;
 
-  /// 学生端「我的作业」入口；老师端没这个按钮，传 null 即可。
+  /// 学生端「我的作品」入口；老师端没这个按钮，传 null 即可。
   final VoidCallback? onOpenMyHomework;
 
   /// 学生端「我的考试」入口；老师端没这个按钮，传 null 即可。
@@ -145,10 +145,10 @@ class TeacherDashboardLayout extends ConsumerStatefulWidget {
   /// 搜索 + 当前/男/女 3 张统计卡 + 学生卡 3 列网格）。
   final VoidCallback? onOpenStudentRoster;
 
-  /// 任课老师 / 班主任「作业批改」入口：进入"作业与批改"总览页（4 状态 tabs +
-  /// 班级 dropdown + 累计/本学期/本月 toggle + 6 项统计 + 左作业列表 + 右
-  /// 当前作业的提交学生表，并通过右抽屉发布作业 / 查看历史发布记录 /
-  /// 进入作业点评）。
+  /// 任课老师 / 班主任「作品批改」入口：进入"作品与批改"总览页（4 状态 tabs +
+  /// 班级 dropdown + 累计/本学期/本月 toggle + 6 项统计 + 左作品列表 + 右
+  /// 当前作品的提交学生表，并通过右抽屉发布作品 / 查看历史发布记录 /
+  /// 进入作品点评）。
   final VoidCallback? onOpenHomeworkReview;
 
   /// 任课老师 / 班主任「考评管理」入口：进入"考评管理"总览页（5 状态 tabs +
@@ -961,8 +961,8 @@ class _TeacherActionPanel extends StatelessWidget {
       // 未配置路由的按钮由 [SmartCampusQuickActionsCard] 兜底弹"页面迁移中"SnackBar。
       case '课堂签到':
         return onOpenCheckIn;
-      // 学生端独有：我的作业。老师端的 "作业批改" 是另一条入口，单独处理。
-      case '我的作业':
+      // 学生端独有：我的作品。老师端的 "作品批改" 是另一条入口，单独处理。
+      case '我的作品':
         return onOpenMyHomework;
       // 学生端独有：我的考试，进入「我的考试」总览页（全部考试 + 我的成绩）。
       case '我的考试':
@@ -988,11 +988,11 @@ class _TeacherActionPanel extends StatelessWidget {
       // 搜索 + 当前/男/女 3 张统计卡 + 学生卡 3 列网格）。
       case '学生名册':
         return onOpenStudentRoster;
-      // 任课老师/班主任专属：「作业批改」→ 进入"作业与批改"总览页（4 状态
-      // tabs + 班级 dropdown + 累计/本学期/本月 toggle + 6 项统计 + 左作业
-      // 列表 + 右当前作业的提交学生表，支持发布作业 / 历史发布记录 /
-      // 作业点评 3 个右抽屉）。
-      case '作业批改':
+      // 任课老师/班主任专属：「作品批改」→ 进入"作品与批改"总览页（4 状态
+      // tabs + 班级 dropdown + 累计/本学期/本月 toggle + 6 项统计 + 左作品
+      // 列表 + 右当前作品的提交学生表，支持发布作品 / 历史发布记录 /
+      // 作品点评 3 个右抽屉）。
+      case '作品批改':
         return onOpenHomeworkReview;
       // 任课老师/班主任专属：「考评管理」→ 进入"考评管理"总览页（5 状态
       // tabs + 班级 dropdown + 累计/本学期/本月 + 6 项统计 + 左考试列表

@@ -27,7 +27,7 @@ const campusPageChecks = {
   grades: [{ check: /^全部考试$/, role: 'button' }],
   'dorm-check': [{ check: /^申请补卡$/, role: 'button' }],
   notice: [{ check: /^发布通知$/, role: 'button' }],
-  'homework-review': [{ check: '待批改人次' }, { check: /^发布作业$/, role: 'button' }],
+  'homework-review': [{ check: '待批改人次' }, { check: /^发布作品$/, role: 'button' }],
   workbench: [{ check: /发布通知/, role: 'button' }],
   'leave-approval': [{ check: /^待家长确认$/, role: 'button' }],
   'home-school': [{ check: '会话总数' }],
@@ -335,7 +335,7 @@ export const ROLES = [
       {
         id: 'artwork-upload',
         route: '/artworks',
-        actions: [{ click: '上传作品', after: 1800 }, { check: '关联作业' }],
+        actions: [{ click: '上传作品', after: 1800 }, { check: '关联作品' }],
       },
       { id: 'gallery', route: '/gallery' },
       {
@@ -404,7 +404,7 @@ export const ROLES = [
       campusAction('my-schedule', '我的课表'),
       scheduleNextWeek('我的课表'),
       campusAction('check-in', '课堂签到'),
-      campusAction('homework', '我的作业'),
+      campusAction('homework', '我的作品'),
       campusAction('grades', '我的考试'),
       campusAction('group-chat', '群聊'),
       campusAction('school-circle', '校圈'),
@@ -450,19 +450,19 @@ export const ROLES = [
       },
       scheduleNextWeek('授课课表'),
       campusAction('sign', '签课管理'),
-      campusAction('homework-review', '作业批改'),
-      campusSub('homework-closed', '作业批改', [
+      campusAction('homework-review', '作品批改'),
+      campusSub('homework-closed', '作品批改', [
         { click: /^已截止$/, after: 1200 },
-        { check: '作业列表' }, { check: /已截止|暂无/ },
+        { check: '作品列表' }, { check: /已截止|暂无/ },
       ]),
-      campusSub('homework-publish', '作业批改', [
-        { click: /^发布作业$/, after: 900 },
+      campusSub('homework-publish', '作品批改', [
+        { click: /^发布作品$/, after: 900 },
         { check: '期望提交格式' }, { check: /^发布$/, role: 'button' },
       ]),
-      campusSub('homework-history', '作业批改', [
-        { click: /^历史作业$/, after: 900 }, { check: '历史发布记录' },
+      campusSub('homework-history', '作品批改', [
+        { click: /^历史作品$/, after: 900 }, { check: '历史发布记录' },
       ]),
-      campusSub('homework-grade', '作业批改', [
+      campusSub('homework-grade', '作品批改', [
         { click: /^查看(?:\/评分)?$/, after: 1200 },
         { check: '保存并下一份', role: 'button' },
       ]),
@@ -626,7 +626,7 @@ export const ROLES = [
     steps: [
       { ...homeStep, actions: [skipGuide, { check: '校长驾驶舱' }, { check: '今日新交作品' }] },
       { id: 'home-principal-campus', route: '/', actions: [skipGuide,
-        { click: /^城西$/, after: 1600 }, { check: '今日到校学生' }, { check: '数据看板' },
+        { click: /^城西校区$/, after: 1600 }, { check: '今日到校学生' }, { check: '教学趋势' },
       ] },
       { id: 'home-principal-review-chain', route: '/', actions: [skipGuide,
         { click: /^作品点评链$/, after: 1500 }, { check: '点评链概览' }, { check: '全部日期' },
@@ -667,3 +667,88 @@ export const ROLES = [
     ],
   },
 ];
+
+// 3.1：专题与集市为全身份入口，断言具体结果，避免路由回退页误通过。
+for (const role of ROLES) {
+  if (role.id === 'guest') continue;
+  role.steps.push(
+    { id: 'v31-topics', route: '/micro-lessons', actions: [{ check: '发现专题' }, { check: '把明暗交界线画进体积里' }] },
+    { id: 'v31-topic-detail', route: '/micro-lessons', actions: [{ click: '把明暗交界线画进体积里' }, { check: '阅读资料' }, { check: '开始阅读' }] },
+    { id: 'v31-topic-new', route: '/micro-lessons', actions: [{ click: '新增小课件' }, { check: '专题内容' }, { check: '上传 PDF / 图片' }, { check: '发布小课件' }] },
+    { id: 'v31-market', route: '/market', actions: [{ check: '发现作品' }, { check: '午后的静物' }, { check: '可购买' }] },
+    { id: 'v31-market-detail', route: '/market', actions: [{ click: '午后的静物' }, { check: '数字作品使用许可' }, { check: '演示交易' }] },
+    { id: 'v31-market-new', route: '/market', actions: [{ click: /^发布作品$/ }, { check: '创作信息' }, { check: '出售使用许可' }, { check: '上传作品图片' }] },
+    { id: 'v31-market-orders', route: '/market', actions: [{ click: '我的订单' }, { check: '还没有订单' }] },
+  );
+}
+
+ROLES.find((role) => role.id === 'principal').steps.push({
+  id: 'v31-campus-chart', route: '/', actions: [skipGuide,
+    { click: /^全校学情$/ }, { check: '校区学情对比' }, { check: '最近一次模考均分' },
+  ],
+});
+
+ROLES.find((role) => role.id === 'student').steps.push(
+  { id: 'v31-upload-reader-resume', route: '/micro-lessons', actions: [
+    { click: '新增小课件' }, { check: '每份不超过 20 MB' },
+    { type: '两页体积观察', into: '例如：把明暗交界线画进体积里' },
+    { type: '通过两页图片观察形体转折和明暗变化。', into: '这份小课件解决什么问题？读完可以尝试什么？' },
+    { uploadFiles: ['assets/demo/ebooks/eb-sketch-still-p02.jpg', 'assets/demo/ebooks/eb-sketch-still-p03.jpg'], into: '上传 PDF / 图片', after: 2000 },
+    { check: '图片书籍 · 2 页' }, { click: '发布小课件' },
+    { click: '两页体积观察' }, { click: '开始阅读' }, { check: '1 / 2' },
+    { click: '下一页' }, { check: '2 / 2' }, { click: '返回' },
+    { click: '开始阅读' }, { check: '2 / 2' },
+  ] },
+  { id: 'v31-topic-publish', route: '/micro-lessons', actions: [
+    { click: '新增小课件' },
+    { click: '发布小课件' }, { check: '专题名称须为' },
+    { type: '明暗关系阅读练习', into: '例如：把明暗交界线画进体积里' },
+    { type: '通过图文对照观察明暗关系与形体转折。', into: '这份小课件解决什么问题？读完可以尝试什么？' },
+    { click: /^选择联考素描静物高分解析（示例）$/ },
+    { click: /^选择联考素描静物高分解析（示例） · PDF$/ },
+    { click: '发布小课件' }, { check: '明暗关系阅读练习' },
+    { click: '明暗关系阅读练习' }, { check: '2 份阅读资料' },
+    { click: '收藏专题' }, { check: '已收藏' },
+  ] },
+  { id: 'v31-topic-pdf', route: '/micro-lessons', actions: [
+    { click: '一组静物，建立统一的色调' },
+    { click: /色彩静物冷暖关系 30 讲（示例） · PDF/, role: 'button' },
+    { check: 'PDF 阅读' }, { check: '1 / 10', after: 1500 },
+    { click: '下一页' }, { check: '2 / 10', after: 1500 },
+  ] },
+  { id: 'v31-topic-image-book', route: '/micro-lessons', actions: [
+    { click: '把明暗交界线画进体积里' }, { click: '开始阅读' },
+    { check: '目录与书签' }, { click: '下一页' }, { check: '联考素描静物高分解析', role: 'heading' },
+  ] },
+  { id: 'v31-market-publish', route: '/market', actions: [
+    { click: /^发布作品$/ },
+    { type: '光与空间练习', into: '给这份创作起个名字' },
+    { type: '观察静物之间的遮挡与明暗，记录这次创作的过程。', into: '分享观察、材料与创作过程' },
+    { click: '石膏头像长期作品' },
+    { click: '确认作品发布权限' },
+    { click: /^发布到集市$/, nth: 1 }, { check: '光与空间练习' },
+    { click: '光与空间练习' }, { check: '撤下作品' }, { check: '作品展示' },
+  ] },
+  { id: 'v31-market-purchase', route: '/market', actions: [
+    { click: '午后的静物' }, { scroll: 450, at: [950, 600] },
+    { click: '购买使用许可' }, { check: '确认演示订单' },
+    { click: '确认演示购买' }, { check: '查看我的订单' },
+    { click: '查看我的订单' }, { check: '演示订单已完成' }, { check: '个人学习使用' },
+  ] },
+  { id: 'v31-market-order-read', route: '/market', actions: [
+    { click: '我的订单' }, { click: '查看数字作品' }, { check: '午后的静物' }, { check: '1 / 1' },
+  ] },
+);
+
+
+for (const id of ['teacher', 'headTeacher', 'principal']) {
+  ROLES.find((role) => role.id === id).steps.push({
+    id: 'v31-independent-reviews', route: '/artworks', actions: [
+      { click: /^全部$/, role: 'button' },
+      { type: '几何体明暗关系', into: '搜索学生、校区或作品', enter: true },
+      { click: '几何体明暗关系' },
+      { check: '作品点评' }, { check: '3 / 3 位已点评' },
+      { check: '王海波' }, { check: '校长评分独立展示' },
+    ],
+  });
+}

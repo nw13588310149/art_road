@@ -175,7 +175,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
         noticeTitle: '校级通知',
         stats: const [
           SmartCampusStatCardData(label: '今日课程', value: '0'),
-          SmartCampusStatCardData(label: '待交作业', value: '0'),
+          SmartCampusStatCardData(label: '待交作品', value: '0'),
           SmartCampusStatCardData(label: '学期均分', value: '0'),
           SmartCampusStatCardData(label: '未读通知', value: '0'),
           SmartCampusStatCardData(label: '最近考试', value: '0'),
@@ -204,7 +204,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
             imagePath: 'assets/images/new/智慧校园/学生端/课堂签到.png',
           ),
           SmartCampusQuickActionData(
-            label: '我的作业',
+            label: '我的作品',
             icon: Icons.assignment_rounded,
             background: _blueSoft,
             foreground: _blue,
@@ -325,12 +325,12 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               avatarSeed: '江',
             ),
             SmartCampusPanelItemData(
-              badge: '作业',
+              badge: '作品',
               badgeForeground: _orange,
               badgeBackground: _orangeSoft,
-              title: '色彩静物写生作业',
+              title: '色彩静物写生作品',
               subtitle: '今天 21:00 前上传色彩静物写生照片',
-              person: '班级作业',
+              person: '班级作品',
               personHint: '已发布至联考冲刺1班',
               trailing: '待提交',
               avatarSeed: '作',
@@ -403,7 +403,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
             imagePath: 'assets/images/new/智慧校园/任课老师/学生名册.png',
           ),
           SmartCampusQuickActionData(
-            label: '作业批改',
+            label: '作品批改',
             icon: Icons.edit_note_rounded,
             background: _orangeSoft,
             foreground: _orange,
@@ -512,10 +512,10 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badge: '课后',
               badgeForeground: _orange,
               badgeBackground: _orangeSoft,
-              title: '布置课后作业',
-              subtitle: '下课后自动推送素描作业至学生端',
+              title: '布置课后作品',
+              subtitle: '下课后自动推送素描作品至学生端',
               person: '课堂任务',
-              personHint: '今日课程已配置课堂作业模板',
+              personHint: '今日课程已配置课堂作品模板',
               trailing: '待发布',
               avatarSeed: '课',
             ),
@@ -1022,7 +1022,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
         roleScopeSections: const [
           SmartCampusRoleScopeSectionData(
             title: '核心场景',
-            items: ['课表', '作业', '成绩', '课堂签到', '请假与补课', '查寝管理', '校圈', '群聊'],
+            items: ['课表', '作品', '成绩', '课堂签到', '请假与补课', '查寝管理', '校圈', '群聊'],
           ),
           SmartCampusRoleScopeSectionData(
             title: '管理端',

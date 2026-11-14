@@ -401,6 +401,7 @@ class ArtworkPrincipalComment {
     required this.name,
     required this.content,
     this.time = '',
+    this.score,
   });
 
   factory ArtworkPrincipalComment.fromJson(Object? raw) {
@@ -410,6 +411,7 @@ class ArtworkPrincipalComment {
       name: _str(json['name']),
       content: _str(json['content']),
       time: _str(json['time']),
+      score: _num(json['score']),
     );
   }
 
@@ -417,6 +419,7 @@ class ArtworkPrincipalComment {
   final String name;
   final String content;
   final String time;
+  final double? score;
 }
 
 @immutable
@@ -751,7 +754,7 @@ class ArtworkDetail {
         return item;
       }
     }
-    return review;
+    return null;
   }
 
   List<ArtworkReview> get otherReviews =>
@@ -977,6 +980,7 @@ class ArtworkDraft {
     required this.images,
     this.taskId = '',
     this.parentId = '',
+    this.teacherIds = const [],
   });
 
   final String title;
@@ -988,6 +992,7 @@ class ArtworkDraft {
   final List<ArtworkDraftImage> images;
   final String taskId;
   final String parentId;
+  final List<String> teacherIds;
 }
 
 /// 解析接口返回的 id（字符串或数字）。

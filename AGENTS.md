@@ -2,8 +2,8 @@
 
 ## Product
 - 美育集: a landscape iPad app for art-exam (美术艺考) students, studio teachers and studio staff, built around the marking system (阅卷系统).
-- 3.0 is a demo build: every request is answered by the local demo backend using the app's API paths. The app name is 「美育集」. The logo is the ArtEd.Hub / 美育集 lockup in `assets/images/brand/meiyuji_logo.png`; the square app icon uses the 「美育集」 wordmark.
-- Product plan and implementation: `docs/美育集3.0产品方案.md`, `docs/美育集3.0实施规格.md`. Design rules and component library: `docs/设计规范.md`. Backend gaps before going live: `docs/后端缺口清单.md`. Run instructions and demo accounts: `README.md`. Audit findings and fix records: `docs/走查问题清单.md`, `docs/走查/`.
+- 3.1 is a demo build: every request is answered by the local demo backend using the app's API paths. The app name is 「美育集」. The logo is the ArtEd.Hub / 美育集 lockup in `assets/images/brand/meiyuji_logo.png`; the square app icon uses the 「美育集」 wordmark.
+- Product plan and implementation: `docs/美育集3.1产品与交互方案.md`, `docs/美育集3.0产品方案.md`, `docs/美育集3.0实施规格.md`. Design rules and component library: `docs/设计规范.md`. Backend gaps before going live: `docs/后端缺口清单.md`. Run instructions and demo accounts: `README.md`. Audit findings and fix records: `docs/走查问题清单.md`, `docs/走查/`.
 
 ## Current Rules
 - All feature work uses Flutter. UI and business state stay strictly separated: feature folders `data/` (repository + models) → `state/` (Riverpod StateNotifier controllers) → `ui/`.
@@ -30,6 +30,10 @@
   - `/gallery` → `GalleryPage` (`subject`, `keyword`, `category`, `workId`)
   - `/toolbox` → `ArtToolboxPage` (`tool`, `imageUrl`, `title`); `tool` is an `ArtTool.key` from `art_toolbox/data/toolbox_catalog.dart` (17 tools in three groups). Other modules deep-link by key, so never rename an existing key.
   - `/ebooks` → `EbooksPage` (`bookId`)
+  - `/micro-lessons` → `LearningTopicsPage`; `/market` → `MarketplacePage` (creative_hub data/state/ui).
+- Creative Hub fixtures use DemoStore for topics, resources, listings, per-user favorites and immutable order snapshots. Purchases are explicitly demo transactions.
+- Artwork teacher reviews are independent per assigned teacher; `teacherStageComplete` gates leader review. Principal scores remain separate from the teaching reference score.
+- FL Chart 1.3.1 is cached with the user's one-time download approval; keep future dependency resolution offline.
 - Notifications carry `targetType` + `targetId`; the mapping to routes lives in `lib/features/shell/navigation/shell_notice_routes.dart`.
 - First-login guide per role: content in `lib/features/help_guide/data/role_guides.dart`, seen flags `role_guide_seen_v1:<role>` in SharedPreferences.
 - Two API clients in `lib/core/providers/app_providers.dart`:

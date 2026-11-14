@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/app_asset_graphic.dart';
 
-/// 作业相关 PNG 图标带内边距，用 [BoxFit.cover] 铺满指定容器。
+/// 作品相关 PNG 图标带内边距，用 [BoxFit.cover] 铺满指定容器。
 class HomeworkAssetIcon extends StatelessWidget {
   const HomeworkAssetIcon(
     this.asset, {

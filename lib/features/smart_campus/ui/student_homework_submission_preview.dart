@@ -75,7 +75,7 @@ StudentSubmissionPreviewKind _kindFromPath(String raw) {
   return StudentSubmissionPreviewKind.unknown;
 }
 
-/// 学生作业「我的提交」文件预览：Web 走 [CoursewareInlinePreview]（浏览器内嵌
+/// 学生作品「我的提交」文件预览：Web 走 [CoursewareInlinePreview]（浏览器内嵌
 /// 图片 / 音视频 / PDF 等）；原生端图片与 PDF 内嵌，音视频用 `media_kit`；
 /// 无法识别类型时提示并在浏览器打开。
 Future<void> showStudentHomeworkSubmissionPreview(

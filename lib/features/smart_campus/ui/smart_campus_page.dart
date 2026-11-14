@@ -66,9 +66,9 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 ///     教学周 banner + 时间冻结列 + 横滚 7 天序 + 4 种课卡）
 ///   - `mainView == checkIn` → [StudentCheckInView]（独立"课堂签到"页：
 ///     banner + 5 项统计 + 今日课程 + 签到操作 + 最近课堂记录 6 卡）
-///   - `mainView == myHomework` → [StudentMyHomeworkView]（独立"我的作业"页：
+///   - `mainView == myHomework` → [StudentMyHomeworkView]（独立"我的作品"页：
 ///     banner + 学期均分/班级名次/年级名次 3 卡 + 均分柱形/分数段分布
-///     + 状态 tabs + 作业卡 6 张网格）
+///     + 状态 tabs + 作品卡 6 张网格）
 ///   - `mainView == myGrades` → [StudentMyGradesView]（独立"我的成绩"页：
 ///     成绩与排名 banner + 学期 tabs + 4 项统计卡 + 6 次考试折线趋势
 ///     + 场次均分分布 + 考试记录与各科成绩双列 6 卡）
@@ -347,13 +347,13 @@ class _SmartCampusPageBody extends ConsumerWidget {
       if (state.mainView == SmartCampusMainView.studentRoster) {
         return TeacherStudentRosterView(onBack: controller.backToDashboard);
       }
-      // 教师/班主任端"作业批改"独立视图：banner + 4 状态 tabs + 班级筛选 +
-      // 累计/本学期/本月 toggle + 6 项统计 + 左作业列表 + 右作业详情与
-      // 学生提交表，支持 "发布作业 / 历史发布记录 / 作业点评" 3 个右抽屉。
+      // 教师/班主任端"作品批改"独立视图：banner + 4 状态 tabs + 班级筛选 +
+      // 累计/本学期/本月 toggle + 6 项统计 + 左作品列表 + 右作品详情与
+      // 学生提交表，支持 "发布作品 / 历史发布记录 / 作品点评" 3 个右抽屉。
       if (state.mainView == SmartCampusMainView.homeworkReview) {
         return TeacherHomeworkReviewView(onBack: controller.backToDashboard);
       }
-      // 教师/班主任端"考评管理"独立视图：与作业批改同款双列布局，但只读
+      // 教师/班主任端"考评管理"独立视图：与作品批改同款双列布局，但只读
       // (不可新建考试) + 5 状态 tabs(全部/审批中/已通过/已拒绝/已撤销) +
       // banner 副标题 + 6 项统计(待评分/关联考试/已评/均分/最高/最低) +
       // 列表卡含 N/M 提交比 + 右栏紫色月考同步说明 + 评分 / 历史月考 2 个抽屉。
@@ -446,7 +446,7 @@ class _SmartCampusPageBody extends ConsumerWidget {
       if (state.mainView == SmartCampusMainView.checkIn) {
         return StudentCheckInView(onBack: controller.backToDashboard);
       }
-      // 学生端"我的作业"独立视图：banner 返回 → controller.backToDashboard。
+      // 学生端"我的作品"独立视图：banner 返回 → controller.backToDashboard。
       if (state.mainView == SmartCampusMainView.myHomework) {
         return StudentMyHomeworkView(onBack: controller.backToDashboard);
       }
@@ -677,7 +677,7 @@ class _SmartCampusPlaceholder extends StatelessWidget {
       case SmartCampusMainView.checkIn:
         return '课堂签到';
       case SmartCampusMainView.myHomework:
-        return '我的作业';
+        return '我的作品';
       case SmartCampusMainView.myGrades:
         return '我的考试';
       case SmartCampusMainView.groupChat:
@@ -709,7 +709,7 @@ class _SmartCampusPlaceholder extends StatelessWidget {
       case SmartCampusMainView.studentRoster:
         return '学生名册';
       case SmartCampusMainView.homeworkReview:
-        return '作业批改';
+        return '作品批改';
       case SmartCampusMainView.examReview:
         return '考评管理';
       case SmartCampusMainView.studentManagement:

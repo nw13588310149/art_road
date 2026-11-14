@@ -20,6 +20,18 @@ const _keptUploads = 60;
 
 /// 作品点评链演示接口（阅卷一侧，口径见实施规格 2.6）。
 void registerMarkingArtworkFixtures(DemoRouter marking) {
+  marking.get(
+    '/app/artworks/review-teachers',
+    (req) => [
+      for (final teacher in DemoMarkingData.reviewTeachers)
+        if (!teacher.leader)
+          {
+            'teacherId': teacher.id,
+            'teacherName': teacher.name,
+            'subject': teacher.subject,
+          },
+    ],
+  );
   // ── 学生：作品档案 ──────────────────────────────────────────────────
   marking.get('/app/artworks/statistics', (req) {
     final works = _studentLatest(_studentIndex(req));
@@ -78,7 +90,15 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final revised = req.str('revised').toLowerCase();
     var rows = _studentLatest(_studentIndex(req));
     if (status != 'ALL') {
-      rows = rows.where((w) => DemoArtworkData.statusOf(w) == status).toList();
+      rows = rows
+          .where(
+            (w) =>
+                (_reviewedFor(w, req.account)
+                    ? DemoArtworkData.statusReviewed
+                    : DemoArtworkData.statusPending) ==
+                status,
+          )
+          .toList();
     }
     if (revised == '1' || revised == 'true') {
       rows = rows
@@ -200,19 +220,19 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     } else if (taskId.isNotEmpty) {
       final task = DemoArtworkStore.taskById(taskId);
       if (task == null) {
-        throw const DemoApiException('没有找到对应的作业', code: 404);
+        throw const DemoApiException('没有找到对应的作品', code: 404);
       }
       final classId = DemoArtworkData.classOf(person).id;
       if (!(task['classIds'] as List).contains(classId) ||
           task['subject'] != subject) {
-        throw const DemoApiException('请选择本班同科目的作业', code: 400);
+        throw const DemoApiException('请选择本班同科目的作品', code: 400);
       }
       if (DemoArtworkStore.works().any(
         (work) =>
             work['taskId'] == taskId &&
             DemoArtworkData.personOf(work) == person,
       )) {
-        throw const DemoApiException('这份作业已提交，可在作品档案查看', code: 400);
+        throw const DemoApiException('这份作品已提交，可在作品档案查看', code: 400);
       }
       teacherId = _text(task['teacherId']);
     } else {
@@ -222,6 +242,13 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       );
     }
 
+    final teacherIds = {teacherId, ...req.listOf('teacherIds').map(_text)};
+    if (parent != null) {
+      teacherIds.addAll((parent['teacherIds'] as List? ?? []).map(_text));
+    }
+    if (teacherIds.any((id) => !DemoArtworkData.isReviewTeacher(id))) {
+      throw const DemoApiException('请选择有效的任课老师', code: 400);
+    }
     final uploads = DemoArtworkStore.uploads();
     final images = <Map<String, dynamic>>[];
     for (final imageId in imageIds) {
@@ -250,6 +277,14 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       'images': images,
       'taskId': taskId,
       'teacherId': teacherId,
+      'teacherIds': teacherIds.toList(),
+      'seedCoReviewsAt': {
+        for (final id in teacherIds)
+          if (id != teacherId && !DemoArtworkData.hasDemoAccount(id))
+            id: DemoArtworkData.fmt(
+              DemoArtworkStore.now().add(DemoArtworkData.autoDelay),
+            ),
+      },
       'review': null,
       'supplements': <Map<String, dynamic>>[],
       'leadReview': null,
@@ -274,7 +309,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final classId = DemoArtworkData.classOf(person).id;
     final status = req.str('status').toUpperCase();
     final now = DemoArtworkStore.now();
-    // 这名学生交过的作品先按作业归好，不逐份作业去翻整个作品库。
+    // 这名学生交过的作品先按作品归好，不逐份作品去翻整个作品库。
     final submitted = <String, List<Map<String, dynamic>>>{};
     for (final work in DemoArtworkStore.works()) {
       final taskId = _text(work['taskId']);
@@ -303,17 +338,17 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
   // ── 教职：作品点评 ──────────────────────────────────────────────────
   marking.get('/school/teacher/artworks/statistics', (req) {
     final mine = _visibleWorks(req.account);
-    final pending = mine.where((w) => !DemoArtworkData.isReviewed(w)).toList();
+    final pending = mine.where((w) => !_reviewedFor(w, req.account)).toList();
     final overdue = pending
         .where(
           (w) => DemoArtworkData.isOverdue(
-            w,
+            {...w, 'review': null, 'teacherReviews': <Map<String, dynamic>>[]},
             DemoArtworkStore.now(),
             DemoArtworkStore.settings(),
           ),
         )
         .length;
-    final reviewed = mine.where(DemoArtworkData.isReviewed).length;
+    final reviewed = mine.length - pending.length;
     return <String, dynamic>{
       'total': mine.length,
       'pending': pending.length,
@@ -335,7 +370,15 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
           .toList();
     }
     if (status != 'ALL') {
-      rows = rows.where((w) => DemoArtworkData.statusOf(w) == status).toList();
+      rows = rows
+          .where(
+            (w) =>
+                (_reviewedFor(w, req.account)
+                    ? DemoArtworkData.statusReviewed
+                    : DemoArtworkData.statusPending) ==
+                status,
+          )
+          .toList();
     }
     if (subject.isNotEmpty) {
       rows = rows
@@ -344,7 +387,10 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     }
     if (teacherFilter.isNotEmpty) {
       rows = rows
-          .where((w) => DemoArtworkData.text(w['teacherId']) == teacherFilter)
+          .where(
+            (w) =>
+                DemoArtworkData.assignedTeacherIdsOf(w).contains(teacherFilter),
+          )
           .toList();
     }
     if (campus.isNotEmpty) {
@@ -393,7 +439,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     }
     final access = DemoArtworkData.accessOf(account, work);
     if (!access.canReview) {
-      throw const DemoApiException('只有责任老师可以保存点评', code: 403);
+      throw const DemoApiException('当前身份不能保存任课老师点评', code: 403);
     }
 
     final score = _optionalNumber(body['score'], '分数须为数字，最多两位小数');
@@ -432,7 +478,9 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     }
 
     final myTags = DemoArtworkStore.tagsOf(teacherId);
-    final previous = DemoArtworkData.reviewOf(work);
+    final previous = DemoArtworkData.reviewsOf(
+      work,
+    ).where((review) => review['teacherId'] == teacherId).firstOrNull;
     final previousTags = previous == null
         ? const <Map<String, dynamic>>[]
         : DemoArtworkData.tagsOf(previous);
@@ -474,10 +522,22 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       spotCheckPercent: DemoArtworkStore.settings().spotCheckPercent,
     );
     // 组长本人负责的作品不进复核池。
-    final leaderId = DemoArtworkData.leaderIdFor(teacherId);
-    final enterLead = reasons.isNotEmpty && leaderId != null;
+    final leaderId = DemoArtworkData.leaderOfSubject(
+      _text(work['subject']),
+    )?.id;
+    final enterLead = leaderId != null;
+    final completedLead =
+        DemoArtworkData.leadStatusOf(work) == DemoArtworkData.leadDone;
 
-    work['review'] = <String, dynamic>{
+    if (previous != null) {
+      _rememberReview(
+        work,
+        previous,
+        'TEACHER',
+        DemoArtworkData.teacherName(teacherId),
+      );
+    }
+    final savedReview = <String, dynamic>{
       'teacherId': teacherId,
       'score': score,
       'maxScore': maxScore,
@@ -490,8 +550,18 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       'requestLeadReview': requestLead,
       'tagResolutions': tagResolutions,
     };
-    work.remove('seedReviewAt');
-    if (enterLead) {
+    if (teacherId == work['teacherId']) {
+      work['review'] = savedReview;
+      work.remove('seedReviewAt');
+    } else {
+      final others = DemoArtworkData.mapsOf(work['teacherReviews']).toList()
+        ..removeWhere((review) => review['teacherId'] == teacherId);
+      others.add(savedReview);
+      work['teacherReviews'] = others;
+    }
+    if (enterLead &&
+        !completedLead &&
+        DemoArtworkData.teacherStageComplete(work)) {
       final auto = !DemoArtworkData.hasDemoAccount(leaderId);
       final entered = DemoArtworkStore.now();
       final lead = <String, dynamic>{
@@ -527,11 +597,9 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         );
         lead.remove('seedLeadAt');
       }
-    } else {
-      work['leadReview'] = null;
     }
     DemoArtworkStore.saveWork(work);
-    DemoArtworkStore.notifyStudentOfReview(work);
+    DemoArtworkStore.notifyStudentOfReview(work, reviewerId: teacherId);
 
     return <String, dynamic>{
       'artworkId': workId,
@@ -609,7 +677,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     return true;
   });
 
-  // ── 作业 ────────────────────────────────────────────────────────────
+  // ── 作品 ────────────────────────────────────────────────────────────
   marking.get('/school/teacher/tasks', (req) {
     final account = req.account;
     final teacherId = account.teacherId ?? '';
@@ -632,7 +700,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final dueTime = _text(body['dueTime']);
     final classIds = req.listOf('classIds').map((e) => e.toString()).toList();
     if (title.isEmpty) {
-      throw const DemoApiException('请填写作业标题', code: 400);
+      throw const DemoApiException('请填写作品标题', code: 400);
     }
     if (!DemoArtworkData.subjects.contains(subject)) {
       throw const DemoApiException('请选择素描、色彩或速写', code: 400);
@@ -739,7 +807,10 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     }
     if (teacherFilter.isNotEmpty) {
       rows = rows
-          .where((w) => DemoArtworkData.text(w['teacherId']) == teacherFilter)
+          .where(
+            (w) =>
+                DemoArtworkData.assignedTeacherIdsOf(w).contains(teacherFilter),
+          )
           .toList();
     }
     return _projectPage(rows, req, (w) {
@@ -765,8 +836,8 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     if (!access.leader) {
       throw const DemoApiException('只能复核本组作品', code: 403);
     }
-    if (DemoArtworkData.leadStatusOf(work) != DemoArtworkData.leadInReview) {
-      throw const DemoApiException('这份作品不在复核池中', code: 400);
+    if (!DemoArtworkData.teacherStageComplete(work)) {
+      throw const DemoApiException('请等待全部任课老师完成点评', code: 400);
     }
     final body = req.bodyMap;
     final action = _text(body['action']).toUpperCase();
@@ -781,6 +852,16 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final content = _text(body['content']);
     final note = _text(body['qualityNote']);
     double? score;
+    if (action == 'REVIEW') {
+      score = _optionalNumber(body['score'], '请填写有效分数');
+      final max = DemoArtworkData.maxScoreOf(work);
+      if (score == null || score < 0 || score > max || !_twoDecimals(score)) {
+        throw DemoApiException('分数须在 0 至 $max 之间', code: 400);
+      }
+      if (content.runes.length < 5) {
+        throw const DemoApiException('组长评语至少 5 个字', code: 400);
+      }
+    }
     if (action == DemoArtworkData.actionAdjust) {
       if (reason.runes.length < DemoArtworkData.adjustReasonLength) {
         throw const DemoApiException('调分理由至少 10 个字', code: 400);
@@ -798,7 +879,15 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         content.runes.length < 5) {
       throw const DemoApiException('补充评语至少 5 个字', code: 400);
     }
-    final lead = DemoArtworkData.leadOf(work)!;
+    final lead =
+        DemoArtworkData.leadOf(work) ??
+        <String, dynamic>{
+          'enteredTime': DemoArtworkData.fmt(DemoArtworkStore.now()),
+          'reasons': <String>[],
+        };
+    if (_text(lead['action']).isNotEmpty) {
+      _rememberReview(work, lead, 'LEADER', req.account.name);
+    }
     lead
       ..['action'] = action
       ..['score'] = score
@@ -826,9 +915,23 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     if (content.runes.length < 5) {
       throw const DemoApiException('校长点评至少 5 个字', code: 400);
     }
-    final comments = DemoArtworkData.principalCommentsOf(work);
+    final score = _optionalNumber(req.bodyMap['score'], '请填写有效的校长评分');
+    if (score != null &&
+        (score < 0 ||
+            score > DemoArtworkData.maxScoreOf(work) ||
+            !_twoDecimals(score))) {
+      throw const DemoApiException('校长评分须在作品满分范围内，最多两位小数', code: 400);
+    }
+    final comments = DemoArtworkData.principalCommentsOf(work).toList();
+    for (final previous in comments.where(
+      (c) => c['userId'] == req.account.userId,
+    )) {
+      _rememberReview(work, previous, 'PRINCIPAL', req.account.name);
+    }
+    comments.removeWhere((c) => c['userId'] == req.account.userId);
     comments.add(<String, dynamic>{
       'id': DemoStore.nextId('pc-'),
+      'score': score,
       'userId': req.account.userId,
       'name': req.account.name,
       'content': content,
@@ -967,7 +1070,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
 
 // ── 查询辅助 ──────────────────────────────────────────────────────────
 
-/// 先分页，再整理字段：整理一条要查版本数、作业和学生信息，校长的列表有上千条，
+/// 先分页，再整理字段：整理一条要查版本数、作品和学生信息，校长的列表有上千条，
 /// 只整理当前页要返回的那些。
 Map<String, dynamic> _projectPage(
   List<Map<String, dynamic>> rows,
@@ -1013,7 +1116,11 @@ List<Map<String, dynamic>> _visibleWorks(DemoAccount account) {
     // 责任老师看自己的；组长额外能在详情里看本组，列表仍以自己负责为主，
     // 校长/管理员看全部。补充点评入口走详情。
     return all
-        .where((w) => DemoArtworkData.text(w['teacherId']) == teacherId)
+        .where(
+          (w) =>
+              DemoArtworkData.accessOf(account, w).canReview ||
+              DemoArtworkData.accessOf(account, w).leader,
+        )
         .toList();
   }
   return const <Map<String, dynamic>>[];
@@ -1059,13 +1166,18 @@ Map<String, dynamic> _readableWork(DemoRequest req, String id) {
   return work;
 }
 
+bool _reviewedFor(Map<String, dynamic> work, DemoAccount viewer) =>
+    DemoArtworkData.accessOf(viewer, work).canReview
+    ? DemoArtworkData.reviewedBy(work, viewer.teacherId)
+    : DemoArtworkData.teacherStageComplete(work);
+
 String? _nextPending(DemoAccount account, String currentId) {
   final pending =
       _visibleWorks(account)
           .where(
             (w) =>
                 _text(w['id']) != currentId &&
-                !DemoArtworkData.isReviewed(w) &&
+                !DemoArtworkData.reviewedBy(w, account.teacherId) &&
                 DemoArtworkData.accessOf(account, w).canReview,
           )
           .toList()
@@ -1075,7 +1187,7 @@ String? _nextPending(DemoAccount account, String currentId) {
   return pending.isEmpty ? null : _text(pending.first['id']);
 }
 
-/// [submitted] 是这名学生为这份作业交过的作品。
+/// [submitted] 是这名学生为这份作品交过的作品。
 String _taskStatus(
   Map<String, dynamic> task,
   List<Map<String, dynamic>> submitted,
@@ -1331,4 +1443,20 @@ bool _isSupportedImage(Uint8List b) {
       at(0, const [0x47, 0x49, 0x46, 0x38]) ||
       (at(0, const [0x52, 0x49, 0x46, 0x46]) &&
           at(8, const [0x57, 0x45, 0x42, 0x50]));
+}
+
+void _rememberReview(
+  Map<String, dynamic> work,
+  Map<String, dynamic> review,
+  String role,
+  String name,
+) {
+  final history = DemoArtworkData.mapsOf(work['reviewHistory']).toList();
+  history.add({
+    ...review,
+    'role': role,
+    'name': name,
+    'time': review['reviewedTime'] ?? review['time'],
+  });
+  work['reviewHistory'] = history;
 }

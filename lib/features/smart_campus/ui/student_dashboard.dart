@@ -427,7 +427,7 @@ class _StudentDashboardScheduleSectionState
 List<SmartCampusStatCardData> _placeholderStudentStats() {
   return const [
     SmartCampusStatCardData(label: '今日课程', value: '0'),
-    SmartCampusStatCardData(label: '待交作业', value: '0'),
+    SmartCampusStatCardData(label: '待交作品', value: '0'),
     SmartCampusStatCardData(label: '学期均分', value: '0'),
     SmartCampusStatCardData(label: '未读班级通知', value: '0'),
     SmartCampusStatCardData(label: '下次月考', value: '—'),
@@ -462,7 +462,7 @@ List<SmartCampusStatCardData> _parseStudentIndexStats(dynamic raw) {
       label: '今日课程',
       value: displayInt('todayCourseCount'),
     ),
-    SmartCampusStatCardData(label: '待交作业', value: displayInt('homeworkCount')),
+    SmartCampusStatCardData(label: '待交作品', value: displayInt('homeworkCount')),
     SmartCampusStatCardData(
       label: '学期均分',
       value: avgScore == null ? '0' : avgScore.toStringAsFixed(1),

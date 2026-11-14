@@ -1,25 +1,25 @@
 // =============================================================================
-// 任课老师 / 班主任端「作业批改」独立页面（"作业与批改"总览）
+// 任课老师 / 班主任端「作品批改」独立页面（"作品与批改"总览）
 //
-// 入口：教师 dashboard 快捷区「作业批改」按钮 → controller.openHomeworkReview()
+// 入口：教师 dashboard 快捷区「作品批改」按钮 → controller.openHomeworkReview()
 //      → mainView == homeworkReview + role == teacher/headTeacher → SmartCampusPage
 //      路由到本视图。返回：banner 左上角返回按钮 → onBack。
 //
 // 视觉（Figma 970 设计宽）：
-//   1. 顶部 banner（62 高）：白→#F9EDFF 渐变；左 12 返回；居中 "作业与批改"
-//      16/600；右上 "历史作业" + "发布作业" 两白底胶囊按钮（带紫色图标）。
+//   1. 顶部 banner（62 高）：白→#F9EDFF 渐变；左 12 返回；居中 "作品与批改"
+//      16/600；右上 "历史作品" + "发布作品" 两白底胶囊按钮（带紫色图标）。
 //   2. 状态 tabs（44 高 4 tab）：白底圆角 8，命中黑底 #0B081A 白字。
 //      tab：全部 / 待我批改 / 进行中 / 已截止。
 //   3. 统计面板（单白卡 12 圆角 16 内边）：
 //      · 上行（spaceBetween）：左 120×44 「全部班级 ▾」白底 1px #F3F2F3 边
 //        胶囊 → 点击 PopupSelectorField；右 累计/本学期/本月 toggle（黑底白字）。
 //      · 下行：6 张 stat card 等宽 flex（灰底 #F5F6FA 12 圆角）：
-//        待批改人次 / 发布作业数 / 已评阅人次 / 已评均分 / 最高分 / 最低分。
+//        待批改人次 / 发布作品数 / 已评阅人次 / 已评均分 / 最高分 / 最低分。
 //   4. 主体双列：
-//      · 左 340 白卡：标题 "作业列表" + 6 张 316×104 卡片（灰底/紫底 #F4F4FF
+//      · 左 340 白卡：标题 "作品列表" + 6 张 316×104 卡片（灰底/紫底 #F4F4FF
 //        选中态），每张卡顶部右上 68×22 状态角标（已截止 / 待批改 N / 进行中），
 //        主区显示截止时间 / 班级 / 科目 tag + 待批改 tag / 标题。点击切换 active。
-//      · 右 615 白卡：当前作业详情：
+//      · 右 615 白卡：当前作品详情：
 //          - 标题 + 截止时间（spaceBetween）
 //          - 灰底卡：【建议提交：图片】+ 描述说明 12 号、1.6 行高
 //          - 4 项数据指示（126×32 灰底胶囊：标签 + 数字 + 28×28 紫色渐变图标）
@@ -27,12 +27,12 @@
 //            + 上传时间 + 90×32 黑底操作按钮）
 //
 //   5. 三个右抽屉（[showSmartCampusSideDrawer]：贴右全高、240ms 从右滑入）：
-//      · 发布作业（600 宽）：作业标题输入 + 学科/期望提交格式双下拉 + 截止时间
-//        picker + 发布对象（带紫色 checkbox 的班级列表）+ 作业要求 textarea
+//      · 发布作品（600 宽）：作品标题输入 + 学科/期望提交格式双下拉 + 截止时间
+//        picker + 发布对象（带紫色 checkbox 的班级列表）+ 作品要求 textarea
 //        + 底部紫色渐变 "发布" CTA。
 //      · 历史发布记录（344 宽）：标题 "历史发布记录 + 共12条" + 7+ 张 312×104
 //        卡片，每张卡左下显示「N / 总数」提交比 + 截止时间 + 班级 + 科目 + 标题。
-//      · 作业点评（600 宽）：标题 "作业点评" + 学生 profile（40 头像 + 姓名 +
+//      · 作品点评（600 宽）：标题 "作品点评" + 学生 profile（40 头像 + 姓名 +
 //        课程 + 时间 + 待批改 tag）+ 附件卡（名称 + 大小 + 下载 + 在线预览）+
 //        "批改与点评" 分组：分数/100 输入 + 评语 textarea + 底部紫色渐变
 //        "发布批改" CTA。
@@ -212,7 +212,7 @@ Map<String, dynamic> _mergeStudentHomeworkDetailForReview(
   return out;
 }
 
-/// 作业详情：`data` 内嵌 `homework` 时摊平为与列表项一致的字段布局。
+/// 作品详情：`data` 内嵌 `homework` 时摊平为与列表项一致的字段布局。
 Map<dynamic, dynamic> _flattenHomeworkPayload(Map<dynamic, dynamic> m) {
   final hw = m['homework'];
   if (hw is! Map) return m;
@@ -269,7 +269,7 @@ class _Submission {
     this.feedback,
   });
 
-  /// 学生作业记录 ID，用于调用 studentHomeworkDetail / teacherHomeworkCorrect。
+  /// 学生作品记录 ID，用于调用 studentHomeworkDetail / teacherHomeworkCorrect。
   final String id;
   final String studentName;
   final int avatarSeed;
@@ -398,7 +398,7 @@ class _HomeworkItem {
     this.expectedExtRaw = '',
   });
 
-  /// 后端作业 ID（字符串，与列表 `id` 一致），用于 teacherHomeworkDetail / teacherHomeworkDelete。
+  /// 后端作品 ID（字符串，与列表 `id` 一致），用于 teacherHomeworkDetail / teacherHomeworkDelete。
   final String id;
   final String title;
   final String subject;
@@ -422,7 +422,7 @@ class _HomeworkItem {
   final int? subjectId;
   final List<String>? classIds;
 
-  /// 作业要求的介质编码（如 `audio`），供批改页预览推断类型。
+  /// 作品要求的介质编码（如 `audio`），供批改页预览推断类型。
   final String expectedExtRaw;
 
   String resolveSubjectDisplay(Map<int, String> subjectNameById) {
@@ -810,7 +810,7 @@ class _TeacherHomeworkReviewViewState
   Future<void> _deleteHomework(_HomeworkItem item) async {
     final ok = await showConfirmDialog(
       context: context,
-      title: '删除作业',
+      title: '删除作品',
       content: '确认删除「${item.title}」？删除后学生将无法再查看或提交，操作不可恢复。',
       confirmLabel: '删除',
     );
@@ -820,7 +820,7 @@ class _TeacherHomeworkReviewViewState
         .teacherHomeworkDelete(id: item.id);
     if (!mounted) return;
     if (res.isSuccess) {
-      AppToast.show(context, '作业已删除');
+      AppToast.show(context, '作品已删除');
       await _loadHomeworkList();
       await _loadStats();
     } else {
@@ -845,16 +845,16 @@ class _TeacherHomeworkReviewViewState
       bodyTopClipRadius: 8,
       bodyScrollable: false,
       header: SmartCampusPageBanner(
-        title: '作业与批改',
+        title: '作品与批改',
         onBack: widget.onBack,
         actions: [
           SmartCampusBannerButton(
-            label: '历史作业',
+            label: '历史作品',
             iconAsset: AppAssets.homeworkHistoryIcon,
             onTap: _openHistoryDrawer,
           ),
           SmartCampusBannerButton(
-            label: '发布作业',
+            label: '发布作品',
             iconAsset: AppAssets.homeworkPublishIcon,
             onTap: _openPublishDrawer,
           ),
@@ -906,7 +906,7 @@ class _TeacherHomeworkReviewViewState
             child: _all.isEmpty
                 ? Center(
                     child: Text(
-                      '暂无作业数据',
+                      '暂无作品数据',
                       style: TextStyle(color: _kTextHint, fontSize: ui(14)),
                     ),
                   )
@@ -947,7 +947,7 @@ class _TeacherHomeworkReviewViewState
   void _openPublishDrawer() {
     showSmartCampusSideDrawer<void>(
       context: context,
-      barrierLabel: '关闭发布作业',
+      barrierLabel: '关闭发布作品',
       builder: (ctx) => _PublishDrawer(
         onPublished: () {
           Navigator.of(ctx).maybePop();
@@ -974,7 +974,7 @@ class _TeacherHomeworkReviewViewState
     }
     showSmartCampusSideDrawer<void>(
       context: context,
-      barrierLabel: '关闭作业点评',
+      barrierLabel: '关闭作品点评',
       builder: (ctx) => _ReviewDrawer(
         item: item,
         submission: submission,
@@ -1149,7 +1149,7 @@ class _StatsPanel extends StatelessWidget {
               Expanded(
                 child: _StatCell(
                   value: '${s?.publishCount ?? 0}',
-                  label: '发布作业数',
+                  label: '发布作品数',
                 ),
               ),
               _StatGap(),
@@ -1240,7 +1240,7 @@ class _StatCell extends StatelessWidget {
 }
 
 // =============================================================================
-// 主体双列：左 340 作业列表 + 右 615 作业详情 / 提交表
+// 主体双列：左 340 作品列表 + 右 615 作品详情 / 提交表
 // =============================================================================
 
 class _BodyRow extends StatelessWidget {
@@ -1302,7 +1302,7 @@ class _BodyRow extends StatelessWidget {
   }
 }
 
-// ---- 左侧作业列表 -----------------------------------------------------------
+// ---- 左侧作品列表 -----------------------------------------------------------
 
 class _HomeworkListPanel extends StatelessWidget {
   const _HomeworkListPanel({
@@ -1334,7 +1334,7 @@ class _HomeworkListPanel extends StatelessWidget {
           Padding(
             padding: EdgeInsets.symmetric(vertical: ui(4)),
             child: Text(
-              '作业列表',
+              '作品列表',
               style: TextStyle(
                 fontSize: ui(16),
                 color: _kTextBlack,
@@ -1478,7 +1478,7 @@ class _HomeworkListCard extends StatelessWidget {
   }
 }
 
-/// 原版科目方角标签：内距 4×2、圆角 4、白底 12 号灰字（科目名取自作业数据）。
+/// 原版科目方角标签：内距 4×2、圆角 4、白底 12 号灰字（科目名取自作品数据）。
 class _SubjectTag extends StatelessWidget {
   const _SubjectTag({required this.label});
 
@@ -1574,7 +1574,7 @@ class _CornerLabel extends StatelessWidget {
   }
 }
 
-// ---- 右侧作业详情 + 4 项指标 + 学生表格 -------------------------------------
+// ---- 右侧作品详情 + 4 项指标 + 学生表格 -------------------------------------
 
 class _HomeworkDetailPanel extends StatelessWidget {
   const _HomeworkDetailPanel({
@@ -2137,7 +2137,7 @@ class _AvatarCircle extends StatelessWidget {
 }
 
 // =============================================================================
-// 发布作业右抽屉（600 宽）
+// 发布作品右抽屉（600 宽）
 // =============================================================================
 
 class _PublishDrawer extends ConsumerStatefulWidget {
@@ -2231,7 +2231,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
   Future<void> _publish() async {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
-      AppToast.show(context, '请输入作业标题');
+      AppToast.show(context, '请输入作品标题');
       return;
     }
     if (_deadlineDate == null) {
@@ -2275,7 +2275,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
     if (!mounted) return;
     setState(() => _publishing = false);
     if (res.isSuccess) {
-      AppToast.show(context, '作业已发布');
+      AppToast.show(context, '作品已发布');
       widget.onPublished?.call();
     } else {
       AppToast.show(context, res.msg.isNotEmpty ? res.msg : '发布失败，请重试');
@@ -2342,7 +2342,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
     // 原版 600 宽右抽屉骨架（紫条标题 + 分隔线 + 可滚动表单 + 底部渐变按钮），
     // 由共享的 SmartCampusSideDrawerShell 提供。
     return SmartCampusSideDrawerShell(
-      title: '发布作业',
+      title: '发布作品',
       footer: SmartCampusDrawerGradientButton(
         icon: Icons.send_rounded,
         label: _publishing ? '发布中…' : '发布',
@@ -2354,9 +2354,9 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
           children: [
             // 原版分隔线到第一个字段是 20（骨架里已留 16）。
             SizedBox(height: ui(4)),
-            _FieldLabel('作业标题'),
+            _FieldLabel('作品标题'),
             SizedBox(height: ui(12)),
-            _PlainInputField(hint: '请输入作业标题', controller: _titleCtrl),
+            _PlainInputField(hint: '请输入作品标题', controller: _titleCtrl),
             SizedBox(height: ui(20)),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2490,7 +2490,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                 ),
               ],
             SizedBox(height: ui(20)),
-            _FieldLabel('作业要求'),
+            _FieldLabel('作品要求'),
             SizedBox(height: ui(12)),
             _PlainTextArea(
               hint: '说明题目范围、命名规则、提交格式等',
@@ -2940,7 +2940,7 @@ class _HistoryCard extends StatelessWidget {
 }
 
 // =============================================================================
-// 作业点评右抽屉（600 宽）
+// 作品点评右抽屉（600 宽）
 // =============================================================================
 
 class _ReviewDrawer extends ConsumerStatefulWidget {
@@ -3058,7 +3058,7 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
         _detailExtra['fileName']?.toString() ??
         _detailExtra['attachName']?.toString() ??
         widget.submission.fileName;
-    return f?.trim().isNotEmpty == true ? f!.trim() : '作业附件';
+    return f?.trim().isNotEmpty == true ? f!.trim() : '作品附件';
   }
 
   String get _resolvedSubmitUrl {
@@ -3140,7 +3140,7 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
     // 未批改时底部 48 高渐变按钮距底 20（正文底部相应留 80），已批改时只留 20。
     // 骨架由共享的 SmartCampusSideDrawerShell 提供。
     return SmartCampusSideDrawerShell(
-      title: '作业点评',
+      title: '作品点评',
       footer: _isReviewed
           ? null
           : SmartCampusDrawerGradientButton(
@@ -3245,7 +3245,7 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
             _FieldLabel('点评'),
             SizedBox(height: ui(8)),
             _PlainTextArea(
-              hint: '请输入对该次作业的点评内容…',
+              hint: '请输入对该次作品的点评内容…',
               height: ui(100),
               controller: _commentCtrl,
               readOnly: _isReviewed,
@@ -3638,7 +3638,7 @@ class _VoiceCommentFieldState extends State<_VoiceCommentField> {
   }
 }
 
-/// 作业点评抽屉内「按住说话」按钮（固定 48×48，靠右；视觉与群聊 [_VoiceHoldBar] 一致）。
+/// 作品点评抽屉内「按住说话」按钮（固定 48×48，靠右；视觉与群聊 [_VoiceHoldBar] 一致）。
 class _HomeworkVoiceHoldBar extends StatelessWidget {
   const _HomeworkVoiceHoldBar({
     required this.recording,

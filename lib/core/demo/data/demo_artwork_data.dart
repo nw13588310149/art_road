@@ -1,5 +1,5 @@
 /// 作品点评链演示数据的定义与规则：责任老师点评 → 组长复核 → 校长点评与推优，
-/// 加上改画版本、分项评价和作业关联（口径见 `docs/美育集3.0实施规格.md` 第 1、2 节）。
+/// 加上改画版本、分项评价和作品关联（口径见 `docs/美育集3.0实施规格.md` 第 1、2 节）。
 ///
 /// 一份作品：
 /// ```
@@ -72,6 +72,7 @@ class DemoArtworkAccess {
   const DemoArtworkAccess({
     this.owner = false,
     this.responsible = false,
+    this.coTeacher = false,
     this.leader = false,
     this.principal = false,
     this.admin = false,
@@ -85,6 +86,7 @@ class DemoArtworkAccess {
 
   /// 责任老师。
   final bool responsible;
+  final bool coTeacher;
 
   /// 这份作品所在科目组的组长。
   final bool leader;
@@ -100,7 +102,8 @@ class DemoArtworkAccess {
   /// 作品已被校长推优，挂在优秀作品墙上，对全校公开。
   final bool featured;
 
-  bool get staff => responsible || leader || principal || admin || headTeacher;
+  bool get staff =>
+      responsible || coTeacher || leader || principal || admin || headTeacher;
 
   /// 只因为作品被推优才读得到的人：不是本人，对这份作品也没有教职权限。
   ///
@@ -126,10 +129,10 @@ class DemoArtworkAccess {
   /// 校长点评与优秀作品标记。
   bool get seesPrincipal => canRead;
 
-  bool get canReview => responsible;
+  bool get canReview => responsible || coTeacher;
 
   /// 非责任老师的补充点评，不计分。
-  bool get canSupplement => artTeacher && !responsible;
+  bool get canSupplement => artTeacher && !canReview && !leader;
 
   /// 校长可以点评和推优，不改分；管理员只读。
   bool get canComment => principal;
@@ -167,7 +170,12 @@ abstract final class DemoArtworkData {
   static const actionKeep = 'KEEP';
   static const actionAdjust = 'ADJUST';
   static const actionSupplement = 'SUPPLEMENT';
-  static const actions = <String>[actionKeep, actionAdjust, actionSupplement];
+  static const actions = <String>[
+    actionKeep,
+    actionAdjust,
+    actionSupplement,
+    'REVIEW',
+  ];
 
   /// 分数异常：与最近同科最终分均值的差不少于满分的 15%。
   static const anomalyRatio = 0.15;
@@ -252,7 +260,27 @@ abstract final class DemoArtworkData {
   }
 
   static Map<String, dynamic>? reviewOf(Map<String, dynamic> work) =>
-      mapOf(work['review']);
+      mapOf(work['review']) ?? mapsOf(work['teacherReviews']).firstOrNull;
+
+  /// 责任老师与共同任课老师的独立评价；旧版数据自然兼容。
+  static List<Map<String, dynamic>> reviewsOf(Map<String, dynamic> work) {
+    final first = mapOf(work['review']);
+    return [?first, ...mapsOf(work['teacherReviews'])];
+  }
+
+  static double? teacherMeanOf(Map<String, dynamic> work) {
+    final scores = <double>[];
+    for (final review in reviewsOf(work)) {
+      final score = review['score'];
+      final maximum = (review['maxScore'] as num?)?.toDouble() ?? 100;
+      if (score is num && maximum > 0) scores.add(score / maximum);
+    }
+    return scores.isEmpty
+        ? null
+        : round2(
+            scores.reduce((a, b) => a + b) / scores.length * maxScoreOf(work),
+          );
+  }
 
   static Map<String, dynamic>? leadOf(Map<String, dynamic> work) =>
       mapOf(work['leadReview']);
@@ -290,7 +318,22 @@ abstract final class DemoArtworkData {
   static String statusOf(Map<String, dynamic> work) =>
       isReviewed(work) ? statusReviewed : statusPending;
 
-  static bool isReviewed(Map<String, dynamic> work) => work['review'] is Map;
+  static bool isReviewed(Map<String, dynamic> work) =>
+      work['review'] is Map ||
+      (work['teacherReviews'] is List &&
+          (work['teacherReviews'] as List).isNotEmpty);
+
+  static Set<String> assignedTeacherIdsOf(Map<String, dynamic> work) => {
+    text(work['teacherId']),
+    ...(work['teacherIds'] as List? ?? []).map(text),
+  }..remove('');
+
+  static bool reviewedBy(Map<String, dynamic> work, String? teacherId) =>
+      reviewsOf(work).any((review) => review['teacherId'] == teacherId);
+
+  static bool teacherStageComplete(Map<String, dynamic> work) =>
+      isReviewed(work) &&
+      assignedTeacherIdsOf(work).every((id) => reviewedBy(work, id));
 
   static String leadStatusOf(Map<String, dynamic> work) {
     final lead = work['leadReview'];
@@ -302,23 +345,22 @@ abstract final class DemoArtworkData {
 
   /// 组长调分后取组长的分数，否则取责任老师的分数；未点评或没有打分时为 null。
   static double? finalScoreOf(Map<String, dynamic> work) {
-    final review = work['review'];
+    final review = reviewOf(work);
     if (review is! Map) {
       return null;
     }
     final lead = work['leadReview'];
     if (lead is Map &&
-        text(lead['action']) == actionAdjust &&
+        text(lead['action']).isNotEmpty &&
         lead['score'] is num) {
       return (lead['score'] as num).toDouble();
     }
-    final score = review['score'];
-    return score is num ? score.toDouble() : null;
+    return teacherMeanOf(work);
   }
 
   static double maxScoreOf(Map<String, dynamic> work) {
-    final review = work['review'];
-    final max = review is Map ? review['maxScore'] : null;
+    final review = reviewOf(work);
+    final max = review?['maxScore'];
     return max is num && max > 0 ? max.toDouble() : 100;
   }
 
@@ -512,6 +554,9 @@ abstract final class DemoArtworkData {
         : '';
     return DemoArtworkAccess(
       responsible: viewerTeacher.isNotEmpty && viewerTeacher == teacherId,
+      coTeacher:
+          viewerTeacher.isNotEmpty &&
+          (work['teacherIds'] as List? ?? []).contains(viewerTeacher),
       leader: group.isNotEmpty && viewer.groupLeaderSubjects.contains(group),
       principal: role == DemoRole.principal,
       admin: role == DemoRole.admin,
@@ -609,11 +654,34 @@ abstract final class DemoArtworkData {
           ),
         );
       }
+      for (final item in mapsOf(work['teacherReviews'])) {
+        events.add(
+          event(
+            'TEACHER',
+            'REVIEW',
+            teacherName(text(item['teacherId'])),
+            item['reviewedTime'],
+            content: text(item['content']),
+            score: item['score'],
+          ),
+        );
+      }
       final lead = leadOf(work);
       final action = text(lead?['action']);
       if (lead != null && action.isNotEmpty) {
         final leader = teacherName(text(lead['leaderId']));
         switch (action) {
+          case 'REVIEW':
+            events.add(
+              event(
+                'LEADER',
+                'LEAD_REVIEW',
+                leader,
+                lead['time'],
+                content: text(lead['content']),
+                score: lead['score'],
+              ),
+            );
           case actionAdjust:
             events.add(
               event(
@@ -659,6 +727,19 @@ abstract final class DemoArtworkData {
           text(comment['name']),
           comment['time'],
           content: text(comment['content']),
+          score: comment['score'],
+        ),
+      );
+    }
+    for (final item in mapsOf(work['reviewHistory'])) {
+      events.add(
+        event(
+          text(item['role']),
+          'REVIEW_HISTORY',
+          text(item['name']),
+          item['time'],
+          content: text(item['content']),
+          score: item['score'],
         ),
       );
     }

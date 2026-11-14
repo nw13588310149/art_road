@@ -386,7 +386,7 @@ class _WorkspaceCard extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           image == null
-              ? '上传一张作业或范画，或直接点一张示例。同一张图可在各工具中继续使用，图片只在本机处理。'
+              ? '上传一张作品或范画，或直接点一张示例。同一张图可在各工具中继续使用，图片只在本机处理。'
               : '当前画作 · 同一张图可在各工具中继续使用，图片只在本机处理。',
           style: libraryText(
             size: 12,

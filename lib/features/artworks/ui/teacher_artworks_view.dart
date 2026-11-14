@@ -193,7 +193,7 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
               ? '查看全校作品、校长点评与推优'
               : isPrincipal
               ? '查看全校作品与点评记录'
-              : '责任老师点评后学生即可查看，需要时可请组长复核',
+              : '独立记录每位任课老师的评价，完成后交给教学组长',
           bottom: Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,

@@ -145,6 +145,10 @@ class _TimelineRow extends StatelessWidget {
     switch (type) {
       case 'SUBMIT':
         return event.content.trim().isEmpty ? '提交作品' : event.content.trim();
+      case 'LEAD_REVIEW':
+        return '组长点评 · ${points(event.score)}';
+      case 'REVIEW_HISTORY':
+        return '历史评价 · ${event.score == null ? '未评分' : points(event.score)}';
       case 'REVIEW':
         return event.score == null ? '点评 · 未评分' : '点评 · ${points(event.score)}';
       case 'SUPPLEMENT':
@@ -160,7 +164,7 @@ class _TimelineRow extends StatelessWidget {
       case 'LEAD_SUPPLEMENT':
         return '复核 · 补充评语';
       case 'PRINCIPAL_COMMENT':
-        return '校长点评';
+        return event.score == null ? '校长点评' : '校长点评 · ${points(event.score)}';
       case 'FEATURE':
         return '推荐到优秀作品墙';
       default:

@@ -204,10 +204,10 @@ class HomeDashboardState {
 }
 
 /// 首页九宫格，按角色给入口。学生、任课老师、班主任从左到右、从上到下为：
-/// 资讯、校圈、群聊、工具箱、作业、素材库、作品库、小课件、集市。
-/// 作业对学生打开「我的作业」，对老师和班主任打开「作业批改」。
-/// 素材库打开范画库，作品库打开作品档案（老师为作品点评），小课件打开校园课件。
-/// 集市尚未上线。宿管是查寝与值班工具，管理员是教务管理工具。
+/// 资讯、校圈、群聊、工具箱、作品、素材库、作品库、小课件、集市。
+/// 作品对学生打开「我的作品」，对老师和班主任打开「作品批改」。
+/// 素材库打开范画库，作品库打开作品档案（老师为作品点评），小课件打开知识点阅读专题。
+/// 小课件与集市对全部身份开放。
 List<HomeQuickAction> buildQuickActions({
   bool isStaff = false,
   String role = '',
@@ -215,6 +215,16 @@ List<HomeQuickAction> buildQuickActions({
   const campusIcons = AppAssets.campusHomeActions;
   if (role == 'dormManager') {
     return const <HomeQuickAction>[
+      HomeQuickAction(
+        name: '小课件',
+        icon: Icons.auto_stories_outlined,
+        route: RoutePaths.microLessons,
+      ),
+      HomeQuickAction(
+        name: '集市',
+        icon: Icons.storefront_outlined,
+        route: RoutePaths.marketplace,
+      ),
       HomeQuickAction(
         name: '按宿舍查寝',
         iconAsset: '$campusIcons/dorm_manager/dorm_check_by_room.png',
@@ -259,6 +269,16 @@ List<HomeQuickAction> buildQuickActions({
   }
   if (role == 'admin' || role == 'principal') {
     return <HomeQuickAction>[
+      const HomeQuickAction(
+        name: '小课件',
+        icon: Icons.auto_stories_outlined,
+        route: RoutePaths.microLessons,
+      ),
+      const HomeQuickAction(
+        name: '集市',
+        icon: Icons.storefront_outlined,
+        route: RoutePaths.marketplace,
+      ),
       const HomeQuickAction(
         name: '学生管理',
         iconAsset: '$campusIcons/admin/student_management.png',
@@ -329,7 +349,7 @@ List<HomeQuickAction> buildQuickActions({
       arguments: <String, dynamic>{'returnToSource': true},
     ),
     HomeQuickAction(
-      name: '作业',
+      name: '作品',
       iconAsset: '$campusIcons/student/my_homework.png',
       campus: isStaff
           ? HomeCampusTarget.homeworkReview
@@ -348,12 +368,12 @@ List<HomeQuickAction> buildQuickActions({
     const HomeQuickAction(
       name: '小课件',
       iconAsset: AppAssets.homeQuickQuestionBank,
-      route: RoutePaths.school,
+      route: RoutePaths.microLessons,
     ),
     const HomeQuickAction(
       name: '集市',
       icon: Icons.storefront_rounded,
-      comingSoon: true,
+      route: RoutePaths.marketplace,
     ),
   ];
 }

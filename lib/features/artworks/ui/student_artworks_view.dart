@@ -319,7 +319,7 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
                 ArtworkStatusFilter.reviewed => '还没有完成点评的作品',
               },
               description: switch (state.filter) {
-                ArtworkStatusFilter.all => '把日常作业拍照上传，老师会逐一点评',
+                ArtworkStatusFilter.all => '把日常作品拍照上传，老师会逐一点评',
                 ArtworkStatusFilter.pending => '上传的作品在老师点评完成前会出现在这里',
                 ArtworkStatusFilter.reviewed => '全部老师点评完成后，作品会出现在这里',
               },

@@ -1,6 +1,6 @@
 import 'smart_campus_dashboard_data.dart';
 
-/// 学生 dashboard 快捷入口角标（我的作业 / 我的考试 / 我的请假）。
+/// 学生 dashboard 快捷入口角标（我的作品 / 我的考试 / 我的请假）。
 class StudentDashboardBadges {
   const StudentDashboardBadges({
     this.homeworkPending = 0,
@@ -8,7 +8,7 @@ class StudentDashboardBadges {
     this.leavePending = 0,
   });
 
-  /// 待交作业（对齐首页统计「待交作业」/`homeworkCount`）。
+  /// 待交作品（对齐首页统计「待交作品」/`homeworkCount`）。
   final int homeworkPending;
 
   /// 待考考试（`myExamList` tab=1 或 `phase.isPending`）。
@@ -56,7 +56,7 @@ StudentDashboardBadges parseStudentDashboardBadgesFromIndex(dynamic raw) {
 
 Map<String, int> buildStudentActionBadges(StudentDashboardBadges badges) {
   return <String, int>{
-    '我的作业': badges.homeworkPending,
+    '我的作品': badges.homeworkPending,
     '我的考试': badges.examPending,
     '我的请假': badges.leavePending,
   };

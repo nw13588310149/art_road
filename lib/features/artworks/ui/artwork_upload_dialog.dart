@@ -59,6 +59,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
   ];
   static const _otherSubject = '其他';
 
+  final _teacherIds = <String>{};
   final _images = <ArtworkDraftImage>[];
   final _uploaded = <ArtworkDraftImage, String>{};
   final _title = TextEditingController();
@@ -230,6 +231,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
             description: _description.text.trim(),
             images: List<ArtworkDraftImage>.of(_images),
             parentId: widget.parentId,
+            teacherIds: _teacherIds.toList(),
             taskId: _taskId,
           ),
           uploaded: _uploaded,
@@ -268,7 +270,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
       },
       child: AppDialog(
         title: widget.parentId.isEmpty ? '上传作品' : '改画重交',
-        message: '责任老师点评后，即可查看分数与评语',
+        message: '多位任课老师独立点评，全部完成后交给教学组长',
         width: AppSize.dialogWide,
         actions: [
           AppButton(
@@ -314,12 +316,12 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
         ),
         if (taskState != null) ...[
           const SizedBox(height: AppSpace.s20),
-          const _FieldLabel(label: '关联作业（可选）'),
+          const _FieldLabel(label: '关联作品（可选）'),
           AppSelect<String>(
             value: _taskId,
             enabled:
                 enabled && widget.taskId.isEmpty && availableTasks.isNotEmpty,
-            hint: taskState.loading ? '正在加载作业' : '关联作业',
+            hint: taskState.loading ? '正在加载作品' : '关联作品',
             options: [
               const AppSelectOption(value: '', label: '自主练习'),
               for (final task in availableTasks)
@@ -340,7 +342,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
           ),
           if (taskState.errorMessage.isNotEmpty)
             AppButton(
-              label: '重新加载作业',
+              label: '重新加载作品',
               variant: AppButtonVariant.text,
               onTap: ref.read(artworkTasksControllerProvider.notifier).refresh,
             ),
@@ -415,6 +417,39 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
         const _FieldLabel(label: '绘画日期'),
         _DateField(date: _date, onTap: enabled ? _pickDate : null),
         const SizedBox(height: AppSpace.s20),
+        if (widget.parentId.isEmpty) ...[
+          Text('共同点评老师（可多选）', style: AppText.body14Strong),
+          const SizedBox(height: 8),
+          ref
+              .watch(artworkReviewTeachersProvider)
+              .when(
+                loading: () => const AppLoadingIndicator(),
+                error: (_, _) => AppButton(
+                  label: '重新加载老师',
+                  variant: AppButtonVariant.text,
+                  onTap: () => ref.invalidate(artworkReviewTeachersProvider),
+                ),
+                data: (teachers) => Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final teacher in teachers)
+                      AppChip(
+                        label: teacher.teacherName,
+                        selected: _teacherIds.contains(teacher.teacherId),
+                        onTap: () => setState(() {
+                          if (!_teacherIds.add(teacher.teacherId)) {
+                            _teacherIds.remove(teacher.teacherId);
+                          }
+                        }),
+                      ),
+                  ],
+                ),
+              ),
+          const SizedBox(height: 8),
+          Text('科目责任老师自动加入，每位老师分别评分与点评。', style: AppText.caption12),
+          const SizedBox(height: 16),
+        ],
         AppInputField(
           controller: _description,
           label: '作品说明（选填）',

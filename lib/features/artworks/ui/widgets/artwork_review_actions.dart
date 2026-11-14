@@ -24,7 +24,7 @@ class ArtworkLeadReviewForm extends ConsumerStatefulWidget {
 }
 
 class _ArtworkLeadReviewFormState extends ConsumerState<ArtworkLeadReviewForm> {
-  String _action = 'KEEP';
+  String _action = 'REVIEW';
   int _stars = 0;
   late final _score = TextEditingController(
     text: widget.detail.review?.score == null
@@ -49,7 +49,7 @@ class _ArtworkLeadReviewFormState extends ConsumerState<ArtworkLeadReviewForm> {
     final provider = artworkReviewControllerProvider(widget.detail.work.id);
     final busy = ref.watch(provider.select((state) => state.saving));
     return AppCard(
-      title: '提交复核',
+      title: '教学组长点评',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: AppSpace.s12,
@@ -58,28 +58,30 @@ class _ArtworkLeadReviewFormState extends ConsumerState<ArtworkLeadReviewForm> {
             value: _action,
             onChanged: (value) => setState(() => _action = value),
             segments: const [
+              AppSegment(value: 'REVIEW', label: '独立评分'),
               AppSegment(value: 'KEEP', label: '维持'),
               AppSegment(value: 'ADJUST', label: '调分'),
               AppSegment(value: 'SUPPLEMENT', label: '补充评语'),
             ],
           ),
-          if (_action == 'ADJUST') ...[
+          if (_action == 'ADJUST' || _action == 'REVIEW') ...[
             AppInputField(
               controller: _score,
-              label: '调整后分数',
+              label: _action == 'REVIEW' ? '组长评分' : '调整后分数',
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
             ),
-            AppInputField(
-              controller: _reason,
-              label: '调分理由（至少 10 字）',
-              multiline: true,
-              minLines: 2,
-              maxLines: 4,
-            ),
+            if (_action == 'ADJUST')
+              AppInputField(
+                controller: _reason,
+                label: '调分理由（至少 10 字）',
+                multiline: true,
+                minLines: 2,
+                maxLines: 4,
+              ),
           ],
-          if (_action == 'SUPPLEMENT')
+          if (_action == 'SUPPLEMENT' || _action == 'REVIEW')
             AppInputField(
               controller: _content,
               label: '组长评语',
@@ -117,11 +119,14 @@ class _ArtworkLeadReviewFormState extends ConsumerState<ArtworkLeadReviewForm> {
                         .submitLeadReview(
                           action: _action,
                           qualityStars: _stars,
-                          score: _action == 'ADJUST'
+                          score: (_action == 'ADJUST' || _action == 'REVIEW')
                               ? double.tryParse(_score.text.trim())
                               : null,
                           reason: _action == 'ADJUST' ? _reason.text : '',
-                          content: _action == 'SUPPLEMENT' ? _content.text : '',
+                          content:
+                              (_action == 'SUPPLEMENT' || _action == 'REVIEW')
+                              ? _content.text
+                              : '',
                           qualityNote: _note.text,
                         );
                     if (!context.mounted) return;

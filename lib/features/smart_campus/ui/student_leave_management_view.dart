@@ -1122,7 +1122,7 @@ String _headTeacherStepLabel(StudentLeaveRecord source) {
 // =============================================================================
 // 发起请假 · 右侧抽屉
 //   · 整体 600 宽，从右滑入；与 dorm 端共用同一布局，但裁剪掉「顶班/交接说明」
-//     字段（学生不需要），并把"作业标题"换成「请假类型」单选下拉。
+//     字段（学生不需要），并把"作品标题"换成「请假类型」单选下拉。
 //   · 时长根据开始/结束时间自动计算（向上取小时整数），用户可手动覆盖。
 //   · 提交按钮在校验通过后回调 `_LeaveApplyResult` 给父级，由父级新增记录。
 // =============================================================================
@@ -1362,7 +1362,7 @@ class _LeaveApplyDrawerState extends State<_LeaveApplyDrawer> {
                     SizedBox(height: ui(12)),
                     _TextAreaField(
                       controller: _noteCtrl,
-                      placeholder: '补充说明，例如已与班主任沟通、需课代表代收作业等',
+                      placeholder: '补充说明，例如已与班主任沟通、需课代表代收作品等',
                     ),
                     SizedBox(height: ui(28)),
                   ],

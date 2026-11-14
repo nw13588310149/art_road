@@ -874,7 +874,7 @@ const _seedPosts = <_SeedPost>[
   _SeedPost(
     author: 's:26',
     minutesAgo: 6 * 24 * 60,
-    content: '作品分享｜大胡子石膏像 6 小时长期作业。胡子的卷曲按组归纳，先分大的明暗，再挑前面几组刻画，其余的概括掉，这次终于没有画花。',
+    content: '作品分享｜大胡子石膏像 6 小时长期作品。胡子的卷曲按组归纳，先分大的明暗，再挑前面几组刻画，其余的概括掉，这次终于没有画花。',
     images: ['${_art}sketch-bust-2.jpg'],
     likes: 77,
     favorites: 20,
@@ -892,7 +892,7 @@ const _seedPosts = <_SeedPost>[
     author: 's:31',
     minutesAgo: 7 * 24 * 60,
     content:
-        '色彩静物｜同一组陶罐和水果的两张作业，一张浅灰背景，一张深褐背景。对比下来，深背景'
+        '色彩静物｜同一组陶罐和水果的两张作品，一张浅灰背景，一张深褐背景。对比下来，深背景'
         '更容易把白衬布衬亮，但暗部更难画透。',
     images: ['${_art}color-still-5.jpg', '${_art}color-still-1.jpg'],
     likes: 52,
@@ -916,7 +916,7 @@ const _seedPosts = <_SeedPost>[
     ref: 'ghost-drawing',
     author: 's:29',
     minutesAgo: 2 * 24 * 60 + 2 * 60,
-    content: '接速写、色彩作业代画，晚自习前交稿，需要的同学私信我。',
+    content: '接速写、色彩作品代画，晚自习前交稿，需要的同学私信我。',
     images: ['${_art}speed-figure-3.jpg'],
     likes: 3,
     favorites: 0,

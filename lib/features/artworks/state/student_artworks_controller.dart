@@ -253,6 +253,7 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
       imageIds: imageIds,
       taskId: draft.taskId,
       parentId: draft.parentId,
+      teacherIds: draft.teacherIds,
     );
     if (!response.isSuccess) {
       return response.errorOr('作品提交失败，请稍后重试');
@@ -267,3 +268,14 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
     state = state.copyWith(errorMessage: '');
   }
 }
+
+final artworkReviewTeachersProvider =
+    FutureProvider.autoDispose<List<ArtworkTeacher>>((ref) async {
+      final response = await ref
+          .watch(artworkRepositoryProvider)
+          .getReviewTeachers();
+      if (!response.isSuccess) throw StateError(response.displayMsg);
+      return [
+        for (final row in response.data as List) ArtworkTeacher.fromJson(row),
+      ];
+    });

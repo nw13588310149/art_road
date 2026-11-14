@@ -9,7 +9,7 @@ import '../../data/artwork_rules.dart';
 
 /// 作品卡片与详情上的状态小标。
 ///
-/// 形状与配色取自参照工程（80e9dd3c）：方角标签和绿 / 橙两组状态色来自作业卡
+/// 形状与配色取自参照工程（80e9dd3c）：方角标签和绿 / 橙两组状态色来自作品卡
 /// （`student_my_homework_view.dart` 85–90、1848–1897），右上角标来自人员卡
 /// （`admin_student_management_view.dart` 1286–1310）。原版的紫色换成品牌紫。
 abstract final class ArtworkMarkPalette {

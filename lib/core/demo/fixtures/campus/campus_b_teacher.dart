@@ -1,5 +1,5 @@
 /// 智慧校园 · 任课老师端演示接口（`/app/school/v2/teacher/*` 中与授课相关的
-/// 部分）：身份、班级与课表、签课、小课申请、校级通知、学生名册、考评与作业、
+/// 部分）：身份、班级与课表、签课、小课申请、校级通知、学生名册、考评与作品、
 /// 我的请假。班主任端的接口见 campus_b_head_teacher.dart。
 library;
 
@@ -841,7 +841,7 @@ Object? _examFullDetail(DemoRequest req) {
   };
 }
 
-// ── 作业 ──────────────────────────────────────────────────────────────
+// ── 作品 ──────────────────────────────────────────────────────────────
 
 List<Map<String, dynamic>> _scopeHomework(DemoRequest req) {
   final scope = cbScope(req);
@@ -928,7 +928,7 @@ Future<Object?> _homeworkSave(DemoRequest req) async {
   ];
   final title = req.str('title');
   if (title.isEmpty) {
-    throw const DemoApiException('请输入作业标题');
+    throw const DemoApiException('请输入作品标题');
   }
   if (classIds.isEmpty) {
     throw const DemoApiException('请选择至少一个发布班级');
@@ -954,10 +954,10 @@ Future<Object?> _homeworkSave(DemoRequest req) async {
 Map<String, dynamic> _homeworkOf(DemoRequest req) {
   final hw = cbHomeworkById(req.str('id'));
   if (hw == null) {
-    throw const DemoApiException('作业不存在或已删除');
+    throw const DemoApiException('作品不存在或已删除');
   }
   if (!cbScope(req).ownsTeacher(hw['teacherUserId'])) {
-    throw const DemoApiException('没有权限查看这份作业', code: 403);
+    throw const DemoApiException('没有权限查看这份作品', code: 403);
   }
   return hw;
 }
@@ -968,10 +968,10 @@ Object? _homeworkDetail(DemoRequest req) =>
 Object? _homeworkDelete(DemoRequest req) {
   final hw = _homeworkOf(req);
   if (!cbScope(req).ownsTeacher(hw['teacherUserId'])) {
-    throw const DemoApiException('只能删除自己布置的作业');
+    throw const DemoApiException('只能删除自己布置的作品');
   }
   if (cbRecordsOf(hw['id']).any((record) => record['artworkId'] != null)) {
-    throw const DemoApiException('已有学生提交作品，无法删除这份作业', code: 400);
+    throw const DemoApiException('已有学生提交作品，无法删除这份作品', code: 400);
   }
   cbDeleteHomework(cbStr(hw['id']));
   return true;
@@ -980,13 +980,13 @@ Object? _homeworkDelete(DemoRequest req) {
 Map<String, dynamic> _recordOf(DemoRequest req) {
   final record = cbRecordById(req.str('id'));
   if (record == null) {
-    throw const DemoApiException('学生作业记录不存在');
+    throw const DemoApiException('学生作品记录不存在');
   }
   return record;
 }
 
 Object? _homeworkCorrect(DemoRequest req) {
-  throw const DemoApiException('请在作品点评工作台批改作业', code: 400);
+  throw const DemoApiException('请在作品点评工作台批改作品', code: 400);
 }
 
 Object? _studentHomeworkDetail(DemoRequest req) {

@@ -9,7 +9,7 @@ import 'student_leave_data.dart';
 /// 智慧校园 **学生端** `POST /app/school/v2/student/*`。
 ///
 /// 与 [TeacherRepository] 中任课老师调用的 `teacher/...` 路径不同。
-/// 学生首页概览 [index]、我的课表 [courseList]、「我的作业」等均走本类。
+/// 学生首页概览 [index]、我的课表 [courseList]、「我的作品」等均走本类。
 final studentRepositoryProvider = Provider<StudentRepository>((ref) {
   final client = ref.watch(apiClientProvider);
   return StudentRepository(client: client);
@@ -22,7 +22,7 @@ class StudentRepository {
 
   static const _base = '/app/school/v2/student';
 
-  /// 学生首页概览：今日课程、待交作业、学期均分、班级未读通知、月考/统考时间等。
+  /// 学生首页概览：今日课程、待交作品、学期均分、班级未读通知、月考/统考时间等。
   Future<ApiResponse> index() {
     return client.post('$_base/index');
   }
@@ -145,7 +145,7 @@ class StudentRepository {
     return client.post('$_base/schoolClassNotice/detail', data: body);
   }
 
-  /// 我的作业列表（分页）。
+  /// 我的作品列表（分页）。
   ///
   /// - [status]：`0` 待提交、`1` 已提交、`2` 已评分；不传则不限状态（全部）。
   Future<ApiResponse> studentHomeworkList({
@@ -158,12 +158,12 @@ class StudentRepository {
     return client.post('$_base/studentHomeworkList', data: body);
   }
 
-  /// 学生作业数据统计：科目均分与分数段分布。
+  /// 学生作品数据统计：科目均分与分数段分布。
   Future<ApiResponse> studentHomeworkSum() {
     return client.post('$_base/studentHomeworkSum');
   }
 
-  /// 作业详情。`id` 须传列表项的 **`homeworkStudentId`**（学生作业记录 id），勿用作业 `id`。
+  /// 作品详情。`id` 须传列表项的 **`homeworkStudentId`**（学生作品记录 id），勿用作品 `id`。
   Future<ApiResponse> studentHomeworkDetail({required String id}) {
     return client.post(
       '$_base/studentHomeworkDetail',
@@ -171,7 +171,7 @@ class StudentRepository {
     );
   }
 
-  /// 提交作业。`id` 为 **`homeworkStudentId`**；`studentParam1`～`3` 预留给附件路径、
+  /// 提交作品。`id` 为 **`homeworkStudentId`**；`studentParam1`～`3` 预留给附件路径、
   /// 文件名、提交类型等扩展（与上传通道对齐）。
   Future<ApiResponse> studentHomeworkSubmit({
     required String id,

@@ -386,14 +386,14 @@ abstract final class AppAssets {
   static const studentLeaveCreateApplyIcon =
       'assets/images/smartCampus/student/leave/create_apply_icon.png';
 
-  /// 学生 · 我的作业 · 顶部统计卡背景（作业均分 / 已提交 / 已批阅）。
+  /// 学生 · 我的作品 · 顶部统计卡背景（作品均分 / 已提交 / 已批阅）。
   static const studentHomeworkStatCard1 = 'assets/images/new/我的作业.png';
   static const studentHomeworkStatCard2 =
       'assets/images/smartCampus/student/homework/stat_card_2.png';
   static const studentHomeworkStatCard3 =
       'assets/images/smartCampus/student/homework/stat_card_3.png';
 
-  /// 学生 · 我的作业 · 作业卡背景。
+  /// 学生 · 我的作品 · 作品卡背景。
   static const studentHomeworkCardBg =
       'assets/images/smartCampus/student/homework/card_bg.png';
 
@@ -405,7 +405,7 @@ abstract final class AppAssets {
   static const teacherStudentRosterStatCard3 =
       'assets/images/smartCampus/teacher/student_roster/stat_card_3.png';
 
-  /// 作业与批改 · 发布作业截止时间 / 学生我的作业截止时间。
+  /// 作品与批改 · 发布作品截止时间 / 学生我的作品截止时间。
   static const homeworkDeadlineIcon =
       'assets/images/smartCampus/teacher/homework/deadline_icon.png';
   static const homeworkHistoryIcon =
@@ -415,7 +415,7 @@ abstract final class AppAssets {
   static const teacherExamHistoryIcon =
       'assets/images/smartCampus/teacher/exam/history_icon.png';
 
-  /// 作业点评抽屉 · 附件下载 / 在线预览 / 语音点评 / 删除语音。
+  /// 作品点评抽屉 · 附件下载 / 在线预览 / 语音点评 / 删除语音。
   static const homeworkReviewDownloadIcon =
       'assets/images/smartCampus/teacher/homework/review_download_icon.png';
   static const homeworkReviewPreviewIcon =

@@ -1,8 +1,8 @@
-/// 作品点评链的种子数据：每次按「现在」重新生成最近 8 周的作业、作品、点评、复核、
+/// 作品点评链的种子数据：每次按「现在」重新生成最近 8 周的作品、作品、点评、复核、
 /// 校长点评与改画版本，不落盘。
 ///
 /// 两部分数据：
-/// - 日常数据按「日期 + 学生 + 作业」取固定随机数，同一份作品在哪天生成结果都一样，
+/// - 日常数据按「日期 + 学生 + 作品」取固定随机数，同一份作品在哪天生成结果都一样，
 ///   只有「现在」之后才发生的事件看不到；
 /// - 留给演示账号的待办（林小雨的故事线、李静与赵雪的待点评、张明远的待复核、
 ///   王海波的超时作品）按相对「现在」的时间编排，id 固定，被操作后整条存进
@@ -174,7 +174,7 @@ const _leadDelay = <String, (int, int)>{
 /// 质量星级的基准：李静高，王海波低。
 const _qualityBase = <String, double>{'t-1': 4.6, 't-4': 3.9, 't-5': 2.8};
 
-/// 每个班每周每科 1 次作业，由该科老师在有课的那天上午布置：周一、周三、周五
+/// 每个班每周每科 1 次作品，由该科老师在有课的那天上午布置：周一、周三、周五
 /// 各一科，三个班错开（值为星期几）。
 const _plan = <String, Map<String, int>>{
   '501': {'素描': 1, '速写': 3, '色彩': 5},
@@ -224,7 +224,7 @@ const _taskPool = <String, List<(String, String)>>{
   ],
 };
 
-/// 作业的参考范画（范画库里的作品 id），隔一次布置一张。
+/// 作品的参考范画（范画库里的作品 id），隔一次布置一张。
 const _referenceWorks = <String, List<String>>{
   '素描': ['7101', '7102', '7103', '7104', '7106'],
   '色彩': ['7111', '7112', '7114', '7115'],
@@ -284,18 +284,8 @@ const _studentNotes = <String, List<String>>{
     '这次尝试了新的起稿方法。',
     '时间有点紧，后半段画得比较赶。',
   ],
-  '色彩': [
-    '颜色调了很多遍还是觉得脏。',
-    '想请老师看一下整体色调。',
-    '尝试了偏暖的整体色调。',
-    '背景不知道怎么处理比较好。',
-  ],
-  '速写': [
-    '人物比例不太确定。',
-    '想请老师看一下动态。',
-    '课间在操场画的。',
-    '三个人物的前后关系不太会处理。',
-  ],
+  '色彩': ['颜色调了很多遍还是觉得脏。', '想请老师看一下整体色调。', '尝试了偏暖的整体色调。', '背景不知道怎么处理比较好。'],
+  '速写': ['人物比例不太确定。', '想请老师看一下动态。', '课间在操场画的。', '三个人物的前后关系不太会处理。'],
 };
 
 /// 各分项做得好时的一句话。
@@ -552,16 +542,14 @@ abstract final class DemoArtworkSeed {
   }) {
     final teacherId = DemoArtworkData.text(work['teacherId']);
     final subject = DemoArtworkData.text(work['subject']);
-    final draft =
-        _W(
-            id: DemoArtworkData.text(work['id']),
-            person: DemoArtworkData.personOf(work),
-            subject: subject,
-            title: DemoArtworkData.text(work['title']),
-            submit: at,
-            teacherId: teacherId,
-          )
-          ..reviewAt = at;
+    final draft = _W(
+      id: DemoArtworkData.text(work['id']),
+      person: DemoArtworkData.personOf(work),
+      subject: subject,
+      title: DemoArtworkData.text(work['title']),
+      submit: at,
+      teacherId: teacherId,
+    )..reviewAt = at;
     final problems = <String>[
       for (final tag in previousTags)
         if (!DemoArtworkData.isHighlightTag(
@@ -599,7 +587,8 @@ abstract final class DemoArtworkSeed {
           )
           ..score = score is num ? score.toDouble() : null
           ..reasons = <String>[
-            for (final reason in (lead['reasons'] as List? ?? const <dynamic>[]))
+            for (final reason
+                in (lead['reasons'] as List? ?? const <dynamic>[]))
               '$reason',
           ]
           ..leaderId = DemoArtworkData.text(lead['leaderId']);
@@ -626,8 +615,14 @@ abstract final class DemoArtworkSeed {
 DateTime _d(DateTime day, int addDays) =>
     DateTime(day.year, day.month, day.day + addDays);
 
-DateTime _at(DateTime day, int minutes, [int seconds = 0]) =>
-    DateTime(day.year, day.month, day.day, minutes ~/ 60, minutes % 60, seconds);
+DateTime _at(DateTime day, int minutes, [int seconds = 0]) => DateTime(
+  day.year,
+  day.month,
+  day.day,
+  minutes ~/ 60,
+  minutes % 60,
+  seconds,
+);
 
 bool _school(DateTime day) => DemoArtworkData.isSchoolDay(day);
 
@@ -666,12 +661,16 @@ String _dayCode(DateTime day) =>
     '${_two(day.year % 100)}${_two(day.month)}${_two(day.day)}';
 
 /// 课后时段里的一个时刻；[frac]、[secFrac] 取 0–1。
-DateTime _slotTime(DateTime day, int slot, double frac, [double secFrac = 0.5]) =>
-    _at(
-      day,
-      _slotStart[slot] + (frac * (_slotLength[slot] - 1)).floor(),
-      (secFrac * 59).floor(),
-    );
+DateTime _slotTime(
+  DateTime day,
+  int slot,
+  double frac, [
+  double secFrac = 0.5,
+]) => _at(
+  day,
+  _slotStart[slot] + (frac * (_slotLength[slot] - 1)).floor(),
+  (secFrac * 59).floor(),
+);
 
 /// 从 [from] 起再过 [minutes] 个白天的分钟（08:30–21:30，周日不算）。
 DateTime _workAdd(DateTime from, int minutes) {
@@ -771,7 +770,7 @@ void _drawReview(
   final rng = _Rng('review|${w.id}');
   final profile = _profiles[w.teacherId] ?? _fallbackProfile;
 
-  // 用时。林小雨的日常作业都很快点评，她名下的待办只来自故事线。
+  // 用时。林小雨的日常作品都很快点评，她名下的待办只来自故事线。
   final overtime = rng.chance(profile.lateProb);
   var delay = overtime
       ? rng.range(800, profile.lateMax).round()
@@ -987,7 +986,8 @@ Map<String, dynamic> _reviewMap(_W w, DateTime at) => <String, dynamic>{
   'reviewedTime': DemoArtworkData.fmt(at),
   'dimensions': <String, dynamic>{...w.dims},
   'tags': <Map<String, dynamic>>[
-    for (final index in w.tags) ?DemoArtworkData.tagSnapshot(w.teacherId, index),
+    for (final index in w.tags)
+      ?DemoArtworkData.tagSnapshot(w.teacherId, index),
   ],
   'voiceRef': '',
   'voiceSeconds': 0,
@@ -1013,7 +1013,7 @@ class _Builder {
 
   final List<_Task> tasks = <_Task>[];
 
-  /// 已被编排占用的「作业 + 学生」，日常数据不再生成。
+  /// 已被编排占用的「作品 + 学生」，日常数据不再生成。
   final Set<String> claimed = <String>{};
 
   /// 日常作品走完复核后的最终分（占满分的比例），按点评时间先后。
@@ -1036,9 +1036,35 @@ class _Builder {
     final shown = <_W>[...scripted, ...organic.where((w) => w.visible)];
     _principalPicks(shown);
     shown.sort((a, b) => b.submit.compareTo(a.submit));
+    final seededWorks = <Map<String, dynamic>>[
+      for (final work in shown) _toMap(work),
+    ];
+    final chain = seededWorks
+        .where((w) => w['id'] == DemoArtworkSeed.storyChainId)
+        .first;
+    chain['teacherIds'] = ['t-1', 't-4', 't-5'];
+    chain['teacherReviews'] = [
+      {
+        'teacherId': 't-4',
+        'score': 89,
+        'maxScore': 100,
+        'content': '形体转折明确，建议用长线条概括边缘，让局部服从整体。',
+        'reviewedTime': DemoArtworkData.fmt(_clock(4, 14, 20)),
+      },
+      {
+        'teacherId': 't-5',
+        'score': 90,
+        'maxScore': 100,
+        'content': '黑白灰组织清晰，可以继续控制反光的亮度，保留暗部的整体性。',
+        'reviewedTime': DemoArtworkData.fmt(_clock(4, 16, 10)),
+      },
+    ];
+    for (final comment in chain['principalComments'] as List) {
+      comment['score'] = 93;
+    }
     return DemoArtworkSeedResult(
       now: now,
-      works: <Map<String, dynamic>>[for (final work in shown) _toMap(work)],
+      works: seededWorks,
       tasks: <Map<String, dynamic>>[
         for (final task in tasks.reversed) _taskMap(task),
       ],
@@ -1046,7 +1072,7 @@ class _Builder {
     );
   }
 
-  // ── 作业 ──────────────────────────────────────────────────────────────
+  // ── 作品 ──────────────────────────────────────────────────────────────
 
   void _buildTasks() {
     final monday = _d(today, -(today.weekday - 1));
@@ -1150,7 +1176,7 @@ class _Builder {
         final noteRoll = rng.next();
         final DateTime time;
         if (index == 1) {
-          // 林小雨每次都在布置当天中午交，开放中的作业留给演示的人提交。
+          // 林小雨每次都在布置当天中午交，开放中的作品留给演示的人提交。
           if (!now.isAfter(task.due)) {
             continue;
           }
@@ -1195,7 +1221,7 @@ class _Builder {
       }
     }
 
-    // 少量自主练习：不关联作业，交给本班该科的老师。
+    // 少量自主练习：不关联作品，交给本班该科的老师。
     final monday = _d(today, -(today.weekday - 1));
     final first = _d(monday, -7 * (DemoArtworkSeed.weeks - 1));
     for (var day = first; !day.isAfter(today); day = _d(day, 1)) {
@@ -1455,7 +1481,7 @@ class _Builder {
     return null;
   }
 
-  /// 一份待点评的编排作品；提交时刻正好落在本班该科作业的开放期内时，记为这次作业
+  /// 一份待点评的编排作品；提交时刻正好落在本班该科作品的开放期内时，记为这次作品
   /// 的提交（日常数据里不再重复生成）。
   _W _pending(
     String id,
@@ -1512,20 +1538,18 @@ class _Builder {
     List<(String, bool)>? resolutions,
   }) {
     final classId = DemoArtworkData.classOf(person).id;
-    final work =
-        _W(
-            id: id,
-            person: person,
-            subject: subject,
-            title: title,
-            submit: submit,
-            teacherId: DemoArtworkData.responsibleTeacherId(classId, subject),
-            description: description,
-            images: images,
-            scripted: true,
-            parent: parent,
-          )
-          ..reviewAt = reviewAt;
+    final work = _W(
+      id: id,
+      person: person,
+      subject: subject,
+      title: title,
+      submit: submit,
+      teacherId: DemoArtworkData.responsibleTeacherId(classId, subject),
+      description: description,
+      images: images,
+      scripted: true,
+      parent: parent,
+    )..reviewAt = reviewAt;
     _drawReview(work, organic: false, fixedScore: score);
     work
       ..meanDelta = meanDelta
@@ -1552,7 +1576,7 @@ class _Builder {
           DemoArtworkSeed.storyPendingId,
           1,
           '素描',
-          '石膏头像长期作业',
+          '石膏头像长期作品',
           _slotBack(0, 0.12),
           description: '画了两个课时，重点练习头部结构和明暗交界线，耳朵的位置感觉没有画准。',
           images: const ['art/sketch-bust-1', 'art/detail-sketch'],

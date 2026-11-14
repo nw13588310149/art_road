@@ -1,3 +1,5 @@
+import '../../features/creative_hub/ui/learning_topics_page.dart';
+import '../../features/creative_hub/ui/marketplace_page.dart';
 import 'package:flutter/material.dart';
 
 import '../../features/ai_chat/ui/ai_chat_page.dart';
@@ -106,6 +108,10 @@ class AppRouter {
         return const GalleryPage();
       case RoutePaths.artToolbox:
         return const ArtToolboxPage();
+      case RoutePaths.microLessons:
+        return const LearningTopicsPage();
+      case RoutePaths.marketplace:
+        return const MarketplacePage();
       case RoutePaths.ebooks:
         return const EbooksPage();
       case RoutePaths.school:

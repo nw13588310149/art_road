@@ -162,7 +162,7 @@ final List<_Video> _videos = <_Video>[
     cover: ContentDemo.art('sketch-bust-2'),
     clip: ContentDemo.clip('studio'),
     steps: [ContentDemo.art('sketch-bust-2'), ContentDemo.art('sketch-bust-3')],
-    desc: '长期作业如何避免「越画越碎」？本课示范分阶段推进：大关系—结构细化—质感刻画—整体调整，并讲解每个阶段的检查方法。',
+    desc: '长期作品如何避免「越画越碎」？本课示范分阶段推进：大关系—结构细化—质感刻画—整体调整，并讲解每个阶段的检查方法。',
     time: '2026-10-27 19:40:00',
   ),
   // ── 色彩 ──────────────────────────────────────────────────────────────

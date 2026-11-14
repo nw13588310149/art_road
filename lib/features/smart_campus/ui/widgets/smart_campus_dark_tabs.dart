@@ -29,7 +29,7 @@ class SmartCampusDarkTabs<T> extends StatelessWidget {
   final T value;
   final ValueChanged<T> onChanged;
 
-  /// 容器是否带 1px `#F3F2F3` 描边（学生管理有，作业页没有）。
+  /// 容器是否带 1px `#F3F2F3` 描边（学生管理有，作品页没有）。
   final bool bordered;
 
   @override

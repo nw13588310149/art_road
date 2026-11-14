@@ -412,9 +412,7 @@ class _Overview {
     final teacherCourses = courses.where(
       (c) => c.teacherUserId == staff.userId,
     );
-    final teacherWorks = works
-        .where((w) => w['teacherId'] == staff.id)
-        .toList();
+    final teacherWorks = _worksForTeacher(staff.id);
     return {
       ..._teacherMetrics(staff),
       'reviews': [
@@ -445,8 +443,23 @@ class _Overview {
     };
   }
 
+  // 每位任课老师的履职口径只读取其本人的评价，避免合并成绩代替个人完成量。
+  List<_Row> _worksForTeacher(String id) => [
+    for (final work in works)
+      if (DemoArtworkData.assignedTeacherIdsOf(work).contains(id))
+        {
+          ...work,
+          'teacherId': id,
+          'teacherIds': [id],
+          'review': DemoArtworkData.reviewsOf(
+            work,
+          ).where((r) => r['teacherId'] == id).firstOrNull,
+          'teacherReviews': <_Row>[],
+        },
+  ];
+
   _Row _teacherMetrics(DemoCampusStaff staff) {
-    final own = works.where((w) => w['teacherId'] == staff.id).toList();
+    final own = _worksForTeacher(staff.id);
     final dueThisWeek = own
         .where((w) => _recent(w['createTime'], 7) && _dueOrReviewed(w))
         .toList();

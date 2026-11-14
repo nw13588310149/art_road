@@ -217,7 +217,7 @@ class SmartCampusState {
   ///   智慧校园时，每次都根据后端 `mapped` 角色（即 admin）作为默认视图。
   /// - `true`：用户已经在 dashboard 上选过身份（例如 admin 切到「班主任」）。
   ///   这之后 `applyBackendRole` 不会再覆盖 `selectedRole`，避免进入「班级
-  ///   工作台 / 学生名册 / 作业批改 / 考评管理」等子页再返回时被打回默认。
+  ///   工作台 / 学生名册 / 作品批改 / 考评管理」等子页再返回时被打回默认。
   final bool hasUserSelectedRole;
 
   /// 当前登录态下的身份是否已判定完毕（`myInfo` 映射 + 必要时

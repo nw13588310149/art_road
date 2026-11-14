@@ -189,11 +189,24 @@ abstract final class ArtworkRules {
     double maxScore = defaultFullScore,
   }) {
     final normalized = action.trim().toUpperCase();
-    if (!const {'KEEP', 'ADJUST', 'SUPPLEMENT'}.contains(normalized)) {
+    if (!const {
+      'KEEP',
+      'ADJUST',
+      'SUPPLEMENT',
+      'REVIEW',
+    }.contains(normalized)) {
       return '请选择复核结果';
     }
     if (qualityStars < 1 || qualityStars > 5) {
       return '请为这次点评选择 1 至 5 星';
+    }
+    if (normalized == 'REVIEW' &&
+        (score == null ||
+            !score.isFinite ||
+            score < 0 ||
+            score > maxScore ||
+            lengthOf(content) < 5)) {
+      return '请填写有效的组长评分和至少 5 字评语';
     }
     if (normalized == 'ADJUST') {
       if (lengthOf(reason) < adjustReasonLimit) {

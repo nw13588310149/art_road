@@ -120,6 +120,12 @@ async function runAction(page, action) {
     await page.mouse.down();
     await page.mouse.move(...action.drag[1], { steps: 16 });
     await page.mouse.up();
+  } else if (action.uploadFiles) {
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser', { timeout: 5000 }),
+      clickByName(page, action.into),
+    ]);
+    await chooser.setFiles(action.uploadFiles.map((file) => path.resolve(file)));
   } else if (action.uploadText) {
     const [chooser] = await Promise.all([
       page.waitForEvent('filechooser', { timeout: 5000 }),

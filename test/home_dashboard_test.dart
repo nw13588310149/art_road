@@ -162,11 +162,11 @@ void main() {
   });
 
   test('student and staff home entries follow the nine-button order', () {
-    const names = ['资讯', '校圈', '群聊', '工具箱', '作业', '素材库', '作品库', '小课件', '集市'];
+    const names = ['资讯', '校圈', '群聊', '工具箱', '作品', '素材库', '作品库', '小课件', '集市'];
     final student = buildQuickActions();
     expect(student.map((a) => a.name), names);
     expect(
-      student.firstWhere((a) => a.name == '作业').campus,
+      student.firstWhere((a) => a.name == '作品').campus,
       HomeCampusTarget.myHomework,
     );
     expect(
@@ -177,12 +177,15 @@ void main() {
       student.firstWhere((a) => a.name == '作品库').route,
       RoutePaths.artworks,
     );
-    expect(student.firstWhere((a) => a.name == '小课件').route, RoutePaths.school);
-    expect(student.firstWhere((a) => a.name == '集市').comingSoon, isTrue);
+    expect(
+      student.firstWhere((a) => a.name == '小课件').route,
+      RoutePaths.microLessons,
+    );
+    expect(student.firstWhere((a) => a.name == '集市').comingSoon, isFalse);
     final staff = buildQuickActions(isStaff: true, role: 'teacher');
     expect(staff.map((a) => a.name), names);
     expect(
-      staff.firstWhere((a) => a.name == '作业').campus,
+      staff.firstWhere((a) => a.name == '作品').campus,
       HomeCampusTarget.homeworkReview,
     );
   });
@@ -194,7 +197,15 @@ void main() {
       containsAll(['按宿舍查寝', '查寝动态', '查寝历史', '到岗打卡', '宿管请假']),
     );
     expect(dorm.map((a) => a.name), isNot(contains('班级学情')));
-    expect(dorm.every((a) => a.campus != null), isTrue);
+    expect(
+      dorm.every(
+        (a) =>
+            a.campus != null ||
+            a.route == RoutePaths.microLessons ||
+            a.route == RoutePaths.marketplace,
+      ),
+      isTrue,
+    );
 
     final admin = buildQuickActions(isStaff: true, role: 'admin');
     expect(

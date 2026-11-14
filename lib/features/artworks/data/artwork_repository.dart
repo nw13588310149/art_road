@@ -70,6 +70,9 @@ class ArtworkRepository {
     );
   }
 
+  Future<ApiResponse> getReviewTeachers() =>
+      client.get('/app/artworks/review-teachers');
+
   Future<ApiResponse> getTasks({String status = ''}) {
     return client.get(
       '/app/tasks',
@@ -96,6 +99,7 @@ class ArtworkRepository {
     required List<String> imageIds,
     String taskId = '',
     String parentId = '',
+    List<String> teacherIds = const [],
   }) {
     return client.post(
       '/app/artworks',
@@ -105,6 +109,7 @@ class ArtworkRepository {
         'drawingDate': drawingDate,
         'description': description.isEmpty ? null : description,
         'imageIds': imageIds,
+        'teacherIds': teacherIds,
         if (taskId.isNotEmpty) 'taskId': taskId,
         if (parentId.isNotEmpty) 'parentId': parentId,
       },
@@ -324,10 +329,11 @@ class ArtworkRepository {
   Future<ApiResponse> principalComment({
     required String artworkId,
     required String content,
+    double? score,
   }) {
     return client.post(
       '/school/principal/artworks/${_id(artworkId)}/comment',
-      data: <String, dynamic>{'content': content},
+      data: <String, dynamic>{'content': content, 'score': score},
     );
   }
 

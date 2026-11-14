@@ -19,7 +19,7 @@ abstract final class DemoArtworkStore {
   static DemoArtworkSeedResult? _seed;
   static Map<String, Map<String, dynamic>>? _seedById;
 
-  /// 每次写入加一。合并后的作品与作业、它们的索引，以及「下一次代办时间」都按它判断
+  /// 每次写入加一。合并后的作品与作品、它们的索引，以及「下一次代办时间」都按它判断
   /// 是否过期。
   static int _revision = 0;
   static _Snapshot? _works;
@@ -114,7 +114,7 @@ abstract final class DemoArtworkStore {
   }
 
   /// 种子与差异合并后的只读快照。一千多份作品合并一次要几毫秒，列表接口又会逐条
-  /// 查版本数和作业，所以按写入版本缓存，有写入才重新合并。
+  /// 查版本数和作品，所以按写入版本缓存，有写入才重新合并。
   static _Snapshot _worksSnapshot() {
     final overrides = _workOverrides();
     final cached = _works;
@@ -204,7 +204,7 @@ abstract final class DemoArtworkStore {
       ? raw
       : raw.map((k, v) => MapEntry(k.toString(), v));
 
-  /// 全部作业（新的在前），每条只读。
+  /// 全部作品（新的在前），每条只读。
   static List<Map<String, dynamic>> tasks() =>
       List<Map<String, dynamic>>.of(_tasksSnapshot().items);
 
@@ -468,10 +468,23 @@ abstract final class DemoArtworkStore {
           },
       ],
       'review': projectedReview,
-      // 兼容旧界面：把责任老师点评放进 reviews 列表。
-      'reviews': projectedReview == null
-          ? const <Map<String, dynamic>>[]
-          : <Map<String, dynamic>>[projectedReview],
+      'reviews': access.seesReview
+          ? [
+              for (final item in DemoArtworkData.reviewsOf(work))
+                {
+                  ...item,
+                  'teacherName': DemoArtworkData.teacherName(
+                    DemoArtworkData.text(item['teacherId']),
+                  ),
+                  'mine': viewer.teacherId == item['teacherId'],
+                  'reviewed': true,
+                  'annotations': strokesOf(
+                    DemoArtworkData.text(work['id']),
+                    DemoArtworkData.text(item['teacherId']),
+                  ),
+                },
+            ]
+          : <Map<String, dynamic>>[],
       'supplements': access.seesReview
           ? <Map<String, dynamic>>[
               for (final item in DemoArtworkData.supplementsOf(work))
@@ -503,9 +516,7 @@ abstract final class DemoArtworkStore {
         'canReview': access.canReview,
         'canSupplement': access.canSupplement,
         'canLeadReview':
-            access.leader &&
-            viewer.teacherId == lead?['leaderId'] &&
-            DemoArtworkData.leadStatusOf(work) == 'IN_REVIEW',
+            access.leader && DemoArtworkData.teacherStageComplete(work),
         'canComment': access.canComment,
         'canFeature': access.canFeature,
         'seesLeadReasons': access.seesLeadReasons,
@@ -569,13 +580,17 @@ abstract final class DemoArtworkStore {
       'studentName': personInfo?.name ?? DemoArtworkData.studentName(person),
       'organizationName': personInfo?.organizationName ?? '',
       'avatarUrl': '',
-      'myReviewed':
-          viewer.teacherId != null &&
-          viewer.teacherId == teacherId &&
-          DemoArtworkData.isReviewed(work),
-      // 旧字段兼容：责任老师一人。
-      'teacherCount': 1,
-      'reviewedCount': DemoArtworkData.isReviewed(work) ? 1 : 0,
+      'myReviewed': DemoArtworkData.reviewsOf(
+        work,
+      ).any((review) => review['teacherId'] == viewer.teacherId),
+      'teacherCount': {
+        teacherId,
+        ...(work['teacherIds'] as List? ?? []),
+        ...DemoArtworkData.reviewsOf(work).map((review) => review['teacherId']),
+      }.length,
+      'reviewedCount': DemoArtworkData.reviewsOf(work).length,
+      'teacherMean': DemoArtworkData.teacherMeanOf(work),
+      'requiredFullScore': DemoArtworkData.maxScoreOf(work),
     };
   }
 
@@ -639,31 +654,32 @@ abstract final class DemoArtworkStore {
   }
 
   static void notifyTeacherOfSubmit(Map<String, dynamic> work) {
-    final teacherId = DemoArtworkData.text(work['teacherId']);
-    final userId = DemoArtworkData.userIdOfTeacher(teacherId);
-    if (userId == null) {
-      return;
-    }
     final name = DemoArtworkData.studentName(DemoArtworkData.personOf(work));
-    appendNotice(
-      userId: userId,
-      content: '【作品】$name提交了《${work['title']}》，请尽快点评。',
-      targetId: DemoArtworkData.text(work['id']),
-      seedMayCover: true,
-    );
+    for (final teacherId in DemoArtworkData.assignedTeacherIdsOf(work)) {
+      final userId = DemoArtworkData.userIdOfTeacher(teacherId);
+      if (userId == null) continue;
+      appendNotice(
+        userId: userId,
+        content: '【作品】$name提交了《${work['title']}》，请尽快点评。',
+        targetId: DemoArtworkData.text(work['id']),
+        seedMayCover: true,
+      );
+    }
   }
 
-  static void notifyStudentOfReview(Map<String, dynamic> work) {
+  static void notifyStudentOfReview(
+    Map<String, dynamic> work, {
+    String? reviewerId,
+  }) {
     final userId = DemoArtworkData.userIdOfStudent(
       DemoArtworkData.personOf(work),
     );
-    if (userId == null) {
-      return;
-    }
-    final teacher = DemoArtworkData.teacherName(
-      DemoArtworkData.text(work['teacherId']),
-    );
-    final review = DemoArtworkData.reviewOf(work);
+    if (userId == null) return;
+    final id = reviewerId ?? DemoArtworkData.text(work['teacherId']);
+    final teacher = DemoArtworkData.teacherName(id);
+    final review = DemoArtworkData.reviewsOf(
+      work,
+    ).where((r) => r['teacherId'] == id).firstOrNull;
     final clause = _firstClause(DemoArtworkData.text(review?['content']));
     appendNotice(
       userId: userId,
@@ -870,13 +886,26 @@ abstract final class DemoArtworkStore {
           reviewAt = null;
         }
       }
+      final coTimes = DemoArtworkData.mapOf(source['seedCoReviewsAt']) ?? {};
+      final coDue = <String>[];
+      for (final entry in coTimes.entries) {
+        final due = DemoArtworkData.parseTime(entry.value);
+        if (due == null || DemoArtworkData.reviewedBy(source, entry.key)) {
+          continue;
+        }
+        if (due.isAfter(at)) {
+          waitFor(due);
+        } else {
+          coDue.add(entry.key);
+        }
+      }
       final leadAt = reviewed ? _autoLeadAt(source['leadReview']) : null;
-      if (reviewAt == null && leadAt == null) {
+      if (reviewAt == null && leadAt == null && coDue.isEmpty) {
         return;
       }
       final reviewDue = reviewAt != null && !reviewAt.isAfter(at);
       final leadDue = leadAt != null && !leadAt.isAfter(at);
-      if (!reviewDue && !leadDue) {
+      if (!reviewDue && !leadDue && coDue.isEmpty) {
         waitFor((reviewAt ?? leadAt)!);
         return;
       }
@@ -885,6 +914,45 @@ abstract final class DemoArtworkStore {
       if (reviewAt != null && reviewDue) {
         _autoReview(work, reviewAt, spotCheckPercent);
         notices.add(() => notifyStudentOfReview(work));
+      }
+      for (final teacherId in coDue) {
+        final due = DemoArtworkData.parseTime(coTimes[teacherId])!;
+        final reviews = DemoArtworkData.mapsOf(work['teacherReviews']).toList();
+        reviews.add(
+          DemoArtworkSeed.autoReview({
+            ...work,
+            'teacherId': teacherId,
+          }, at: due),
+        );
+        work['teacherReviews'] = reviews;
+        coTimes.remove(teacherId);
+        notices.add(() => notifyStudentOfReview(work, reviewerId: teacherId));
+      }
+      if (coDue.isNotEmpty) {
+        work['seedCoReviewsAt'] = coTimes;
+        final leaderId = DemoArtworkData.leaderOfSubject(
+          DemoArtworkData.text(work['subject']),
+        )?.id;
+        if (DemoArtworkData.teacherStageComplete(work) &&
+            work['leadReview'] == null &&
+            leaderId != null) {
+          work['leadReview'] = <String, dynamic>{
+            'leaderId': leaderId,
+            'enteredTime': DemoArtworkData.fmt(at),
+            'reasons': <String>[],
+            'action': null,
+            'score': null,
+            'content': '',
+            'reason': '',
+            'qualityStars': 0,
+            'qualityNote': '',
+            'time': '',
+            if (!DemoArtworkData.hasDemoAccount(leaderId))
+              'seedLeadAt': DemoArtworkData.fmt(
+                at.add(DemoArtworkData.autoDelay),
+              ),
+          };
+        }
       }
       // 复核记录可能是刚才代点评时生成的，也可能早就在等。
       final lead = work['leadReview'];
@@ -973,6 +1041,7 @@ abstract final class DemoArtworkStore {
     );
     work['review'] = review;
     work.remove('seedReviewAt');
+    if (!DemoArtworkData.teacherStageComplete(work)) return;
 
     // 组长本人负责的作品不进复核池。
     final leaderId = DemoArtworkData.leaderIdFor(teacherId);
@@ -994,9 +1063,7 @@ abstract final class DemoArtworkStore {
       hasAnnotations: hasAnnotations(id, teacherId),
       spotCheckPercent: spotCheckPercent,
     );
-    if (reasons.isEmpty) {
-      return;
-    }
+    if (reasons.isEmpty && work['teacherIds'] == null) return;
     work['leadReview'] = <String, dynamic>{
       'reasons': reasons,
       'enteredTime': DemoArtworkData.fmt(reviewAt),

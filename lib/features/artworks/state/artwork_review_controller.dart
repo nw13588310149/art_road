@@ -14,7 +14,7 @@ import '../data/artwork_rules.dart';
 typedef ArtworkVoiceUploader =
     Future<String?> Function(Uint8List bytes, String filename);
 
-/// 语音评语走平台的通用文件上传，与作业语音点评是同一个端点。
+/// 语音评语走平台的通用文件上传，与作品语音点评是同一个端点。
 final artworkVoiceUploaderProvider = Provider<ArtworkVoiceUploader>((ref) {
   final repository = ref.watch(teacherRepositoryProvider);
   return (bytes, filename) async {

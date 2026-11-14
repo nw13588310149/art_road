@@ -210,7 +210,7 @@ class StudentExamSubjectScore {
   final String nickname;
 }
 
-/// 学生「我的作业」统计（`student/studentHomeworkSum`）。实测字段：
+/// 学生「我的作品」统计（`student/studentHomeworkSum`）。实测字段：
 /// `subjectAvgScores` / `teacherAvgScores` / `scoreRanges` /
 /// `total` / `pending` / `submitted` / `reviewed` / `overdue`。
 class StudentHomeworkSummary {
@@ -245,16 +245,16 @@ class StudentHomeworkSummary {
     );
   }
 
-  /// 按科目作业均分。
+  /// 按科目作品均分。
   final List<StudentSubjectAverage> subjectAvgScores;
 
-  /// 按任课老师作业均分。
+  /// 按任课老师作品均分。
   final List<StudentSubjectAverage> teacherAvgScores;
 
-  /// 作业分数段分布。
+  /// 作品分数段分布。
   final List<StudentScoreDistribution> scoreRanges;
 
-  /// 作业总数。
+  /// 作品总数。
   final int total;
 
   /// 待提交数。
@@ -269,7 +269,7 @@ class StudentHomeworkSummary {
   /// 已逾期数。
   final int overdue;
 
-  /// 总体作业均分：对各科目均分中 >0 的项取算术平均；无数据返回 0。
+  /// 总体作品均分：对各科目均分中 >0 的项取算术平均；无数据返回 0。
   double get overallAvgScore {
     final scores = subjectAvgScores
         .map((e) => e.score)
