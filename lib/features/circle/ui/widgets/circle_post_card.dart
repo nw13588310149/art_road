@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_font.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../shell/ui/shell_layout.dart';
 import '../../state/circle_state.dart';
 import 'circle_action_buttons.dart';
 import 'circle_badges.dart';
 import 'circle_post_menu.dart';
 import 'circle_video_play_button.dart';
 
-/// 卡片模式下的单个帖子：作者 / 文字 / 配图 / 操作按钮。
+/// 列表模式预览图左下角的格式图标。
+const _kMediaChipImage = 'assets/images/circle/tp.png';
+const _kMediaChipVideo = 'assets/images/circle/video.png';
+
+/// 列表模式下的单个帖子卡片：作者 / 文字 / 配图 / 操作按钮。
 ///
-/// 删除、举报收在作者行右侧的「···」菜单里，两者都没有时不显示菜单。
+/// 作者行右侧：只能删除时显示原版删除图标；能举报时显示「···」菜单。
 class CirclePostCard extends StatelessWidget {
   const CirclePostCard({
     super.key,
@@ -32,42 +38,57 @@ class CirclePostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.s12,
-        AppSpace.s12,
-        AppSpace.s12,
-        AppSpace.s8,
-      ),
+    final ui = DashboardScaleScope.of(context).ui;
+    return AppPressable(
       onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _CardAuthor(
-            post: post,
-            onDeletePost: onDeletePost,
-            onReportPost: onReportPost,
-          ),
-          const SizedBox(height: AppSpace.s8),
-          Text(
-            post.text,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.body14,
-          ),
-          const SizedBox(height: AppSpace.s4),
-          Text(post.timeLabel, style: AppText.caption12),
-          const SizedBox(height: AppSpace.s12),
-          _CardImage(post: post),
-          const SizedBox(height: AppSpace.s8),
-          CircleActionRow(
-            post: post,
-            onLike: onLike,
-            onComment: onComment,
-            onFavorite: onFavorite,
-          ),
-        ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(ui(16)),
+        ),
+        padding: EdgeInsets.fromLTRB(ui(12), ui(12), ui(12), ui(8)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _CardAuthor(
+              post: post,
+              onDeletePost: onDeletePost,
+              onReportPost: onReportPost,
+            ),
+            SizedBox(height: ui(8)),
+            Text(
+              post.text,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: const Color(0xFF000000),
+                fontSize: ui(14),
+                fontFamily: 'PingFang SC',
+                height: 19.6 / 14,
+              ),
+            ),
+            SizedBox(height: ui(6)),
+            Text(
+              post.timeLabel,
+              style: TextStyle(
+                color: const Color(0xFFB6B5BB),
+                fontSize: ui(13),
+                fontFamily: 'PingFang SC',
+              ),
+            ),
+            SizedBox(height: ui(13)),
+            _CardImage(post: post),
+            SizedBox(height: ui(12)),
+            CircleActionRow(
+              post: post,
+              onLike: onLike,
+              onComment: onComment,
+              onFavorite: onFavorite,
+            ),
+            SizedBox(height: ui(4)),
+          ],
+        ),
       ),
     );
   }
@@ -82,43 +103,67 @@ class _CardAuthor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final role = formatCircleAuthorRole(post.author.role);
+    final ui = DashboardScaleScope.of(context).ui;
+    final hasMenu = onDeletePost != null || onReportPost != null;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        AppAvatar(name: post.author.name, url: post.author.avatarUrl),
-        const SizedBox(width: AppSpace.s12),
+        AppAvatar(
+          name: post.author.name,
+          url: post.author.avatarUrl,
+          size: ui(40),
+        ),
+        SizedBox(width: ui(11)),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Wrap(
-                spacing: AppSpace.s8,
-                runSpacing: AppSpace.s4,
-                crossAxisAlignment: WrapCrossAlignment.center,
+              Row(
                 children: [
-                  Text(
-                    post.author.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.body14Strong,
+                  Flexible(
+                    child: Text(
+                      post.author.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: const Color(0xFF0B081A),
+                        fontSize: ui(16),
+                        fontFamily: 'PingFang SC',
+                        fontWeight: AppFont.w600,
+                      ),
+                    ),
                   ),
-                  for (final badge in post.badges)
-                    CircleBadgeChip(badge: badge),
+                  if (post.badges.isNotEmpty) ...[
+                    SizedBox(width: ui(12)),
+                    CircleBadgeRow(badges: post.badges),
+                  ],
                 ],
               ),
-              if (role.isNotEmpty)
-                Text(
-                  role,
+              Transform.translate(
+                offset: Offset(0, -ui(2)),
+                child: Text(
+                  formatCircleAuthorRole(post.author.role),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.caption12,
+                  style: TextStyle(
+                    color: const Color(0xFFB6B5BB),
+                    fontSize: ui(13),
+                    fontFamily: 'PingFang SC',
+                  ),
                 ),
+              ),
             ],
           ),
         ),
-        CirclePostMenuButton(onDelete: onDeletePost, onReport: onReportPost),
+        if (hasMenu)
+          Transform.translate(
+            offset: Offset(0, -ui(4)),
+            child: CirclePostMenuButton(
+              onDelete: onDeletePost,
+              onReport: onReportPost,
+            ),
+          ),
       ],
     );
   }
@@ -165,12 +210,14 @@ class _CardImageState extends State<_CardImage> {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+
     return ClipRRect(
-      borderRadius: AppRadius.br12,
+      borderRadius: BorderRadius.circular(ui(12)),
       child: AspectRatio(
         aspectRatio: _effectiveAspectRatio,
         child: switch (post.mediaKind) {
-          PostMediaKind.image => AppImage(src: post.imageUrl),
+          PostMediaKind.image => _ImageCover(url: post.imageUrl),
           PostMediaKind.video => _VideoCover(post: post),
           PostMediaKind.audio => _AudioCover(post: post),
         },
@@ -218,7 +265,57 @@ class _CardImageState extends State<_CardImage> {
   }
 }
 
-/// 视频帖封面：海报（没有时用墨色底）+ 中央播放按钮 + 左下「视频」标记。
+/// 图片帖封面：直接铺整张图，加载中 / 加载失败做兜底。
+class _ImageCover extends StatelessWidget {
+  const _ImageCover({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (url.isEmpty)
+          Container(
+            color: const Color(0xFFEFEFF4),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.image_not_supported_outlined,
+              size: ui(32),
+              color: const Color(0xFFB6B5BB),
+            ),
+          )
+        else
+          Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stack) =>
+                Container(color: const Color(0xFFD9D9D9)),
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                color: const Color(0xFFEFEFF4),
+                alignment: Alignment.center,
+                child: const AppLoadingIndicator(),
+              );
+            },
+          ),
+        Positioned(
+          left: ui(8),
+          bottom: ui(8),
+          child: const _MediaTypeChip(
+            iconAsset: _kMediaChipImage,
+            label: '图片',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 视频帖封面：海报（coverImg 或退化深色背景）+ 中央播放按钮 + 左下「视频」标记。
 class _VideoCover extends StatelessWidget {
   const _VideoCover({required this.post});
 
@@ -226,28 +323,51 @@ class _VideoCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     return Stack(
       fit: StackFit.expand,
       children: [
         if (post.imageUrl.isNotEmpty)
-          AppImage(
-            src: post.imageUrl,
-            error: const ColoredBox(color: AppColors.ink),
+          Image.network(
+            post.imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) =>
+                const ColoredBox(color: Color(0xFF1B1530)),
           )
         else
-          const ColoredBox(color: AppColors.ink),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF252035), Color(0xFF0B081A)],
+              ),
+            ),
+          ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x00000000), Color(0x66000000)],
+            ),
+          ),
+        ),
         const Center(child: CircleVideoPlayButton()),
-        const Positioned(
-          left: AppSpace.s8,
-          bottom: AppSpace.s8,
-          child: _MediaTypeChip(icon: Icons.videocam_outlined, label: '视频'),
+        Positioned(
+          left: ui(8),
+          bottom: ui(8),
+          child: const _MediaTypeChip(
+            iconAsset: _kMediaChipVideo,
+            label: '视频',
+          ),
         ),
       ],
     );
   }
 }
 
-/// 音频帖封面：封面图（没有时用浅紫底 + 音频图标）+ 中央播放按钮 + 左下「音频」标记。
+/// 历史音频帖封面：封面图（没有时用浅紫渐变 + 耳机图标）+ 中央播放按钮 + 左下「音频」标记。
 class _AudioCover extends StatelessWidget {
   const _AudioCover({required this.post});
 
@@ -255,57 +375,120 @@ class _AudioCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const fallback = ColoredBox(
-      color: AppColors.brandTint,
-      child: Center(
-        child: Icon(
-          Icons.headphones_outlined,
-          size: 48,
-          color: AppColors.brandDeep,
-        ),
-      ),
-    );
+    final ui = DashboardScaleScope.of(context).ui;
     return Stack(
       fit: StackFit.expand,
       children: [
         if (post.imageUrl.isNotEmpty)
-          AppImage(src: post.imageUrl, error: fallback)
+          Image.network(
+            post.imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => const _AudioGradient(),
+          )
         else
-          fallback,
-        const Center(child: CircleVideoPlayButton()),
-        const Positioned(
-          left: AppSpace.s8,
-          bottom: AppSpace.s8,
-          child: _MediaTypeChip(icon: Icons.headphones_outlined, label: '音频'),
+          const _AudioGradient(),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x00000000), Color(0x55000000)],
+            ),
+          ),
+        ),
+        Center(
+          child: Container(
+            width: ui(48),
+            height: ui(48),
+            decoration: const BoxDecoration(
+              color: AppColors.brand,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.play_arrow_rounded,
+              color: Colors.white,
+              size: ui(28),
+            ),
+          ),
+        ),
+        Positioned(
+          left: ui(8),
+          bottom: ui(8),
+          child: const _MediaTypeChip(
+            icon: Icons.headphones_outlined,
+            label: '音频',
+          ),
         ),
       ],
     );
   }
 }
 
-class _MediaTypeChip extends StatelessWidget {
-  const _MediaTypeChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
+class _AudioGradient extends StatelessWidget {
+  const _AudioGradient();
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.brandTint, AppColors.brand],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.headphones_outlined,
+          color: Colors.white.withValues(alpha: 0.85),
+          size: ui(56),
+        ),
+      ),
+    );
+  }
+}
+
+/// 格式标记：图片、视频用原版位图，音频没有可用位图，用线性图标。
+class _MediaTypeChip extends StatelessWidget {
+  const _MediaTypeChip({required this.label, this.iconAsset, this.icon});
+
+  final String label;
+  final String? iconAsset;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final asset = iconAsset;
     return Container(
-      height: AppSize.tag,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
+      padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(3)),
       decoration: BoxDecoration(
-        color: AppColors.ink.withValues(alpha: 0.6),
-        borderRadius: AppRadius.brPill,
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(ui(7)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: AppColors.onBrand),
-          const SizedBox(width: AppSpace.s4),
+          if (asset != null)
+            Image.asset(
+              asset,
+              width: ui(12),
+              height: ui(12),
+              fit: BoxFit.contain,
+              excludeFromSemantics: true,
+            )
+          else
+            Icon(icon, size: ui(12), color: Colors.white),
+          SizedBox(width: ui(4)),
           Text(
             label,
-            style: AppText.caption12.copyWith(color: AppColors.onBrand),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: ui(11),
+              fontFamily: 'PingFang SC',
+              height: 1,
+            ),
           ),
         ],
       ),
