@@ -40,8 +40,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
+import '../../../core/art/art_subject.dart';
 import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../courseware/ui/courseware_url_opener.dart';
@@ -50,30 +50,31 @@ import '../data/teacher_repository.dart';
 import '../state/teacher_exam_controller.dart';
 import '../data/campus_format.dart';
 import '../../shell/ui/shell_layout.dart';
+import 'widgets/smart_campus_dark_tabs.dart';
+import 'widgets/smart_campus_side_drawer.dart';
+import 'widgets/smart_campus_square_tag.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'student_homework_submission_preview.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_empty_state.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-// ---- 配色 -------------------------------------------------------------------
-const Color _kCardBg = AppColors.surface;
-const Color _kPageGrey = AppColors.surfaceSubtle;
-const Color _kPickGrey = AppColors.brandWash;
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextBlack = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kTextMuted = AppColors.textSecondary;
+// ---- 配色（原版色值；紫色统一为品牌紫）--------------------------------------
+const Color _kCardBg = Colors.white;
+const Color _kPageGrey = Color(0xFFF5F6FA);
+const Color _kPickGrey = Color(0xFFF4F4FF);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextBlack = Color(0xFF1A1A1A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kTextMuted = Color(0xFF71717A);
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleEnd = AppColors.brandSoft;
-const Color _kPurpleStart = AppColors.brand;
-const Color _kOrange = AppColors.warning;
-const Color _kOrangeBg = AppColors.warningSoft;
-const Color _kGreen = AppColors.success;
-const Color _kGreenBg = AppColors.successSoft;
-const Color _kPillIconColor = AppColors.ink;
+const Color _kOrange = Color(0xFFFF6A00);
+const Color _kOrangeBg = Color(0xFFFFEDD3);
+const Color _kGreen = Color(0xFF12CE51);
+const Color _kGreenBg = Color(0xFFE4FFED);
+const Color _kPillIconColor = Color(0xFF1C274C);
 
 /// 页面各板块之间的固定间距。
 const double _kSectionGap = 14;
@@ -153,16 +154,16 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
     return SmartCampusSecondaryPageShell(
       bodyScrollable: false,
       bodyBorderRadius: 8,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
         title: '考评管理',
         subtitle: '给任教科目的月考提交评分和点评，评分同步到艺考网阅卷系统，复核后在「班级学情」发布',
         onBack: widget.onBack,
+        // 右侧按钮约 106 宽，副标题两侧各让出 112，窄横屏也不会压到按钮下面。
+        titleHorizontalInset: 112,
         actions: [
-          AppButton(
+          SmartCampusBannerButton(
             label: '历史月考',
             iconAsset: AppAssets.teacherExamHistoryIcon,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
             onTap: _openHistoryDrawer,
           ),
         ],
@@ -170,10 +171,13 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _StatusTabsRow(
-            tabs: _kStatusTabs,
-            activeIdx: examState.statusTab,
-            onTap: (i) => ref
+          SmartCampusDarkTabs<int>(
+            segments: [
+              for (var i = 0; i < _kStatusTabs.length; i++)
+                AppSegment(value: i, label: _kStatusTabs[i]),
+            ],
+            value: examState.statusTab,
+            onChanged: (i) => ref
                 .read(teacherExamControllerProvider.notifier)
                 .selectStatusTab(i),
           ),
@@ -189,17 +193,19 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
           SizedBox(height: ui(_kSectionGap)),
           Expanded(
             child: active == null
-                ? AppCard(
-                    child: examState.error.isNotEmpty
-                        ? AppErrorState(
-                            title: '考试列表加载失败',
-                            description: examState.error,
-                          )
-                        : const AppEmptyState(
-                            icon: Icons.fact_check_outlined,
-                            title: '暂时没有需要评阅的考试',
-                            description: '教务安排考试后会出现在这里',
-                          ),
+                // 原版空状态：居中的一行灰字，不套卡片。
+                ? Center(
+                    child: Text(
+                      examState.error.isNotEmpty
+                          ? '考试列表加载失败：${examState.error}'
+                          : '暂时没有需要评阅的考试，教务安排考试后会出现在这里',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _kTextHint,
+                        fontSize: ui(14),
+                        fontFamily: 'PingFang SC',
+                      ),
+                    ),
                   )
                 : _BodyRow(
                     items: visibleItems,
@@ -225,62 +231,20 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
   }
 
   void _openHistoryDrawer() {
-    final scale = DashboardScaleScope.of(context);
-    showGeneralDialog<void>(
+    showSmartCampusSideDrawer<void>(
       context: context,
-      barrierDismissible: true,
       barrierLabel: '关闭历史月考',
-      barrierColor: AppColors.ink.withValues(alpha: 0.20),
-      transitionDuration: const Duration(milliseconds: 240),
-      pageBuilder: (ctx, anim, sec) {
-        return Align(
-          alignment: Alignment.centerRight,
-          child: DashboardScaleScope(
-            data: scale,
-            child: _HistoryDrawer(
-              items: ref.read(teacherExamControllerProvider).exams,
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (ctx, anim, sec, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-          child: child,
-        );
-      },
+      builder: (_) => _HistoryDrawer(
+        items: ref.read(teacherExamControllerProvider).exams,
+      ),
     );
   }
 
   void _openSeatPlanDrawer(_ExamItem item) {
-    final scale = DashboardScaleScope.of(context);
-    showGeneralDialog<void>(
+    showSmartCampusSideDrawer<void>(
       context: context,
-      barrierDismissible: true,
       barrierLabel: '关闭考场安排',
-      barrierColor: AppColors.ink.withValues(alpha: 0.20),
-      transitionDuration: const Duration(milliseconds: 240),
-      pageBuilder: (ctx, anim, sec) {
-        return Align(
-          alignment: Alignment.centerRight,
-          child: DashboardScaleScope(
-            data: scale,
-            child: _SeatPlanDrawer(examId: item.id, examTitle: item.title),
-          ),
-        );
-      },
-      transitionBuilder: (ctx, anim, sec, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-          child: child,
-        );
-      },
+      builder: (_) => _SeatPlanDrawer(examId: item.id, examTitle: item.title),
     );
   }
 
@@ -302,181 +266,22 @@ class _TeacherExamReviewViewState extends ConsumerState<TeacherExamReviewView> {
 
   void _openScoreDrawer(_ExamItem item, _Submission submission) {
     if (submission.state == TeacherExamSubmissionState.missing) return;
-    final scale = DashboardScaleScope.of(context);
-    showGeneralDialog<void>(
+    showSmartCampusSideDrawer<void>(
       context: context,
-      barrierDismissible: true,
       barrierLabel: '关闭评分',
-      barrierColor: AppColors.ink.withValues(alpha: 0.20),
-      transitionDuration: const Duration(milliseconds: 240),
-      pageBuilder: (ctx, anim, sec) {
-        return Align(
-          alignment: Alignment.centerRight,
-          child: DashboardScaleScope(
-            data: scale,
-            child: _ScoreDrawer(
-              item: item,
-              submission: submission,
-              onScored: () => ref
-                  .read(teacherExamControllerProvider.notifier)
-                  .refreshActiveExam(),
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (ctx, anim, sec, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-          child: child,
-        );
-      },
-    );
-  }
-}
-
-// =============================================================================
-// 顶部 banner（白→#F9EDFF 渐变；左返回 + 居中标题/副标题 + 右"历史月考"按钮）
-// =============================================================================
-
-class _BannerActionButton extends StatelessWidget {
-  const _BannerActionButton({
-    this.icon,
-    this.assetIcon,
-    required this.label,
-    required this.onTap,
-  }) : assert(icon != null || assetIcon != null);
-
-  final IconData? icon;
-  final String? assetIcon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        height: ui(33),
-        padding: EdgeInsets.symmetric(horizontal: ui(12)),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: Border.all(color: _kBorderSoft),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (assetIcon != null)
-              AppAssetGraphic(
-                assetIcon!,
-                width: ui(16),
-                height: ui(16),
-                fit: BoxFit.contain,
-              )
-            else
-              Icon(icon, size: ui(16), color: _kPurple),
-            SizedBox(width: ui(4)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: ui(12),
-                color: _kTextDark,
-                fontWeight: AppFont.w600,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
+      builder: (_) => _ScoreDrawer(
+        item: item,
+        submission: submission,
+        onScored: () => ref
+            .read(teacherExamControllerProvider.notifier)
+            .refreshActiveExam(),
       ),
     );
   }
 }
 
-// =============================================================================
-// 状态 tabs（5 项）
-// =============================================================================
-
-class _StatusTabsRow extends StatelessWidget {
-  const _StatusTabsRow({
-    required this.tabs,
-    required this.activeIdx,
-    required this.onTap,
-  });
-
-  final List<String> tabs;
-  final int activeIdx;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      height: ui(44),
-      padding: EdgeInsets.all(ui(4)),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(8)),
-        border: Border.all(color: _kBorderSoft, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < tabs.length; i++)
-            _StatusTabPill(
-              label: tabs[i],
-              active: i == activeIdx,
-              onTap: () => onTap(i),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusTabPill extends StatelessWidget {
-  const _StatusTabPill({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: ui(36),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        margin: EdgeInsets.symmetric(horizontal: ui(2)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? _kTextDark : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(14),
-            height: 1,
-            color: active ? AppColors.surface : _kTextSecondary,
-            fontWeight: AppFont.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
+// 顶部 banner、右侧「历史月考」按钮与状态页签使用共享组件
+// （SmartCampusPageBanner / SmartCampusBannerButton / SmartCampusDarkTabs）。
 
 // =============================================================================
 // 统计面板（班级筛选 + 累计/本学期/本月 + 6 张 stat 卡）
@@ -760,84 +565,63 @@ class _ExamListCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (item.publishedRatio.total > 0)
-                  Semantics(
-                    label:
-                        '已提交 ${item.publishedRatio.submitted} 人，共 ${item.publishedRatio.total} 人',
-                    excludeSemantics: true,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          '${item.publishedRatio.submitted}',
-                          style: AppText.displayNumber(size: 24),
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '/${item.publishedRatio.total}',
-                          style: AppText.number(
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Semantics(
-                    label: '暂无提交统计',
-                    excludeSemantics: true,
-                    child: Text(
-                      '—',
-                      style: AppText.displayNumber(
-                        size: 24,
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                  ),
+                _SubmitRatio(
+                  submitted: item.publishedRatio.submitted,
+                  total: item.publishedRatio.total,
+                ),
                 if (item.deadline.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  SizedBox(height: ui(2)),
                   Text(
                     '截止 ${campusListTimeOf(item.deadline, fallback: item.deadline)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.caption12,
+                    style: TextStyle(
+                      fontSize: ui(10),
+                      color: _kTextHint,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w400,
+                      height: 1.4,
+                    ),
                   ),
                 ],
                 if (item.classLabel.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  SizedBox(height: ui(2)),
                   Text(
                     item.classLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.caption12.copyWith(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      fontSize: ui(12),
+                      color: _kTextSecondary,
+                      fontFamily: 'PingFang SC',
+                      fontWeight: AppFont.w400,
+                      height: 1.2,
                     ),
                   ),
                 ],
-                const SizedBox(height: 6),
+                SizedBox(height: ui(6)),
+                // 原版是单行 Row；卡片较窄，放不下时换行，不截断。
                 Wrap(
-                  spacing: AppSpace.s4,
-                  runSpacing: AppSpace.s4,
+                  spacing: ui(4),
+                  runSpacing: ui(4),
                   children: [
                     if (item.examLabel.isNotEmpty)
-                      AppTag(label: item.examLabel),
+                      _ExamInfoTag(label: item.examLabel),
                     if (item.subject.isNotEmpty)
                       _SubjectTag(label: item.subject),
                     if (item.pendingReview > 0)
-                      AppTag(
-                        label: '待评 ${item.pendingReview}',
-                        tone: AppTone.warning,
-                      ),
+                      _PendingReviewTag(count: item.pendingReview),
                   ],
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: ui(6)),
                 Text(
                   item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.body16.copyWith(
+                  style: TextStyle(
+                    fontSize: ui(16),
+                    color: _kTextBlack,
+                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.2,
                   ),
@@ -856,6 +640,76 @@ class _ExamListCard extends StatelessWidget {
   }
 }
 
+/// 原版提交比：Barlow 28/600 已交人数 + 16/400 灰色「/总人数」（底对齐，分母下沉 4）。
+/// 没有提交统计时显示「—」。
+class _SubmitRatio extends StatelessWidget {
+  const _SubmitRatio({required this.submitted, required this.total});
+
+  final int submitted;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final numberStyle = TextStyle(
+      fontSize: ui(28),
+      color: _kTextDark,
+      fontFamily: 'Barlow',
+      fontWeight: FontWeight.w600,
+      height: 1,
+    );
+    if (total <= 0) {
+      return Semantics(
+        label: '暂无提交统计',
+        excludeSemantics: true,
+        child: Text('—', style: numberStyle.copyWith(color: _kTextHint)),
+      );
+    }
+    return Semantics(
+      label: '已提交 $submitted 人，共 $total 人',
+      excludeSemantics: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text('$submitted', style: numberStyle),
+          SizedBox(width: ui(2)),
+          Padding(
+            padding: EdgeInsets.only(bottom: ui(4)),
+            child: Text(
+              '/$total',
+              style: TextStyle(
+                fontSize: ui(16),
+                color: _kTextHint,
+                fontFamily: 'Barlow',
+                fontWeight: FontWeight.w400,
+                height: 1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 原版考试信息标签：白底、圆角 4、内距 4×2、灰字。
+class _ExamInfoTag extends StatelessWidget {
+  const _ExamInfoTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return SmartCampusSquareTag(
+      label: label,
+      background: Colors.white,
+      foreground: _kTextHint,
+      horizontalPadding: 4,
+    );
+  }
+}
+
+/// 科目标签：形状同 [_ExamInfoTag]，颜色按 [ArtSubject] 的科目色。
 class _SubjectTag extends StatelessWidget {
   const _SubjectTag({required this.label});
 
@@ -863,10 +717,32 @@ class _SubjectTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppTag.subject(label);
+    return SmartCampusSquareTag(
+      label: label,
+      background: artSubjectSoftColor(label),
+      foreground: artSubjectColor(label),
+      horizontalPadding: 4,
+    );
   }
 }
 
+class _PendingReviewTag extends StatelessWidget {
+  const _PendingReviewTag({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return SmartCampusSquareTag(
+      label: '待评 $count',
+      background: _kOrangeBg,
+      foreground: _kOrange,
+      horizontalPadding: 4,
+    );
+  }
+}
+
+/// 原版右上角状态角标：高 22、左右 10、右上与左下圆角 12。
 class _CornerLabel extends StatelessWidget {
   const _CornerLabel({required this.label, required this.kind});
 
@@ -875,13 +751,30 @@ class _CornerLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 10, 12, 0),
-      child: AppStatusTag(
-        label: label,
-        tone: kind == TeacherExamCornerKind.published
-            ? AppTone.success
-            : AppTone.brand,
+    final ui = DashboardScaleScope.of(context).ui;
+    final published = kind == TeacherExamCornerKind.published;
+    final bg = published ? const Color(0xFFE6E9F1) : _kOrangeBg;
+    final fg = published ? _kTextHint : _kOrange;
+    return Container(
+      height: ui(22),
+      padding: EdgeInsets.symmetric(horizontal: ui(10)),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(ui(12)),
+          bottomLeft: Radius.circular(ui(12)),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: ui(12),
+          color: fg,
+          fontFamily: 'PingFang SC',
+          fontWeight: AppFont.w400,
+          height: 1.2,
+        ),
       ),
     );
   }
@@ -932,8 +825,8 @@ class _ExamDetailPanel extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: ui(12)),
-                      _BannerActionButton(
-                        assetIcon: AppAssets.teacherExamSeatPlanIcon,
+                      SmartCampusBannerButton(
+                        iconAsset: AppAssets.teacherExamSeatPlanIcon,
                         label: '考场安排',
                         onTap: onOpenSeatPlan,
                       ),
@@ -954,7 +847,8 @@ class _ExamDetailPanel extends StatelessWidget {
                     item.syncNote,
                     style: TextStyle(
                       fontSize: ui(12),
-                      color: AppColors.textTertiary,
+                      color: _kPurple,
+                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.4,
                     ),
@@ -1204,8 +1098,9 @@ class _ScoreSummaryStrip extends StatelessWidget {
                   Text(
                     cells[i].label,
                     style: TextStyle(
-                      fontSize: ui(12),
+                      fontSize: ui(11),
                       color: _kTextSecondary,
+                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1,
                     ),
@@ -1300,7 +1195,7 @@ class _SeatPlanDrawerState extends ConsumerState<_SeatPlanDrawer> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: AppColors.surface,
+      color: Colors.white,
       child: SizedBox(
         width: ui(420),
         height: double.infinity,
@@ -1309,7 +1204,7 @@ class _SeatPlanDrawerState extends ConsumerState<_SeatPlanDrawer> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _DrawerTitleBar(title: '考场安排'),
+              const SmartCampusDrawerTitleBar(title: '考场安排'),
               SizedBox(height: ui(6)),
               Text(
                 widget.examTitle,
@@ -1436,7 +1331,7 @@ class _SeatStudentRow extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: ui(10), vertical: ui(8)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(8)),
       ),
       child: Row(
@@ -1474,8 +1369,9 @@ class _SeatStudentRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: ui(12),
+                      fontSize: ui(11),
                       color: _kTextHint,
+                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -1488,8 +1384,9 @@ class _SeatStudentRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: ui(12),
+                      fontSize: ui(11),
                       color: _kPurple,
+                      fontFamily: 'PingFang SC',
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
@@ -1521,8 +1418,9 @@ class _SeatStudentRow extends StatelessWidget {
             Text(
               '待编排',
               style: TextStyle(
-                fontSize: ui(12),
+                fontSize: ui(11),
                 color: _kTextHint,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1,
               ),
@@ -1555,7 +1453,7 @@ class _SubmissionsTable extends StatelessWidget {
           height: ui(40),
           padding: EdgeInsets.symmetric(horizontal: ui(8)),
           decoration: BoxDecoration(
-            color: AppColors.surfaceSubtle,
+            color: const Color(0xFFF9FAFB),
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           child: Row(
@@ -1648,15 +1546,33 @@ class _SubmissionRow extends ConsumerWidget {
           Expanded(child: _CellText(item.subject)),
           Expanded(child: _CellText(item.medium)),
           Expanded(child: _CellText(item.uploadAt)),
+          // 原版操作按钮：90×32、圆角 8；墨色实底白字，催交为橙色浅底描边。
           SizedBox(
             width: ui(90),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: AppButton(
-                label: isMissing && isReminding ? '发送中…' : item.action,
-                variant: AppButtonVariant.quiet,
-                size: AppButtonSize.sm,
-                onTap: isReminding ? null : onOpenScore,
+            child: AppPressable(
+              onTap: isReminding ? null : onOpenScore,
+              child: Container(
+                height: ui(32),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isMissing ? _kOrangeBg : _kTextDark,
+                  borderRadius: BorderRadius.circular(ui(8)),
+                  border: isMissing
+                      ? Border.all(color: _kOrange.withValues(alpha: 0.35))
+                      : null,
+                ),
+                child: Text(
+                  isMissing && isReminding ? '发送中…' : item.action,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: ui(13),
+                    color: isMissing ? _kOrange : Colors.white,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w400,
+                    height: 1.4,
+                  ),
+                ),
               ),
             ),
           ),
@@ -1700,8 +1616,8 @@ class _StatusPill extends StatelessWidget {
       _SubmissionState.passed => (bg: _kGreenBg, fg: _kGreen, text: '已通过'),
       _SubmissionState.pending => (bg: _kOrangeBg, fg: _kOrange, text: '待评'),
       _SubmissionState.missing => (
-        bg: AppColors.dangerSoft,
-        fg: AppColors.danger,
+        bg: const Color(0xFFFFE5E5),
+        fg: const Color(0xFFE54848),
         text: '未交',
       ),
       _SubmissionState.reviewed => (bg: _kGreenBg, fg: _kGreen, text: '已批改'),
@@ -1747,7 +1663,7 @@ class _AvatarCircle extends StatelessWidget {
     final resolved = _resolveMediaUrl(imageUrl);
     final palettes = const [
       [AppColors.brandSoft, AppColors.brand],
-      [Color(0xFFFFB68E), AppColors.warning],
+      [Color(0xFFFFB68E), Color(0xFFFF8741)],
       [Color(0xFF8EE0FF), Color(0xFF418EFF)],
     ];
     final palette = palettes[seed.abs() % palettes.length];
@@ -1775,7 +1691,7 @@ class _AvatarCircle extends StatelessWidget {
               initial,
               style: TextStyle(
                 fontSize: ui(13),
-                color: AppColors.surface,
+                color: Colors.white,
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -1800,7 +1716,7 @@ class _AvatarCircle extends StatelessWidget {
         initial,
         style: TextStyle(
           fontSize: ui(13),
-          color: AppColors.surface,
+          color: Colors.white,
           fontWeight: AppFont.w500,
           height: 1,
         ),
@@ -1822,9 +1738,9 @@ class _HistoryDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: AppColors.surface,
+      color: Colors.white,
       child: SizedBox(
-        width: ui(344),
+        width: ui(kSmartCampusDrawerWidthNarrow),
         height: double.infinity,
         child: Padding(
           padding: EdgeInsets.fromLTRB(ui(16), ui(20), ui(16), ui(20)),
@@ -1834,24 +1750,7 @@ class _HistoryDrawer extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
-                    width: ui(3.25),
-                    height: ui(14.85),
-                    decoration: BoxDecoration(
-                      color: _kPurple,
-                      borderRadius: BorderRadius.circular(ui(6)),
-                    ),
-                  ),
-                  SizedBox(width: ui(4)),
-                  Text(
-                    '历史月考',
-                    style: TextStyle(
-                      fontSize: ui(16),
-                      color: _kTextDark,
-                      fontWeight: AppFont.w600,
-                      height: 1.2,
-                    ),
-                  ),
+                  const SmartCampusDrawerTitleBar(title: '历史月考'),
                   SizedBox(width: ui(8)),
                   Padding(
                     padding: EdgeInsets.only(top: ui(4)),
@@ -1860,6 +1759,7 @@ class _HistoryDrawer extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextHint,
+                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.2,
                       ),
@@ -1912,61 +1812,44 @@ class _HistoryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${item.publishedRatio.submitted}',
-                style: TextStyle(
-                  fontSize: ui(24),
-                  color: _kTextDark,
-                  fontFamily: 'Barlow',
-                  fontWeight: FontWeight.w600,
-                  height: 1,
-                ),
+          _SubmitRatio(
+            submitted: item.publishedRatio.submitted,
+            total: item.publishedRatio.total,
+          ),
+          if (item.deadline.isNotEmpty) ...[
+            SizedBox(height: ui(2)),
+            Text(
+              '截止 ${campusListTimeOf(item.deadline, fallback: item.deadline)}',
+              style: TextStyle(
+                fontSize: ui(10),
+                color: _kTextHint,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 1.4,
               ),
-              SizedBox(width: ui(2)),
-              Padding(
-                padding: EdgeInsets.only(bottom: ui(4)),
-                child: Text(
-                  '/${item.publishedRatio.total}',
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    color: _kTextHint,
-                    fontFamily: 'Barlow',
-                    fontWeight: FontWeight.w400,
-                    height: 1,
-                  ),
-                ),
+            ),
+          ],
+          if (item.classLabel.isNotEmpty) ...[
+            SizedBox(height: ui(2)),
+            Text(
+              item.classLabel,
+              style: TextStyle(
+                fontSize: ui(12),
+                color: _kTextSecondary,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 1.2,
               ),
-            ],
-          ),
-          SizedBox(height: ui(2)),
-          Text(
-            '截止 ${item.deadline}',
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextHint,
-              fontWeight: AppFont.w400,
-              height: 1.4,
             ),
-          ),
-          SizedBox(height: ui(2)),
-          Text(
-            item.classLabel,
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextSecondary,
-              fontWeight: AppFont.w400,
-              height: 1.2,
-            ),
-          ),
+          ],
           SizedBox(height: ui(6)),
-          Row(
+          Wrap(
+            spacing: ui(4),
+            runSpacing: ui(4),
             children: [
-              _SubjectTag(label: item.examLabel),
-              SizedBox(width: ui(4)),
-              _SubjectTag(label: item.subject),
+              if (item.examLabel.isNotEmpty)
+                _ExamInfoTag(label: item.examLabel),
+              if (item.subject.isNotEmpty) _SubjectTag(label: item.subject),
             ],
           ),
           SizedBox(height: ui(6)),
@@ -1975,6 +1858,7 @@ class _HistoryCard extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(16),
               color: _kTextBlack,
+              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w500,
               height: 1.2,
             ),
@@ -2034,103 +1918,78 @@ class _ScoreDrawerState extends ConsumerState<_ScoreDrawer> {
               ? <String>[widget.submission.path]
               : const <String>[]);
     final hasAttachment = files.isNotEmpty;
-    return Material(
-      color: AppColors.surface,
-      child: SizedBox(
-        width: ui(600),
-        height: double.infinity,
-        child: Stack(
+    // 原版 600 宽抽屉骨架：紫条标题 + 分隔线 + 滚动内容 + 底部 48 高渐变主按钮。
+    return SmartCampusSideDrawerShell(
+      title: '评分',
+      footerIcon: Icons.check_circle_outline_rounded,
+      footerLabel: _submitting
+          ? '提交中...'
+          : (widget.submission.state == TeacherExamSubmissionState.reviewed
+                ? '更新评分'
+                : '提交评分'),
+      onFooterTap: _submit,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(ui(20), ui(20), ui(20), ui(80)),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _DrawerTitleBar(title: '评分'),
-                    SizedBox(height: ui(20)),
-                    Container(height: 1, color: _kBorderSoft),
-                    SizedBox(height: ui(16)),
-                    _ScoreProfileRow(
-                      submission: widget.submission,
-                      item: widget.item,
-                    ),
-                    SizedBox(height: ui(16)),
-                    if (hasAttachment)
-                      for (var i = 0; i < files.length; i++) ...[
-                        if (i > 0) SizedBox(height: ui(10)),
-                        _attachmentCardFor(files[i], i, files.length),
-                      ]
-                    else
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: ui(12),
-                          vertical: ui(10),
-                        ),
-                        decoration: BoxDecoration(
-                          color: _kPageGrey,
-                          borderRadius: BorderRadius.circular(ui(8)),
-                        ),
-                        child: Text(
-                          '该学生尚未提交考试文件',
-                          style: TextStyle(
-                            fontSize: ui(13),
-                            color: _kTextSecondary,
-                            fontWeight: AppFont.w400,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    SizedBox(height: ui(20)),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          '评分与点评',
-                          style: TextStyle(
-                            fontSize: ui(16),
-                            color: _kTextDark,
-                            fontWeight: AppFont.w600,
-                            height: 1.2,
-                          ),
-                        ),
-                        SizedBox(width: ui(12)),
-                        Expanded(
-                          child: Container(height: 1, color: _kBorderSoft),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: ui(16)),
-                    _FieldLabel('分数/100'),
-                    SizedBox(height: ui(8)),
-                    _ScoreInput(controller: _scoreCtrl),
-                    SizedBox(height: ui(16)),
-                    _FieldLabel('评语（选填）'),
-                    SizedBox(height: ui(8)),
-                    _PlainTextArea(
-                      hint: '请输入对该次考试的评分依据与点评内容…',
-                      height: ui(96),
-                      controller: _commentCtrl,
-                    ),
-                  ],
+            _ScoreProfileRow(submission: widget.submission, item: widget.item),
+            SizedBox(height: ui(16)),
+            if (hasAttachment)
+              for (var i = 0; i < files.length; i++) ...[
+                if (i > 0) SizedBox(height: ui(10)),
+                _attachmentCardFor(files[i], i, files.length),
+              ]
+            else
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(
+                  horizontal: ui(12),
+                  vertical: ui(10),
+                ),
+                decoration: BoxDecoration(
+                  color: _kPageGrey,
+                  borderRadius: BorderRadius.circular(ui(8)),
+                ),
+                child: Text(
+                  '该学生尚未提交考试文件',
+                  style: TextStyle(
+                    fontSize: ui(13),
+                    color: _kTextSecondary,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w400,
+                    height: 1.4,
+                  ),
                 ),
               ),
+            SizedBox(height: ui(20)),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  '评分与点评',
+                  style: TextStyle(
+                    fontSize: ui(16),
+                    color: _kTextDark,
+                    fontFamily: 'PingFang SC',
+                    fontWeight: AppFont.w600,
+                    height: 1.2,
+                  ),
+                ),
+                SizedBox(width: ui(12)),
+                Expanded(child: Container(height: 1, color: _kBorderSoft)),
+              ],
             ),
-            Positioned(
-              left: ui(20),
-              right: ui(20),
-              bottom: ui(20),
-              child: _PrimaryGradientButton(
-                icon: Icons.check_circle_outline_rounded,
-                label: _submitting
-                    ? '提交中...'
-                    : (widget.submission.state ==
-                              TeacherExamSubmissionState.reviewed
-                          ? '更新评分'
-                          : '提交评分'),
-                onTap: _submit,
-              ),
+            SizedBox(height: ui(16)),
+            _FieldLabel('分数/100'),
+            SizedBox(height: ui(8)),
+            _ScoreInput(controller: _scoreCtrl),
+            SizedBox(height: ui(16)),
+            _FieldLabel('评语（选填）'),
+            SizedBox(height: ui(8)),
+            _PlainTextArea(
+              hint: '请输入对该次考试的评分依据与点评内容…',
+              height: ui(96),
+              controller: _commentCtrl,
             ),
           ],
         ),
@@ -2249,7 +2108,8 @@ class _ScoreProfileRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: ui(16),
-                        color: AppColors.ink,
+                        color: Colors.black,
+                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w600,
                         height: 1.2,
                       ),
@@ -2317,13 +2177,13 @@ class _AttachmentCard extends StatelessWidget {
       '音频' => const [Color(0xFFFFE3D7), Color(0xFFFFF8F4)],
       '视频' => const [Color(0xFFD7FFE9), Color(0xFFF4FFF8)],
       '图片' => const [Color(0xFFFFF1D7), Color(0xFFFFFCF4)],
-      _ => const [Color(0xFFD7E2FF), AppColors.surfaceSubtle],
+      _ => const [Color(0xFFD7E2FF), Color(0xFFF9FBFF)],
     };
     final tagColor = switch (medium) {
-      '音频' => AppColors.warning,
-      '视频' => AppColors.success,
+      '音频' => const Color(0xFFFF8741),
+      '视频' => const Color(0xFF12CE51),
       '图片' => const Color(0xFFE68D10),
-      _ => AppColors.danger,
+      _ => const Color(0xFFFF5040),
     };
     final tagText = switch (medium) {
       '音频' => 'MP3',
@@ -2361,8 +2221,9 @@ class _AttachmentCard extends StatelessWidget {
               child: Text(
                 tagText,
                 style: TextStyle(
-                  fontSize: ui(12),
-                  color: AppColors.surface,
+                  fontSize: ui(8),
+                  color: Colors.white,
+                  fontFamily: 'PingFang SC',
                   fontWeight: FontWeight.w700,
                   height: 1.2,
                   letterSpacing: 0.4,
@@ -2434,7 +2295,7 @@ class _GhostButton extends StatelessWidget {
           height: ui(33),
           padding: EdgeInsets.symmetric(horizontal: ui(12)),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(ui(8)),
             border: Border.all(color: _kBorderSoft),
           ),
@@ -2520,39 +2381,8 @@ class _ScoreInput extends StatelessWidget {
 // 抽屉里通用零件
 // =============================================================================
 
-class _DrawerTitleBar extends StatelessWidget {
-  const _DrawerTitleBar({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: ui(3.25),
-          height: ui(14.85),
-          decoration: BoxDecoration(
-            color: _kPurple,
-            borderRadius: BorderRadius.circular(ui(6)),
-          ),
-        ),
-        SizedBox(width: ui(4)),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: ui(16),
-            color: _kTextDark,
-            fontWeight: AppFont.w600,
-            height: 1.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
+// 抽屉标题与底部主按钮使用共享组件
+// （SmartCampusDrawerTitleBar / SmartCampusDrawerGradientButton）。
 
 class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.text);
@@ -2566,7 +2396,8 @@ class _FieldLabel extends StatelessWidget {
       text,
       style: TextStyle(
         fontSize: ui(14),
-        color: AppColors.ink,
+        color: Colors.black,
+        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w500,
         height: 1.4,
       ),
@@ -2631,54 +2462,6 @@ class _PlainTextAreaState extends State<_PlainTextArea> {
           color: _kTextDark,
           fontWeight: AppFont.w400,
           height: 1.4,
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryGradientButton extends StatelessWidget {
-  const _PrimaryGradientButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        height: ui(48),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.centerRight,
-            end: Alignment.centerLeft,
-            colors: [_kPurpleEnd, _kPurpleStart],
-          ),
-          borderRadius: BorderRadius.circular(ui(12)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: ui(16), color: AppColors.surface),
-            SizedBox(width: ui(8)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: ui(14),
-                color: AppColors.surface,
-                fontWeight: AppFont.w500,
-                height: 1.6,
-              ),
-            ),
-          ],
         ),
       ),
     );
