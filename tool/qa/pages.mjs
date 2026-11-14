@@ -18,6 +18,14 @@ const noticeStep = {
   route: '/',
   actions: [skipGuide, { click: /^通知/, after: 1500 }],
 };
+// 进入二级页后必须能看到的控件（工作台上没有），避免停在工作台也算通过。
+const campusPageChecks = {
+  'homework-review': [{ check: '待批改人次' }, { check: /^发布作业$/, role: 'button' }],
+  workbench: [{ check: /发布通知/, role: 'button' }],
+  'leave-approval': [{ check: /^待家长确认$/, role: 'button' }],
+  'home-school': [{ check: '会话总数' }],
+  'dorm-dynamic': [{ check: /^查寝记录$/, role: 'button' }],
+};
 const campusAction = (id, label) => ({
   id: `campus-${id}`,
   route: '/smart-campus',
@@ -31,8 +39,25 @@ const campusAction = (id, label) => ({
       { check: '已提交 14 人，共 14 人' },
       { check: /^评分$/, role: 'button' },
     ] : []),
+    ...(campusPageChecks[id] ?? []),
   ],
 });
+// 二级页里的子视图（页签、抽屉、弹窗）：先从工作台点进 entry，再执行 actions。
+const campusSub = (id, entry, actions) => ({
+  id: `campus-${id}`,
+  route: '/smart-campus',
+  actions: [{ wait: 1200 }, { click: entry, after: 2200 }, ...actions],
+});
+// 查寝历史日期条上「前天」那一格（条上是到今天为止的 14 天）及对应的日期文字。
+const dormHistoryDay = new Date(Date.now() - 2 * 86400000);
+const dormHistoryDayCell = new RegExp(
+  `^${'日一二三四五六'[dormHistoryDay.getDay()]}\\s*${dormHistoryDay.getDate()}$`,
+);
+const dormHistoryDayText = [
+  dormHistoryDay.getFullYear(),
+  String(dormHistoryDay.getMonth() + 1).padStart(2, '0'),
+  String(dormHistoryDay.getDate()).padStart(2, '0'),
+].join('-');
 
 const scheduleNextWeek = (label) => ({
   id: 'campus-schedule-next-week',
@@ -362,6 +387,21 @@ export const ROLES = [
       scheduleNextWeek('授课课表'),
       campusAction('sign', '签课管理'),
       campusAction('homework-review', '作业批改'),
+      campusSub('homework-closed', '作业批改', [
+        { click: /^已截止$/, after: 1200 },
+        { check: /石膏头像结构练习/ }, { check: /素描几何体组合/, absent: true },
+      ]),
+      campusSub('homework-publish', '作业批改', [
+        { click: /^发布作业$/, after: 900 },
+        { check: '期望提交格式' }, { check: /^发布$/, role: 'button' },
+      ]),
+      campusSub('homework-history', '作业批改', [
+        { click: /^历史作业$/, after: 900 }, { check: '历史发布记录' },
+      ]),
+      campusSub('homework-grade', '作业批改', [
+        { click: /^查看\/评分$/, after: 900 },
+        { check: '批改与点评' }, { check: /^发布批改$/, role: 'button' },
+      ]),
       campusAction('exam-review', '考评管理'),
       {
         id: 'campus-exam-score',
@@ -401,9 +441,48 @@ export const ROLES = [
       guideStep,
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('workbench', '班级工作台'),
+      campusSub('workbench-notice', '班级工作台', [
+        { click: /发布通知/, after: 800 }, { check: '发布班级通知' },
+      ]),
+      campusSub('workbench-students', '班级工作台', [
+        { click: /^学生管理$/, after: 1500 }, { check: /学生及家长信息仅查看/ },
+      ]),
+      campusSub('workbench-student-detail', '班级工作台', [
+        { click: /^学生管理$/, after: 1500 }, { click: /林小雨/, after: 1200 },
+        { check: '家长与监护人' }, { check: /确认修改/ },
+      ]),
+      campusSub('workbench-grades', '班级工作台', [
+        { click: /^成绩$/, after: 1800 }, { check: '班级成绩变化' }, { check: '考试记录' },
+      ]),
+      campusSub('workbench-score-detail', '班级工作台', [
+        { click: /^成绩$/, after: 1800 }, { click: /^详情$/, after: 1200 },
+        { check: '成绩详情' },
+      ]),
       campusAction('leave-approval', '请假审批'),
+      campusSub('leave-approval-approved', '请假审批', [
+        { click: /^已通过$/, after: 1200 },
+        { check: /代家长确认并通过/, absent: true }, { check: '许嘉懿' },
+      ]),
+      campusSub('leave-approval-reject', '请假审批', [
+        { click: /^驳回$/, after: 800 }, { check: '驳回申请' }, { check: '审批意见' },
+      ]),
       campusAction('home-school', '家校沟通'),
-      campusAction('dorm-history', '查寝历史'),
+      campusSub('home-school-pending', '家校沟通', [
+        { click: /^待回复$/, after: 1200 },
+        { check: '邓雨萱', absent: true }, { check: '刘语桐' },
+      ]),
+      campusSub('home-school-chat', '家校沟通', [
+        { click: /刘语桐/, after: 1500 }, { check: /^发送$/ },
+      ]),
+      campusSub('dorm-history', '查寝历史', [
+        { check: '查寝历史记录' }, { check: /晚查寝 · 已归寝/ },
+      ]),
+      campusSub('dorm-history-day', '查寝历史', [
+        { click: dormHistoryDayCell, after: 1500 }, { check: dormHistoryDayText },
+      ]),
+      campusSub('dorm-history-detail', '查寝历史', [
+        { click: /林小雨/, after: 1500 }, { check: /查寝详情/ },
+      ]),
       campusAction('group-chat', '群聊'),
       campusAction('mailbox', '校长信箱'),
     ],
@@ -417,6 +496,17 @@ export const ROLES = [
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('check-by-room', '按宿舍查寝'),
       campusAction('dorm-dynamic', '查寝动态'),
+      campusSub('dorm-dynamic-exception', '查寝动态', [
+        { click: /^异常$/, after: 1000 },
+        { check: /^查寝记录$/, role: 'button' }, { check: /^正常$/, absent: true },
+      ]),
+      campusSub('dorm-dynamic-audit', '查寝动态', [
+        { click: /^补卡审核/, after: 1200 }, { check: /^待审核$/ },
+      ]),
+      campusSub('dorm-dynamic-audit-detail', '查寝动态', [
+        { click: /^补卡审核/, after: 1200 }, { click: /^查看详情$/, after: 1200 },
+        { check: /补卡详情/ },
+      ]),
       campusAction('dorm-history', '查寝历史'),
       campusAction('punch', '到岗打卡'),
       campusAction('leave', '宿管请假'),
