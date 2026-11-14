@@ -370,6 +370,8 @@ abstract final class AppAssets {
       'assets/images/smartCampus/student/leave/stat_card_2.png';
   static const studentLeaveStatCard3 =
       'assets/images/smartCampus/student/leave/stat_card_3.png';
+  static const studentLeaveCreateApplyIcon =
+      'assets/images/smartCampus/student/leave/create_apply_icon.png';
 
   /// 任课老师 / 班主任 · 学生名册 · 顶部统计卡背景（当前列表 / 男 / 女）。
   static const teacherStudentRosterStatCard1 =

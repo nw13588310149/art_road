@@ -4,11 +4,11 @@
 // 入口：dashboard 快捷区「我的请假」→ controller.openMyTeacherLeave()
 //      → mainView == myTeacherLeave → SmartCampusPage 路由到本视图。
 //
-// 视觉：
-//   1. banner（62 高，背景图 xiaoquan/bg.png，标题「我的请假」）
-//   2. 3 张统计卡（背景图与学生端一致）：待审批 / 已通过 / 已拒绝
-//   3. 控制条：4 状态 tabs + 右侧白底「发起请假」按钮（无搜索框）
-//   4. 双列卡片网格（白底 + 右上角淡紫光晕，展示本人请假记录）
+// 视觉（按音乐之路 80e9dd3c 同路径文件还原）：
+//   1. banner（62 高，背景图 xiaoquan/bg.png，居中标题「我的请假」/「宿管请假」）
+//   2. 3 张统计卡（背景图与学生端一致）：审批中 / 已通过 / 已驳回，下方一行说明
+//   3. 控制条：4 个黑底状态页签 + 右侧白底描边「发起请假」按钮（无搜索框）
+//   4. 双列卡片网格（白底 + 右上角淡紫光晕，方角状态标签，展示本人请假记录）
 //   5. 点击「发起请假」→ 右侧抽屉表单（600 宽，与 APP 其他抽屉一致）
 // =============================================================================
 
@@ -27,20 +27,29 @@ import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/teacher_leave_data.dart';
 import '../data/teacher_repository.dart';
+import 'widgets/smart_campus_dark_tabs.dart';
 import 'widgets/smart_campus_equal_height_grid.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_side_drawer.dart';
+import 'widgets/smart_campus_square_tag.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-// —— 颜色 ————————————————————————————————————————————————————————
-const Color _kBoardBg = AppColors.surfaceSubtle;
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kBorderHair = AppColors.line;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kTextPlaceholder = AppColors.textPlaceholder;
+// —— 颜色（原版色值；紫色统一为品牌紫）————————————————————————————
+const Color _kBoardBg = Color(0xFFF5F6FA);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kBorderHair = Color(0xFFE6E9F1);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kTextPlaceholder = Color(0xFFD1D1D1);
 const Color _kPurple = AppColors.brand;
+const Color _kGreen = Color(0xFF0CAC40);
+const Color _kGreenSoftBg = Color(0xFFE4FFED);
+const Color _kRed = Color(0xFFFF323C);
+const Color _kRedSoftBg = Color(0xFFFFE4E5);
+const Color _kOrange = Color(0xFFFF6A00);
+const Color _kOrangeSoftBg = Color(0xFFFFEDD3);
 
 enum _StatusTab {
   all('全部'),
@@ -60,12 +69,22 @@ enum _StatusTab {
 }
 
 extension _TeacherLeaveStatusStyle on TeacherLeaveStatus {
-  AppTone get tone => switch (this) {
-    TeacherLeaveStatus.pending => AppTone.warning,
-    TeacherLeaveStatus.approved => AppTone.success,
-    TeacherLeaveStatus.rejected => AppTone.danger,
+  Color get bg => switch (this) {
+    TeacherLeaveStatus.pending => _kOrangeSoftBg,
+    TeacherLeaveStatus.approved => _kGreenSoftBg,
+    TeacherLeaveStatus.rejected => _kRedSoftBg,
+  };
+
+  Color get fg => switch (this) {
+    TeacherLeaveStatus.pending => _kOrange,
+    TeacherLeaveStatus.approved => _kGreen,
+    TeacherLeaveStatus.rejected => _kRed,
   };
 }
+
+/// 申请人视角统一叫「审批中」（数据层的「待审批」是审批人视角的叫法）。
+String _statusLabel(TeacherLeaveStatus status) =>
+    status == TeacherLeaveStatus.pending ? '审批中' : status.label;
 
 String _formatYmdHms(DateTime d) {
   String two(int n) => n.toString().padLeft(2, '0');
@@ -166,7 +185,7 @@ class _TeacherMyLeaveViewState extends ConsumerState<TeacherMyLeaveView> {
       context: context,
       barrierLabel: '关闭',
       barrierDismissible: true,
-      barrierColor: AppColors.ink.withValues(alpha: 0.32),
+      barrierColor: Colors.black.withValues(alpha: 0.32),
       transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (ctx, anim, sec) {
         return DashboardScaleScope(
@@ -211,9 +230,9 @@ class _TeacherMyLeaveViewState extends ConsumerState<TeacherMyLeaveView> {
     final ui = DashboardScaleScope.of(context).ui;
     await showScaledDialog<void>(
       context: context,
-      barrierColor: AppColors.ink.withValues(alpha: 0.18),
+      barrierColor: Colors.black.withValues(alpha: 0.18),
       builder: (ctx) => GradientHeaderDialog(
-        title: '${detail.leaveType} · ${detail.status.label}',
+        title: '${detail.leaveType} · ${_statusLabel(detail.status)}',
         width: 460,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,11 +269,7 @@ class _TeacherMyLeaveViewState extends ConsumerState<TeacherMyLeaveView> {
     final ui = DashboardScaleScope.of(context).ui;
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
-      header: AppPageHeader(
-        title: widget.title,
-        subtitle: '提交后由教务老师审批，审批结果会同步到这里',
-        onBack: widget.onBack,
-      ),
+      header: SmartCampusPageBanner(title: widget.title, onBack: widget.onBack),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -263,42 +278,29 @@ class _TeacherMyLeaveViewState extends ConsumerState<TeacherMyLeaveView> {
             approvedCount: _approvedCount,
             rejectedCount: _rejectedCount,
           ),
+          SizedBox(height: ui(8)),
+          Padding(
+            padding: EdgeInsets.only(left: ui(8)),
+            child: Text(
+              '提交后由教务老师审批，审批结果会同步到这里',
+              style: TextStyle(
+                fontSize: ui(12),
+                color: _kTextHint,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 1.5,
+              ),
+            ),
+          ),
           SizedBox(height: ui(16)),
-          Row(
-            children: [
-              Expanded(
-                child: SmartCampusStatusTabs<_StatusTab>(
-                  segments: [
-                    const AppSegment(value: _StatusTab.all, label: '全部'),
-                    AppSegment(
-                      value: _StatusTab.pending,
-                      label: '${_StatusTab.pending.label}（$_pendingCount）',
-                    ),
-                    AppSegment(
-                      value: _StatusTab.approved,
-                      label: '${_StatusTab.approved.label}（$_approvedCount）',
-                    ),
-                    AppSegment(
-                      value: _StatusTab.rejected,
-                      label: '${_StatusTab.rejected.label}（$_rejectedCount）',
-                    ),
-                  ],
-                  value: _tab,
-                  onChanged: (t) {
-                    if (_tab == t) return;
-                    setState(() => _tab = t);
-                    unawaited(_loadList());
-                  },
-                ),
-              ),
-              const SizedBox(width: AppSpace.s12),
-              AppButton(
-                label: '发起请假',
-                icon: Icons.add_rounded,
-                size: AppButtonSize.sm,
-                onTap: _showApplyDrawer,
-              ),
-            ],
+          _ControlBar(
+            current: _tab,
+            onTap: (t) {
+              if (_tab == t) return;
+              setState(() => _tab = t);
+              unawaited(_loadList());
+            },
+            onCreate: _showApplyDrawer,
           ),
           SizedBox(height: ui(16)),
           _CardsGrid(
@@ -311,8 +313,6 @@ class _TeacherMyLeaveViewState extends ConsumerState<TeacherMyLeaveView> {
     );
   }
 }
-
-// —— Banner ————————————————————————————————————————————————————————
 
 // —— 统计卡 ————————————————————————————————————————————————————————
 
@@ -337,7 +337,6 @@ class _StatsRow extends StatelessWidget {
             backgroundAsset: AppAssets.studentLeaveStatCard1,
             label: '审批中',
             value: pendingCount,
-            valueSuffix: '条',
           ),
         ),
         SizedBox(width: ui(12)),
@@ -346,7 +345,6 @@ class _StatsRow extends StatelessWidget {
             backgroundAsset: AppAssets.studentLeaveStatCard2,
             label: '已通过',
             value: approvedCount,
-            valueSuffix: '条',
           ),
         ),
         SizedBox(width: ui(12)),
@@ -355,7 +353,6 @@ class _StatsRow extends StatelessWidget {
             backgroundAsset: AppAssets.studentLeaveStatCard3,
             label: '已驳回',
             value: rejectedCount,
-            valueSuffix: '条',
           ),
         ),
       ],
@@ -364,6 +361,87 @@ class _StatsRow extends StatelessWidget {
 }
 
 // —— 控制条 ————————————————————————————————————————————————————————
+
+/// 原版控制条：左黑底状态页签（无描边），右白底描边「发起请假」。
+class _ControlBar extends StatelessWidget {
+  const _ControlBar({
+    required this.current,
+    required this.onTap,
+    required this.onCreate,
+  });
+
+  final _StatusTab current;
+  final ValueChanged<_StatusTab> onTap;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // 页签放不下时在自己内部横向滚动，不挤掉右侧按钮（窄横屏）。
+        Flexible(
+          child: SmartCampusDarkTabs<_StatusTab>(
+            bordered: false,
+            segments: [
+              for (final tab in _StatusTab.values)
+                AppSegment(value: tab, label: tab.label),
+            ],
+            value: current,
+            onChanged: onTap,
+          ),
+        ),
+        SizedBox(width: ui(12)),
+        _CreateLeaveButton(onTap: onCreate),
+      ],
+    );
+  }
+}
+
+class _CreateLeaveButton extends StatelessWidget {
+  const _CreateLeaveButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(ui(12), ui(8), ui(13), ui(8)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(ui(8)),
+          border: Border.all(color: _kBorderSoft, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              AppAssets.studentLeaveCreateApplyIcon,
+              width: ui(16),
+              height: ui(16),
+              fit: BoxFit.contain,
+            ),
+            SizedBox(width: ui(8)),
+            Text(
+              '发起请假',
+              style: TextStyle(
+                fontSize: ui(14),
+                color: _kTextDark,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w500,
+                height: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 // —— 卡片网格 ——————————————————————————————————————————————————————
 
@@ -424,9 +502,9 @@ class _LeaveCard extends StatelessWidget {
         child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(ui(12)),
-            border: Border.all(color: AppColors.surface),
+            border: Border.all(color: Colors.white),
           ),
           child: Stack(
             clipBehavior: Clip.none,
@@ -466,7 +544,8 @@ class _LeaveCard extends StatelessWidget {
                           record.leaveType,
                           style: TextStyle(
                             fontSize: ui(16),
-                            color: AppColors.ink,
+                            color: Colors.black,
+                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w500,
                             height: 1.1,
                           ),
@@ -477,6 +556,7 @@ class _LeaveCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: ui(12),
                             color: _kTextSecondary,
+                            fontFamily: 'PingFang SC',
                             fontWeight: AppFont.w400,
                             height: 1.1,
                           ),
@@ -546,9 +626,13 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppStatusTag(
-      label: status == TeacherLeaveStatus.pending ? '审批中' : status.label,
-      tone: status.tone,
+    // 原版方角状态标签：内距 4×2、圆角 4、12 号（行高 15.24）。
+    return SmartCampusSquareTag(
+      label: _statusLabel(status),
+      background: status.bg,
+      foreground: status.fg,
+      height: 19.24,
+      horizontalPadding: 4,
     );
   }
 }
@@ -857,28 +941,11 @@ class _DrawerHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: ui(3.25),
-            height: ui(15),
-            decoration: BoxDecoration(
-              color: _kPurple,
-              borderRadius: BorderRadius.circular(ui(6)),
-            ),
-          ),
-          SizedBox(width: ui(4)),
-          Text(
-            '发起请假',
-            style: TextStyle(
-              fontSize: ui(16),
-              color: _kTextDark,
-              fontWeight: AppFont.w600,
-              height: 1.2,
-            ),
-          ),
+          const SmartCampusDrawerTitleBar(title: '发起请假'),
           const Spacer(),
-          InkWell(
+          AppPressable(
             onTap: onClose,
-            borderRadius: BorderRadius.circular(ui(8)),
+            semanticLabel: '关闭',
             child: Padding(
               padding: EdgeInsets.all(ui(8)),
               child: Icon(
@@ -994,7 +1061,8 @@ class _FieldLabel extends StatelessWidget {
       text,
       style: TextStyle(
         fontSize: ui(14),
-        color: AppColors.ink,
+        color: Colors.black,
+        fontFamily: 'PingFang SC',
         fontWeight: AppFont.w500,
         height: 20 / 14,
       ),
