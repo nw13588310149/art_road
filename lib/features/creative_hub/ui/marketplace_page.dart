@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../core/ui/ui.dart';
+import '../../shell/state/shell_controller.dart';
 import '../data/creative_models.dart';
-import '../data/creative_repository.dart';
-import '../state/creative_controllers.dart';
+import '../data/market_repository.dart';
+import '../state/market_controller.dart';
 import 'creative_widgets.dart';
 import 'marketplace_editor.dart';
+import 'market_forms.dart';
+import 'market_order_page.dart';
+import 'market_management.dart';
+
+final _listingProvider = FutureProvider.autoDispose
+    .family<MarketListing, String>(
+      (ref, id) => ref.watch(marketRepositoryProvider).listing(id),
+    );
 
 class MarketplacePage extends ConsumerStatefulWidget {
   const MarketplacePage({super.key});
@@ -15,156 +24,391 @@ class MarketplacePage extends ConsumerStatefulWidget {
 }
 
 class _MarketplacePageState extends ConsumerState<MarketplacePage> {
-  String? _selected;
-  bool _creating = false, _orders = false;
+  String _view = 'discover', _sellerTab = 'listings', _returnView = 'discover';
+  String? _selected, _order;
+  MarketListing? _editing;
+  bool _initialized = false;
+  final _search = TextEditingController();
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['listingId'] != null) {
+        _selected = '${args['listingId']}';
+        _view = 'detail';
+      }
+    }
+  }
+
+  void _back() => setState(() {
+    _view = ['seller', 'orders', 'moderation'].contains(_view)
+        ? 'discover'
+        : _returnView;
+    _returnView = 'discover';
+    _selected = null;
+    _order = null;
+  });
+  void _open(MarketListing w) => setState(() {
+    _returnView = _view;
+    _selected = w.id;
+    _view = 'detail';
+  });
+  void _openOrder(String id) => setState(() {
+    _returnView = _view == 'detail' ? 'orders' : _view;
+    _order = id;
+    _view = 'order';
+  });
+  void _edit([MarketListing? w]) => setState(() {
+    _returnView = 'seller';
+    _editing = w;
+    _view = 'editor';
+  });
+  Future<void> _favorite(MarketListing w) async {
+    final result = await ref.read(commerceProvider.notifier).favorite(w.id);
+    if (mounted && !result.success) AppToast.showError(context, result.error);
+  }
+
+  Future<void> _checkout(MarketListing w) async {
+    final order = await showAppDrawer<MarketOrder>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => MarketCheckout(listing: w),
+    );
+    if (mounted && order != null) _openOrder(order.id);
+  }
+
+  Future<void> _share(MarketListing w) async {
+    final route = Uri(path: '/market', queryParameters: {'listingId': w.id});
+    final uri = Uri.base.replace(fragment: '$route');
+    await Clipboard.setData(
+      ClipboardData(text: '${w.title} · ${w.author}\n$uri'),
+    );
+    if (mounted) AppToast.showSuccess(context, '作品链接已复制');
+  }
+
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(marketplaceProvider);
-    final controller = ref.read(marketplaceProvider.notifier);
-    final work = state.items.where((item) => item.id == _selected).firstOrNull;
-    if (_creating) {
-      return MarketplaceEditor(
-        onClose: () => setState(() => _creating = false),
-      );
+    final state = ref.watch(commerceProvider);
+    final controller = ref.read(commerceProvider.notifier);
+    final role = ref.watch(shellControllerProvider.select((s) => s.user.role));
+    if (_view == 'editor') {
+      return MarketplaceEditor(initial: _editing, onClose: _back);
     }
-    if (_orders) return _orderList();
-    if (work != null) return _detail(work);
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 16,
-        children: [
-          CreativeHeading(
-            title: '集市',
-            subtitle: '让好作品被看见，也让创作拥有更多可能。',
-            actions: [
-              AppButton(
-                label: '我的订单',
-                variant: AppButtonVariant.secondary,
-                onTap: () => setState(() => _orders = true),
-              ),
-              const SizedBox(width: 8),
-              AppButton(
-                label: '发布作品',
-                icon: Icons.add,
-                onTap: () => setState(() => _creating = true),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              AppSegmented<String>(
-                value: state.view,
-                onChanged: (value) => controller.filter(view: value),
-                segments: const [
-                  AppSegment(value: 'all', label: '发现作品'),
-                  AppSegment(value: 'sale', label: '可购买'),
-                  AppSegment(value: 'saved', label: '我的收藏'),
-                  AppSegment(value: 'mine', label: '我的发布'),
-                ],
-              ),
-              const Spacer(),
-              SizedBox(
-                width: 210,
-                child: AppSearchField(
-                  hint: '搜索作品或作者',
-                  onChanged: (value) => controller.filter(keyword: value),
-                ),
-              ),
-            ],
-          ),
-          CreativeSubjectFilter(
-            value: state.subject,
-            onChanged: (value) => controller.filter(subject: value),
-          ),
-          Expanded(
-            child: state.loading
-                ? const Center(child: AppLoadingIndicator())
-                : state.error.isNotEmpty
-                ? AppErrorState(
-                    title: '集市加载失败',
-                    description: state.error,
-                    onRetry: controller.load,
-                  )
-                : controller.visible.isEmpty
-                ? const AppEmptyState(
-                    title: '还没有匹配的作品',
-                    description: '换个关键词，或分享自己的创作。',
-                  )
-                : LayoutBuilder(
-                    builder: (context, size) => GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: size.maxWidth >= 880 ? 3 : 2,
-                        mainAxisExtent: 334,
-                        mainAxisSpacing: 18,
-                        crossAxisSpacing: 18,
+    Widget content;
+    if (_view == 'order') {
+      content = MarketOrderPage(orderId: _order!, onBack: _back);
+    } else if (_view == 'moderation') {
+      content = MarketModerationPage(
+        onBack: () => setState(() => _view = 'discover'),
+      );
+    } else if (_view == 'detail' && _selected != null) {
+      final w = state.listings.where((l) => l.id == _selected).firstOrNull;
+      content = w != null
+          ? _detail(w)
+          : ref
+                .watch(_listingProvider(_selected!))
+                .when(
+                  loading: () => const Center(child: AppLoadingIndicator()),
+                  error: (e, _) => Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AppErrorState(
+                        title: '作品暂时无法查看',
+                        description: '$e'.replaceFirst('Bad state: ', ''),
+                        onRetry: () =>
+                            ref.invalidate(_listingProvider(_selected!)),
                       ),
-                      itemCount: controller.visible.length,
-                      itemBuilder: (context, index) =>
-                          _card(controller.visible[index]),
+                      AppButton(label: '返回集市', onTap: _back),
+                    ],
+                  ),
+                  data: _detail,
+                );
+    } else {
+      content = Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 16,
+          children: [
+            CreativeHeading(
+              title: _view == 'seller'
+                  ? '创作者工作台'
+                  : _view == 'orders'
+                  ? '我的订单'
+                  : '集市',
+              subtitle: _view == 'seller'
+                  ? '管理发布、交付与售后'
+                  : _view == 'orders'
+                  ? '交易进展、数字交付与售后记录'
+                  : '发现创作 · 数字授权与实物作品',
+              onBack: _view == 'discover'
+                  ? null
+                  : () => setState(() => _view = 'discover'),
+              actions: [
+                if (_view == 'discover') ...[
+                  AppButton(
+                    label: '我的订单',
+                    variant: AppButtonVariant.secondary,
+                    onTap: () => setState(() => _view = 'orders'),
+                  ),
+                  const SizedBox(width: 8),
+                  AppButton(
+                    label: '创作者工作台',
+                    variant: AppButtonVariant.secondary,
+                    onTap: () => setState(() => _view = 'seller'),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                if (_view == 'orders')
+                  AppButton(
+                    label: '收货地址',
+                    variant: AppButtonVariant.secondary,
+                    onTap: () => showAppDrawer(
+                      context: context,
+                      builder: (_) => const MarketAddressBook(),
                     ),
                   ),
-          ),
-        ],
-      ),
+                if (_view != 'orders')
+                  AppButton(
+                    label: '发布作品',
+                    icon: Icons.add,
+                    onTap: () => _edit(),
+                  ),
+              ],
+            ),
+            if (state.error.isNotEmpty)
+              Row(
+                children: [
+                  Expanded(
+                    child: AppNotice(
+                      message: state.error,
+                      tone: AppTone.warning,
+                    ),
+                  ),
+                  AppButton(
+                    label: '重试',
+                    variant: AppButtonVariant.secondary,
+                    onTap: controller.load,
+                  ),
+                ],
+              ),
+            if (state.loading && !state.loaded)
+              const Expanded(child: Center(child: AppLoadingIndicator()))
+            else if (_view == 'orders')
+              Expanded(
+                child: MarketOrderList(
+                  orders: state.orders,
+                  seller: false,
+                  onSelect: _openOrder,
+                ),
+              )
+            else if (_view == 'seller') ...[
+              Row(
+                children: [
+                  AppSegmented<String>(
+                    value: _sellerTab,
+                    segments: const [
+                      AppSegment(value: 'listings', label: '我的发布'),
+                      AppSegment(value: 'orders', label: '卖出的订单'),
+                    ],
+                    onChanged: (v) => setState(() => _sellerTab = v),
+                  ),
+                  const Spacer(),
+                  AppIconButton(
+                    icon: Icons.refresh,
+                    semanticLabel: '刷新工作台',
+                    onTap: controller.load,
+                  ),
+                ],
+              ),
+              Expanded(
+                child: _sellerTab == 'orders'
+                    ? MarketOrderList(
+                        orders: state.orders,
+                        seller: true,
+                        onSelect: _openOrder,
+                      )
+                    : MarketSellerListings(onEdit: _edit, onDetail: _open),
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: AppSegmented<String>(
+                      value: state.kind,
+                      segments: const [
+                        AppSegment(value: '', label: '发现作品'),
+                        AppSegment(value: 'digital', label: '数字授权'),
+                        AppSegment(value: 'physical', label: '实物作品'),
+                        AppSegment(value: 'showcase', label: '创作分享'),
+                      ],
+                      onChanged: (v) => controller.filter(kind: v),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 200,
+                    child: AppSearchField(
+                      controller: _search,
+                      hint: '搜索作品或作者',
+                      onChanged: (v) => controller.filter(keyword: v),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: CreativeSubjectFilter(
+                      value: state.subject,
+                      onChanged: (v) => controller.filter(subject: v),
+                    ),
+                  ),
+                  AppChip(
+                    label: '我的收藏',
+                    selected: state.savedOnly,
+                    onTap: () => controller.filter(savedOnly: !state.savedOnly),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 130,
+                    child: AppSelect<String>(
+                      value: state.sort,
+                      options: const [
+                        AppSelectOption(value: 'newest', label: '最近发布'),
+                        AppSelectOption(value: 'priceAsc', label: '价格从低到高'),
+                        AppSelectOption(value: 'priceDesc', label: '价格从高到低'),
+                      ],
+                      onChanged: (v) => controller.filter(sort: v),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Text(
+                    '${controller.visible.length} 件作品',
+                    style: AppText.caption12,
+                  ),
+                  const Spacer(),
+                  if (role == 'principal' || role == 'admin')
+                    AppButton(
+                      label: '集市审核',
+                      size: AppButtonSize.sm,
+                      variant: AppButtonVariant.secondary,
+                      onTap: () => setState(() => _view = 'moderation'),
+                    ),
+                  const SizedBox(width: 12),
+                  Text('演示交易 · 无真实资金流转', style: AppText.caption12),
+                ],
+              ),
+              Expanded(
+                child: controller.visible.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const AppEmptyState(
+                              title: '没有匹配的作品',
+                              description: '试试其他科目或交易方式。',
+                            ),
+                            AppButton(
+                              label: '清除筛选',
+                              variant: AppButtonVariant.secondary,
+                              onTap: () {
+                                _search.clear();
+                                controller.clearFilters();
+                              },
+                            ),
+                          ],
+                        ),
+                      )
+                    : LayoutBuilder(
+                        builder: (_, size) => GridView.builder(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: size.maxWidth >= 880 ? 3 : 2,
+                                mainAxisExtent: 348,
+                                mainAxisSpacing: 18,
+                                crossAxisSpacing: 18,
+                              ),
+                          itemCount: controller.visible.length,
+                          itemBuilder: (_, i) => _card(controller.visible[i]),
+                        ),
+                      ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+    return PopScope(
+      canPop: _view == 'discover',
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: content,
     );
   }
 
-  Widget _card(MarketListing work) => AppCard(
+  Widget _card(MarketListing w) => AppCard(
     padding: EdgeInsets.zero,
-    onTap: () => setState(() => _selected = work.id),
+    onTap: () => _open(w),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-          child: AppImage(src: work.cover, height: 220, fit: BoxFit.cover),
+          child: AppImage(src: w.cover, height: 220, fit: BoxFit.cover),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 10,
             children: [
               Row(
                 children: [
                   Expanded(
                     child: Text(
-                      work.title,
+                      w.title,
                       style: AppText.title16,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    work.priceLabel,
-                    style: AppText.number(size: work.forSale ? 16 : 13),
-                  ),
+                  Text(w.priceLabel, style: AppText.number(size: 16)),
                 ],
               ),
-              const SizedBox(height: 8),
               Row(
                 children: [
-                  AppAvatar(name: work.author, size: 24),
+                  AppAvatar(name: w.author, size: 24),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(work.author, style: AppText.body13)),
+                  Expanded(child: Text(w.author, style: AppText.body13)),
                   AppIconButton(
-                    icon: work.favorite
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    semanticLabel: work.favorite ? '取消收藏作品' : '收藏作品',
+                    icon: w.favorite ? Icons.favorite : Icons.favorite_border,
+                    semanticLabel: w.favorite ? '取消收藏作品' : '收藏作品',
                     filled: false,
                     size: AppButtonSize.sm,
-                    onTap: () => _favorite(work),
+                    onTap: () => _favorite(w),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
               Text(
-                work.forSale
-                    ? '${work.subject} · ${work.license.label}'
-                    : '${work.subject} · 创作分享',
+                '${w.subject} · ${w.kind.label}${w.kind == MarketKind.physical
+                    ? w.stock > 0
+                          ? ' · 余 ${w.stock} 件'
+                          : ' · 已售罄'
+                    : ''}',
                 style: AppText.caption12,
               ),
             ],
@@ -173,177 +417,24 @@ class _MarketplacePageState extends ConsumerState<MarketplacePage> {
       ],
     ),
   );
-
-  Future<void> _favorite(MarketListing work) async {
-    final error = await ref
-        .read(marketplaceProvider.notifier)
-        .favorite(work.id);
-    if (mounted && error != null) AppToast.showError(context, error);
-  }
-
-  Future<void> _buy(MarketListing work) async {
-    final confirmed = await showAppConfirm(
-      context: context,
-      title: '确认演示订单',
-      message:
-          '《${work.title}》\n${work.license.label} · ${work.priceLabel}\n\n${work.license.description}\n\n本次为演示购买，不收取真实款项。',
-      confirmLabel: '确认演示购买',
-    );
-    if (!confirmed || !mounted) return;
-    final error = await ref.read(marketplaceProvider.notifier).buy(work.id);
-    if (!mounted) return;
-    if (error != null) {
-      AppToast.showError(context, error);
-    } else {
-      ref.invalidate(marketOrdersProvider);
-      AppToast.showSuccess(context, '演示订单已完成，可在我的订单中查看');
-    }
-  }
-
-  Future<void> _remove(MarketListing work) async {
-    final confirmed = await showAppConfirm(
-      context: context,
-      title: '撤下作品',
-      message: '撤下后不再出现在集市中，已完成的订单仍可查看。',
-      danger: true,
-      confirmLabel: '撤下',
-    );
-    if (!confirmed || !mounted) return;
-    final error = await ref
-        .read(marketplaceProvider.notifier)
-        .action(
-          () => ref
-              .read(creativeRepositoryProvider)
-              .remove('market/listings', work.id),
-        );
-    if (!mounted) return;
-    if (error != null) {
-      AppToast.showError(context, error);
-    } else {
-      setState(() => _selected = null);
-    }
-  }
-
-  Widget _detail(MarketListing work) => Padding(
-    padding: const EdgeInsets.all(24),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 20,
-      children: [
-        CreativeHeading(
-          title: '作品详情',
-          subtitle: '集市 / ${work.subject}',
-          onBack: () => setState(() => _selected = null),
-          actions: [
-            AppButton(
-              label: work.favorite ? '已收藏' : '收藏作品',
-              variant: AppButtonVariant.secondary,
-              icon: work.favorite ? Icons.favorite : Icons.favorite_border,
-              onTap: () => _favorite(work),
-            ),
-          ],
-        ),
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 20,
-            children: [
-              Expanded(
-                flex: 6,
-                child: AppCard(
-                  padding: const EdgeInsets.all(20),
-                  color: AppColors.surfaceSubtle,
-                  child: InteractiveViewer(
-                    minScale: 1,
-                    maxScale: 4,
-                    child: AppImage(src: work.cover, fit: BoxFit.contain),
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 4,
-                child: ListView(
-                  children: [
-                    AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          AppTag.subject(work.subject),
-                          const SizedBox(height: 16),
-                          Text(work.title, style: AppText.title24),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              AppAvatar(name: work.author, size: 36),
-                              const SizedBox(width: 10),
-                              Text(work.author, style: AppText.body14Strong),
-                            ],
-                          ),
-                          const Divider(height: 32, color: AppColors.line),
-                          Text('创作说明', style: AppText.title16),
-                          const SizedBox(height: 10),
-                          Text(work.description, style: AppText.body14),
-                          const Divider(height: 32, color: AppColors.line),
-                          Text(
-                            work.forSale ? '数字作品使用许可' : '作品展示',
-                            style: AppText.title16,
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            work.forSale ? work.license.label : '作者保留作品的相关权利',
-                            style: AppText.body14Strong,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            work.forSale
-                                ? work.license.description
-                                : '这份作品用于创作交流，当前未开放购买。',
-                            style: AppText.body13,
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            work.priceLabel,
-                            style: AppText.displayNumber(size: 32),
-                          ),
-                          const SizedBox(height: 16),
-                          if (work.mine)
-                            AppButton(
-                              label: '撤下作品',
-                              variant: AppButtonVariant.secondary,
-                              onTap: () => _remove(work),
-                            )
-                          else if (work.purchased)
-                            AppButton(
-                              label: '查看我的订单',
-                              onTap: () => setState(() => _orders = true),
-                            )
-                          else if (work.forSale)
-                            AppButton(
-                              label: '购买使用许可',
-                              loading: ref.watch(
-                                marketplaceProvider.select((s) => s.busy),
-                              ),
-                              onTap: () => _buy(work),
-                            ),
-                          if (work.forSale) ...[
-                            const SizedBox(height: 12),
-                            Text('演示交易 · 不收取真实款项', style: AppText.caption12),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _orderList() {
-    final orders = ref.watch(marketOrdersProvider);
+  Widget _detail(MarketListing w) {
+    final state = ref.watch(commerceProvider);
+    final pending = state.orders
+        .where(
+          (o) =>
+              o.buyer &&
+              o.listing.id == w.id &&
+              o.status == MarketOrderStatus.pendingPayment,
+        )
+        .firstOrNull;
+    final purchased = state.orders
+        .where(
+          (o) =>
+              o.buyer &&
+              o.listing.id == w.id &&
+              o.status == MarketOrderStatus.completed,
+        )
+        .firstOrNull;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -351,93 +442,200 @@ class _MarketplacePageState extends ConsumerState<MarketplacePage> {
         spacing: 20,
         children: [
           CreativeHeading(
-            title: '我的订单',
-            subtitle: '已获得的数字作品使用许可 · 演示交易',
-            onBack: () => setState(() => _orders = false),
+            title: '作品详情',
+            subtitle: '集市 / ${w.subject} / ${w.kind.label}',
+            onBack: _back,
+            actions: [
+              if (w.status == MarketPublication.published)
+                AppButton(
+                  label: '分享作品',
+                  icon: Icons.ios_share,
+                  variant: AppButtonVariant.secondary,
+                  onTap: () => _share(w),
+                ),
+            ],
           ),
           Expanded(
-            child: orders.when(
-              loading: () => const Center(child: AppLoadingIndicator()),
-              error: (error, _) => AppErrorState(
-                title: '订单加载失败',
-                onRetry: () => ref.invalidate(marketOrdersProvider),
-              ),
-              data: (items) => items.isEmpty
-                  ? const AppEmptyState(
-                      title: '还没有订单',
-                      description: '购买完成后，作品和许可说明会保存在这里。',
-                    )
-                  : ListView.separated(
-                      itemCount: items.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        final order = items[index];
-                        final work = order.listing;
-                        return AppCard(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              AppImage(
-                                src: work.cover,
-                                width: 128,
-                                height: 146,
-                                fit: BoxFit.cover,
-                                borderRadius: AppRadius.br8,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 20,
+              children: [
+                Expanded(
+                  flex: 6,
+                  child: AppCard(
+                    padding: const EdgeInsets.all(24),
+                    color: AppColors.surfaceSubtle,
+                    child: InteractiveViewer(
+                      minScale: 1,
+                      maxScale: 4,
+                      child: AppImage(src: w.cover, fit: BoxFit.contain),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: ListView(
+                    children: [
+                      AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          spacing: 16,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                AppTag.subject(w.subject),
+                                AppTag(label: w.kind.label),
+                                if (w.status != MarketPublication.published)
+                                  AppTag(label: w.status.label),
+                              ],
+                            ),
+                            Text(w.title, style: AppText.title24),
+                            Row(
+                              children: [
+                                AppAvatar(name: w.author, size: 32),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    w.author,
+                                    style: AppText.body14Strong,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(w.description, style: AppText.body14),
+                            const Divider(color: AppColors.line),
+                            if (w.kind == MarketKind.digital) ...[
+                              Text(w.license.label, style: AppText.title16),
+                              Text(w.terms, style: AppText.body14),
+                              Text(
+                                '付款后交付 ${w.deliveryCount} 份文件 · 非独占授权',
+                                style: AppText.body13,
                               ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  spacing: 8,
-                                  children: [
-                                    Text(work.title, style: AppText.title20),
-                                    Text(
-                                      '${work.author} · ${work.license.label}',
-                                      style: AppText.body14,
-                                    ),
-                                    Text(
-                                      work.license.description,
-                                      style: AppText.body13,
-                                    ),
-                                    Text(
-                                      '${order.id} · ${order.time}',
-                                      style: AppText.caption12,
-                                    ),
-                                    AppButton(
-                                      label: '查看数字作品',
-                                      size: AppButtonSize.sm,
-                                      variant: AppButtonVariant.secondary,
-                                      onTap: () => openReadingResource(
-                                        context,
-                                        ReadingResource(
-                                          id: work.id,
-                                          title: work.title,
-                                          kind: 'images',
-                                          cover: work.cover,
-                                          pages: [work.cover],
-                                        ),
-                                      ),
+                            ] else if (w.kind == MarketKind.physical) ...[
+                              Text('作品规格', style: AppText.title16),
+                              Text(w.specification, style: AppText.body14),
+                              Text(
+                                '库存 ${w.stock} 件 · 运费 ${marketMoney(w.shippingCents)}\n付款后 ${w.dispatchDays} 天内发货',
+                                style: AppText.body13,
+                              ),
+                              Text(
+                                '购买实物不包含著作权转让或商业使用授权。',
+                                style: AppText.body13,
+                              ),
+                            ] else
+                              Text('用于创作交流，作者保留作品相关权利。', style: AppText.body14),
+                            if (w.rightsNote.isNotEmpty)
+                              Text(
+                                '作者权属说明：${w.rightsNote}',
+                                style: AppText.body13,
+                              ),
+                            Text(
+                              w.priceLabel,
+                              style: AppText.displayNumber(size: 32),
+                            ),
+                            if (w.mine)
+                              AppButton(
+                                label: '管理这件作品',
+                                onTap: () => setState(() {
+                                  _view = 'seller';
+                                  _sellerTab = 'listings';
+                                }),
+                              )
+                            else if (pending != null)
+                              AppButton(
+                                label: '继续付款',
+                                onTap: () => _openOrder(pending.id),
+                              )
+                            else if (w.kind == MarketKind.digital &&
+                                purchased != null)
+                              AppButton(
+                                label: '查看已购订单',
+                                onTap: () => _openOrder(purchased.id),
+                              )
+                            else if (w.forSale)
+                              AppButton(
+                                label: w.kind == MarketKind.physical
+                                    ? w.stock > 0
+                                          ? '购买实物作品'
+                                          : '暂时售罄'
+                                    : '购买使用许可',
+                                onTap: w.purchasable && !state.busy
+                                    ? () => _checkout(w)
+                                    : null,
+                              ),
+                            if (w.status == MarketPublication.published)
+                              AppButton(
+                                label: w.favorite ? '已收藏' : '收藏作品',
+                                variant: AppButtonVariant.secondary,
+                                icon: w.favorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                onTap: state.busy ? null : () => _favorite(w),
+                              ),
+                            if (w.forSale)
+                              Text('演示交易 · 不收取真实款项', style: AppText.caption12),
+                            if (!w.mine &&
+                                w.status == MarketPublication.published)
+                              AppButton(
+                                label: '举报作品或权属问题',
+                                variant: AppButtonVariant.secondary,
+                                size: AppButtonSize.sm,
+                                onTap: () => showMarketForm(
+                                  context,
+                                  title: '举报作品',
+                                  explanation: '请说明涉及的内容、权属或交易问题，平台审核后处理。',
+                                  fields: const [
+                                    MarketFormField(
+                                      'reason',
+                                      '举报说明（至少 5 字）',
+                                      lines: 4,
                                     ),
                                   ],
+                                  save: (body) => ref
+                                      .read(commerceProvider.notifier)
+                                      .report(w.id, '${body['reason']}'),
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      AppCard(
+                        title: '购买者评价 · ${w.reviews.length}',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          spacing: 14,
+                          children: [
+                            if (w.reviews.isEmpty)
+                              Text('还没有购买者评价', style: AppText.body13),
+                            for (final r in w.reviews)
                               Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                spacing: 6,
                                 children: [
                                   Text(
-                                    work.priceLabel,
-                                    style: AppText.number(size: 20),
+                                    '${r['name']} · ${r['rating']} / 5',
+                                    style: AppText.body14Strong,
                                   ),
-                                  const SizedBox(height: 8),
-                                  const AppTag(label: '演示订单已完成'),
+                                  Text(
+                                    '${r['content']}',
+                                    style: AppText.body14,
+                                  ),
+                                  Text(
+                                    '${r['time']}',
+                                    style: AppText.caption12,
+                                  ),
                                 ],
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],

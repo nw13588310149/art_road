@@ -45,19 +45,8 @@ final learningTopicsProvider =
           LearningTopicsController(ref.watch(creativeRepositoryProvider))
             ..load(),
     );
-final marketplaceProvider =
-    StateNotifierProvider.autoDispose<
-      MarketplaceController,
-      CreativeState<MarketListing>
-    >(
-      (ref) =>
-          MarketplaceController(ref.watch(creativeRepositoryProvider))..load(),
-    );
 final readingResourcesProvider = FutureProvider.autoDispose(
   (ref) => ref.watch(creativeRepositoryProvider).resources(),
-);
-final marketOrdersProvider = FutureProvider.autoDispose(
-  (ref) => ref.watch(creativeRepositoryProvider).orders(),
 );
 final marketMyArtworksProvider = FutureProvider.autoDispose(
   (ref) => ref.watch(creativeRepositoryProvider).myArtworks(),
@@ -119,33 +108,6 @@ class LearningTopicsController extends CreativeController<LearningTopic> {
   Future<String?> publish(CreativeJson body) => action(() async {
     await repository.publish('micro-lessons', body);
     filter(keyword: '', subject: '', view: 'mine');
-  });
-}
-
-class MarketplaceController extends CreativeController<MarketListing> {
-  MarketplaceController(super.repository);
-  @override
-  Future<List<MarketListing>> fetch() => repository.listings();
-  List<MarketListing> get visible => state.items
-      .where(
-        (work) =>
-            (state.subject.isEmpty || work.subject == state.subject) &&
-            (state.view != 'saved' || work.favorite) &&
-            (state.view != 'mine' || work.mine) &&
-            (state.view != 'sale' || work.forSale) &&
-            '${work.title} ${work.author} ${work.description}'.contains(
-              state.keyword.trim(),
-            ),
-      )
-      .toList();
-  Future<String?> favorite(String id) =>
-      action(() => repository.favorite('market/listings', id));
-  Future<String?> publish(CreativeJson body) => action(() async {
-    await repository.publish('market/listings', body);
-    filter(keyword: '', subject: '', view: 'mine');
-  });
-  Future<String?> buy(String id) => action(() async {
-    await repository.buy(id);
   });
 }
 

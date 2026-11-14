@@ -115,6 +115,11 @@ async function runAction(page, action) {
     }
   } else if (action.tap) {
     await page.mouse.click(action.tap[0], action.tap[1]);
+  } else if (action.account) {
+    await boot(page, '/login');
+    await clickByName(page, action.account);
+    await sleep(3500);
+    await boot(page, action.route || '/market');
   } else if (action.drag) {
     await page.mouse.move(...action.drag[0]);
     await page.mouse.down();

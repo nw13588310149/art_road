@@ -211,31 +211,61 @@ void main() {
       final first = await call(
         'POST',
         '/app/market/orders',
-        body: {'listingId': 'market-1'},
+        body: {
+          'listingId': 'market-1',
+          'idempotencyKey': 'legacy-flow',
+          'expectedPriceCents': 1800,
+          'expectedTotalCents': 1800,
+          'termsAccepted': true,
+        },
       );
       final again = await call(
         'POST',
         '/app/market/orders',
-        body: {'listingId': 'market-1'},
+        body: {
+          'listingId': 'market-1',
+          'idempotencyKey': 'legacy-flow',
+          'expectedPriceCents': 1800,
+          'expectedTotalCents': 1800,
+          'termsAccepted': true,
+        },
       );
       expect(again['id'], first['id']);
+      expect(first['status'], 'pending_payment');
+      await call('POST', '/app/market/orders/${first['id']}/pay');
       expect(await call('GET', '/app/market/orders'), hasLength(1));
       expect(
         await call('GET', '/app/market/orders', account: DemoAccounts.teacher),
-        isEmpty,
+        hasLength(1),
       );
       await expectLater(
         call(
           'POST',
           '/app/market/orders',
           account: DemoAccounts.teacher,
-          body: {'listingId': 'market-1'},
+          body: {
+            'listingId': 'market-1',
+            'idempotencyKey': 'legacy-flow',
+            'expectedPriceCents': 1800,
+            'expectedTotalCents': 1800,
+            'termsAccepted': true,
+          },
         ),
         rejected(400),
       );
       await expectLater(
-        call('POST', '/app/market/orders', body: {'listingId': 'market-3'}),
-        rejected(400),
+        call(
+          'POST',
+          '/app/market/orders',
+          body: {
+            'listingId': 'market-3',
+            'idempotencyKey': 'showcase',
+            'expectedPriceCents': 0,
+            'expectedTotalCents': 0,
+            'termsAccepted': true,
+          },
+        ),
+        rejected(409),
       );
       await call(
         'POST',
@@ -257,7 +287,9 @@ void main() {
         'description': '记录静物创作中的明暗组织与空间关系。',
         'subject': '素描',
         'imageId': 'sample-1',
-        'forSale': true,
+        'kind': 'digital',
+        'submit': true,
+        'deliveryIds': ['sample-1'],
         'priceCents': 1800,
         'license': 'study',
         'rightsConfirmed': true,

@@ -11,7 +11,6 @@ import '../../features/artworks/ui/lead_reviews_page.dart';
 import '../../features/auth/ui/forget_password_page.dart';
 import '../../features/auth/ui/login_page.dart';
 import '../../features/auth/ui/register_page.dart';
-import '../../features/common/ui/feature_default_pages.dart';
 import '../../features/common/ui/legacy_placeholder_content.dart';
 import '../../features/common/ui/terms_page.dart';
 import '../../features/courseware/ui/courseware_page.dart';
@@ -44,6 +43,17 @@ import 'route_paths.dart';
 
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+    final incoming = Uri.tryParse(settings.name ?? '');
+    if (incoming?.path == RoutePaths.marketplace && incoming!.hasQuery) {
+      settings = RouteSettings(
+        name: RoutePaths.marketplace,
+        arguments: {
+          ...incoming.queryParameters,
+          if (settings.arguments is Map)
+            ...Map<String, dynamic>.from(settings.arguments as Map),
+        },
+      );
+    }
     final routeName = settings.name ?? RoutePaths.home;
 
     if (_isPublicRoute(routeName)) {
@@ -160,7 +170,7 @@ class AppRouter {
       case RoutePaths.designSystem:
         return const DesignSystemPage();
       case RoutePaths.mock:
-        return const MockExamDefaultPage();
+        return const StudyCenterPage();
       case RoutePaths.camp:
         return const QuizPracticePage();
       // 校园专属刷题 / 视频页（独立于公开资料，后续接入校园接口）。

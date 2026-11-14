@@ -67,9 +67,7 @@ void main() {
       await tester.tap(find.text('发布作品'));
       await settle(tester);
       expect(find.text('创作信息'), findsOneWidget);
-      await tester.tap(find.text('出售使用许可'));
-      await settle(tester);
-      await tester.tap(find.text('发布到集市').last);
+      await tester.tap(find.text('提交审核').last);
       await settle(tester);
       expect(find.text('请先选择作品图片'), findsOneWidget);
       expect(tester.takeException(), isNull);

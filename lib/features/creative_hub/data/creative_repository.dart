@@ -42,12 +42,6 @@ class CreativeRepository {
   Future<List<ReadingResource>> resources() async => creativeRows(
     await _data(client.get('/app/micro-lessons/resources')),
   ).map(ReadingResource.fromJson).toList();
-  Future<List<MarketListing>> listings() async => creativeRows(
-    await _data(client.get('/app/market/listings')),
-  ).map(MarketListing.fromJson).toList();
-  Future<List<MarketOrder>> orders() async => creativeRows(
-    await _data(client.get('/app/market/orders')),
-  ).map(MarketOrder.fromJson).toList();
   Future<List<CreativeJson>> myArtworks() async =>
       creativeRows(await _data(client.get('/app/market/my-artworks')));
   Future<void> favorite(String kind, String id) async =>
@@ -57,12 +51,6 @@ class CreativeRepository {
   Future<String> publish(String kind, CreativeJson body) async => creativeText(
     creativeMap(await _data(client.post('/app/$kind', data: body)))['id'],
   );
-  Future<MarketOrder> buy(String id) async => MarketOrder.fromJson(
-    creativeMap(
-      await _data(client.post('/app/market/orders', data: {'listingId': id})),
-    ),
-  );
-
   Future<ReadingResource> upload({
     required String name,
     Uint8List? bytes,

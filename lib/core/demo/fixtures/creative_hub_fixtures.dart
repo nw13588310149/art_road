@@ -1,4 +1,5 @@
 import 'package:image/image.dart' as img;
+import 'marketplace_fixtures.dart';
 import '../data/demo_artwork_data.dart';
 import '../data/demo_artwork_store.dart';
 import '../demo_accounts.dart';
@@ -10,19 +11,20 @@ import '../media/demo_media.dart';
 typedef _Row = Map<String, dynamic>;
 const _topicsKey = 'creative:topics:v1';
 const _resourcesKey = 'creative:resources:v1';
-const _listingsKey = 'creative:listings:v1';
-const _ordersKey = 'creative:orders:v1';
 String _text(Object? raw) => raw?.toString().trim() ?? '';
 String _now() => DemoArtworkData.fmt(DemoClock.now());
 List<_Row> _resources() => DemoStore.list(_resourcesKey, _seedResources);
 List<_Row> _topics() => DemoStore.list(_topicsKey, _seedTopics);
-List<_Row> _listings() => DemoStore.list(_listingsKey, _seedListings);
-List<_Row> _orders() => DemoStore.list(_ordersKey, () => []);
 _Row _find(List<_Row> rows, String id) =>
     rows.where((row) => row['id'] == id).firstOrNull ??
     (throw const DemoApiException('内容已不存在，请返回刷新', code: 404));
 
 void registerCreativeHubFixtures(DemoRouter router) {
+  registerMarketplaceFixtures(
+    router,
+    seedListings: _seedListings,
+    resources: _resources,
+  );
   _Row readableResource(DemoRequest req) {
     final row = _find(_resources(), req.param('id'));
     final shared = _topics().any(
@@ -112,10 +114,6 @@ void registerCreativeHubFixtures(DemoRouter router) {
     return {'id': row['id']};
   });
   router.get(
-    '/app/market/listings',
-    (req) => [for (final row in _listings()) _listing(row, req)],
-  );
-  router.get(
     '/app/market/samples',
     (req) => [
       for (final row in _resources())
@@ -138,96 +136,9 @@ void registerCreativeHubFixtures(DemoRouter router) {
           },
     ],
   );
-  router.post('/app/market/listings', (req) {
-    final body = req.bodyMap;
-    _validateText(body, 'title', '作品名称', 2, 40);
-    _validateText(body, 'description', '创作说明', 10, 1000);
-    _subject(body);
-    if (!req.boolOf('rightsConfirmed')) {
-      throw const DemoApiException('请确认拥有作品发布权限', code: 400);
-    }
-    var cover = '';
-    final artworkId = req.str('artworkId');
-    if (artworkId.isNotEmpty) {
-      final work = DemoArtworkStore.workById(artworkId);
-      if (work == null || !DemoArtworkData.accessOf(req.account, work).owner) {
-        throw const DemoApiException('请选择本人的作品', code: 403);
-      }
-      cover = _text(DemoArtworkData.imagesOf(work).firstOrNull?['ref']);
-    } else {
-      final resource = _find(_resources(), req.str('imageId'));
-      if (resource['kind'] != 'images' ||
-          (resource['ownerId'] != req.account.userId &&
-              resource['sample'] != true)) {
-        throw const DemoApiException('请选择自己的图片或演示素材', code: 403);
-      }
-      cover = _text(resource['cover']);
-    }
-    final sale = req.boolOf('forSale');
-    final price = req.intOf('priceCents');
-    if (sale &&
-        (req.bodyMap['priceCents'] is! int || price < 100 || price > 100000)) {
-      throw const DemoApiException('演示售价须在 1 至 1000 元之间', code: 400);
-    }
-    final license = req.str('license');
-    if (!const ['study', 'teaching'].contains(license)) {
-      throw const DemoApiException('请选择使用许可', code: 400);
-    }
-    final row = <String, dynamic>{
-      'id': DemoStore.nextId('market-'),
-      'ownerId': req.account.userId,
-      'author': req.account.name,
-      'title': req.str('title'),
-      'description': req.str('description'),
-      'subject': req.str('subject'),
-      'cover': cover,
-      'forSale': sale,
-      'priceCents': sale ? price : 0,
-      'license': license,
-      'createdAt': _now(),
-    };
-    _listings().insert(0, row);
-    DemoStore.save(_listingsKey);
-    return {'id': row['id']};
-  });
-  router.get(
-    '/app/market/orders',
-    (req) => [
-      for (final row in _orders().reversed)
-        if (row['buyerId'] == req.account.userId) _order(row, req),
-    ],
-  );
-  router.post('/app/market/orders', (req) {
-    final listing = _find(_listings(), req.str('listingId'));
-    if (listing['ownerId'] == req.account.userId) {
-      throw const DemoApiException('不能购买自己发布的作品', code: 400);
-    }
-    if (listing['forSale'] != true) {
-      throw const DemoApiException('这份作品仅供展示', code: 400);
-    }
-    final existing = _orders()
-        .where(
-          (row) =>
-              row['buyerId'] == req.account.userId &&
-              row['listingId'] == listing['id'],
-        )
-        .firstOrNull;
-    if (existing != null) return _order(existing, req);
-    final order = <String, dynamic>{
-      'id': DemoStore.nextId('MYJ-'),
-      'buyerId': req.account.userId,
-      'listingId': listing['id'],
-      'time': _now(),
-      'listing': Map<String, dynamic>.from(listing),
-      'status': 'demo_completed',
-    };
-    _orders().add(order);
-    DemoStore.save(_ordersKey);
-    return _order(order, req);
-  });
-  for (final kind in ['micro-lessons', 'market/listings']) {
+  for (final kind in ['micro-lessons']) {
     router.post('/app/$kind/{id}/favorite', (req) {
-      _find(kind == 'micro-lessons' ? _topics() : _listings(), req.param('id'));
+      _find(_topics(), req.param('id'));
       final key = 'creative:favorites:${req.account.userId}';
       final saved = DemoStore.map(key, () => {});
       final id = '$kind:${req.param('id')}';
@@ -236,13 +147,13 @@ void registerCreativeHubFixtures(DemoRouter router) {
       return saved[id];
     });
     router.post('/app/$kind/{id}/remove', (req) {
-      final rows = kind == 'micro-lessons' ? _topics() : _listings();
+      final rows = _topics();
       final row = _find(rows, req.param('id'));
       if (row['ownerId'] != req.account.userId) {
         throw const DemoApiException('只能撤下自己的发布', code: 403);
       }
       rows.remove(row);
-      DemoStore.save(kind == 'micro-lessons' ? _topicsKey : _listingsKey);
+      DemoStore.save(_topicsKey);
       return true;
     });
   }
@@ -325,21 +236,6 @@ _Row _topic(_Row row, DemoRequest req) => {
     for (final id in row['resourceIds'] as List)
       _resource(_find(_resources(), _text(id))),
   ],
-};
-_Row _listing(_Row row, DemoRequest req) => {
-  ...row,
-  'mine': row['ownerId'] == req.account.userId,
-  'cover': DemoMedia.url(_text(row['cover'])),
-  'favorite': _favorite('market/listings', _text(row['id']), req),
-  'purchased': _orders().any(
-    (order) =>
-        order['buyerId'] == req.account.userId &&
-        order['listingId'] == row['id'],
-  ),
-};
-_Row _order(_Row row, DemoRequest req) => {
-  ...row,
-  'listing': _listing(Map<String, dynamic>.from(row['listing'] as Map), req),
 };
 void _validateText(_Row body, String key, String label, int min, int max) {
   final length = _text(body[key]).runes.length;

@@ -698,10 +698,10 @@ for (const role of ROLES) {
     { id: 'v31-topics', route: '/micro-lessons', actions: [{ check: '发现专题' }, { check: '把明暗交界线画进体积里' }] },
     { id: 'v31-topic-detail', route: '/micro-lessons', actions: [{ click: '把明暗交界线画进体积里' }, { check: '阅读资料' }, { check: '开始阅读' }] },
     { id: 'v31-topic-new', route: '/micro-lessons', actions: [{ click: '新增小课件' }, { check: '专题内容' }, { check: '上传 PDF / 图片' }, { check: '发布小课件' }] },
-    { id: 'v31-market', route: '/market', actions: [{ check: '发现作品' }, { check: '午后的静物' }, { check: '可购买' }] },
-    { id: 'v31-market-detail', route: '/market', actions: [{ click: '午后的静物' }, { check: '数字作品使用许可' }, { check: '演示交易' }] },
-    { id: 'v31-market-new', route: '/market', actions: [{ click: /^发布作品$/ }, { check: '创作信息' }, { check: '出售使用许可' }, { check: '上传作品图片' }] },
-    { id: 'v31-market-orders', route: '/market', actions: [{ click: '我的订单' }, { check: '还没有订单' }] },
+    { id: 'v31-market', route: '/market', actions: [{ check: '发现作品' }, { check: '午后的静物' }, { check: '数字授权' }] },
+    { id: 'v31-market-detail', route: '/market', actions: [{ click: '午后的静物' }, { check: '个人学习使用' }, { check: '演示交易' }] },
+    { id: 'v31-market-new', route: '/market', actions: [{ click: /^发布作品$/ }, { check: '创作信息' }, { check: '交易方式' }, { check: '上传作品图片' }] },
+    { id: 'v31-market-orders', route: '/market', actions: [{ click: '我的订单' }, { check: '暂无匹配的订单' }] },
   );
 }
 
@@ -748,18 +748,18 @@ ROLES.find((role) => role.id === 'student').steps.push(
     { type: '光与空间练习', into: '给这份创作起个名字' },
     { type: '观察静物之间的遮挡与明暗，记录这次创作的过程。', into: '分享观察、材料与创作过程' },
     { click: '石膏头像长期作品' },
-    { click: '确认作品发布权限' },
-    { click: /^发布到集市$/, nth: 1 }, { check: '光与空间练习' },
-    { click: '光与空间练习' }, { check: '撤下作品' }, { check: '作品展示' },
+    { scroll: 750, at: [900, 580] }, { click: '确认作品发布权限' },
+    { click: /^提交审核$/ }, { check: '光与空间练习' }, { check: '审核中' },
   ] },
   { id: 'v31-market-purchase', route: '/market', actions: [
     { click: '午后的静物' }, { scroll: 450, at: [950, 600] },
-    { click: '购买使用许可' }, { check: '确认演示订单' },
-    { click: '确认演示购买' }, { check: '查看我的订单' },
-    { click: '查看我的订单' }, { check: '演示订单已完成' }, { check: '个人学习使用' },
+    { click: '购买使用许可' }, { check: '确认订单' },
+    { scroll: 500, at: [950, 600] }, { click: '我已阅读并同意以上交易说明', role: 'any' },
+    { click: '创建订单 ·' }, { check: '待付款' }, { click: '模拟支付 ¥' }, { click: /^确认模拟支付$/, nth: 0 },
+    { check: '已完成' }, { check: '查看交付文件' },
   ] },
   { id: 'v31-market-order-read', route: '/market', actions: [
-    { click: '我的订单' }, { click: '查看数字作品' }, { check: '午后的静物' }, { check: '1 / 1' },
+    { click: '我的订单' }, { click: '午后的静物' }, { click: '查看交付文件' }, { check: '保存许可凭证' }, { check: '保存文件 1' },
   ] },
 );
 
@@ -775,3 +775,32 @@ for (const id of ['teacher', 'headTeacher', 'principal']) {
     ],
   });
 }
+
+ROLES.find((r) => r.id === 'student').steps.push(
+  { id: 'v32-market-physical', route: '/market', actions: [
+    { click: '石膏像的光' }, { scroll: 500, at: [950, 550] }, { click: '购买实物作品' }, { check: '收货地址' },
+    { click: '新增收货地址' }, { type: '林小雨', into: '收货人' }, { type: '13809310001', into: '联系电话' }, { type: '示范画室城东校区一号楼前台', into: '省市区及详细地址' },
+    { click: '保存地址' }, { scroll: 700, at: [950, 550] }, { click: '我已阅读并同意以上交易说明', role: 'any' }, { click: '创建订单 ·' }, { check: '待付款' }, { click: '模拟支付 ¥' }, { click: /^确认模拟支付$/ }, { check: '待发货' }, { check: '申请售后' },
+  ] },
+  { id: 'v32-market-seller', route: '/market', actions: [{ click: '创作者工作台' }, { check: '我的发布' }, { click: '卖出的订单' }, { check: '待发货' }] },
+  { id: 'v32-market-share', route: '/market?listingId=market-1', actions: [{ check: '作品详情' }, { check: '午后的静物' }] },
+);
+ROLES.find((r) => r.id === 'principal').steps.push({id:'v32-market-moderation',route:'/market',actions:[{click:'集市审核'},{check:'待审核作品'},{check:'举报与争议'}]});
+
+ROLES.find((r) => r.id === 'student').steps.push(
+ {id:'v32-market-fulfillment',route:'/market',actions:[
+  {account:'组长 · 张明远'}, {click:'创作者工作台'}, {click:'卖出的订单'}, {click:'石膏像的光'},
+  {check:'待发货'}, {click:'填写发货信息'}, {type:'顺丰速运',into:'快递公司'}, {type:'SF1234567890',into:'物流单号'}, {click:/^提交$/}, {check:'待收货'},
+  {account:'学生 · 林小雨'}, {click:'我的订单'}, {click:'石膏像的光'}, {click:/^确认收货$/}, {click:/^确认收货$/}, {check:'已完成'},
+  {click:'申请售后'}, {type:'收到的作品边角有破损，需要退货处理。',into:'问题说明'}, {click:/^提交$/}, {check:'售后处理中'},
+  {account:'组长 · 张明远'}, {click:'创作者工作台'}, {click:'卖出的订单'}, {click:'石膏像的光'}, {click:/^同意售后$/},
+  {type:'已核对作品状态，同意寄回后退款。',into:'处理说明'}, {type:'张明远 13809310012 示范画室城东校区前台',into:'退货地址'}, {click:/^提交$/}, {check:'待寄回'},
+  {account:'学生 · 林小雨'}, {click:'我的订单'}, {click:'石膏像的光'}, {click:'填写退货物流'}, {type:'顺丰速运',into:'快递公司'}, {type:'SF9988776655',into:'退货单号'}, {click:/^提交$/}, {check:'退货待签收'},
+  {account:'组长 · 张明远'}, {click:'创作者工作台'}, {click:'卖出的订单'}, {click:'石膏像的光'}, {click:/^确认退货并退款$/}, {click:/^确认退货并退款$/}, {check:'已退款'},
+  {account:'学生 · 林小雨'}, {click:'我的订单'}, {click:'石膏像的光'}, {check:'已退款'},
+ ]},
+ {id:'v32-market-audit-published',route:'/market',actions:[
+  {account:'校长 · 陈建华'}, {click:'集市审核'}, {check:'光与空间练习'}, {click:'通过审核'}, {type:'作品与创作说明已核对，可以公开展示。',into:'处理依据'}, {click:/^通过审核$/}, {check:'当前没有待审核作品'},
+  {account:'学生 · 林小雨'}, {click:'光与空间练习'}, {check:'管理这件作品'},
+ ]},
+);

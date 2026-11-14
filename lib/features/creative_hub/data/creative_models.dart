@@ -64,14 +64,69 @@ class LearningTopic {
 }
 
 enum MarketLicense {
-  study('study', '个人学习使用', '可用于个人欣赏与学习参考，不包含商用、转售或再次分发权限。'),
-  teaching('teaching', '教学展示使用', '可在本人授课中展示并注明作者，不包含素材转售、批量分发或著作权转让。');
+  study('study', '个人学习使用', '仅供购买者个人欣赏与学习参考，不包含商用、转售、再分发或著作权转让。'),
+  teaching('teaching', '教学展示使用', '允许购买者在本人授课中展示并注明作者，不包含素材转售、批量分发或著作权转让。'),
+  commercial(
+    'commercial',
+    '单项目商业使用',
+    '允许购买者在一个商业项目中使用并注明作者，不得单独转售素材、再授权或用于商标注册；著作权仍归作者。',
+  );
 
   const MarketLicense(this.key, this.label, this.description);
   final String key, label, description;
   static MarketLicense parse(String value) =>
       values.firstWhere((item) => item.key == value, orElse: () => study);
 }
+
+enum MarketKind {
+  showcase('showcase', '仅展示'),
+  digital('digital', '数字授权'),
+  physical('physical', '实物作品');
+
+  const MarketKind(this.key, this.label);
+  final String key, label;
+  static MarketKind parse(String value) =>
+      values.firstWhere((e) => e.key == value, orElse: () => showcase);
+}
+
+enum MarketPublication {
+  draft('draft', '草稿'),
+  pending('pending', '审核中'),
+  published('published', '已上架'),
+  rejected('rejected', '需修改'),
+  withdrawn('withdrawn', '已下架'),
+  archived('archived', '已归档');
+
+  const MarketPublication(this.key, this.label);
+  final String key, label;
+  static MarketPublication parse(String value) =>
+      values.firstWhere((e) => e.key == value, orElse: () => draft);
+}
+
+enum MarketOrderStatus {
+  pendingPayment('pending_payment', '待付款'),
+  awaitingShipment('awaiting_shipment', '待发货'),
+  shipped('shipped', '待收货'),
+  completed('completed', '已完成'),
+  cancelled('cancelled', '已取消'),
+  expired('expired', '已超时'),
+  refundRequested('refund_requested', '售后处理中'),
+  returnRequired('return_required', '待寄回'),
+  returnShipped('return_shipped', '退货待签收'),
+  refunded('refunded', '已退款'),
+  unknown('unknown', '状态待更新');
+
+  const MarketOrderStatus(this.key, this.label);
+  final String key, label;
+  static MarketOrderStatus parse(String value) => value == 'demo_completed'
+      ? completed
+      : values.firstWhere((e) => e.key == value, orElse: () => unknown);
+  bool get afterSale =>
+      [refundRequested, returnRequired, returnShipped].contains(this);
+}
+
+String marketMoney(int cents) => '¥${(cents / 100).toStringAsFixed(2)}';
+int marketInt(Object? value) => value is num ? value.toInt() : 0;
 
 class MarketListing {
   MarketListing.fromJson(CreativeJson json)
@@ -80,26 +135,158 @@ class MarketListing {
       subject = creativeText(json['subject']),
       description = creativeText(json['description']),
       author = creativeText(json['author']),
+      ownerId = creativeText(json['ownerId']),
       cover = creativeText(json['cover']),
-      priceCents = (json['priceCents'] as num?)?.toInt() ?? 0,
-      forSale = json['forSale'] == true,
+      priceCents = marketInt(json['priceCents']),
+      kind = MarketKind.parse(
+        creativeText(
+          json['kind'] ?? (json['forSale'] == true ? 'digital' : 'showcase'),
+        ),
+      ),
+      status = MarketPublication.parse(
+        creativeText(json['status'] ?? 'published'),
+      ),
       favorite = json['favorite'] == true,
       mine = json['mine'] == true,
       purchased = json['purchased'] == true,
-      license = MarketLicense.parse(creativeText(json['license']));
-  final String id, title, subject, description, author, cover;
-  final int priceCents;
-  final bool forSale, favorite, mine, purchased;
+      license = MarketLicense.parse(creativeText(json['license'])),
+      licenseTerms = creativeText(json['licenseTerms']),
+      stock = marketInt(json['stock']),
+      shippingCents = marketInt(json['shippingCents']),
+      dispatchDays = marketInt(json['dispatchDays']),
+      specification = creativeText(json['specification']),
+      reviewNote = creativeText(json['reviewNote']),
+      rightsNote = creativeText(json['rightsNote']),
+      imageId = creativeText(json['imageId']),
+      artworkId = creativeText(json['artworkId']),
+      deliveryIds = (json['deliveryIds'] as List? ?? [])
+          .map(creativeText)
+          .toList(),
+      deliveryCount = marketInt(json['deliveryCount']),
+      reviews = creativeRows(json['reviews']),
+      createdAt = creativeText(json['createdAt']);
+  final String id,
+      title,
+      subject,
+      description,
+      author,
+      ownerId,
+      cover,
+      licenseTerms;
+  final String specification,
+      reviewNote,
+      rightsNote,
+      imageId,
+      artworkId,
+      createdAt;
+  final int priceCents, shippingCents, stock, dispatchDays, deliveryCount;
+  final MarketKind kind;
+  final MarketPublication status;
+  final bool favorite, mine, purchased;
   final MarketLicense license;
-  String get priceLabel =>
-      forSale ? '¥${(priceCents / 100).toStringAsFixed(2)}' : '仅展示';
+  final List<String> deliveryIds;
+  final List<CreativeJson> reviews;
+  bool get forSale => kind != MarketKind.showcase;
+  bool get editable => [
+    MarketPublication.draft,
+    MarketPublication.rejected,
+    MarketPublication.withdrawn,
+  ].contains(status);
+  bool get purchasable =>
+      !mine &&
+      forSale &&
+      status == MarketPublication.published &&
+      (kind != MarketKind.physical || stock > 0);
+  String get priceLabel => forSale ? marketMoney(priceCents) : '仅展示';
+  String get terms =>
+      licenseTerms.isNotEmpty ? licenseTerms : license.description;
+  int get totalCents =>
+      priceCents + (kind == MarketKind.physical ? shippingCents : 0);
+}
+
+class MarketAddress {
+  const MarketAddress({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.detail,
+    this.isDefault = false,
+  });
+  factory MarketAddress.fromJson(CreativeJson json) => MarketAddress(
+    id: creativeText(json['id']),
+    name: creativeText(json['name']),
+    phone: creativeText(json['phone']),
+    detail: creativeText(json['detail']),
+    isDefault: json['default'] == true,
+  );
+  final String id, name, phone, detail;
+  final bool isDefault;
 }
 
 class MarketOrder {
   MarketOrder.fromJson(CreativeJson json)
     : id = creativeText(json['id']),
       time = creativeText(json['time']),
-      listing = MarketListing.fromJson(creativeMap(json['listing']));
-  final String id, time;
+      listing = MarketListing.fromJson(creativeMap(json['listing'])),
+      status = MarketOrderStatus.parse(creativeText(json['status'])),
+      buyer = json['buyer'] == true,
+      seller = json['seller'] == true,
+      buyerName = creativeText(json['buyerName']),
+      totalCents = marketInt(
+        json['totalCents'] ?? creativeMap(json['listing'])['priceCents'],
+      ),
+      shippingCents = marketInt(json['shippingCents']),
+      expiresAt = creativeText(json['expiresAt']),
+      paidAt = creativeText(json['paidAt']),
+      updatedAt = creativeText(json['updatedAt']),
+      address = json['address'] is Map
+          ? MarketAddress.fromJson(creativeMap(json['address']))
+          : null,
+      shipment = creativeMap(json['shipment']),
+      afterSale = creativeMap(json['afterSale']),
+      review = creativeMap(json['review']),
+      events = creativeRows(json['events']);
+  final String id, time, buyerName, expiresAt, paidAt, updatedAt;
   final MarketListing listing;
+  final MarketOrderStatus status;
+  final bool buyer, seller;
+  final int totalCents, shippingCents;
+  final MarketAddress? address;
+  final CreativeJson shipment, afterSale, review;
+  final List<CreativeJson> events;
+  bool get canRefund =>
+      buyer &&
+      [
+        MarketOrderStatus.completed,
+        MarketOrderStatus.shipped,
+        MarketOrderStatus.awaitingShipment,
+      ].contains(status);
+  bool get canReview =>
+      buyer && status == MarketOrderStatus.completed && review.isEmpty;
+  bool get canDispute => buyer && afterSale['status'] == 'rejected';
+  bool get canDeliver =>
+      buyer &&
+      listing.kind == MarketKind.digital &&
+      status == MarketOrderStatus.completed;
+}
+
+class MarketModeration {
+  MarketModeration.fromJson(CreativeJson json)
+    : listings = creativeRows(
+        json['listings'],
+      ).map(MarketListing.fromJson).toList(),
+      cases = creativeRows(json['cases']);
+  final List<MarketListing> listings;
+  final List<CreativeJson> cases;
+}
+
+/// 金额输入按十进制字符串转分，避免浮点价格计算。
+int? marketCents(String input) {
+  final value = input.trim();
+  if (!RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(value)) return null;
+  final parts = value.split('.');
+  final whole = int.tryParse(parts.first);
+  if (whole == null || whole > 100000) return null;
+  return whole * 100 +
+      (parts.length == 1 ? 0 : int.parse(parts.last.padRight(2, '0')));
 }
