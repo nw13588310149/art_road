@@ -101,6 +101,7 @@ class _EdgesBodyState extends State<_EdgesBody>
             value: _compare,
             onChanged: (v) => setState(() => _compare = v),
           ),
+          const SizedBox(height: 4),
           const ToolTipCard(
             title: '用线稿检查结构',
             text:

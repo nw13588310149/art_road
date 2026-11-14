@@ -3,7 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/geometry.dart';
@@ -242,9 +244,8 @@ class _PortraitBodyState extends State<_PortraitBody> {
                   ],
                 ),
         ),
-        Text(
+        const ToolNote(
           '先拖动方框四角，让上边对齐发际线、下边对齐下巴，左右贴住脸的两侧；再上下拖动眉线和鼻底线到实际位置。',
-          style: AppText.caption12,
         ),
         const SizedBox(height: AppSpace.s16),
         ToolSwitchRow(
@@ -259,33 +260,29 @@ class _PortraitBodyState extends State<_PortraitBody> {
           value: _axis,
           onChanged: (v) => setState(() => _axis = v),
         ),
-        Row(
+        Wrap(
+          spacing: AppSpace.s8,
+          runSpacing: AppSpace.s8,
           children: [
-            Expanded(
-              child: AppButton(
-                label: '恢复三等分',
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.sm,
-                onTap: _brow == 1 / 3 && _nose == 2 / 3
-                    ? null
-                    : () => setState(() {
-                        _brow = 1 / 3;
-                        _nose = 2 / 3;
-                      }),
-              ),
+            LibraryActionPill(
+              label: '恢复三等分',
+              iconAsset: AppAssets.coursewareRefresh,
+              onTap: _brow == 1 / 3 && _nose == 2 / 3
+                  ? null
+                  : () => setState(() {
+                      _brow = 1 / 3;
+                      _nose = 2 / 3;
+                    }),
             ),
-            const SizedBox(width: AppSpace.s12),
-            Expanded(
-              child: AppButton(
-                label: '重置方框',
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.sm,
-                onTap: () => setState(() {
-                  _frame = _defaultFrame();
-                  _brow = 1 / 3;
-                  _nose = 2 / 3;
-                }),
-              ),
+            LibraryActionPill(
+              label: '重置方框',
+              icon: Icons.crop_free_rounded,
+              iconSize: 18,
+              onTap: () => setState(() {
+                _frame = _defaultFrame();
+                _brow = 1 / 3;
+                _nose = 2 / 3;
+              }),
             ),
           ],
         ),
@@ -298,7 +295,7 @@ class _PortraitBodyState extends State<_PortraitBody> {
               '另外，鼻翼宽约等于两内眼角的距离，嘴角大致落在两眼瞳孔的垂线上，耳朵上缘约齐眉、下缘约齐鼻底。',
         ),
         const SizedBox(height: AppSpace.s8),
-        Text('常用参考比例，个体差异明显，写生时以对象为准', style: AppText.caption12),
+        const ToolNote('常用参考比例，个体差异明显，写生时以对象为准'),
       ],
     );
   }

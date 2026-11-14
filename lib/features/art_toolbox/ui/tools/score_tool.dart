@@ -192,11 +192,7 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
             ),
           ],
           const SizedBox(height: AppSpace.s20),
-          ToolTipCard(
-            title: '计算公式',
-            icon: Icons.functions_rounded,
-            text: rule.formula,
-          ),
+          ToolTipCard(title: '计算公式', text: rule.formula),
         ],
       ),
     );

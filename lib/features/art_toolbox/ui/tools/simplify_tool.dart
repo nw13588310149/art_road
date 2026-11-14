@@ -107,6 +107,7 @@ class _SimplifyBodyState extends State<_SimplifyBody>
           value: _compare,
           onChanged: (v) => setState(() => _compare = v),
         ),
+        const SizedBox(height: AppSpace.s4),
         ToolPanelSection(
           title: '色块占比',
           trailing: const Text('点击复制 HEX'),

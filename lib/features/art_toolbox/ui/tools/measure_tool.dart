@@ -4,7 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/geometry.dart';
@@ -95,62 +97,63 @@ class _MeasureBodyState extends State<_MeasureBody> {
   Widget _buildStage(BuildContext context) {
     final image = widget.image;
     return ToolStage(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpace.s12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final mapping = ContainMapping(
-              constraints.biggest,
-              image.width,
-              image.height,
-            );
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: (details) => _tap(details.localPosition, mapping),
-              onPanStart: (details) =>
-                  _dragging = _nearest(details.localPosition, mapping),
-              onPanUpdate: (details) {
-                final index = _dragging;
-                if (index != null) {
-                  setState(
-                    () => _points[index] = mapping.toImage(
-                      details.localPosition,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.s12),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final mapping = ContainMapping(
+                    constraints.biggest,
+                    image.width,
+                    image.height,
+                  );
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: (details) => _tap(details.localPosition, mapping),
+                    onPanStart: (details) =>
+                        _dragging = _nearest(details.localPosition, mapping),
+                    onPanUpdate: (details) {
+                      final index = _dragging;
+                      if (index != null) {
+                        setState(
+                          () => _points[index] = mapping.toImage(
+                            details.localPosition,
+                          ),
+                        );
+                      }
+                    },
+                    onPanEnd: (_) => _dragging = null,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: RawImage(
+                            image: image.image,
+                            fit: BoxFit.contain,
+                            filterQuality: FilterQuality.medium,
+                          ),
+                        ),
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _MeasurePainter(
+                              points: List<Offset>.of(_points),
+                              mapping: mapping,
+                              plumb: _plumb,
+                              level: _level,
+                              active: _dragging,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
-                }
-              },
-              onPanEnd: (_) => _dragging = null,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: RawImage(
-                      image: image.image,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.medium,
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _MeasurePainter(
-                        points: List<Offset>.of(_points),
-                        mapping: mapping,
-                        plumb: _plumb,
-                        level: _level,
-                        active: _dragging,
-                      ),
-                    ),
-                  ),
-                  if (_points.isEmpty)
-                    const Positioned(
-                      left: 0,
-                      top: 0,
-                      child: StageLabel('依次点两个点量出 A 段，再点两个点量出 B 段'),
-                    ),
-                ],
+                },
               ),
-            );
-          },
-        ),
+            ),
+          ),
+          if (_points.isEmpty) const StageHint('依次点两个点量出 A 段，再点两个点量出 B 段'),
+        ],
       ),
     );
   }
@@ -195,30 +198,22 @@ class _MeasureBodyState extends State<_MeasureBody> {
           value: _level,
           onChanged: (v) => setState(() => _level = v),
         ),
-        Row(
+        Wrap(
+          spacing: AppSpace.s8,
+          runSpacing: AppSpace.s8,
           children: [
-            Expanded(
-              child: AppButton(
-                label: '撤销一点',
-                icon: Icons.undo_rounded,
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.sm,
-                onTap: _points.isEmpty
-                    ? null
-                    : () => setState(() => _points.removeLast()),
-              ),
+            LibraryActionPill(
+              label: '撤销一点',
+              icon: Icons.undo_rounded,
+              iconSize: 18,
+              onTap: _points.isEmpty
+                  ? null
+                  : () => setState(() => _points.removeLast()),
             ),
-            const SizedBox(width: AppSpace.s12),
-            Expanded(
-              child: AppButton(
-                label: '清空',
-                icon: Icons.delete_sweep_outlined,
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.sm,
-                onTap: _points.isEmpty
-                    ? null
-                    : () => setState(_points.clear),
-              ),
+            LibraryActionPill(
+              label: '清空',
+              iconAsset: AppAssets.coursewareActionDelete,
+              onTap: _points.isEmpty ? null : () => setState(_points.clear),
             ),
           ],
         ),
@@ -246,14 +241,7 @@ class _RatioSummary extends StatelessWidget {
       final hint = segments.isEmpty
           ? (pending ? '再点一个点完成 A 段' : '在画面上点两个点量出 A 段')
           : (pending ? '再点一个点完成 B 段' : '再点两个点量出 B 段，显示两段之比');
-      return Container(
-        padding: const EdgeInsets.all(AppSpace.s12),
-        decoration: const BoxDecoration(
-          color: AppColors.surfaceSubtle,
-          borderRadius: AppRadius.br8,
-        ),
-        child: Text(hint, style: AppText.body13),
-      );
+      return ToolInfoBlock(child: Text(hint, style: AppText.body13));
     }
     final a = segmentLength(segments[0].$1, segments[0].$2);
     final b = segmentLength(segments[1].$1, segments[1].$2);

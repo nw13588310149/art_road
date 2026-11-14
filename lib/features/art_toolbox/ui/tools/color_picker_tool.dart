@@ -109,15 +109,15 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
 
   Widget _buildStage(BuildContext context) {
     return ToolStage(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpace.s12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final box = constraints.biggest;
-            return Stack(
-              children: [
-                Positioned.fill(
-                  child: InteractiveViewer(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.s12),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final box = constraints.biggest;
+                  return InteractiveViewer(
                     transformationController: _transform,
                     maxScale: 10,
                     child: SizedBox(
@@ -144,18 +144,13 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
                         ],
                       ),
                     ),
-                  ),
-                ),
-                if (_picked == null)
-                  const Positioned(
-                    left: 0,
-                    top: 0,
-                    child: StageLabel('点击画面任意位置取色，双指放大可精确取色'),
-                  ),
-              ],
-            );
-          },
-        ),
+                  );
+                },
+              ),
+            ),
+          ),
+          if (_picked == null) const StageHint('点击画面任意位置取色，双指放大可精确取色'),
+        ],
       ),
     );
   }
@@ -211,14 +206,9 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
         ToolPanelSection(
           title: '取色结果',
           child: color == null
-              ? Container(
-                  height: 72,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: AppColors.surfaceSubtle,
-                    borderRadius: AppRadius.br8,
-                  ),
-                  child: Text('点击画面取色', style: AppText.body13),
+              ? const ToolInfoBlock(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 27),
+                  child: Center(child: ToolNote('点击画面取色')),
                 )
               : _PickedColorCard(
                   color: color,
@@ -285,8 +275,7 @@ class _PickedColorCard extends StatelessWidget {
     final hsb = color.toHsb();
     final temperature = describeTemperature(color);
     final attributes = colorAttributesOf(color);
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpace.s12),
+    return ToolInfoBlock(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -387,6 +376,8 @@ class _TemperatureTag extends StatelessWidget {
       ColorTemperature.neutral => AppTag(
         label: label,
         icon: Icons.contrast_rounded,
+        color: AppColors.textSecondary,
+        background: AppColors.surface,
       ),
     };
   }

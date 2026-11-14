@@ -111,8 +111,8 @@ class _BlurBodyState extends State<_BlurBody>
             value: _compare,
             onChanged: (v) => setState(() => _compare = v),
           ),
-          Text('按住画面可临时查看原图', style: AppText.caption12),
-          const SizedBox(height: AppSpace.s16),
+          const ToolNote('按住画面可临时查看原图'),
+          const SizedBox(height: AppSpace.s20),
           const ToolTipCard(
             title: '为什么要眯眼看',
             text:
