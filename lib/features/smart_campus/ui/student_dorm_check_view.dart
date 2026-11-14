@@ -250,14 +250,13 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
     final pendingMakeups = state.pendingMakeupCount > 0
         ? state.pendingMakeupCount
         : state.stat.pendingMakeupCount;
-    final displayName = widget.studentName.isEmpty ? '我' : widget.studentName;
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
       headerGap: _kStatsBlockGap,
       header: SmartCampusPageBanner(
         titleHorizontalInset: 310,
         title: '我的查寝',
-        subtitle: '只显示$displayName的查寝记录；漏打卡可申请补卡，由宿管或班主任审核',
+        subtitle: '漏打卡可申请补卡',
         onBack: widget.onBack,
         actions: [
           AppButton(
