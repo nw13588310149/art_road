@@ -113,6 +113,7 @@ class ArtworkSummary {
     this.drawingDate = '',
     this.createTime = '',
     this.description = '',
+    this.practiceSource = const {},
     this.reviewed = false,
     this.leadStatus = ArtworkLeadStatus.none,
     this.version = 1,
@@ -155,6 +156,9 @@ class ArtworkSummary {
       drawingDate: _str(json['drawingDate']),
       createTime: _str(json['createTime']),
       description: _str(json['description']),
+      practiceSource: _map(
+        json['practiceSource'],
+      ).map((k, v) => MapEntry(k, _str(v))),
       reviewed: _str(json['status']).toUpperCase() == 'REVIEWED',
       leadStatus: ArtworkLeadStatus.parse(json['leadStatus']),
       version: _int(json['version']) < 1 ? 1 : _int(json['version']),
@@ -203,6 +207,7 @@ class ArtworkSummary {
   /// 提交时间 `yyyy-MM-dd HH:mm:ss`。
   final String createTime;
   final String description;
+  final Map<String, String> practiceSource;
 
   /// 责任老师已点评（`status == REVIEWED`）。
   final bool reviewed;
@@ -770,6 +775,10 @@ class ArtworkInsightTag {
     this.explanation = '',
     this.positive = false,
     this.resolvedCount = 0,
+    this.latestResolved = false,
+    this.advice = '',
+    this.keyword = '',
+    this.evidence = const [],
   });
 
   factory ArtworkInsightTag.fromJson(Object? raw) {
@@ -781,6 +790,12 @@ class ArtworkInsightTag {
       explanation: _str(json['explanation']),
       positive: _bool(json['positive']),
       resolvedCount: _int(json['resolvedCount']),
+      latestResolved: _bool(json['latestResolved']),
+      advice: _str(json['advice']),
+      keyword: _str(json['keyword']),
+      evidence: _maps(
+        json['evidence'],
+      ).map(ArtworkReviewEvidence.fromJson).toList(),
     );
   }
 
@@ -792,6 +807,9 @@ class ArtworkInsightTag {
   /// 表扬类标签（如「细节出彩」），不计入问题建议。
   final bool positive;
   final int resolvedCount;
+  final bool latestResolved;
+  final String advice, keyword;
+  final List<ArtworkReviewEvidence> evidence;
 }
 
 @immutable
@@ -883,11 +901,23 @@ class ArtworkDimensionLevels {
     required this.sampleCount,
     required this.items,
     this.history = const [],
+    this.reviewCount = 0,
+    this.fromDate = '',
+    this.toDate = '',
+    this.issues = const [],
+    this.sourceWorks = const [],
   });
 
   factory ArtworkDimensionLevels.fromJson(Map<String, dynamic> json) {
     return ArtworkDimensionLevels(
       subject: _str(json['subject']),
+      reviewCount: _int(json['reviewCount']),
+      fromDate: _str(json['fromDate']),
+      toDate: _str(json['toDate']),
+      issues: _maps(json['issues']).map(ArtworkInsightTag.fromJson).toList(),
+      sourceWorks: _maps(json['history'])
+          .map((h) => (id: _str(h['artworkId']), title: _str(h['title'])))
+          .toList(),
       sampleCount: _int(json['sampleCount']),
       items: [
         for (final row in _maps(json['items']))
@@ -912,6 +942,10 @@ class ArtworkDimensionLevels {
 
   final String subject;
   final int sampleCount;
+  final int reviewCount;
+  final String fromDate, toDate;
+  final List<ArtworkInsightTag> issues;
+  final List<({String id, String title})> sourceWorks;
   final List<({String key, String name, double? level})> items;
   final List<({String date, Map<String, double> levels})> history;
 }
@@ -979,6 +1013,7 @@ class ArtworkDraft {
     required this.description,
     required this.images,
     this.taskId = '',
+    this.practiceSource = const {},
     this.parentId = '',
     this.teacherIds = const [],
   });
@@ -991,6 +1026,7 @@ class ArtworkDraft {
   final String description;
   final List<ArtworkDraftImage> images;
   final String taskId;
+  final Map<String, String> practiceSource;
   final String parentId;
   final List<String> teacherIds;
 }
@@ -1001,4 +1037,26 @@ String artworkIdOf(Object? raw) {
     return _str(raw['id']);
   }
   return _str(raw);
+}
+
+class ArtworkReviewEvidence {
+  const ArtworkReviewEvidence({
+    required this.artworkId,
+    required this.title,
+    required this.teacher,
+    required this.time,
+    required this.comment,
+    required this.resolved,
+  });
+  factory ArtworkReviewEvidence.fromJson(Map<String, dynamic> json) =>
+      ArtworkReviewEvidence(
+        artworkId: _str(json['artworkId']),
+        title: _str(json['title']),
+        teacher: _str(json['teacher']),
+        time: _str(json['time']),
+        comment: _str(json['comment']),
+        resolved: _bool(json['resolved']),
+      );
+  final String artworkId, title, teacher, time, comment;
+  final bool resolved;
 }

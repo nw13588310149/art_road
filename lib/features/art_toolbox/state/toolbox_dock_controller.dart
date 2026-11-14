@@ -29,9 +29,23 @@ class ToolboxDockController extends StateNotifier<ToolboxDockPosition> {
     }
   }
 
-  void dock(Offset point, Rect bounds) {
+  void dock(Offset point, Rect bounds) =>
+      _save(ToolboxDockGeometry.snap(point, bounds));
+
+  void dockVertical(Offset point, Rect bounds) {
+    final p = ToolboxDockGeometry.clamp(point, bounds);
+    _save(
+      ToolboxDockPosition(
+        edge: p.dx < bounds.center.dx
+            ? ToolboxDockEdge.left
+            : ToolboxDockEdge.right,
+        fraction: bounds.height <= 0 ? 0 : (p.dy - bounds.top) / bounds.height,
+      ),
+    );
+  }
+
+  void _save(ToolboxDockPosition position) {
     _moved = true;
-    final position = ToolboxDockGeometry.snap(point, bounds);
     state = position;
     // 顺序写入，快速连续拖动也不会被较早的保存覆盖。
     _pendingSave = _pendingSave.then((_) async {

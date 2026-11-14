@@ -1,55 +1,46 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../core/ui/ui.dart';
+import '../../../app/router/route_paths.dart';
+import '../../my_notes/state/my_notes_controller.dart';
+import '../../my_notes/state/my_notes_state.dart';
 import '../data/toolbox_catalog.dart';
 import '../state/toolbox_dock_controller.dart';
 import '../state/page_tools_controller.dart';
-import '../state/companion_controller.dart';
 import '../state/toolbox_image_controller.dart';
 import 'art_toolbox_page.dart';
 import 'toolbox_route_observer.dart';
-import 'widgets/art_companion_portrait.dart';
-import 'widgets/companion_paint_trail.dart';
-import 'widgets/toolbox_companion.dart';
 import 'widgets/page_tools_drawer.dart';
 import 'widgets/page_tool_overlay.dart';
+import 'widgets/professional_tool_rail.dart';
 
-/// 挂在 MaterialApp.builder：业务导航与工具导航并列，收起不销毁工作台。
+/// 业务页面与工具工作台分开保留，参数关闭不结束当前工具。
 class FloatingToolboxHost extends ConsumerStatefulWidget {
   const FloatingToolboxHost({
     required this.observer,
     required this.child,
     super.key,
   });
-
   final ToolboxRouteObserver observer;
   final Widget child;
-
   @override
   ConsumerState<FloatingToolboxHost> createState() =>
       _FloatingToolboxHostState();
 }
 
-class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
-  static const _extent = ToolboxCompanion.extent;
+class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost>
+    with WidgetsBindingObserver {
   final _pageCapture = GlobalKey();
   int _sampleVersion = 0;
   final _workspaceNavigator = GlobalKey<NavigatorState>();
-  final _trail = GlobalKey<CompanionPaintTrailState>();
   final _selection = ValueNotifier<ArtTool?>(null);
   LocalHistoryEntry? _history;
-  bool _panelOpen = false;
-  bool _workspaceOpen = false;
-  bool _workspaceCreated = false;
-  bool _greeted = false;
-  bool _greetScheduled = false;
-  int _paint = 0;
+  bool _panelOpen = false, _railExpanded = false;
+  bool _workspaceOpen = false, _workspaceCreated = false;
   Offset? _dragPosition;
   ModalRoute<dynamic>? _lastPage;
 
@@ -57,19 +48,28 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
   void initState() {
     super.initState();
     widget.observer.changes.addListener(_routeChanged);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      ref.read(pageToolsProvider.notifier).pause();
+    }
   }
 
   void _routeChanged() {
     if (!mounted) return;
-    final pageChanged = _lastPage != widget.observer.page;
+    final changed = _lastPage != widget.observer.page;
     _lastPage = widget.observer.page;
-    if (pageChanged || !widget.observer.inSession) {
+    if (changed) _railExpanded = false;
+    if (changed || !widget.observer.inSession) {
       _sampleVersion++;
       ref.read(pageToolsProvider.notifier).end();
     }
     if (!widget.observer.inSession) ref.invalidate(pageToolsProvider);
     if (!widget.observer.inSession ||
-        pageChanged ||
+        changed ||
         !widget.observer.unobstructed) {
       _close();
     }
@@ -77,10 +77,7 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
       if (!widget.observer.inSession) {
         _workspaceCreated = false;
         _selection.value = null;
-        _greeted = false;
-        _paint = 0;
       }
-      if (!widget.observer.unobstructed) _panelOpen = false;
     });
   }
 
@@ -101,33 +98,53 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
   }
 
   void _close() {
-    if (!_panelOpen && !_workspaceOpen && _history == null) return;
     FocusManager.instance.primaryFocus?.unfocus();
     final history = _history;
     _history = null;
     history?.remove();
+    if (mounted) {
+      setState(() {
+        _panelOpen = false;
+        _workspaceOpen = false;
+      });
+    }
+  }
+
+  void _options() {
+    if (_panelOpen) {
+      _close();
+      return;
+    }
+    _attachHistory();
+    setState(() => _panelOpen = true);
+  }
+
+  void _select(ArtTool tool) {
+    final current = ref.read(pageToolsProvider).tool;
+    if (current == tool) {
+      _options();
+      return;
+    }
+    ref.read(pageToolsProvider.notifier).select(tool);
+    _attachHistory();
     setState(() {
-      _panelOpen = false;
-      _workspaceOpen = false;
+      _panelOpen = tool != ArtTool.color && tool != ArtTool.measure;
+      if (!_panelOpen) _railExpanded = false;
     });
   }
 
-  void _togglePanel() {
-    if (_panelOpen) {
-      _close();
-    } else {
-      FocusManager.instance.primaryFocus?.unfocus();
-      _attachHistory();
-      setState(() => _panelOpen = true);
-    }
+  void _end() {
+    _sampleVersion++;
+    ref.read(pageToolsProvider.notifier).end();
+    _close();
+    setState(() => _railExpanded = true);
   }
 
-  void _openTool(ArtTool? tool, {bool resume = false}) {
+  void _openTool(ArtTool? tool) {
+    ref.read(pageToolsProvider.notifier).pause();
     _attachHistory();
-    if (!resume) {
-      _workspaceNavigator.currentState?.popUntil((route) => route.isFirst);
-      _selection.value = tool;
-    }
+    _workspaceNavigator.currentState?.popUntil((route) => route.isFirst);
+    _selection.value = tool;
     setState(() {
       _workspaceCreated = true;
       _panelOpen = false;
@@ -184,12 +201,17 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
             Future.value(false))) {
       return;
     }
-    if (mounted) _close();
+    if (_workspaceOpen || _panelOpen) {
+      _close();
+    } else {
+      _end();
+    }
   }
 
   @override
   void dispose() {
     widget.observer.changes.removeListener(_routeChanged);
+    WidgetsBinding.instance.removeObserver(this);
     _selection.dispose();
     super.dispose();
   }
@@ -197,74 +219,69 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
   @override
   Widget build(BuildContext context) {
     final inSession = widget.observer.inSession;
-    // 会话级监听让路由切换和收起后的原图继续可用；退出登录后自动释放。
     if (inSession) ref.watch(toolboxImageControllerProvider);
     final pageTools = ref.watch(pageToolsProvider);
     final dock = ref.watch(toolboxDockControllerProvider);
-    final motionEnabled = ref.watch(companionMotionProvider);
     final media = MediaQuery.of(context);
-    final paintTrail = motionEnabled && !media.disableAnimations;
-    void trace(Offset position) {
-      if (!paintTrail) return;
-      _trail.currentState?.add(
-        position + const Offset(_extent / 2, _extent / 2),
-        companionPaints[_paint % companionPaints.length],
-      );
-    }
-
+    final route = widget.observer.page?.settings.name;
+    final ownTools =
+        route == RoutePaths.artToolbox ||
+        (route == RoutePaths.myNotes &&
+            ref.watch(myNotesControllerProvider.select((s) => s.view)) ==
+                MyNotesView.editor);
+    final visible =
+        inSession &&
+        widget.observer.unobstructed &&
+        !_workspaceOpen &&
+        !ownTools;
+    final effect = visible && !pageTools.original;
     return Overlay.wrap(
       child: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () {
-            if (_workspaceOpen) {
-              _escape();
-            } else if (_panelOpen) {
-              _close();
-            } else {
-              ref.read(pageToolsProvider.notifier).end();
-            }
-          },
-        },
+        bindings: {const SingleActivator(LogicalKeyboardKey.escape): _escape},
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final left = media.padding.left;
-            final top = media.padding.top;
-            final bounds = Rect.fromLTRB(
-              left,
-              top,
+            final safeBottom = math.max(
+              media.padding.bottom,
+              media.viewInsets.bottom,
+            );
+            final railHeight = math.min(
+              _railExpanded ? 420.0 : 52.0,
               math.max(
-                left,
-                constraints.maxWidth - media.padding.right - _extent,
+                52.0,
+                constraints.maxHeight - media.padding.top - safeBottom - 16,
+              ),
+            );
+            final bounds = Rect.fromLTRB(
+              media.padding.left + 8,
+              media.padding.top + 8,
+              math.max(
+                media.padding.left + 8,
+                constraints.maxWidth - media.padding.right - 60,
               ),
               math.max(
-                top,
-                constraints.maxHeight -
-                    math.max(media.padding.bottom, media.viewInsets.bottom) -
-                    _extent,
+                media.padding.top + 8,
+                constraints.maxHeight - safeBottom - railHeight - 8,
               ),
             );
             final point = ToolboxDockGeometry.clamp(
               _dragPosition ?? ToolboxDockGeometry.resolve(dock, bounds),
               bounds,
             );
-            final panelWidth = math.min(
-              360.0,
-              constraints.maxWidth < 700
-                  ? constraints.maxWidth - 16
-                  : constraints.maxWidth * .48,
-            );
-            final pageToolVisible =
-                inSession && widget.observer.unobstructed && !_workspaceOpen;
-            final effect = pageToolVisible && !pageTools.original;
-            final showLauncher =
-                inSession && widget.observer.unobstructed && !_workspaceOpen;
-            if (showLauncher && !_greeted && !_greetScheduled) {
-              _greetScheduled = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _greetScheduled = false;
-                if (mounted) _greeted = true;
-              });
-            }
+            final onRight = point.dx > constraints.maxWidth / 2;
+            final panelWidth = math.min(300.0, constraints.maxWidth - 88);
+            final panelLeft =
+                (onRight ? point.dx - panelWidth - 8 : point.dx + 60).clamp(
+                  8.0,
+                  constraints.maxWidth - panelWidth - 8,
+                );
+            final panelHeight = math.min(switch (pageTools.tool) {
+              ArtTool.grid => 330.0,
+              ArtTool.value => 320.0,
+              ArtTool.mirror => 300.0,
+              ArtTool.measure => 250.0,
+              ArtTool.color => 460.0,
+              _ => 400.0,
+            }, constraints.maxHeight - media.padding.top - safeBottom - 24);
             return Stack(
               children: [
                 ExcludeFocus(
@@ -404,136 +421,176 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost> {
                       ),
                     ),
                   ),
-                if (pageToolVisible && pageTools.tool != null)
+
+                if (visible && pageTools.tool != null)
                   Positioned.fill(
                     child: PageToolOverlay(onSample: _sampleColor),
                   ),
-                if (pageToolVisible && pageTools.tool != null && !_panelOpen)
+                if (visible && pageTools.tool != null && !_panelOpen)
                   Positioned(
-                    bottom: media.padding.bottom + 16,
                     left: 16,
-                    child: Semantics(
-                      container: true,
-                      explicitChildNodes: true,
-                      child: Material(
-                        color: AppColors.surface,
-                        borderRadius: AppRadius.br12,
-                        elevation: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                pageTools.tool!.icon,
-                                size: 18,
-                                color: AppColors.brand,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                pageTools.tool == ArtTool.quickSketch
-                                    ? '速写 ${pageTools.clock}${pageTools.seconds == 0 ? " · 已结束" : ""}'
-                                    : pageTools.tool == ArtTool.color
-                                    ? pageTools.hex
-                                    : pageTools.tool!.label,
-                                style: AppText.body14,
-                              ),
-                              AppButton(
-                                label: '调整',
-                                onTap: _togglePanel,
-                                variant: AppButtonVariant.text,
-                                size: AppButtonSize.sm,
-                              ),
-                              AppIconButton(
-                                icon: Icons.close_rounded,
-                                semanticLabel: '结束当前页面工具',
-                                filled: false,
-                                onTap: ref.read(pageToolsProvider.notifier).end,
-                              ),
-                            ],
-                          ),
+                    bottom: safeBottom + 12,
+                    child: Material(
+                      color: AppColors.surface,
+                      elevation: 3,
+                      borderRadius: AppRadius.br12,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              pageTools.tool!.icon,
+                              size: 18,
+                              color: AppColors.brand,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              pageTools.tool == ArtTool.quickSketch
+                                  ? '速写 ${pageTools.clock}${pageTools.seconds == 0 ? " · 已结束" : ""}'
+                                  : pageTools.tool == ArtTool.color
+                                  ? pageTools.hex
+                                  : pageTools.tool!.label,
+                              style: AppText.body14,
+                            ),
+                            AppButton(
+                              label: '调整',
+                              onTap: _options,
+                              variant: AppButtonVariant.text,
+                              size: AppButtonSize.sm,
+                            ),
+                            RailButton(
+                              icon: Icons.close,
+                              label: '结束当前页面工具',
+                              onTap: _end,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                if (_panelOpen && showLauncher)
+                if (visible && _panelOpen && pageTools.tool != null)
                   Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: media.viewInsets.bottom,
+                    left: panelLeft,
+                    top: point.dy.clamp(
+                      media.padding.top + 8,
+                      math.max(
+                        media.padding.top + 8,
+                        constraints.maxHeight - safeBottom - panelHeight - 8,
+                      ),
+                    ),
                     width: panelWidth,
-                    child: CallbackShortcuts(
-                      bindings: {
-                        const SingleActivator(LogicalKeyboardKey.escape):
-                            _close,
-                      },
+                    height: panelHeight,
+                    child: Material(
+                      key: const ValueKey('page-tool-options'),
+                      color: AppColors.surface,
+                      elevation: 6,
+                      borderRadius: AppRadius.br12,
+                      clipBehavior: Clip.antiAlias,
                       child: FocusScope(
                         autofocus: true,
-                        child: Semantics(
-                          container: true,
-                          explicitChildNodes: true,
-                          child: PageToolsDrawer(
-                            paint: _paint,
-                            onClose: _close,
-                            onAllTools: () {
-                              ref.read(pageToolsProvider.notifier).end();
-                              _openTool(null);
-                            },
-                          ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                left: 16,
+                                right: 4,
+                                top: 4,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      pageTools.tool!.label,
+                                      style: AppText.title16,
+                                    ),
+                                  ),
+                                  RailButton(
+                                    icon: Icons.close,
+                                    label: '收起工具参数',
+                                    onTap: _close,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(height: 1),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.all(16),
+                                child: PageToolOptions(state: pageTools),
+                              ),
+                            ),
+                            const Divider(height: 1),
+                            Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Row(
+                                children: [
+                                  RailButton(
+                                    icon: Icons.undo,
+                                    label: '撤销工具调整',
+                                    enabled: pageTools.canUndo,
+                                    onTap: ref
+                                        .read(pageToolsProvider.notifier)
+                                        .undo,
+                                  ),
+                                  AppButton(
+                                    label: '重置参数',
+                                    variant: AppButtonVariant.text,
+                                    onTap: ref
+                                        .read(pageToolsProvider.notifier)
+                                        .reset,
+                                  ),
+                                  const Spacer(),
+                                  AppButton(
+                                    label: '完成',
+                                    onTap: _end,
+                                    size: AppButtonSize.sm,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                if (showLauncher && !_panelOpen) ...[
-                  Positioned.fill(child: CompanionPaintTrail(key: _trail)),
+                if (visible)
                   Positioned(
                     left: point.dx,
                     top: point.dy,
-                    width: _extent,
-                    height: _extent,
-                    child: Semantics(
-                      container: true,
-                      explicitChildNodes: true,
-                      child: ToolboxCompanion(
-                        edge: dock.edge,
-                        expanded: _panelOpen,
-                        dragging: _dragPosition != null,
-                        motionEnabled: motionEnabled,
-                        greet: !_greeted,
-                        paint: _paint,
-                        onPaintChanged: (paint) {
-                          if (_paint == paint) return;
-                          setState(() => _paint = paint);
-                        },
-                        onTap: _togglePanel,
-                        onDragStart: (_) {
-                          _close();
-                          trace(point);
-                          setState(() => _dragPosition = point);
-                        },
-                        onDragUpdate: (event) {
-                          final next = ToolboxDockGeometry.clamp(
-                            (_dragPosition ?? point) + event.delta,
-                            bounds,
-                          );
-                          trace(next);
-                          setState(() => _dragPosition = next);
-                        },
-                        onDragEnd: (_) {
-                          ref
-                              .read(toolboxDockControllerProvider.notifier)
-                              .dock(_dragPosition ?? point, bounds);
-                          setState(() => _dragPosition = null);
-                        },
-                        onDragCancel: () =>
-                            setState(() => _dragPosition = null),
+                    width: 52,
+                    height: railHeight,
+                    child: ProfessionalToolRail(
+                      expanded: _railExpanded,
+                      selected: pageTools.tool,
+                      onSelect: _select,
+                      onPointer: _end,
+                      onAllTools: () => _openTool(null),
+                      onToggle: () {
+                        _close();
+                        setState(() => _railExpanded = !_railExpanded);
+                      },
+                      onDragStart: (_) {
+                        _close();
+                        setState(() => _dragPosition = point);
+                      },
+                      onDragUpdate: (e) => setState(
+                        () => _dragPosition = ToolboxDockGeometry.clamp(
+                          (_dragPosition ?? point) + e.delta,
+                          bounds,
+                        ),
                       ),
+                      onDragEnd: (_) {
+                        final p = _dragPosition ?? point;
+                        // 专业工具栏只贴靠左右两侧，避免横向遮挡内容。
+                        ref
+                            .read(toolboxDockControllerProvider.notifier)
+                            .dockVertical(p, bounds);
+                        setState(() => _dragPosition = null);
+                      },
+                      onDragCancel: () => setState(() => _dragPosition = null),
                     ),
                   ),
-                ],
               ],
             );
           },

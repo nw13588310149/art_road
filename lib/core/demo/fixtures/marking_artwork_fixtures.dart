@@ -176,6 +176,13 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final subject = _text(body['subject']);
     final drawingDate = _text(body['drawingDate']);
     final description = _text(body['description']);
+    final source = DemoArtworkData.mapOf(body['practiceSource']);
+    if (source != null &&
+        (!['weakness', 'microLesson'].contains(source['kind']) ||
+            _text(source['label']).length > 100 ||
+            _text(source['id']).length > 100)) {
+      throw const DemoApiException('练习来源无效，请重新进入练习', code: 400);
+    }
     var taskId = _text(body['taskId']);
     final parentId = _text(body['parentId']);
     final imageIds = req.listOf('imageIds').map((e) => e.toString()).toList();
@@ -274,6 +281,13 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       'drawingDate': drawingDate,
       'createTime': createTime,
       'description': description,
+      'practiceSource': source == null
+          ? (parent?['practiceSource'])
+          : {
+              'kind': source['kind'],
+              'id': _text(source['id']),
+              'label': _text(source['label']),
+            },
       'images': images,
       'taskId': taskId,
       'teacherId': teacherId,

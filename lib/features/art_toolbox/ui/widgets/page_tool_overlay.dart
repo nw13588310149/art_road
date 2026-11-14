@@ -59,6 +59,8 @@ class PageToolOverlay extends ConsumerWidget {
                     child: GestureDetector(
                       key: ValueKey('measure-point-$i'),
                       behavior: HitTestBehavior.opaque,
+                      onPanStart: (_) =>
+                          ref.read(pageToolsProvider.notifier).checkpoint(),
                       onPanUpdate: (event) => ref
                           .read(pageToolsProvider.notifier)
                           .movePoint(

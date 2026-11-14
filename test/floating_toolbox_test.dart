@@ -38,6 +38,12 @@ Future<GlobalKey<NavigatorState>> _pumpHost(
     ),
   );
   await tester.pumpAndSettle();
+  expect(
+    tester.getSize(find.byKey(const ValueKey('professional-tool-rail'))).height,
+    52,
+  );
+  await tester.tap(find.byKey(_handleKey));
+  await tester.pumpAndSettle();
   return navigator;
 }
 
@@ -96,130 +102,138 @@ void main() {
     const Size(1024, 768),
     const Size(720, 400),
   ]) {
-    testWidgets('drawer applies tools to source page at $size', (tester) async {
+    testWidgets('single column tools and bounded options at $size', (
+      tester,
+    ) async {
       final nav = await _pumpHost(tester, size);
-      await tester.tap(find.byKey(_handleKey));
+      final rail = find.byKey(const ValueKey('professional-tool-rail'));
+      expect(tester.getSize(rail).width, 52);
+      expect(tester.getRect(rail).bottom, lessThanOrEqualTo(size.height));
+      await tester.tap(find.bySemanticsLabel('在当前页面使用构图网格'));
       await tester.pumpAndSettle();
-      final rect = tester.getRect(
-        find.byKey(const ValueKey('page-tools-drawer')),
+      final options = tester.getRect(
+        find.byKey(const ValueKey('page-tool-options')),
       );
-      expect(rect.right, size.width);
-      expect(rect.top, 0);
-      expect(rect.height, size.height);
-      await tester.tap(find.bySemanticsLabel(RegExp('在当前页面使用构图网格')));
-      await tester.pumpAndSettle();
+      expect(options.width, 300);
+      expect(options.bottom, lessThanOrEqualTo(size.height));
+      expect(options.left, greaterThanOrEqualTo(0));
       expect(find.byKey(const ValueKey('page-tool-lines')), findsOneWidget);
-      expect(find.text('业务页面 /'), findsOneWidget);
-      final container = ProviderScope.containerOf(
+      final c = ProviderScope.containerOf(
         tester.element(find.byType(FloatingToolboxHost)),
       );
-      expect(container.read(pageToolsProvider).tool, ArtTool.grid);
-      await tester.ensureVisible(find.text('4 × 4'));
       await tester.tap(find.text('4 × 4'));
-      await tester.tap(find.bySemanticsLabel('收起画具抽屉'));
+      await tester.pump();
+      expect(c.read(pageToolsProvider).grid, 4);
+      await tester.tap(find.bySemanticsLabel('撤销工具调整'));
+      await tester.pump();
+      expect(c.read(pageToolsProvider).grid, 3);
+      await tester.tap(find.bySemanticsLabel('收起工具参数'));
       await tester.pumpAndSettle();
-      expect(container.read(pageToolsProvider).grid, 4);
-      expect(find.byKey(const ValueKey('page-tool-lines')), findsOneWidget);
-      await tester.tap(find.text('调整'));
+      expect(c.read(pageToolsProvider).tool, ArtTool.grid);
+      await tester.tap(find.bySemanticsLabel('在当前页面使用明度检查'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.bySemanticsLabel(RegExp('在当前页面使用明度检查')));
-      await tester.tap(find.bySemanticsLabel(RegExp('在当前页面使用明度检查')));
-      await tester.pumpAndSettle();
-      expect(container.read(pageToolsProvider).tool, ArtTool.value);
+      expect(c.read(pageToolsProvider).tool, ArtTool.value);
       await nav.currentState!.maybePop();
       await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('page-tool-options')), findsNothing);
       expect(find.text('业务页面 /'), findsOneWidget);
       nav.currentState!.pushNamed<void>('/notes');
       await tester.pumpAndSettle();
-      expect(container.read(pageToolsProvider).tool, isNull);
+      expect(c.read(pageToolsProvider).tool, isNull);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });
   }
 
-  testWidgets(
-    'drag does not open panel, snaps, then tap and system back dismiss',
-    (tester) async {
-      final nav = await _pumpHost(tester, const Size(1180, 820));
-      final handle = find.byKey(_handleKey);
-      await tester.drag(handle, const Offset(-700, -470));
-      await tester.pumpAndSettle();
-      expect(find.text('随手用画具'), findsNothing);
-      expect(tester.getTopLeft(handle).dy, 0);
-      await tester.tap(handle);
-      await tester.pumpAndSettle();
-      expect(find.text('随手用画具'), findsOneWidget);
-      await nav.currentState!.maybePop();
-      await tester.pumpAndSettle();
-      expect(find.text('随手用画具'), findsNothing);
-      expect(find.text('业务页面 /'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
-    'login and modal dialogs yield the launcher; logout clears workspace',
-    (tester) async {
-      final nav = await _pumpHost(tester, const Size(1024, 768));
-      showDialog<void>(
-        context: nav.currentContext!,
-        builder: (_) => const AlertDialog(title: Text('确认操作')),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byKey(_handleKey), findsNothing);
-      nav.currentState!.pop();
-      await tester.pumpAndSettle();
-      expect(find.byKey(_handleKey), findsOneWidget);
-      nav.currentState!.pushNamedAndRemoveUntil('/login', (_) => false);
-      await tester.pumpAndSettle();
-      expect(find.byKey(_handleKey), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets('Escape dismisses panel without leaving source route', (
+  testWidgets('precision mode frees canvas, supports exit and restores rail', (
     tester,
   ) async {
     await _pumpHost(tester, const Size(1024, 768));
-    await tester.tap(find.byKey(_handleKey));
+    await tester.tap(find.bySemanticsLabel('在当前页面使用取色与色卡'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('page-color-sampler')), findsOneWidget);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('professional-tool-rail')))
+          .height,
+      52,
+    );
+    expect(find.byKey(const ValueKey('page-tool-options')), findsNothing);
+    await tester.tap(find.text('调整'));
+    await tester.pumpAndSettle();
+    expect(find.text('复制色值'), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
-    expect(find.text('随手用画具'), findsNothing);
-    expect(find.text('业务页面 /'), findsOneWidget);
+    expect(find.byKey(const ValueKey('page-color-sampler')), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('结束当前页面工具'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('page-color-sampler')), findsNothing);
+    expect(find.bySemanticsLabel('恢复页面操作'), findsOneWidget);
+  });
+
+  testWidgets('drag handle moves rail without opening options, tap collapses', (
+    tester,
+  ) async {
+    await _pumpHost(tester, const Size(1180, 820));
+    await tester.drag(find.byKey(_handleKey), const Offset(-1000, -100));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .getTopLeft(find.byKey(const ValueKey('professional-tool-rail')))
+          .dx,
+      8,
+    );
+    expect(find.byKey(const ValueKey('page-tool-options')), findsNothing);
+    await tester.tap(find.byKey(_handleKey));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('恢复页面操作'), findsNothing);
+    expect(find.byKey(_handleKey), findsOneWidget);
+  });
+
+  testWidgets('dialogs, direct toolbox and logout hide global rail', (
+    tester,
+  ) async {
+    final nav = await _pumpHost(tester, const Size(1024, 768));
+    showDialog<void>(
+      context: nav.currentContext!,
+      builder: (_) => const AlertDialog(title: Text('确认操作')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(_handleKey), findsNothing);
+    nav.currentState!.pop();
+    await tester.pumpAndSettle();
+    expect(find.byKey(_handleKey), findsOneWidget);
+    nav.currentState!.pushNamed<void>('/toolbox');
+    await tester.pumpAndSettle();
+    expect(find.byKey(_handleKey), findsNothing);
+    nav.currentState!.pushNamedAndRemoveUntil('/login', (_) => false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(_handleKey), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-    'timer remains active when drawer closes; only footer opens full toolbox',
+    'timer continues collapsed, pauses in full toolbox, restores source',
     (tester) async {
       await _pumpHost(tester, const Size(1024, 768));
-      await tester.tap(find.byKey(_handleKey));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('速写计时'));
+      await tester.tap(find.bySemanticsLabel('在当前页面使用速写计时'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('开始计时'));
-      await tester.tap(find.bySemanticsLabel('收起画具抽屉'));
+      await tester.tap(find.bySemanticsLabel('收起工具参数'));
       await tester.pump();
-      final container = ProviderScope.containerOf(
+      final c = ProviderScope.containerOf(
         tester.element(find.byType(FloatingToolboxHost)),
       );
-      expect(container.read(pageToolsProvider).running, isTrue);
-      final semantics = tester.ensureSemantics();
-      final timerNode = tester.getSemantics(
-        find.bySemanticsLabel(RegExp('速写 [0-9]')),
-      );
-      expect(timerNode.rect.width, lessThan(400));
-      semantics.dispose();
-      expect(find.text('业务页面 /'), findsOneWidget);
-      await tester.tap(find.text('调整'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('进入完整工具箱 · 17 个工具'));
+      expect(c.read(pageToolsProvider).running, isTrue);
+      await tester.tap(find.bySemanticsLabel('打开完整工具箱，17 个工具'));
       await tester.pumpAndSettle();
       expect(find.text('看画分析'), findsOneWidget);
-      expect(container.read(pageToolsProvider).running, isFalse);
+      expect(find.byKey(_handleKey), findsNothing);
+      expect(c.read(pageToolsProvider).running, isFalse);
       await tester.tap(find.text('收起工具'));
       await tester.pumpAndSettle();
       expect(find.text('业务页面 /'), findsOneWidget);
+      expect(c.read(pageToolsProvider).tool, ArtTool.quickSketch);
       await tester.pumpWidget(const SizedBox());
     },
   );

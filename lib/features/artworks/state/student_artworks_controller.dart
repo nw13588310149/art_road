@@ -25,6 +25,7 @@ class StudentArtworksState {
     this.hasMore = false,
     this.listFailed = false,
     this.errorMessage = '',
+    this.insightsError = '',
   });
 
   /// 整页刷新中（统计、高频问题、列表）。
@@ -50,6 +51,7 @@ class StudentArtworksState {
   final int total;
   final bool hasMore;
   final String errorMessage;
+  final String insightsError;
 
   StudentArtworksState copyWith({
     bool? loading,
@@ -66,6 +68,7 @@ class StudentArtworksState {
     bool? hasMore,
     bool? listFailed,
     String? errorMessage,
+    String? insightsError,
   }) {
     return StudentArtworksState(
       listFailed: listFailed ?? this.listFailed,
@@ -82,6 +85,7 @@ class StudentArtworksState {
       total: total ?? this.total,
       hasMore: hasMore ?? this.hasMore,
       errorMessage: errorMessage ?? this.errorMessage,
+      insightsError: insightsError ?? this.insightsError,
     );
   }
 }
@@ -126,7 +130,7 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
     final [stats, insights, list] = results;
     // 期间切换了筛选：列表以新的请求为准，统计与高频问题照常更新。
     final listCurrent = generation == _generation;
-    // 高频问题接口尚未上线时该卡片显示空状态，不影响作品列表的报错判断。
+    // 分项接口失败与暂无点评分开呈现，保留上次成功数据。
     final failed = [stats, list].where((r) => !r.isSuccess).firstOrNull;
     final page = listCurrent && list.isSuccess
         ? ArtworkPage.fromJson(list.data)
@@ -135,6 +139,7 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
       loading: false,
       loaded: true,
       stats: stats.isSuccess ? ArtworkStats.fromJson(stats.data) : null,
+      insightsError: insights.isSuccess ? '' : insights.errorOr('点评分析加载失败，请重试'),
       insights: insights.isSuccess
           ? ArtworkInsights.fromJson(insights.data)
           : null,
@@ -252,6 +257,7 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
       description: draft.description,
       imageIds: imageIds,
       taskId: draft.taskId,
+      practiceSource: draft.practiceSource,
       parentId: draft.parentId,
       teacherIds: draft.teacherIds,
     );

@@ -26,7 +26,7 @@ import '../../teaching_overview/ui/principal_overview.dart';
 import '../../teaching_overview/state/teaching_overview_controller.dart';
 import '../../artworks/state/lead_reviews_controller.dart';
 import '../../artworks/state/student_artworks_controller.dart';
-import '../../study_center/ui/growth/student_artwork_growth_view.dart';
+import '../../artworks/ui/widgets/artwork_focus_panel.dart';
 import '../state/home_dashboard_controller.dart';
 import '../state/home_dashboard_state.dart';
 import '../state/home_sections.dart';
@@ -429,21 +429,26 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   }
 }
 
-class _StudentGrowthCard extends ConsumerWidget {
+class _StudentGrowthCard extends ConsumerStatefulWidget {
   const _StudentGrowthCard();
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StudentGrowthCard> createState() => _StudentGrowthCardState();
+}
+
+class _StudentGrowthCardState extends ConsumerState<_StudentGrowthCard> {
+  String? _subject;
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(studentArtworksControllerProvider);
     final insights = state.insights;
+    final selected = _subject ?? insights.weakestSubject;
     final subject =
         insights.dimensions
-            .where((item) => item.subject == insights.weakestSubject)
+            .where((item) => item.subject == selected)
             .firstOrNull ??
         insights.dimensions.firstOrNull;
     return AppCard(
       title: '我的短板',
-      subtitle: subject?.subject,
       trailing: AppButton(
         label: '查看作品成长',
         variant: AppButtonVariant.text,
@@ -454,31 +459,39 @@ class _StudentGrowthCard extends ConsumerWidget {
         ),
       ),
       child: state.loading && !state.loaded
-          ? const AppSkeletonText(lines: 2)
+          ? const AppSkeletonText(lines: 4)
+          : state.insightsError.isNotEmpty
+          ? AppErrorState(
+              title: '点评分析加载失败',
+              description: state.insightsError,
+              onRetry: ref
+                  .read(studentArtworksControllerProvider.notifier)
+                  .refresh,
+            )
           : subject == null
-          ? Text('老师填写分项评价后会显示在这里', style: AppText.body13)
+          ? AppEmptyState(
+              title: '积累点评，找到练习方向',
+              description: '老师填写分项评价后，这里会展示具体问题、点评依据与练习建议。',
+              actionLabel: '查看我的作品',
+              onAction: () =>
+                  Navigator.of(context).pushNamed(RoutePaths.artworks),
+            )
           : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: AppSpace.s12,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ArtworkDimensionChart(levels: subject),
                 Wrap(
-                  spacing: AppSpace.s8,
-                  runSpacing: AppSpace.s8,
+                  spacing: 8,
                   children: [
-                    for (final tag
-                        in insights.topTags
-                            .where((tag) => !tag.positive)
-                            .take(3))
-                      AppTag(
-                        label:
-                            '${tag.name} · ${tag.resolvedCount > 0 ? '已有改善' : '仍需练习'}',
-                        tone: tag.resolvedCount > 0
-                            ? AppTone.success
-                            : AppTone.warning,
+                    for (final item in insights.dimensions)
+                      AppChip(
+                        label: item.subject,
+                        selected: item.subject == subject.subject,
+                        onTap: () => setState(() => _subject = item.subject),
                       ),
                   ],
                 ),
+                const SizedBox(height: 14),
+                ArtworkFocusPanel(levels: subject),
               ],
             ),
     );

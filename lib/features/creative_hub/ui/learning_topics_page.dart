@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/ui.dart';
+import '../../artworks/ui/widgets/artwork_focus_panel.dart';
+import '../../shell/state/shell_controller.dart';
 import '../data/creative_models.dart';
 import '../state/creative_controllers.dart';
 import 'creative_widgets.dart';
@@ -16,6 +18,29 @@ class LearningTopicsPage extends ConsumerStatefulWidget {
 class _LearningTopicsPageState extends ConsumerState<LearningTopicsPage> {
   String? _selected;
   bool _creating = false;
+  bool _readArguments = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_readArguments) return;
+    _readArguments = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref
+            .read(learningTopicsProvider.notifier)
+            .filter(
+              subject: args['subject']?.toString() ?? '',
+              keyword: args['keyword']?.toString() ?? '',
+            );
+        if (args['topicId'] != null) {
+          setState(() => _selected = args['topicId'].toString());
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(learningTopicsProvider);
@@ -69,6 +94,20 @@ class _LearningTopicsPageState extends ConsumerState<LearningTopicsPage> {
             value: state.subject,
             onChanged: (value) => controller.filter(subject: value),
           ),
+          if (state.keyword.isNotEmpty)
+            Row(
+              children: [
+                Expanded(
+                  child: Text('当前知识点：${state.keyword}', style: AppText.body13),
+                ),
+                AppButton(
+                  label: '清除关键词',
+                  variant: AppButtonVariant.text,
+                  size: AppButtonSize.sm,
+                  onTap: () => controller.filter(keyword: ''),
+                ),
+              ],
+            ),
           Expanded(
             child: state.loading
                 ? const Center(child: AppLoadingIndicator())
@@ -82,6 +121,8 @@ class _LearningTopicsPageState extends ConsumerState<LearningTopicsPage> {
                 ? AppEmptyState(
                     title: state.view == 'saved' ? '还没有收藏的小课件' : '暂无匹配专题',
                     description: '试试其他知识点，或创建自己的阅读专题。',
+                    actionLabel: '查看本科目全部专题',
+                    onAction: () => controller.filter(keyword: '', view: 'all'),
                   )
                 : LayoutBuilder(
                     builder: (context, constraints) => GridView.builder(
@@ -294,11 +335,40 @@ class _LearningTopicsPageState extends ConsumerState<LearningTopicsPage> {
               const SizedBox(height: 16),
               AppCard(
                 title: '读完，动笔试一试',
-                child: Text(
-                  topic.exercise.isEmpty
-                      ? '选择一份自己的作品，用今天的知识点完成一次局部改画。'
-                      : topic.exercise,
-                  style: AppText.body14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      topic.exercise.isEmpty
+                          ? '选择一份自己的作品，用今天的知识点完成一次局部改画。'
+                          : topic.exercise,
+                      style: AppText.body14,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '完成一次局部练习，附上调整说明，再通过任课老师的点评检查是否改善。',
+                      style: AppText.body13.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (ref.watch(shellControllerProvider).user.role ==
+                        'student')
+                      AppButton(
+                        label: '开始专题练习',
+                        icon: Icons.draw_outlined,
+                        onTap: () => showArtworkPractice(
+                          context,
+                          subject: topic.subject,
+                          title: topic.title,
+                          instruction: topic.exercise.isEmpty
+                              ? topic.intro
+                              : topic.exercise,
+                          sourceLabel: '小课件 · ${topic.title}',
+                          sourceId: topic.id,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],

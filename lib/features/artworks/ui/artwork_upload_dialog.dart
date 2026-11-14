@@ -20,6 +20,8 @@ Future<bool?> showArtworkUploadDialog(
   String title = '',
   String subject = '',
   String taskId = '',
+  String description = '',
+  Map<String, String> practiceSource = const {},
 }) {
   return showAppDialog<bool>(
     context: context,
@@ -29,6 +31,8 @@ Future<bool?> showArtworkUploadDialog(
       initialTitle: title,
       initialSubject: subject,
       taskId: taskId,
+      initialDescription: description,
+      practiceSource: practiceSource,
     ),
   );
 }
@@ -39,6 +43,8 @@ class ArtworkUploadDialog extends ConsumerStatefulWidget {
     this.initialTitle = '',
     this.initialSubject = '',
     this.taskId = '',
+    this.initialDescription = '',
+    this.practiceSource = const {},
     super.key,
   });
 
@@ -46,6 +52,8 @@ class ArtworkUploadDialog extends ConsumerStatefulWidget {
   final String initialTitle;
   final String initialSubject;
   final String taskId;
+  final String initialDescription;
+  final Map<String, String> practiceSource;
 
   @override
   ConsumerState<ArtworkUploadDialog> createState() =>
@@ -76,6 +84,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
   @override
   void initState() {
     super.initState();
+    _description.text = widget.initialDescription;
     final initial = widget.initialSubject.trim();
     if (initial.isNotEmpty && _subjects.contains(initial)) {
       _subject = initial;
@@ -233,6 +242,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
             parentId: widget.parentId,
             teacherIds: _teacherIds.toList(),
             taskId: _taskId,
+            practiceSource: widget.practiceSource,
           ),
           uploaded: _uploaded,
           onProgress: (done, count) {

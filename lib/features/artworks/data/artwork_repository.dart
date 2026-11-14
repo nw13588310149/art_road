@@ -98,6 +98,7 @@ class ArtworkRepository {
     required String description,
     required List<String> imageIds,
     String taskId = '',
+    Map<String, String> practiceSource = const {},
     String parentId = '',
     List<String> teacherIds = const [],
   }) {
@@ -110,6 +111,7 @@ class ArtworkRepository {
         'description': description.isEmpty ? null : description,
         'imageIds': imageIds,
         'teacherIds': teacherIds,
+        if (practiceSource.isNotEmpty) 'practiceSource': practiceSource,
         if (taskId.isNotEmpty) 'taskId': taskId,
         if (parentId.isNotEmpty) 'parentId': parentId,
       },

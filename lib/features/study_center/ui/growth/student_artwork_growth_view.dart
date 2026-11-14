@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import '../../../../app/router/route_paths.dart';
+import '../../../artworks/ui/widgets/artwork_focus_panel.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +24,14 @@ class StudentArtworkGrowthView extends ConsumerWidget {
       header: AppPageHeader(title: '作品成长', onBack: onBack),
       body: state.loading && !state.loaded
           ? const Center(child: AppLoadingIndicator())
+          : state.insightsError.isNotEmpty
+          ? AppErrorState(
+              title: '点评分析加载失败',
+              description: state.insightsError,
+              onRetry: ref
+                  .read(studentArtworksControllerProvider.notifier)
+                  .refresh,
+            )
           : ListView(
               padding: const EdgeInsets.all(AppSpace.s16),
               children: [
@@ -56,9 +66,27 @@ class StudentArtworkGrowthView extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          ArtworkDimensionChart(levels: subject),
+                          ArtworkFocusPanel(levels: subject, compact: false),
                           if (subject.history.isNotEmpty)
                             _DimensionHistory(levels: subject),
+                          if (subject.sourceWorks.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Text('本次统计的作品', style: AppText.title16),
+                            for (final work in subject.sourceWorks.reversed)
+                              AppListRow(
+                                title: work.title,
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  size: 18,
+                                ),
+                                onTap: work.id.isEmpty
+                                    ? null
+                                    : () => Navigator.of(context).pushNamed(
+                                        RoutePaths.artworks,
+                                        arguments: {'artworkId': work.id},
+                                      ),
+                              ),
+                          ],
                         ],
                       ),
                     ),

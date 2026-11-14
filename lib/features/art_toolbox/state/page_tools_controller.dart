@@ -14,6 +14,7 @@ final pageToolsProvider =
 class PageToolsState {
   const PageToolsState({
     this.tool,
+    this.canUndo = false,
     this.grid = 3,
     this.opacity = .65,
     this.lightLines = false,
@@ -33,6 +34,7 @@ class PageToolsState {
     this.running = false,
   });
   final ArtTool? tool;
+  final bool canUndo;
   final int grid;
   final double opacity;
   final bool lightLines, mirrorX, mirrorY, original;
@@ -49,6 +51,7 @@ class PageToolsState {
   PageToolsState copy({
     ArtTool? tool,
     bool clearTool = false,
+    bool? canUndo,
     int? grid,
     double? opacity,
     bool? lightLines,
@@ -63,6 +66,7 @@ class PageToolsState {
     bool? running,
   }) => PageToolsState(
     tool: clearTool ? null : tool ?? this.tool,
+    canUndo: canUndo ?? this.canUndo,
     grid: grid ?? this.grid,
     opacity: opacity ?? this.opacity,
     lightLines: lightLines ?? this.lightLines,
@@ -85,30 +89,60 @@ class PageToolsController extends StateNotifier<PageToolsState> {
   final DateTime Function() _now;
   DateTime? _deadline;
   Timer? _timer;
+  final List<PageToolsState> _undo = [];
+  void checkpoint() {
+    _undo.add(state.copy(running: false));
+    if (_undo.length > 30) _undo.removeAt(0);
+    state = state.copy(canUndo: true);
+  }
+
+  void undo() {
+    if (_undo.isEmpty) return;
+    pause();
+    state = _undo.removeLast().copy(canUndo: _undo.isNotEmpty);
+  }
+
+  void reset() {
+    checkpoint();
+    pause();
+    state = PageToolsState(
+      tool: state.tool,
+      palette: state.palette,
+      canUndo: true,
+    );
+  }
+
+  void _change(PageToolsState next) {
+    checkpoint();
+    state = next.copy(canUndo: true);
+  }
+
   void select(ArtTool tool) {
     pause();
-    state = state.copy(tool: tool, original: false);
+    _undo.clear();
+    state = state.copy(tool: tool, original: false, canUndo: false);
   }
 
   void end() {
     pause();
-    state = state.copy(clearTool: true, original: false);
+    _undo.clear();
+    state = state.copy(clearTool: true, original: false, canUndo: false);
   }
 
-  void grid(int value) => state = state.copy(grid: value);
+  void grid(int value) => _change(state.copy(grid: value));
   void opacity(double value) =>
       state = state.copy(opacity: value.clamp(.15, 1));
-  void lightLines(bool value) => state = state.copy(lightLines: value);
-  void mirrorX(bool value) => state = state.copy(mirrorX: value);
-  void mirrorY(bool value) => state = state.copy(mirrorY: value);
-  void original(bool value) => state = state.copy(original: value);
+  void lightLines(bool value) => _change(state.copy(lightLines: value));
+  void mirrorX(bool value) => _change(state.copy(mirrorX: value));
+  void mirrorY(bool value) => _change(state.copy(mirrorY: value));
+  void original(bool value) => _change(state.copy(original: value));
   void movePoint(int index, Offset point) {
     final points = [...state.points];
     points[index] = Offset(point.dx.clamp(.02, .98), point.dy.clamp(.02, .98));
     state = state.copy(points: points);
   }
 
-  void sample(Color color) => state = state.copy(color: color);
+  void sample(Color color) => _change(state.copy(color: color));
   void saveColor() {
     final color = state.color;
     if (color == null) return;

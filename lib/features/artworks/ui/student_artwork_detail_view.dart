@@ -490,6 +490,13 @@ class _WorkInfoCard extends StatelessWidget {
             style: AppText.caption12,
           ),
           const SizedBox(height: AppSpace.s8),
+          if (work.practiceSource.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: AppTag(
+                label: '练习来源：${work.practiceSource['label'] ?? ''}',
+              ),
+            ),
           Text(
             work.description.isEmpty ? '没有填写作品说明' : work.description,
             style: work.description.isEmpty

@@ -566,6 +566,7 @@ abstract final class DemoArtworkStore {
       'finalScore': DemoArtworkData.finalScoreOf(work),
       'maxScore': DemoArtworkData.maxScoreOf(work),
       'taskId': taskId,
+      'practiceSource': work['practiceSource'],
       'taskTitle': task == null ? '' : DemoArtworkData.text(task['title']),
       'teacherId': teacherId,
       'teacherName': DemoArtworkData.teacherName(teacherId),

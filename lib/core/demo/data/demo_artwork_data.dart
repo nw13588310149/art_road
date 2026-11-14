@@ -903,30 +903,32 @@ abstract final class DemoArtworkData {
         finals.add(percent);
         subjectScores.putIfAbsent(subject, () => <double>[]).add(percent);
       }
-      final time = text(review['reviewedTime']);
-      for (final tag in tagsOf(review)) {
-        final name = text(tag['name']);
-        if (name.isEmpty) {
-          continue;
+      for (final review in reviewsOf(work)) {
+        final time = text(review['reviewedTime']);
+        for (final tag in tagsOf(review)) {
+          final name = text(tag['name']);
+          if (name.isEmpty) {
+            continue;
+          }
+          final color = text(tag['color']);
+          if (!isHighlightTag(name, color)) {
+            problemTags++;
+          }
+          final stat = stats.putIfAbsent(name, () => _TagStat(name));
+          stat.count++;
+          stat.subjects[subject] = (stat.subjects[subject] ?? 0) + 1;
+          if (time.compareTo(stat.latest) >= 0) {
+            stat.latest = time;
+            stat.color = color;
+            stat.explanation = text(tag['explanation']);
+          }
         }
-        final color = text(tag['color']);
-        if (!isHighlightTag(name, color)) {
-          problemTags++;
-        }
-        final stat = stats.putIfAbsent(name, () => _TagStat(name));
-        stat.count++;
-        stat.subjects[subject] = (stat.subjects[subject] ?? 0) + 1;
-        if (time.compareTo(stat.latest) >= 0) {
-          stat.latest = time;
-          stat.color = color;
-          stat.explanation = text(tag['explanation']);
-        }
-      }
-      for (final item in mapsOf(review['tagResolutions'])) {
-        markedTags++;
-        if (item['resolved'] == true) {
-          resolvedTags++;
-          stats[text(item['tag'])]?.resolved++;
+        for (final item in mapsOf(review['tagResolutions'])) {
+          markedTags++;
+          if (item['resolved'] == true) {
+            resolvedTags++;
+            stats[text(item['tag'])]?.resolved++;
+          }
         }
       }
     }
@@ -945,73 +947,15 @@ abstract final class DemoArtworkData {
     final bySubject = means.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    // 分项水平：每科最近 10 份已点评作品的分项等级均值。
-    reviewed.sort(
-      (a, b) => text(
-        reviewOf(b)?['reviewedTime'],
-      ).compareTo(text(reviewOf(a)?['reviewedTime'])),
-    );
-    final dimensionLevels = <Map<String, dynamic>>[];
-    for (final subject in subjects) {
-      final defs = dimensionsOf(subject);
-      final sums = <String, double>{};
-      final counts = <String, int>{};
-      var samples = 0;
-      for (final work in reviewed) {
-        if (text(work['subject']) != subject) {
-          continue;
-        }
-        final dims = mapOf(reviewOf(work)?['dimensions']);
-        if (dims == null || dims.isEmpty) {
-          continue;
-        }
-        if (samples >= 10) {
-          break;
-        }
-        samples++;
-        for (final def in defs) {
-          final level = dims[def.key];
-          if (level is num) {
-            sums[def.key] = (sums[def.key] ?? 0) + level;
-            counts[def.key] = (counts[def.key] ?? 0) + 1;
-          }
-        }
-      }
-      if (samples == 0) {
-        continue;
-      }
-      dimensionLevels.add(<String, dynamic>{
-        'subject': subject,
-        'sampleCount': samples,
-        'items': <Map<String, dynamic>>[
-          for (final def in defs)
-            <String, dynamic>{
-              'key': def.key,
-              'name': def.name,
-              'level': counts[def.key] == null
-                  ? null
-                  : round2(sums[def.key]! / counts[def.key]!),
-            },
-        ],
-        'history': <Map<String, dynamic>>[
-          for (final work
-              in reviewed
-                  .where(
-                    (work) =>
-                        text(work['subject']) == subject &&
-                        (mapOf(reviewOf(work)?['dimensions'])?.isNotEmpty ??
-                            false),
-                  )
-                  .take(10)
-                  .toList()
-                  .reversed)
-            <String, dynamic>{
-              'date': reviewOf(work)?['reviewedTime'],
-              'levels': reviewOf(work)?['dimensions'],
-            },
-        ],
-      });
-    }
+    // 同一作品先平均多位任课老师的分项，再对最近十份作品等权统计。
+    // 保留每条点评的证据；组长与校长意见不混入任课分项量表。
+    final dimensionLevels = <Map<String, dynamic>>[
+      for (final subject in subjects)
+        _subjectInsights(
+          reviewed.where((w) => text(w['subject']) == subject).toList(),
+          subject,
+        ),
+    ]..removeWhere((row) => row['sampleCount'] == 0);
 
     return <String, dynamic>{
       'reviewedCount': reviewedCount,
@@ -1046,6 +990,157 @@ abstract final class DemoArtworkData {
       'streakDays': streakDays(works, now),
       'recentSubmitCount': recentSubmitCount(works, now),
     };
+  }
+
+  static Map<String, dynamic> _subjectInsights(
+    List<Map<String, dynamic>> works,
+    String subject,
+  ) {
+    String latest(Map<String, dynamic> work) {
+      final times = reviewsOf(work).map((r) => text(r['reviewedTime'])).toList()
+        ..sort();
+      return times.lastOrNull ?? '';
+    }
+
+    works.sort((a, b) => latest(b).compareTo(latest(a)));
+    final defs = dimensionsOf(subject);
+    final samples = works
+        .where(
+          (w) => reviewsOf(
+            w,
+          ).any((r) => mapOf(r['dimensions'])?.isNotEmpty ?? false),
+        )
+        .take(10)
+        .toList();
+    final history = <Map<String, dynamic>>[];
+    final issues = <String, Map<String, dynamic>>{};
+    var reviewCount = 0;
+    for (final work in samples.reversed) {
+      final reviews = reviewsOf(work)
+        ..sort(
+          (a, b) => text(a['reviewedTime']).compareTo(text(b['reviewedTime'])),
+        );
+      reviewCount += reviews.length;
+      final levels = <String, double>{};
+      for (final def in defs) {
+        final values = reviews
+            .map((r) => mapOf(r['dimensions'])?[def.key])
+            .whereType<num>()
+            .where((n) => n >= 1 && n <= 5)
+            .toList();
+        if (values.isNotEmpty) {
+          levels[def.key] = round2(
+            values.fold<double>(0, (a, b) => a + b) / values.length,
+          );
+        }
+      }
+      history.add({
+        'date': latest(work),
+        'artworkId': text(work['id']),
+        'title': text(work['title']),
+        'levels': levels,
+      });
+      for (final review in reviews) {
+        final resolutions = mapsOf(review['tagResolutions']);
+        final tags = tagsOf(review);
+        final names = {
+          ...tags.map((t) => text(t['name'])),
+          ...resolutions.map((t) => text(t['tag'])),
+        }..remove('');
+        for (final name in names) {
+          final tag = tags.where((t) => text(t['name']) == name).firstOrNull;
+          if (tag != null && isHighlightTag(name, text(tag['color']))) continue;
+          final issue = issues.putIfAbsent(
+            name,
+            () => {
+              'name': name,
+              'color': tag?['color'] ?? '',
+              'subject': subject,
+              'explanation': tag?['explanation'] ?? '',
+              'workIds': <String>{},
+              'evidence': <Map<String, dynamic>>[],
+              'resolvedCount': 0,
+              'latestTime': '',
+              'latestResolved': false,
+            },
+          );
+          (issue['workIds'] as Set<String>).add(text(work['id']));
+          final resolution = resolutions
+              .where((t) => text(t['tag']) == name)
+              .firstOrNull;
+          final resolved = resolution?['resolved'] == true;
+          if (resolved) {
+            issue['resolvedCount'] = (issue['resolvedCount'] as int) + 1;
+          }
+          final time = text(review['reviewedTime']);
+          if (time.compareTo(text(issue['latestTime'])) >= 0) {
+            issue['latestTime'] = time;
+            issue['latestResolved'] = resolved;
+            if (tag != null) issue['explanation'] = tag['explanation'];
+          }
+          (issue['evidence'] as List<Map<String, dynamic>>).insert(0, {
+            'artworkId': text(work['id']),
+            'title': text(work['title']),
+            'teacher': teacherName(text(review['teacherId'])),
+            'time': time,
+            'comment': text(review['content']),
+            'resolved': resolved,
+          });
+        }
+      }
+    }
+    final ranked = issues.values.toList()
+      ..sort((a, b) {
+        final unresolved = (a['latestResolved'] == true ? 1 : 0).compareTo(
+          b['latestResolved'] == true ? 1 : 0,
+        );
+        if (unresolved != 0) return unresolved;
+        return (b['workIds'] as Set).length.compareTo(
+          (a['workIds'] as Set).length,
+        );
+      });
+    return {
+      'subject': subject,
+      'sampleCount': samples.length,
+      'reviewCount': reviewCount,
+      'fromDate': history.firstOrNull?['date'] ?? '',
+      'toDate': history.lastOrNull?['date'] ?? '',
+      'items': [
+        for (final def in defs)
+          {
+            'key': def.key,
+            'name': def.name,
+            'level': _mean(
+              history
+                  .map((h) => (h['levels'] as Map)[def.key])
+                  .whereType<num>(),
+            ),
+          },
+      ],
+      'history': history,
+      'issues': [
+        for (final issue in ranked)
+          {
+            for (final entry in issue.entries)
+              if (entry.key != 'workIds') entry.key: entry.value,
+            'count': (issues[text(issue['name'])]?['evidence'] as List? ?? [])
+                .map((e) => e['artworkId'])
+                .toSet()
+                .length,
+            'advice':
+                _advice[text(issue['name'])]?.$1 ??
+                '对照老师的点评，选择一处局部完成改画，再请老师复评。',
+            'keyword': _advice[text(issue['name'])]?.$3 ?? text(issue['name']),
+          },
+      ],
+    };
+  }
+
+  static double? _mean(Iterable<num> input) {
+    final values = input.toList();
+    return values.isEmpty
+        ? null
+        : round2(values.fold<double>(0, (a, b) => a + b) / values.length);
   }
 
   /// 连续练习天数：截至今天，连续有作品提交的在校日数（周日不算断）。
