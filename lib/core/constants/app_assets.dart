@@ -283,6 +283,14 @@ abstract final class AppAssets {
   static const dormCheckStatCard4 =
       'assets/images/smartCampus/dorm_check/stat_card_4.png';
 
+  /// 学生 · 我的查寝 · 横幅「申请补卡」按钮图标。
+  static const dormCheckApplyMakeupIcon =
+      'assets/images/smartCampus/dorm_check/apply_makeup_icon.png';
+
+  /// 宿管 · 到岗打卡 · 打卡记录卡背景。
+  static const dormCheckPunchRecordCardBg =
+      'assets/images/smartCampus/dorm_check/punch_record_card_bg.png';
+
   /// 管理员 · 班级编组 · 顶部统计卡背景（从左到右）。
   static const adminClassManagementStatCard1 =
       'assets/images/smartCampus/admin/class_management/stat_card_1.png';
@@ -372,6 +380,21 @@ abstract final class AppAssets {
       'assets/images/smartCampus/student/leave/stat_card_3.png';
   static const studentLeaveCreateApplyIcon =
       'assets/images/smartCampus/student/leave/create_apply_icon.png';
+
+  /// 学生 · 我的请假 · 「发起申请」按钮图标。
+  static const studentLeaveCreateApplyIcon =
+      'assets/images/smartCampus/student/leave/create_apply_icon.png';
+
+  /// 学生 · 我的作业 · 顶部统计卡背景（作业均分 / 已提交 / 已批阅）。
+  static const studentHomeworkStatCard1 = 'assets/images/new/我的作业.png';
+  static const studentHomeworkStatCard2 =
+      'assets/images/smartCampus/student/homework/stat_card_2.png';
+  static const studentHomeworkStatCard3 =
+      'assets/images/smartCampus/student/homework/stat_card_3.png';
+
+  /// 学生 · 我的作业 · 作业卡背景。
+  static const studentHomeworkCardBg =
+      'assets/images/smartCampus/student/homework/card_bg.png';
 
   /// 任课老师 / 班主任 · 学生名册 · 顶部统计卡背景（当前列表 / 男 / 女）。
   static const teacherStudentRosterStatCard1 =

@@ -6,58 +6,48 @@
 //      role == dormManager → SmartCampusPage 路由到本视图。
 //      返回：banner 左上角返回按钮 → onBack。
 //
-// 视觉（Figma 970 设计宽）：
-//   1. banner（62 高 + 4deg #F9EDFF→white 渐变 + 圆角 16 + 顶部居中
-//      "按宿舍查寝" 16/600 + 副标题 12/#B6B5BB 操作说明；左 12 返回 32×32
-//      白底 outline #F3F2F3）。
-//   2. 顶部当前查寝截止时间 16/500（如 "2026-04-22 23:00前"）。
-//      按需求**去掉**了 Figma 右侧 "晨查寝 / 晚查寝" 分段切换。
-//   3. 4 张统计卡（100 高，196° 彩色渐变 + 右上 32×32 白底图标）：
-//      A. 在册床位 12 — 橙渐变 + 绿色 home icon
-//      B. 已归寝 10
-//      C. 晚归 2     — 红渐变 + 紫色 alert
-//      D. 未打卡 1   — 红渐变 + 紫色 alert
-//   4. 多张宿舍卡（白底 16 圆角 + 12 padding）：
-//      Header：紫色方块 icon + 「宿舍 A-901」14/500 + 「女生公寓A座·6层」
-//             12/400 + 「N人·晚查寝·22:30前」12/#B6B5BB +
-//             右侧「全员到寝」按钮（AppButton quiet，确认后执行；或置灰
-//             #CECED1）。
-//      Body：3 列学生格子（#F5F6FA 12 圆角，padding 12）：40×40 头像 +
-//            姓名 14/500 + 学号 12/#B6B5BB + 右侧状态 dropdown
-//            (已打卡 / 未打卡 / 晚归 / 请假免检)。
-//   5. 底部 3 列查寝历史卡（width 312，padding 12，207° #FAF0FF→white
-//      渐变，圆角 16）：
-//      · Barlow 18/600「晨查寝 / 晚查寝」+ 状态徽章
-//        （正常 #8E7FFF / 未打卡 #FF323C / 迟到 #325BFF）
-//      · 「女生宿舍3号楼 612」13/#6D6B75 + 日期 12/#B6B5BB
-//      · 灰底块 50 高：规定时间 / 打卡时间 两列居中
-//      · 底部 "备注：…" 12/#B6B5BB。
+// 视觉（原版 970 设计宽，数值照原版同路径文件）：
+//   1. 横幅：共享 [SmartCampusPageBanner]，只有居中标题「按宿舍查寝」。
+//   2. 筛选行：楼栋 / 楼层两个 220×44 下拉（共享 [SmartCampusFilterDropdown]）。
+//   3. 当前批次与截止时间 16/500（如「晚查寝 · 22:30 截止」）。
+//   4. 4 张插图统计卡（共享 [SmartCampusStatCard]）：在册床位 / 已归寝 /
+//      晚归 / 未打卡。
+//   5. 多张宿舍卡（白底 16 圆角 + 12 padding）：
+//      Header：65 高灰底条，36 紫色方块 icon + 房号 14/500 + 楼栋楼层 12/400 +
+//             「N人·晚查寝·22:30前」12/#B6B5BB + 右侧 220×40 渐变按钮
+//             「全员到寝」（全部打卡后置灰 #CECED1）。点击先弹确认。
+//      Body：学生格子（#F5F6FA 12 圆角，padding 12）：40×40 方头像 +
+//            姓名 14/500 + 学号·床位 12/#B6B5BB + 右侧 36 高状态下拉
+//            (已打卡 / 未打卡 / 晚归 / 请假免检)。宽屏 3 列，窄横屏 2 列。
 // =============================================================================
 
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
+
 import '../../../core/constants/app_assets.dart';
 import '../../../core/widgets/popup_selector_field.dart';
-import 'widgets/smart_campus_page_banner.dart';
+import '../../school/data/school_config_data.dart';
+import '../../school/state/school_config_controller.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/dormitory_check_data.dart';
 import '../state/dormitory_manager_controller.dart';
-import '../../school/data/school_config_data.dart';
-import '../../school/state/school_config_controller.dart';
+import 'widgets/smart_campus_filter_bar.dart';
+import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_square_avatar.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-// —— 颜色 ————————————————————————————————————————————————————————
-const Color _kCardGreyBg = AppColors.surfaceSubtle;
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kBorderLine = AppColors.textTertiary;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextHint = AppColors.textPlaceholder;
+// —— 颜色（原版色值；紫色统一为品牌紫）——————————————————————————————
+const Color _kCardGreyBg = Color(0xFFF5F6FA);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kBorderLine = Color(0xFFCECED1);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleSoftBg = AppColors.brandTint;
+const Color _kPurpleSoftBg = Color(0xFFE7D9FF);
 
 // =============================================================================
 // 顶级视图
@@ -222,11 +212,8 @@ class _DormManagerCheckByRoomViewState
     final stat = state.roomCheckStat;
     final rooms = state.roomChecks;
     return SmartCampusSecondaryPageShell(
-      header: AppPageHeader(
-        title: '按宿舍查寝',
-        subtitle: '按楼栋、楼层逐间查寝，可标记全员到寝或单独修改状态',
-        onBack: widget.onBack,
-      ),
+      bodyTopClipRadius: 8,
+      header: SmartCampusPageBanner(title: '按宿舍查寝', onBack: widget.onBack),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -240,7 +227,7 @@ class _DormManagerCheckByRoomViewState
             onBuildingChanged: (v) => unawaited(_onBuildingChanged(v)),
             onFloorChanged: (v) => unawaited(_onFloorChanged(v)),
           ),
-          SizedBox(height: ui(16)),
+          SizedBox(height: ui(12)),
           Padding(
             padding: EdgeInsets.only(left: ui(4)),
             child: Text(
@@ -248,6 +235,7 @@ class _DormManagerCheckByRoomViewState
               style: TextStyle(
                 fontSize: ui(16),
                 color: _kTextDark,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
                 height: 1.2,
               ),
@@ -287,7 +275,7 @@ class _DormManagerCheckByRoomViewState
 }
 
 // =============================================================================
-// Banner
+// 筛选行：楼栋 + 楼层
 // =============================================================================
 
 class _FilterRow extends StatelessWidget {
@@ -314,117 +302,24 @@ class _FilterRow extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     return Row(
       children: [
-        _DormitorySelectField<DormitoryBuildingOption>(
+        SmartCampusFilterDropdown<DormitoryBuildingOption>(
           value: selectedBuilding,
           items: buildingOptions,
           itemLabel: (o) => o.label,
-          width: ui(220),
-          menuWidth: ui(280),
           onChanged: onBuildingChanged,
         ),
         SizedBox(width: ui(12)),
-        _DormitorySelectField<DormitoryFloorOption>(
-          value: selectedFloor,
-          items: floorOptions,
-          itemLabel: (o) => o.label,
-          width: ui(220),
-          menuWidth: ui(280),
-          enabled: floorEnabled,
-          onChanged: onFloorChanged,
+        // 选了楼栋、楼层列表到位后才能选楼层（外观与原版一致，不置灰）。
+        IgnorePointer(
+          ignoring: !floorEnabled,
+          child: SmartCampusFilterDropdown<DormitoryFloorOption>(
+            value: selectedFloor,
+            items: floorOptions,
+            itemLabel: (o) => o.label,
+            onChanged: onFloorChanged,
+          ),
         ),
       ],
-    );
-  }
-}
-
-/// 与管理员「教师管理」[_ClassFilterField] 一致的下拉触发器样式。
-class _DormitorySelectField<T> extends StatefulWidget {
-  const _DormitorySelectField({
-    required this.value,
-    required this.items,
-    required this.itemLabel,
-    required this.width,
-    required this.menuWidth,
-    required this.onChanged,
-    this.enabled = true,
-  });
-
-  final T value;
-  final List<T> items;
-  final String Function(T) itemLabel;
-  final double width;
-  final double menuWidth;
-  final ValueChanged<T> onChanged;
-  final bool enabled;
-
-  @override
-  State<_DormitorySelectField<T>> createState() =>
-      _DormitorySelectFieldState<T>();
-}
-
-class _DormitorySelectFieldState<T> extends State<_DormitorySelectField<T>> {
-  final _fieldKey = GlobalKey();
-  bool _open = false;
-
-  Future<void> _openMenu() async {
-    if (!widget.enabled) return;
-    final fieldCtx = _fieldKey.currentContext;
-    if (fieldCtx == null) return;
-    setState(() => _open = true);
-    final selected = await showAppPopupSelector<T>(
-      anchorContext: fieldCtx,
-      items: widget.items,
-      value: widget.value,
-      itemLabel: widget.itemLabel,
-      width: widget.menuWidth,
-    );
-    if (!mounted) return;
-    setState(() => _open = false);
-    if (selected != null) widget.onChanged(selected);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      key: _fieldKey,
-      onTap: _openMenu,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        width: widget.width,
-        height: ui(44),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(12)),
-          border: Border.all(color: _kBorderSoft, width: 1),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                widget.itemLabel(widget.value),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: ui(14),
-                  height: 1.2,
-                  color: _kTextDark,
-                ),
-              ),
-            ),
-            AnimatedRotation(
-              turns: _open ? 0.5 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: ui(22),
-                color: AppColors.textPlaceholder,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -442,7 +337,7 @@ class _LoadErrorHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(32), horizontal: ui(16)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -450,16 +345,21 @@ class _LoadErrorHint extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: ui(13), color: _kTextHint),
+            style: TextStyle(
+              fontSize: ui(13),
+              color: _kTextHint,
+              fontFamily: 'PingFang SC',
+            ),
           ),
           SizedBox(height: ui(12)),
-          InkWell(
+          AppPressable(
             onTap: () => unawaited(onRetry()),
             child: Text(
               '重试',
               style: TextStyle(
                 fontSize: ui(13),
                 color: _kPurple,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
               ),
             ),
@@ -478,13 +378,17 @@ class _EmptyRoomsHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(32)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Center(
         child: Text(
           '暂无查寝数据',
-          style: TextStyle(fontSize: ui(13), color: _kTextHint),
+          style: TextStyle(
+            fontSize: ui(13),
+            color: _kTextHint,
+            fontFamily: 'PingFang SC',
+          ),
         ),
       ),
     );
@@ -550,7 +454,7 @@ class _StatsRow extends StatelessWidget {
 }
 
 // =============================================================================
-// 单个宿舍卡：header（房号 + 一键打卡）+ 学生格子网格
+// 单个宿舍卡：header（房号 + 全员到寝）+ 学生格子网格
 // =============================================================================
 
 class _RoomCard extends StatelessWidget {
@@ -578,7 +482,7 @@ class _RoomCard extends StatelessWidget {
       padding: EdgeInsets.all(ui(12)),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -652,6 +556,7 @@ class _RoomHeader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(14),
                         color: _kTextDark,
+                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w500,
                         height: 1.2,
                       ),
@@ -662,6 +567,7 @@ class _RoomHeader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: ui(12),
                         color: _kTextDark,
+                        fontFamily: 'PingFang SC',
                         fontWeight: AppFont.w400,
                         height: 1.2,
                       ),
@@ -674,6 +580,7 @@ class _RoomHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextHint,
+                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -696,20 +603,54 @@ class _CheckInAllButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppButton(
-      label: onTap == null ? '已全部打卡' : '全员到寝',
-      icon: Icons.fact_check_outlined,
-      variant: AppButtonVariant.quiet,
-      size: AppButtonSize.sm,
+    final ui = DashboardScaleScope.of(context).ui;
+    final disabled = onTap == null;
+    return AppPressable(
       onTap: onTap,
+      child: Container(
+        width: ui(220),
+        height: ui(40),
+        decoration: BoxDecoration(
+          gradient: disabled
+              ? null
+              : const LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [AppColors.brandSoft, AppColors.brand],
+                ),
+          color: disabled ? _kBorderLine : null,
+          borderRadius: BorderRadius.circular(ui(8)),
+          border: Border.all(color: _kBorderSoft, width: 1),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.fact_check_outlined, size: ui(18), color: Colors.white),
+            SizedBox(width: ui(6)),
+            Text(
+              disabled ? '已全部打卡' : '全员到寝',
+              style: TextStyle(
+                fontSize: ui(14),
+                color: Colors.white,
+                fontFamily: 'PingFang SC',
+                fontWeight: AppFont.w400,
+                height: 1.2,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-/// 学生格子网格（固定 3 列）。
+/// 学生格子网格。
 ///
 /// 宿舍卡 padding 12 → 内宽 970 − 24 = 946；3 列 + 2 * 10 gap →
-/// 每格 (946 − 20) / 3 ≈ 308.6，与 Figma 308 一致，所以这里直接写 308。
+/// 每格 (946 − 20) / 3 ≈ 308.6，与原版写死的 308 一致。窄横屏（内宽不足
+/// 900）放不下 3 列，改 2 列并等分，避免右侧空出半列。
 class _RoomStudentGrid extends StatelessWidget {
   const _RoomStudentGrid({
     required this.students,
@@ -726,19 +667,27 @@ class _RoomStudentGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return Wrap(
-      spacing: ui(10),
-      runSpacing: ui(10),
-      children: [
-        for (final s in students)
-          SizedBox(
-            width: ui(308),
-            child: _RoomStudentTile(
-              student: s,
-              onChangeStatus: (n) => onChangeStatus(s, n),
-            ),
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final gap = ui(10);
+        final columns = constraints.maxWidth >= ui(900) ? 3 : 2;
+        final tileWidth = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final s in students)
+              SizedBox(
+                // 向下取整到 0.01，避免浮点误差把最后一列挤到下一行。
+                width: (tileWidth * 100).floorToDouble() / 100,
+                child: _RoomStudentTile(
+                  student: s,
+                  onChangeStatus: (n) => onChangeStatus(s, n),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -761,7 +710,7 @@ class _RoomStudentTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _Avatar(name: student.name, url: student.avatarUrl),
+          SmartCampusSquareAvatar(name: student.name, url: student.avatarUrl),
           SizedBox(width: ui(8)),
           Expanded(
             child: Column(
@@ -775,6 +724,7 @@ class _RoomStudentTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(14),
                     color: _kTextDark,
+                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w500,
                     height: 1.2,
                   ),
@@ -787,6 +737,7 @@ class _RoomStudentTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextHint,
+                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1.2,
                   ),
@@ -798,42 +749,6 @@ class _RoomStudentTile extends StatelessWidget {
           _StatusDropdown(current: student.status, onChange: onChangeStatus),
         ],
       ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name, required this.url});
-
-  final String name;
-  final String url;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final initial = name.isEmpty ? '·' : name.characters.first;
-    return Container(
-      width: ui(40),
-      height: ui(40),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(8)),
-        image: url.isNotEmpty
-            ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
-            : null,
-      ),
-      alignment: Alignment.center,
-      child: url.isNotEmpty
-          ? null
-          : Text(
-              initial,
-              style: TextStyle(
-                fontSize: ui(16),
-                color: _kPurple,
-                fontWeight: AppFont.w500,
-                height: 1.0,
-              ),
-            ),
     );
   }
 }
@@ -880,15 +795,14 @@ class _StatusDropdownState extends State<_StatusDropdown> {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
+    return AppPressable(
       key: _fieldKey,
-      borderRadius: BorderRadius.circular(ui(8)),
       onTap: _openMenu,
       child: Container(
         height: ui(36),
         padding: EdgeInsets.symmetric(horizontal: ui(12)),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderLine, width: 1),
         ),
@@ -900,6 +814,7 @@ class _StatusDropdownState extends State<_StatusDropdown> {
               style: TextStyle(
                 fontSize: ui(12),
                 color: _kTextDark,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.4,
               ),

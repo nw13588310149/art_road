@@ -1,19 +1,38 @@
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
+// =============================================================================
+// 宿管端「补卡审核」独立页面
+//
+// 路由：mainView == dormMakeupAudit + role == dormManager（由
+//      controller.openDormMakeupAudit() 打开；原版与本工程目前都没有界面入口
+//      调用它，宿管日常在「查寝动态 → 补卡审核」页签里审核）。
+//
+// 视觉（数值照原版同路径文件）：
+//   1. 横幅：共享 [SmartCampusPageBanner]，居中标题「补卡审核」。
+//   2. 筛选行：原版是输入框式下拉 + 选择片，这里按约定换成共享的黑底状态
+//      页签（待审批 / 已通过 / 已拒绝 / 已撤销 / 全部）+ 220×44 楼栋下拉。
+//   3. 3 列补卡申请卡（#FAF0FF→白渐变、16 圆角、白描边）：姓名 16/600 +
+//      状态 + 宿舍·日期 + 类型·原因 + 申请时间 11 + 详情 / 驳回 / 通过。
+// =============================================================================
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
+
 import '../../shell/ui/shell_layout.dart';
 import '../data/dormitory_check_data.dart';
 import '../state/dormitory_manager_controller.dart';
 import 'widgets/dormitory_detail_dialog.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import 'widgets/smart_campus_dark_tabs.dart';
+import 'widgets/smart_campus_filter_bar.dart';
+import 'widgets/smart_campus_page_banner.dart';
 
-const Color _kTextDark = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kPurple = AppColors.brand;
-const Color _kRed = AppColors.danger;
+const Color _kRed = Color(0xFFFF323C);
 
 class DormManagerMakeupAuditView extends ConsumerStatefulWidget {
   const DormManagerMakeupAuditView({super.key, required this.onBack});
@@ -27,8 +46,10 @@ class DormManagerMakeupAuditView extends ConsumerStatefulWidget {
 
 class _DormManagerMakeupAuditViewState
     extends ConsumerState<DormManagerMakeupAuditView> {
-  String? _buildingId;
+  DormitoryBuildingOption _building = DormitoryBuildingOption.all;
   int? _status = 0;
+
+  String? get _buildingId => _building.id.isEmpty ? null : _building.id;
 
   @override
   void initState() {
@@ -90,161 +111,128 @@ class _DormManagerMakeupAuditViewState
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final state = ref.watch(dormitoryManagerControllerProvider);
-    return Container(
-      color: AppColors.surface,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: ui(20)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppPageHeader(title: '补卡审核', onBack: widget.onBack),
-            SizedBox(height: ui(16)),
-            _MakeupFilters(
-              buildings: state.managedBuildings,
-              buildingId: _buildingId,
-              status: _status,
-              onBuildingChanged: (value) {
-                setState(() => _buildingId = value);
-                unawaited(_reload());
-              },
-              onStatusChanged: (value) {
-                setState(() => _status = value);
-                unawaited(_reload());
-              },
-            ),
-            if (state.error.isNotEmpty)
-              Padding(
-                padding: EdgeInsets.all(ui(12)),
-                child: Text(state.error, style: TextStyle(color: _kRed)),
-              )
-            else if (state.makeupItems.isEmpty)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: ui(48)),
-                child: Center(
-                  child: Text(
-                    _status == 0 ? '暂无待审补卡申请' : '暂无符合条件的补卡申请',
-                    style: TextStyle(fontSize: ui(14), color: _kTextHint),
-                  ),
-                ),
-              )
-            else
-              Padding(
-                padding: EdgeInsets.only(top: ui(16)),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final gap = ui(16);
-                    var columns = 3;
-                    if (constraints.maxWidth < ui(720)) columns = 2;
-                    if (constraints.maxWidth < ui(480)) columns = 1;
-                    final cardWidth =
-                        (constraints.maxWidth - gap * (columns - 1)) / columns;
-                    return Wrap(
-                      spacing: gap,
-                      runSpacing: gap,
-                      children: [
-                        for (final item in state.makeupItems)
-                          SizedBox(
-                            width: cardWidth,
-                            child: _MakeupCard(
-                              item: item,
-                              submitting: state.submittingMakeupIds.contains(
-                                item.id,
-                              ),
-                              onDetail: () =>
-                                  unawaited(_showMakeupDetail(item)),
-                              onApprove: () =>
-                                  unawaited(_audit(item, approve: true)),
-                              onReject: () =>
-                                  unawaited(_audit(item, approve: false)),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+    return SmartCampusSecondaryPageShell(
+      bodyTopClipRadius: 8,
+      header: SmartCampusPageBanner(title: '补卡审核', onBack: widget.onBack),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _MakeupFilters(
+            buildings: state.managedBuildings,
+            building: _building,
+            status: _status,
+            onBuildingChanged: (value) {
+              setState(() => _building = value);
+              unawaited(_reload());
+            },
+            onStatusChanged: (value) {
+              setState(() => _status = value);
+              unawaited(_reload());
+            },
+          ),
+          if (state.error.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.all(ui(12)),
+              child: Text(state.error, style: TextStyle(color: _kRed)),
+            )
+          else if (state.makeupItems.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: ui(48)),
+              child: Center(
+                child: Text(
+                  _status == 0 ? '暂无待审补卡申请' : '暂无符合条件的补卡申请',
+                  style: TextStyle(fontSize: ui(14), color: _kTextHint),
                 ),
               ),
-          ],
-        ),
+            )
+          else
+            Padding(
+              padding: EdgeInsets.only(top: ui(16)),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final gap = ui(16);
+                  var columns = 3;
+                  if (constraints.maxWidth < ui(720)) columns = 2;
+                  if (constraints.maxWidth < ui(480)) columns = 1;
+                  final cardWidth =
+                      (constraints.maxWidth - gap * (columns - 1)) / columns;
+                  return Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      for (final item in state.makeupItems)
+                        SizedBox(
+                          // 向下取整到 0.01，避免浮点误差把最后一列挤到下一行。
+                          width: (cardWidth * 100).floorToDouble() / 100,
+                          child: _MakeupCard(
+                            item: item,
+                            submitting: state.submittingMakeupIds.contains(
+                              item.id,
+                            ),
+                            onDetail: () => unawaited(_showMakeupDetail(item)),
+                            onApprove: () =>
+                                unawaited(_audit(item, approve: true)),
+                            onReject: () =>
+                                unawaited(_audit(item, approve: false)),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
+/// 筛选行：左侧黑底状态页签，右侧楼栋下拉（窄横屏放不下时折行）。
 class _MakeupFilters extends StatelessWidget {
   const _MakeupFilters({
     required this.buildings,
-    required this.buildingId,
+    required this.building,
     required this.status,
     required this.onBuildingChanged,
     required this.onStatusChanged,
   });
 
   final List<DormitoryBuildingOption> buildings;
-  final String? buildingId;
+  final DormitoryBuildingOption building;
   final int? status;
-  final ValueChanged<String?> onBuildingChanged;
+  final ValueChanged<DormitoryBuildingOption> onBuildingChanged;
   final ValueChanged<int?> onStatusChanged;
+
+  static const _statuses = <(int?, String)>[
+    (0, '待审批'),
+    (1, '已通过'),
+    (2, '已拒绝'),
+    (3, '已撤销'),
+    (null, '全部'),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    const statuses = <(int?, String)>[
-      (0, '待审批'),
-      (1, '已通过'),
-      (2, '已拒绝'),
-      (3, '已撤销'),
-      (null, '全部'),
-    ];
-    return Container(
-      padding: EdgeInsets.all(ui(12)),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(12)),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: ui(220),
-            child: DropdownButtonFormField<String?>(
-              initialValue: buildingId,
-              decoration: const InputDecoration(
-                labelText: '宿舍楼',
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('全部宿舍楼'),
-                ),
-                for (final building in buildings)
-                  if (building.id.isNotEmpty)
-                    DropdownMenuItem<String?>(
-                      value: building.id,
-                      child: Text(
-                        '${building.label} · ${building.assignedBedCount}人',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-              ],
-              onChanged: onBuildingChanged,
-            ),
-          ),
-          SizedBox(width: ui(16)),
-          Expanded(
-            child: Wrap(
-              spacing: ui(8),
-              children: [
-                for (final entry in statuses)
-                  ChoiceChip(
-                    label: Text(entry.$2),
-                    selected: status == entry.$1,
-                    onSelected: (_) => onStatusChanged(entry.$1),
-                  ),
-              ],
-            ),
-          ),
+    return SmartCampusFilterRow(
+      useWrap: true,
+      leading: SmartCampusDarkTabs<int?>(
+        segments: [
+          for (final entry in _statuses)
+            AppSegment<int?>(value: entry.$1, label: entry.$2),
         ],
+        value: status,
+        onChanged: onStatusChanged,
+        bordered: false,
+      ),
+      // 右侧槽位放楼栋下拉（本页没有搜索框）。
+      search: SmartCampusFilterDropdown<DormitoryBuildingOption>(
+        items: buildings.isEmpty
+            ? const [DormitoryBuildingOption.all]
+            : buildings,
+        value: building,
+        itemLabel: (o) =>
+            o.id.isEmpty ? o.label : '${o.label} · ${o.assignedBedCount}人',
+        onChanged: onBuildingChanged,
       ),
     );
   }
@@ -272,10 +260,10 @@ class _MakeupCard extends StatelessWidget {
       padding: EdgeInsets.all(ui(12)),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFFAF0FF), AppColors.surface],
+          colors: [Color(0xFFFAF0FF), Colors.white],
         ),
         borderRadius: BorderRadius.circular(ui(16)),
-        border: Border.all(color: AppColors.surface),
+        border: Border.all(color: Colors.white),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,7 +301,7 @@ class _MakeupCard extends StatelessWidget {
           if (item.createTime.isNotEmpty)
             Text(
               '申请时间：${item.createTime}',
-              style: TextStyle(fontSize: ui(12), color: _kTextHint),
+              style: TextStyle(fontSize: ui(11), color: _kTextHint),
             ),
           if (item.createTime.isNotEmpty) SizedBox(height: ui(8)),
           Row(
@@ -324,9 +312,11 @@ class _MakeupCard extends StatelessWidget {
               ),
               const Spacer(),
               if (item.status == 0) ...[
+                // 72 宽按钮去掉默认左右内距，两个字居中，不会被挤成竖排。
                 SizedBox(
                   width: ui(72),
                   child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
                     onPressed: submitting ? null : onReject,
                     child: Text(
                       '驳回',
@@ -338,7 +328,10 @@ class _MakeupCard extends StatelessWidget {
                 SizedBox(
                   width: ui(72),
                   child: FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: _kPurple),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _kPurple,
+                      padding: EdgeInsets.zero,
+                    ),
                     onPressed: submitting ? null : onApprove,
                     child: Text('通过', style: TextStyle(fontSize: ui(12))),
                   ),

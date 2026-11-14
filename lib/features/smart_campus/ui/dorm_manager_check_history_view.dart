@@ -8,11 +8,11 @@
 // 设计原则：与「按宿舍查寝」(`dorm_manager_check_by_room_view.dart`) 保持
 // 视觉语言的一致性，但因为本页是审计场景、单日动辄 50+ 条记录，所以
 // **正文区采用表格列表**而非卡片网格 —— 让宿管在一屏内能扫到尽可能多的
-// 记录。共用语言：
-//   - banner 白→#F9EDFF 渐变 + 居中标题 + 副标题
-//   - 14 天日历条（白底 16 圆角 + 灰底 8 圆角 cells，今日紫底白字）
-//   - 4 张 100 高彩色渐变统计卡（橙 / 绿 / 红 / 紫 + 右上 32×32 白底图标）
-//   - 状态徽章配色：正常 #8E7FFF / 请假免检 #1CD097 / 迟到 #325BFF /
+// 记录。共用语言（数值照原版同路径文件）：
+//   - 横幅：共享 [SmartCampusPageBanner]，居中标题 + 右侧「导出」
+//   - 14 天日历条（白底 16 圆角 + 灰底 8 圆角 cells，选中紫底白字）
+//   - 4 张插图统计卡（共享 [SmartCampusStatCard]）
+//   - 状态徽章配色：正常 浅品牌紫 / 请假免检 #1CD097 / 晚归 #325BFF /
 //     未打卡 #FF323C
 //
 // 表格区列：学生 | 宿舍/床位 | 状态 | 查寝日期 | 打卡时间 | 操作
@@ -29,43 +29,46 @@
 // 数据流：按日期、宿舍楼和楼层调用 dormitoryCheckHistory + dormitoryCheckStat。
 // =============================================================================
 
-import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
+import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../../../core/widgets/popup_selector_field.dart';
-import 'widgets/smart_campus_page_banner.dart';
+import '../../school/data/school_config_data.dart';
+import '../../school/state/school_config_controller.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/dormitory_check_data.dart';
 import '../data/student_dormitory_data.dart' show DormitoryDetailStudentProfile;
 import '../services/dormitory_export_saver.dart';
 import '../state/dormitory_manager_controller.dart';
-import '../../school/data/school_config_data.dart';
-import '../../school/state/school_config_controller.dart';
 import 'widgets/dormitory_detail_dialog.dart';
+import 'widgets/smart_campus_filter_bar.dart';
+import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_square_avatar.dart';
+import 'widgets/smart_campus_square_tag.dart';
 import 'widgets/smart_campus_stat_card.dart';
-import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-// —— 颜色 ————————————————————————————————————————————————————————
-const Color _kCardGreyBg = AppColors.surfaceSubtle;
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextDarker = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextMuted = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kCalendarHint = AppColors.line;
+// —— 颜色（原版色值；紫色统一为品牌紫）——————————————————————————————
+const Color _kCardGreyBg = Color(0xFFF5F6FA);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextDarker = Color(0xFF1A1A1A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextMuted = Color(0xFF71717A);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kCalendarHint = Color(0xFFE6E9F1);
 const Color _kPurple = AppColors.brand;
-const Color _kRed = AppColors.danger;
+const Color _kPurpleSolid = AppColors.brandSoft;
+const Color _kRed = Color(0xFFFF323C);
 const Color _kBlue = Color(0xFF325BFF);
 const Color _kGreen = Color(0xFF1CD097);
 
 // —— 历史卡状态徽章（与 by-room 视图底部完全一致）—————————————————
 enum _HistoryStatus {
-  normal('正常', AppColors.success),
+  normal('正常', _kPurpleSolid),
   absent('未打卡', _kRed),
   missing('缺勤', _kRed),
   late_('晚归', _kBlue);
@@ -281,17 +284,13 @@ class _DormManagerCheckHistoryViewState
     final historyItems = managerState.historyItems;
     final loadError = managerState.error;
     return SmartCampusSecondaryPageShell(
-      header: AppPageHeader(
+      bodyTopClipRadius: 8,
+      header: SmartCampusPageBanner(
         title: '查寝历史',
-        subtitle: '按日期查看管辖楼栋的查寝记录，异常记录可在这里处理',
         onBack: widget.onBack,
         actions: [
-          AppButton(
-            label: '导出',
-            icon: Icons.download_rounded,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
-            loading: managerState.exporting,
+          // 正在导出或当日没有记录时置灰，不能点。
+          _ExportButton(
             onTap: managerState.exporting || historyItems.isEmpty
                 ? null
                 : _exportHistory,
@@ -308,41 +307,35 @@ class _DormManagerCheckHistoryViewState
             absent: stat.notCheckedCount,
           ),
           SizedBox(height: ui(16)),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _DateStripCard(
-                days: _days,
-                selectedIndex: _selectedDayIndex,
-                dateText: _selectedDateText,
-                statText: '共 ${historyItems.length} 条',
-                onTapDay: _onTapDay,
-              ),
-              SizedBox(height: ui(16)),
-              _FilterRow(
-                buildingOptions: managerState.managedBuildings,
-                floorOptions: managerState.floorOptions,
-                selectedBuilding: _selectedBuilding,
-                selectedFloor: _selectedFloor,
-                floorEnabled:
-                    _selectedBuilding.id.isNotEmpty &&
-                    !managerState.loadingFloors,
-                onBuildingChanged: (v) => unawaited(_onBuildingChanged(v)),
-                onFloorChanged: (v) => unawaited(_onFloorChanged(v)),
-              ),
-              SizedBox(height: ui(16)),
-              if (loadError.isNotEmpty)
-                _LoadErrorHint(message: loadError, onRetry: _reloadAll)
-              else if (historyItems.isEmpty)
-                const _EmptyState()
-              else
-                _HistoryTable(
-                  items: historyItems,
-                  onHandleException: _handleException,
-                  onTapDetail: (item) => unawaited(_showCheckDetail(item)),
-                ),
-            ],
+          _DateStripCard(
+            days: _days,
+            selectedIndex: _selectedDayIndex,
+            dateText: _selectedDateText,
+            statText: '共 ${historyItems.length} 条',
+            onTapDay: _onTapDay,
           ),
+          SizedBox(height: ui(16)),
+          _FilterRow(
+            buildingOptions: managerState.managedBuildings,
+            floorOptions: managerState.floorOptions,
+            selectedBuilding: _selectedBuilding,
+            selectedFloor: _selectedFloor,
+            floorEnabled:
+                _selectedBuilding.id.isNotEmpty && !managerState.loadingFloors,
+            onBuildingChanged: (v) => unawaited(_onBuildingChanged(v)),
+            onFloorChanged: (v) => unawaited(_onFloorChanged(v)),
+          ),
+          SizedBox(height: ui(16)),
+          if (loadError.isNotEmpty)
+            _LoadErrorHint(message: loadError, onRetry: _reloadAll)
+          else if (historyItems.isEmpty)
+            const _EmptyState()
+          else
+            _HistoryTable(
+              items: historyItems,
+              onHandleException: _handleException,
+              onTapDetail: (item) => unawaited(_showCheckDetail(item)),
+            ),
         ],
       ),
     );
@@ -350,8 +343,45 @@ class _DormManagerCheckHistoryViewState
 }
 
 // =============================================================================
-// Banner
+// 横幅右侧「导出」：原版本页独有的紫字按钮（高 32、白底描边、12/600）。
 // =============================================================================
+
+class _ExportButton extends StatelessWidget {
+  const _ExportButton({required this.onTap});
+
+  /// 为 null 时置灰。
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return AppPressable(
+      onTap: onTap,
+      enabled: onTap != null,
+      child: Container(
+        height: ui(32),
+        padding: EdgeInsets.symmetric(horizontal: ui(12)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(ui(8)),
+          border: Border.all(color: _kBorderSoft),
+        ),
+        child: Center(
+          widthFactor: 1,
+          child: Text(
+            '导出',
+            style: TextStyle(
+              fontSize: ui(12),
+              color: _kPurple,
+              fontFamily: 'PingFang SC',
+              fontWeight: AppFont.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _FilterRow extends StatelessWidget {
   const _FilterRow({
@@ -377,116 +407,24 @@ class _FilterRow extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     return Row(
       children: [
-        _DormitorySelectField<DormitoryBuildingOption>(
+        SmartCampusFilterDropdown<DormitoryBuildingOption>(
           value: selectedBuilding,
           items: buildingOptions,
           itemLabel: (o) => o.label,
-          width: ui(220),
-          menuWidth: ui(280),
           onChanged: onBuildingChanged,
         ),
         SizedBox(width: ui(12)),
-        _DormitorySelectField<DormitoryFloorOption>(
-          value: selectedFloor,
-          items: floorOptions,
-          itemLabel: (o) => o.label,
-          width: ui(220),
-          menuWidth: ui(280),
-          enabled: floorEnabled,
-          onChanged: onFloorChanged,
+        // 选了楼栋、楼层列表到位后才能选楼层（外观与原版一致，不置灰）。
+        IgnorePointer(
+          ignoring: !floorEnabled,
+          child: SmartCampusFilterDropdown<DormitoryFloorOption>(
+            value: selectedFloor,
+            items: floorOptions,
+            itemLabel: (o) => o.label,
+            onChanged: onFloorChanged,
+          ),
         ),
       ],
-    );
-  }
-}
-
-class _DormitorySelectField<T> extends StatefulWidget {
-  const _DormitorySelectField({
-    required this.value,
-    required this.items,
-    required this.itemLabel,
-    required this.width,
-    required this.menuWidth,
-    required this.onChanged,
-    this.enabled = true,
-  });
-
-  final T value;
-  final List<T> items;
-  final String Function(T) itemLabel;
-  final double width;
-  final double menuWidth;
-  final ValueChanged<T> onChanged;
-  final bool enabled;
-
-  @override
-  State<_DormitorySelectField<T>> createState() =>
-      _DormitorySelectFieldState<T>();
-}
-
-class _DormitorySelectFieldState<T> extends State<_DormitorySelectField<T>> {
-  final _fieldKey = GlobalKey();
-  bool _open = false;
-
-  Future<void> _openMenu() async {
-    if (!widget.enabled) return;
-    final fieldCtx = _fieldKey.currentContext;
-    if (fieldCtx == null) return;
-    setState(() => _open = true);
-    final selected = await showAppPopupSelector<T>(
-      anchorContext: fieldCtx,
-      items: widget.items,
-      value: widget.value,
-      itemLabel: widget.itemLabel,
-      width: widget.menuWidth,
-    );
-    if (!mounted) return;
-    setState(() => _open = false);
-    if (selected != null) widget.onChanged(selected);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      key: _fieldKey,
-      onTap: _openMenu,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        width: widget.width,
-        height: ui(44),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(12)),
-          border: Border.all(color: _kBorderSoft, width: 1),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                widget.itemLabel(widget.value),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: ui(14),
-                  height: 1.2,
-                  color: _kTextDark,
-                ),
-              ),
-            ),
-            AnimatedRotation(
-              turns: _open ? 0.5 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: ui(18),
-                color: AppColors.textPlaceholder,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -504,7 +442,7 @@ class _LoadErrorHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(32), horizontal: ui(16)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -512,16 +450,21 @@ class _LoadErrorHint extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: ui(13), color: _kTextHint),
+            style: TextStyle(
+              fontSize: ui(13),
+              color: _kTextHint,
+              fontFamily: 'PingFang SC',
+            ),
           ),
           SizedBox(height: ui(12)),
-          InkWell(
+          AppPressable(
             onTap: () => unawaited(onRetry()),
             child: Text(
               '重试',
               style: TextStyle(
                 fontSize: ui(13),
                 color: _kPurple,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w500,
               ),
             ),
@@ -557,7 +500,7 @@ class _DateStripCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(12)),
@@ -572,6 +515,7 @@ class _DateStripCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(14),
                   color: _kTextDark,
+                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w500,
                   height: 1.2,
                 ),
@@ -588,6 +532,7 @@ class _DateStripCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: ui(12),
                   color: _kTextDark,
+                  fontFamily: 'PingFang SC',
                   fontWeight: AppFont.w400,
                   height: 1.2,
                 ),
@@ -642,10 +587,11 @@ class _CalendarCell extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final bg = selected ? _kPurple : _kCardGreyBg;
     final weekdayColor = selected ? _kCalendarHint : _kTextHint;
-    final dayColor = selected ? AppColors.surface : _kTextDark;
-    return InkWell(
+    final dayColor = selected ? Colors.white : _kTextDark;
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
+      selected: selected,
+      semanticLabel: '${day.date.month}月${day.date.day}日',
       child: Container(
         height: ui(59),
         decoration: BoxDecoration(
@@ -660,6 +606,7 @@ class _CalendarCell extends StatelessWidget {
               style: TextStyle(
                 fontSize: ui(12),
                 color: weekdayColor,
+                fontFamily: 'PingFang SC',
                 fontWeight: AppFont.w400,
                 height: 1.2,
               ),
@@ -762,7 +709,7 @@ class _HistoryTable extends StatelessWidget {
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -827,7 +774,7 @@ class _HistoryTableRow extends StatelessWidget {
         ? item.statusLabel
         : status.label;
     return Material(
-      color: zebra ? const Color(0xFFFAFAFC) : AppColors.surface,
+      color: zebra ? const Color(0xFFFAFAFC) : Colors.white,
       child: InkWell(
         onTap: item.id.isEmpty ? null : () => onTapDetail(item),
         child: Padding(
@@ -839,7 +786,11 @@ class _HistoryTableRow extends StatelessWidget {
                 flex: 22,
                 child: Row(
                   children: [
-                    _StudentAvatar(name: item.studentName, url: item.avatarUrl),
+                    SmartCampusSquareAvatar(
+                      name: item.studentName,
+                      url: item.avatarUrl,
+                      size: 36,
+                    ),
                     SizedBox(width: ui(8)),
                     Expanded(
                       child: _TwoLineCell(
@@ -873,6 +824,7 @@ class _HistoryTableRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: ui(12),
                     color: _kTextDark,
+                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                   ),
@@ -884,6 +836,7 @@ class _HistoryTableRow extends StatelessWidget {
                   item.checkTime.isEmpty ? '—' : item.checkTime,
                   style: TextStyle(
                     fontSize: ui(12),
+                    fontFamily: 'PingFang SC',
                     fontWeight: AppFont.w400,
                     height: 1,
                     color: item.status == DormitoryStudentCheckStatus.lateReturn
@@ -928,6 +881,7 @@ class _TwoLineCell extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextDark,
+            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -941,6 +895,7 @@ class _TwoLineCell extends StatelessWidget {
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
+              fontFamily: 'PingFang SC',
               fontWeight: AppFont.w400,
               height: 1,
             ),
@@ -951,55 +906,7 @@ class _TwoLineCell extends StatelessWidget {
   }
 }
 
-class _StudentAvatar extends StatelessWidget {
-  const _StudentAvatar({required this.name, required this.url});
-
-  final String name;
-  final String url;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final size = ui(36);
-    final radius = ui(8);
-    final initial = name.isEmpty ? '·' : name.characters.first;
-
-    Widget fallback() {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: AppColors.brandTint,
-          borderRadius: BorderRadius.circular(radius),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          initial,
-          style: TextStyle(
-            fontSize: ui(12),
-            color: _kPurple,
-            fontWeight: AppFont.w400,
-            height: 1,
-          ),
-        ),
-      );
-    }
-
-    if (url.isEmpty) return fallback();
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: Image.network(
-        url,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => fallback(),
-      ),
-    );
-  }
-}
-
+/// 状态徽章：实色底白字方角标签（原版内距 4×2、12 号字 → 高 16）。
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.text, required this.bg});
 
@@ -1008,22 +915,19 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: AppColors.surface,
-          fontWeight: AppFont.w400,
-          height: 1,
+    // 共享标签带居中对齐，放进有限宽度的父级会撑满整格；包一层
+    // 最小宽度的 Row 让它按文字收缩。
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SmartCampusSquareTag(
+          label: text,
+          background: bg,
+          foreground: Colors.white,
+          height: 16,
+          horizontalPadding: 4,
         ),
-      ),
+      ],
     );
   }
 }
@@ -1057,6 +961,7 @@ class _RowActions extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kPurple,
+            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
@@ -1068,6 +973,7 @@ class _RowActions extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: _kGreen,
+          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1,
         ),
@@ -1086,13 +992,17 @@ class _RowActions extends StatelessWidget {
           style: TextStyle(
             fontSize: ui(12),
             color: _kTextSecondary,
+            fontFamily: 'PingFang SC',
             fontWeight: AppFont.w400,
             height: 1,
           ),
         ),
       );
     }
-    return Align(alignment: Alignment.centerRight, child: action);
+    return Align(
+      alignment: Alignment.centerRight,
+      child: action,
+    );
   }
 }
 
@@ -1114,6 +1024,7 @@ class _HeaderText extends StatelessWidget {
         style: TextStyle(
           fontSize: ui(12),
           color: _kTextMuted,
+          fontFamily: 'PingFang SC',
           fontWeight: AppFont.w400,
           height: 1,
         ),
@@ -1175,11 +1086,28 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AppCard(
-      child: AppEmptyState(
-        icon: Icons.bedtime_outlined,
-        title: '当日暂无查寝记录',
-        description: '查寝结束后会显示查寝结果',
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: ui(48)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(ui(16)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '当日暂无查寝记录',
+            style: TextStyle(
+              fontSize: ui(13),
+              color: _kTextHint,
+              fontFamily: 'PingFang SC',
+              fontWeight: AppFont.w400,
+              height: 1.5,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1189,7 +1117,8 @@ class _EmptyState extends StatelessWidget {
 // 14 天日历构建
 // =============================================================================
 
-/// 最近 14 天（今天在最后一格），不出现未来日期。
+/// 最近 14 天（今天在最后一格），不出现未来日期；标注格式照原版
+/// （今天显示「今」，日期两位数）。
 List<_CalendarDay> _buildDays(DateTime today) {
   const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
   return List<_CalendarDay>.generate(14, (i) {
@@ -1198,8 +1127,8 @@ List<_CalendarDay> _buildDays(DateTime today) {
     final wd = (d.weekday - 1) % 7;
     return _CalendarDay(
       date: d,
-      weekdayLabel: isToday ? '今天' : weekdayLabels[wd],
-      dayLabel: d.day.toString(),
+      weekdayLabel: isToday ? '今' : weekdayLabels[wd],
+      dayLabel: d.day.toString().padLeft(2, '0'),
     );
   });
 }
