@@ -17,32 +17,27 @@ import 'widgets/role_switcher_buttons.dart';
 import 'widgets/smart_campus_avatar_role_badge.dart';
 import 'widgets/smart_campus_home_card.dart';
 import 'widgets/smart_campus_quick_actions_card.dart';
+import 'widgets/smart_campus_square_tag.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-/// 宿管端 · 智慧校园首页。
+/// 宿管端 · 智慧校园首页（版式照原版同路径文件）。
 ///
-/// 970×~820 双栏布局，参考 Figma 设计稿：
+/// 970×~820 双栏布局：
 ///
 /// 左主栏（约 697 宽）自上而下：
-/// 1. **顶部统计行**：5 张小白卡（今日批次 / 待审补卡 / 晚归登记 / 异常未闭环 /
-///    在寝率 98%）+ 1 张「待处理 12」紫色高亮卡，共占 697 宽。
-/// 2. **宿管 6 项快捷入口卡**（697×255）：5+1 网格，每格 43×43 图标
-///    （图片占满，无代码底色）+ 14/500 文案。
-///    - 按宿舍查寝（16.png）/ 查寝历史（17.png）/ 宿管请假（19.png）/
-///      校圈（home_actions/dorm_manager/school_circle.png）
-///    - 群聊（home_actions/dorm_manager/group_chat.png）/ 校长信箱（principal_mailbox.png）
-/// 3. **当前事项 + 今日值班** 两张 340×340 大白卡并排：
-///    - 当前事项：单一灰底 92 高时间卡（紫色「晚查」徽标 + 21:50-22:25 +
-///      "晚查寝预备·设备与名单核对"）
-///    - 今日值班：右上「按宿舍查寝 ›」link + 多条灰底 92 高时间卡，每条
-///      紫色「晨检 / 晚查」徽标 + Barlow 时间段 + 14/600 标题。
+/// 1. **顶部统计行**（67 高）：管辖楼数 / 在册床位 / 已归寝 / 晚归 / 未打卡 /
+///    在寝率 6 张等宽小白卡 + 1 张固定 123 宽的「待审补卡」紫色数字卡。
+/// 2. **快捷入口卡**：每行 5 个，43×43 图标 + 14/500 文案。
+/// 3. **当前事项 + 今日值班** 两张大白卡并排（窄于 690 时上下排）：
+///    - 当前事项：一条灰底时间卡（紫色方角标签 + Barlow 18 时间段 +
+///      14/600 标题），撑满整张白卡；
+///    - 今日值班：标题右侧「按宿舍查寝 ›」+ 多条灰底时间卡。
 ///
 /// 右栏（256 宽）固定单张白卡：
-/// - 顶部 72 圆形头像 + 「Grey黎」16/500 + 绿点「在岗」+ 蓝底「宿管老师」徽章；
-/// - 「区域：男生公寓1-3号楼 / 女生公寓A区」+「权限：管辖区域宿舍管理」+
-///   「职责：生活辅导员·宿管值班」；
-/// - 「校级通知」title + 滚动通知列表（后勤 / 联动 / 制度 / 大师课 等）。
+/// - 共享名片（72 圆形头像 + 姓名 + 绿点「在岗」+「宿管老师」徽章）；
+/// - 「区域 / 权限 / 职责」三行；多身份时显示「身份切换」；
+/// - 「校级通知」标题 + 可滚动的通知列表。
 ///
 /// 不带 `onBack` —— 这就是 dormManager 角色下 `mainView == dashboard` 的根
 /// 视图，不会被 `controller.backToDashboard()` 弹出。
@@ -332,19 +327,69 @@ class _DormDutySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final todayPanel = _TodayDutyCard(
-      tasks: todayDutyTasks,
-      currentTask: currentTask,
+    final currentPanel = _CurrentTaskCard(
+      task: currentTask,
       fillHeight: fillRemaining,
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: fillRemaining ? MainAxisSize.max : MainAxisSize.min,
-      children: [
-        const _SectionTitle(title: '今日值班'),
-        SizedBox(height: ui(12)),
-        if (fillRemaining) Expanded(child: todayPanel) else todayPanel,
-      ],
+    final todayPanel = _TodayDutyCard(
+      tasks: todayDutyTasks,
+      fillHeight: fillRemaining,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cw = constraints.maxWidth;
+        final stackVertically = !cw.isFinite || cw < ui(690);
+
+        if (stackVertically) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const _SectionTitle(title: '当前事项'),
+              SizedBox(height: ui(12)),
+              currentPanel,
+              SizedBox(height: ui(16)),
+              _TodayDutyHeader(onOpenDormCheckByRoom: onOpenDormCheckByRoom),
+              SizedBox(height: ui(12)),
+              todayPanel,
+            ],
+          );
+        }
+
+        final cardsRow = Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: currentPanel),
+            SizedBox(width: ui(16)),
+            Expanded(child: todayPanel),
+          ],
+        );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: fillRemaining ? MainAxisSize.max : MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Expanded(child: _SectionTitle(title: '当前事项')),
+                SizedBox(width: ui(16)),
+                Expanded(
+                  child: _TodayDutyHeader(
+                    onOpenDormCheckByRoom: onOpenDormCheckByRoom,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: ui(12)),
+            if (fillRemaining)
+              Expanded(child: cardsRow)
+            else
+              IntrinsicHeight(child: cardsRow),
+          ],
+        );
+      },
     );
   }
 }
@@ -354,10 +399,13 @@ class _DormDutySection extends StatelessWidget {
 // ============================================================================
 
 class _StatItem {
-  const _StatItem(this.value, this.label);
+  const _StatItem(this.value, this.label, {this.shortLabel});
 
   final String value;
   final String label;
+
+  /// 卡片放不下 [label] 时改用的短标签。
+  final String? shortLabel;
 }
 
 class _QuickAction {
@@ -416,17 +464,18 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        fontSize: ui(16),
+        fontSize: ui(18),
         height: 1.2,
         fontWeight: AppFont.w500,
-        color: AppColors.ink,
+        color: const Color(0xFF1A1A1A),
+        fontFamily: 'PingFang SC',
       ),
     );
   }
 }
 
 // ============================================================================
-// 1. 顶部统计行：5 项小卡 + 1 张待处理紫卡
+// 1. 顶部统计行：6 项小卡 + 1 张「待审补卡」紫色数字卡（固定 123 宽）
 // ============================================================================
 
 class _DormStatsRow extends StatelessWidget {
@@ -441,14 +490,20 @@ class _DormStatsRow extends StatelessWidget {
     final rate = index.bedCount == 0
         ? '—'
         : '${(returned * 100 / index.bedCount).round()}%';
-    final batch = index.batchLabel.split(' ').last;
+    // 批次名「晨查寝 / 晚查寝」缩成「晨查 / 晚查」写在在寝率前面；卡片太窄
+    // 放不下五个字时只写「在寝率」，不截断。
+    final batch = index.batchLabel.split(' ').last.replaceAll('寝', '');
     final items = <_StatItem>[
       _StatItem('${index.managedBuildingCount}', '管辖楼数'),
       _StatItem('${index.bedCount}', '在册床位'),
       _StatItem('${index.todayNormalCount}', '已归寝'),
       _StatItem('${index.todayLateCount}', '晚归'),
       _StatItem('${index.todayAbsentCount}', '未打卡'),
-      _StatItem(rate, batch.isEmpty ? '在寝率' : '在寝率（$batch）'),
+      _StatItem(
+        rate,
+        batch.isEmpty ? '在寝率' : '$batch在寝率',
+        shortLabel: '在寝率',
+      ),
     ];
     return SizedBox(
       height: ui(67),
@@ -459,7 +514,8 @@ class _DormStatsRow extends StatelessWidget {
             Expanded(child: _StatCard(item: items[i])),
             SizedBox(width: ui(16)),
           ],
-          Expanded(
+          SizedBox(
+            width: ui(123),
             child: _PendingCard(
               value: '${index.pendingMakeupCount}',
               label: '待审补卡',
@@ -479,6 +535,12 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
+    final labelStyle = TextStyle(
+      fontSize: ui(12),
+      height: 1.0,
+      color: const Color(0xFF6D6B75),
+      fontFamily: 'PingFang SC',
+    );
     return SmartCampusHomeCard(
       padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(8)),
       child: Column(
@@ -495,16 +557,27 @@ class _StatCard extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            item.label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: ui(12),
-              height: 1.0,
-              color: AppColors.textSecondary,
-            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final short = item.shortLabel;
+              var label = item.label;
+              if (short != null) {
+                final painter = TextPainter(
+                  text: TextSpan(text: label, style: labelStyle),
+                  textDirection: TextDirection.ltr,
+                  maxLines: 1,
+                )..layout();
+                if (painter.width > constraints.maxWidth) label = short;
+                painter.dispose();
+              }
+              return Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: labelStyle,
+              );
+            },
           ),
         ],
       ),
@@ -635,26 +708,84 @@ class _DormQuickActionsCard extends StatelessWidget {
 }
 
 // ============================================================================
-// 3. 今日值班（当前进行的一项高亮）
+// 3. 当前事项卡（左侧大白卡，里面一条灰底时间卡撑满）
 // ============================================================================
 
-class _TodayDutyCard extends StatelessWidget {
-  const _TodayDutyCard({
-    required this.tasks,
-    this.currentTask,
-    this.fillHeight = false,
-  });
+class _CurrentTaskCard extends StatelessWidget {
+  const _CurrentTaskCard({this.task, this.fillHeight = false});
 
-  final List<DormitoryDutyTask> tasks;
-  final DormitoryDutyTask? currentTask;
+  final DormitoryDutyTask? task;
   final bool fillHeight;
 
-  bool _isCurrent(_DutyTask task) {
-    final current = currentTask;
-    return current != null &&
-        current.title == task.title &&
-        current.timeFrom == task.timeFrom;
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final duty = task == null
+        ? const _DutyTask(
+            tag: '查寝',
+            title: '暂无当前事项',
+            timeFrom: '--',
+            timeTo: '--',
+          )
+        : _mapDutyTask(task!);
+    final card = SmartCampusHomeCard(
+      height: fillHeight ? null : ui(340),
+      padding: EdgeInsets.all(ui(12)),
+      child: _DutyTaskTile(task: duty),
+    );
+    return fillHeight ? SizedBox.expand(child: card) : card;
   }
+}
+
+// ============================================================================
+// 4. 今日值班 header（右上「按宿舍查寝 ›」link）
+// ============================================================================
+
+class _TodayDutyHeader extends StatelessWidget {
+  const _TodayDutyHeader({this.onOpenDormCheckByRoom});
+
+  final VoidCallback? onOpenDormCheckByRoom;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Expanded(child: _SectionTitle(title: '今日值班')),
+        AppPressable(
+          onTap: onOpenDormCheckByRoom,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '按宿舍查寝',
+                style: TextStyle(
+                  fontSize: ui(14),
+                  height: 1.2,
+                  color: const Color(0xFF6D6B75),
+                  fontFamily: 'PingFang SC',
+                ),
+              ),
+              SizedBox(width: ui(4)),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: ui(16),
+                color: const Color(0xFFCECED1),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TodayDutyCard extends StatelessWidget {
+  const _TodayDutyCard({required this.tasks, this.fillHeight = false});
+
+  final List<DormitoryDutyTask> tasks;
+  final bool fillHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -671,10 +802,7 @@ class _TodayDutyCard extends StatelessWidget {
         padding: EdgeInsets.zero,
         itemCount: dutyTasks.length,
         separatorBuilder: (_, _) => SizedBox(height: ui(12)),
-        itemBuilder: (_, i) => _DutyTaskTile(
-          task: dutyTasks[i],
-          current: _isCurrent(dutyTasks[i]),
-        ),
+        itemBuilder: (_, i) => _DutyTaskTile(task: dutyTasks[i]),
       ),
     );
     return fillHeight ? SizedBox.expand(child: card) : card;
@@ -687,12 +815,9 @@ class _TodayDutyCard extends StatelessWidget {
 /// 时间段 18/600 Barlow（"-" 用 `#B6B5BB`，前后用 `#1A1A1A`）；
 /// 标题 14/600 `#0B081A`。
 class _DutyTaskTile extends StatelessWidget {
-  const _DutyTaskTile({required this.task, this.current = false});
+  const _DutyTaskTile({required this.task});
 
   final _DutyTask task;
-
-  /// 正在进行的值班项：浅紫底 + 「进行中」。
-  final bool current;
 
   @override
   Widget build(BuildContext context) {
@@ -701,37 +826,41 @@ class _DutyTaskTile extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(12)),
       decoration: BoxDecoration(
-        color: current ? AppColors.brandWash : AppColors.surfaceSubtle,
+        color: const Color(0xFFF5F6FA),
         borderRadius: BorderRadius.circular(ui(12)),
-        border: current ? Border.all(color: AppColors.brandTint) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 原版内距 4×2、12 号字行高 1.27 → 高 19.24；Row 让标签按文字收缩。
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              AppTag(label: task.tag),
-              const Spacer(),
-              if (current)
-                const AppStatusTag(label: '进行中', tone: AppTone.brand),
+              SmartCampusSquareTag(
+                label: task.tag,
+                background: const Color(0xFFDAD2FF),
+                foreground: AppColors.brand,
+                height: 19.24,
+                horizontalPadding: 4,
+              ),
             ],
           ),
           SizedBox(height: ui(8)),
           RichText(
             text: TextSpan(
               style: TextStyle(
-                fontSize: ui(16),
+                fontSize: ui(18),
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Barlow',
                 height: 1.1,
-                color: AppColors.ink,
+                color: const Color(0xFF1A1A1A),
               ),
               children: [
-                TextSpan(text: task.timeFrom),
+                TextSpan(text: '${task.timeFrom} '),
                 const TextSpan(
-                  text: '–',
-                  style: TextStyle(color: AppColors.textPlaceholder),
+                  text: '- ',
+                  style: TextStyle(color: Color(0xFFB6B5BB)),
                 ),
                 TextSpan(text: task.timeTo),
               ],
@@ -744,7 +873,8 @@ class _DutyTaskTile extends StatelessWidget {
               fontSize: ui(14),
               height: 1.3,
               fontWeight: AppFont.w600,
-              color: AppColors.ink,
+              color: const Color(0xFF0B081A),
+              fontFamily: 'PingFang SC',
             ),
           ),
         ],
@@ -804,7 +934,8 @@ class _DormManagerSidePanel extends StatelessWidget {
               fontSize: ui(14),
               height: 1.2,
               fontWeight: AppFont.w500,
-              color: AppColors.ink,
+              color: const Color(0xFF1A1A1A),
+              fontFamily: 'PingFang SC',
             ),
           ),
           SizedBox(height: ui(10)),
@@ -821,7 +952,8 @@ class _DormManagerSidePanel extends StatelessWidget {
             fontSize: ui(16),
             height: 1.2,
             fontWeight: AppFont.w500,
-            color: AppColors.ink,
+            color: const Color(0xFF1A1A1A),
+            fontFamily: 'PingFang SC',
           ),
         ),
         SizedBox(height: ui(12)),
@@ -859,8 +991,9 @@ class _ProfileDetailRows extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 原版每个区域各占一行「区域：」；这里合并成一行，用顿号分隔。
         _AreaLine(
-          label: '管辖区域：',
+          label: '区域：',
           value: areas.isEmpty ? '暂无管辖区域' : areas.join('、'),
         ),
         SizedBox(height: ui(4)),
@@ -882,6 +1015,8 @@ class _AreaLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Row(
+      // 区域较多换成两行时，标签对齐第一行。
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -995,7 +1130,7 @@ class _DormNoticeDetailBody extends StatelessWidget {
         Text(
           notice.title,
           style: TextStyle(
-            fontSize: ui(16),
+            fontSize: ui(15),
             color: AppColors.ink,
             fontWeight: AppFont.w600,
             height: 1.5,
@@ -1170,10 +1305,11 @@ class _SchoolNoticeCard extends StatelessWidget {
                     child: Text(
                       item.tag,
                       style: TextStyle(
-                        fontSize: ui(12),
+                        fontSize: ui(10),
                         height: 1.2,
                         fontWeight: AppFont.w500,
                         color: tagStyle.foreground,
+                        fontFamily: 'PingFang SC',
                       ),
                     ),
                   ),
@@ -1204,7 +1340,7 @@ class _SchoolNoticeCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: ui(12),
                       height: 1.2,
-                      color: AppColors.textTertiary,
+                      color: const Color(0xFFCECED1),
                       fontFamily: 'Source Han Sans SC',
                     ),
                   ),
