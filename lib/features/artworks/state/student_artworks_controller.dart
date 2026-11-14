@@ -18,6 +18,7 @@ class StudentArtworksState {
     this.stats = const ArtworkStats(),
     this.insights = const ArtworkInsights(),
     this.filter = ArtworkStatusFilter.all,
+    this.revisedOnly = false,
     this.items = const <ArtworkSummary>[],
     this.page = 0,
     this.total = 0,
@@ -41,6 +42,9 @@ class StudentArtworksState {
   final ArtworkStats stats;
   final ArtworkInsights insights;
   final ArtworkStatusFilter filter;
+
+  /// 只看有改画版本的作品（每条改画链仍只列最新一版）。
+  final bool revisedOnly;
   final List<ArtworkSummary> items;
   final int page;
   final int total;
@@ -55,6 +59,7 @@ class StudentArtworksState {
     ArtworkStats? stats,
     ArtworkInsights? insights,
     ArtworkStatusFilter? filter,
+    bool? revisedOnly,
     List<ArtworkSummary>? items,
     int? page,
     int? total,
@@ -71,6 +76,7 @@ class StudentArtworksState {
       stats: stats ?? this.stats,
       insights: insights ?? this.insights,
       filter: filter ?? this.filter,
+      revisedOnly: revisedOnly ?? this.revisedOnly,
       items: items ?? this.items,
       page: page ?? this.page,
       total: total ?? this.total,
@@ -107,7 +113,12 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
     final results = await Future.wait([
       _repository.getStatistics(),
       _repository.getInsights(),
-      _repository.getArtworks(status: state.filter, page: 1, size: _pageSize),
+      _repository.getArtworks(
+        status: state.filter,
+        revised: state.revisedOnly,
+        page: 1,
+        size: _pageSize,
+      ),
     ]);
     if (!mounted) {
       return;
@@ -131,19 +142,22 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
       page: page?.current,
       total: page?.total,
       hasMore: page?.hasMore,
-      listFailed: listCurrent
-          ? (!list.isSuccess && state.items.isEmpty)
-          : null,
+      listFailed: listCurrent ? (!list.isSuccess && state.items.isEmpty) : null,
       errorMessage: failed?.errorOr('作品加载失败，请稍后重试') ?? '',
     );
   }
 
-  Future<void> setFilter(ArtworkStatusFilter filter) async {
-    if (filter == state.filter) {
+  /// 切换筛选：点评状态，或「有改画」（[revisedOnly]，与状态可同时生效）。
+  Future<void> setFilter(
+    ArtworkStatusFilter filter, {
+    bool revisedOnly = false,
+  }) async {
+    if (filter == state.filter && revisedOnly == state.revisedOnly) {
       return;
     }
     state = state.copyWith(
       filter: filter,
+      revisedOnly: revisedOnly,
       items: const <ArtworkSummary>[],
       page: 0,
       total: 0,
@@ -172,6 +186,7 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
     );
     final response = await _repository.getArtworks(
       status: state.filter,
+      revised: state.revisedOnly,
       page: page,
       size: _pageSize,
     );

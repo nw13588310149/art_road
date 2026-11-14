@@ -9,9 +9,12 @@ abstract final class AppAssets {
   static const cloudBreadcrumbArrow = 'assets/images/yunpan/right1.png';
   static const profileAnnualVipBadge = 'assets/images/info/1.png';
   static const aiChatSendEnabled = 'assets/images/aichat/Button.png';
-  static const aiChatPlanVector2 = 'assets/images/aichat/v2/ai_tool_plan_v2.svg';
-  static const aiChatPlanVector1 = 'assets/images/aichat/v2/ai_tool_plan_v1.svg';
-  static const aiChatToolAnalyze = 'assets/images/aichat/v2/ai_tool_analyze.svg';
+  static const aiChatPlanVector2 =
+      'assets/images/aichat/v2/ai_tool_plan_v2.svg';
+  static const aiChatPlanVector1 =
+      'assets/images/aichat/v2/ai_tool_plan_v1.svg';
+  static const aiChatToolAnalyze =
+      'assets/images/aichat/v2/ai_tool_analyze.svg';
   static const homeUserMenuLogout = 'assets/images/home/3.png';
   static const homeUserMenuProfile = 'assets/images/home/2.png';
   static const homeUserMenuRegion = 'assets/images/home/1.png';
@@ -378,8 +381,6 @@ abstract final class AppAssets {
       'assets/images/smartCampus/student/leave/stat_card_2.png';
   static const studentLeaveStatCard3 =
       'assets/images/smartCampus/student/leave/stat_card_3.png';
-  static const studentLeaveCreateApplyIcon =
-      'assets/images/smartCampus/student/leave/create_apply_icon.png';
 
   /// 学生 · 我的请假 · 「发起申请」按钮图标。
   static const studentLeaveCreateApplyIcon =

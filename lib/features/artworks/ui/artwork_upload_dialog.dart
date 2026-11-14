@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/ui.dart';
+import '../../../core/art/art_subject.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/student_artworks_controller.dart';
+import '../state/artwork_tasks_controller.dart';
 
 /// 学生上传作品弹窗；提交成功返回 true。
 ///
@@ -16,6 +18,7 @@ Future<bool?> showArtworkUploadDialog(
   String parentId = '',
   String title = '',
   String subject = '',
+  String taskId = '',
 }) {
   return showAppDialog<bool>(
     context: context,
@@ -24,6 +27,7 @@ Future<bool?> showArtworkUploadDialog(
       parentId: parentId,
       initialTitle: title,
       initialSubject: subject,
+      taskId: taskId,
     ),
   );
 }
@@ -33,12 +37,14 @@ class ArtworkUploadDialog extends ConsumerStatefulWidget {
     this.parentId = '',
     this.initialTitle = '',
     this.initialSubject = '',
+    this.taskId = '',
     super.key,
   });
 
   final String parentId;
   final String initialTitle;
   final String initialSubject;
+  final String taskId;
 
   @override
   ConsumerState<ArtworkUploadDialog> createState() =>
@@ -46,7 +52,10 @@ class ArtworkUploadDialog extends ConsumerStatefulWidget {
 }
 
 class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
-  static const _subjects = <String>['素描', '色彩', '速写', '其他'];
+  static final _subjects = <String>[
+    for (final subject in ArtSubject.values) subject.label,
+    _otherSubject,
+  ];
   static const _otherSubject = '其他';
 
   final _images = <ArtworkDraftImage>[];
@@ -55,6 +64,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
   final _customSubject = TextEditingController();
   final _description = TextEditingController();
   late String _subject;
+  late String _taskId = widget.taskId;
   DateTime _date = ArtworkRules.dateOnly(DateTime.now());
   bool _picking = false;
   bool _submitting = false;
@@ -219,6 +229,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
             description: _description.text.trim(),
             images: List<ArtworkDraftImage>.of(_images),
             parentId: widget.parentId,
+            taskId: _taskId,
           ),
           uploaded: _uploaded,
           onProgress: (done, count) {
@@ -241,6 +252,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
       AppToast.showError(context, message);
       return;
     }
+    ref.invalidate(artworkTasksControllerProvider);
     Navigator.of(context).pop(true);
   }
 
@@ -254,8 +266,8 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
         }
       },
       child: AppDialog(
-        title: '上传作品',
-        message: '老师会逐一点评，全部老师点评完成后可查看分数与评语',
+        title: widget.parentId.isEmpty ? '上传作品' : '改画重交',
+        message: '责任老师点评后，即可查看分数与评语',
         width: AppSize.dialogWide,
         actions: [
           AppButton(
@@ -276,6 +288,18 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
 
   Widget _buildForm() {
     final enabled = !_submitting;
+    final taskState = widget.parentId.isEmpty
+        ? ref.watch(artworkTasksControllerProvider)
+        : null;
+    final availableTasks = [
+      for (final task in taskState?.items ?? const <ArtworkTask>[])
+        if (task.status == 'PENDING' ||
+            task.status == 'OVERDUE' ||
+            task.id == _taskId)
+          task,
+    ];
+    final subjectEditable =
+        enabled && widget.parentId.isEmpty && _taskId.isEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -284,6 +308,39 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
           hint:
               '${_images.length}/${ArtworkRules.imageLimit} · JPG / PNG，单张不超过 20MB',
         ),
+        if (taskState != null) ...[
+          const SizedBox(height: AppSpace.s20),
+          const _FieldLabel(label: '关联作业（可选）'),
+          AppSelect<String>(
+            value: _taskId,
+            enabled:
+                enabled && widget.taskId.isEmpty && availableTasks.isNotEmpty,
+            hint: taskState.loading ? '正在加载作业' : '关联作业',
+            options: [
+              const AppSelectOption(value: '', label: '自主练习'),
+              for (final task in availableTasks)
+                AppSelectOption(
+                  value: task.id,
+                  label: '${task.subject} · ${task.title}',
+                ),
+            ],
+            onChanged: (id) => setState(() {
+              _taskId = id;
+              for (final task in availableTasks) {
+                if (task.id == id && _subjects.contains(task.subject)) {
+                  _subject = task.subject;
+                  if (_title.text.trim().isEmpty) _title.text = task.title;
+                }
+              }
+            }),
+          ),
+          if (taskState.errorMessage.isNotEmpty)
+            AppButton(
+              label: '重新加载作业',
+              variant: AppButtonVariant.text,
+              onTap: ref.read(artworkTasksControllerProvider.notifier).refresh,
+            ),
+        ],
         Wrap(
           spacing: AppSpace.s12,
           runSpacing: AppSpace.s12,
@@ -321,7 +378,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
           ],
           value: _subject,
           expand: true,
-          enabled: enabled,
+          enabled: subjectEditable,
           onChanged: (subject) => setState(() => _subject = subject),
         ),
         if (_subject == _otherSubject) ...[
@@ -329,7 +386,7 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
           AppInputField(
             controller: _customSubject,
             hint: '填写科目，如：设计、创作、书法',
-            enabled: enabled,
+            enabled: subjectEditable,
             maxLength: ArtworkRules.subjectLimit,
           ),
         ],
@@ -507,10 +564,7 @@ class _DateField extends StatelessWidget {
       semanticLabel: '选择绘画日期',
       child: Container(
         height: AppSize.control,
-        padding: const EdgeInsets.only(
-          left: AppSpace.s12,
-          right: AppSpace.s8,
-        ),
+        padding: const EdgeInsets.only(left: AppSpace.s12, right: AppSpace.s8),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: AppRadius.br8,

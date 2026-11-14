@@ -68,11 +68,12 @@ class _FigureToolState extends State<FigureTool> {
             ],
           ),
         ),
-        Text('${_pose.view}图示，头顶到脚底', style: AppText.caption12),
+        ToolNote('${_pose.view}图示，头顶到脚底'),
         const SizedBox(height: AppSpace.s12),
         for (final note in _pose.notes) _Bullet(note),
         const SizedBox(height: AppSpace.s12),
         ToolPanelSection(
+          bottom: AppSpace.s12,
           title: '通用要点',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

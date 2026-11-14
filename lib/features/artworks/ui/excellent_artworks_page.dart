@@ -118,6 +118,7 @@ class _ExcellentArtworksPageState extends ConsumerState<ExcellentArtworksPage> {
                                 RoutePaths.artworks,
                                 arguments: <String, dynamic>{
                                   'artworkId': item.id,
+                                  'readOnly': true,
                                 },
                               ),
                             );
@@ -171,8 +172,13 @@ class _ExcellentCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${item.studentName} · ${item.subject}'
-                    '${item.finalScore == null ? '' : ' · ${ArtworkRules.displayScore(item.finalScore)}分'}',
+                    [
+                      item.studentName,
+                      item.className,
+                      item.subject,
+                      if (item.finalScore != null)
+                        '${ArtworkRules.displayScore(item.finalScore)} 分',
+                    ].where((part) => part.isNotEmpty).join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppText.caption12,

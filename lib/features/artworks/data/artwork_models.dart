@@ -126,6 +126,8 @@ class ArtworkSummary {
     this.featured = false,
     this.overdue = false,
     this.leadOverdue = false,
+    this.leadReasons = const <String>[],
+    this.leadEnteredTime = '',
     this.imageCount = 0,
     this.teacherCount = 0,
     this.reviewedCount = 0,
@@ -136,6 +138,7 @@ class ArtworkSummary {
     this.studentNo = '',
     this.studentName = '',
     this.organizationName = '',
+    this.className = '',
     this.avatarUrl = '',
     this.myReviewed = false,
   });
@@ -144,6 +147,7 @@ class ArtworkSummary {
     final json = _map(raw);
     final root = _str(json['rootId']);
     final id = _str(json['id']);
+    final reasons = json['leadReasons'];
     return ArtworkSummary(
       id: id,
       title: _str(json['title']),
@@ -166,6 +170,13 @@ class ArtworkSummary {
       featured: _bool(json['featured']),
       overdue: _bool(json['overdue']),
       leadOverdue: _bool(json['leadOverdue']),
+      leadReasons: reasons is List
+          ? <String>[
+              for (final item in reasons)
+                if (_str(item).isNotEmpty) _str(item).toUpperCase(),
+            ]
+          : const <String>[],
+      leadEnteredTime: _str(json['enteredTime']),
       imageCount: _int(json['imageCount']),
       teacherCount: _int(json['teacherCount']),
       reviewedCount: _int(json['reviewedCount']),
@@ -176,6 +187,7 @@ class ArtworkSummary {
       studentNo: _str(json['studentNo']),
       studentName: _str(json['studentName']),
       organizationName: _str(json['organizationName']),
+      className: _str(json['className']),
       avatarUrl: _str(json['avatarUrl']),
       myReviewed: _bool(json['myReviewed']),
     );
@@ -206,6 +218,13 @@ class ArtworkSummary {
   final bool featured;
   final bool overdue;
   final bool leadOverdue;
+
+  /// 进入复核池的原因（`REQUESTED / SCORE_ANOMALY / BRIEF / SPOT_CHECK`），
+  /// 只有复核池列表返回。
+  final List<String> leadReasons;
+
+  /// 进入复核池的时间 `yyyy-MM-dd HH:mm:ss`，只有复核池列表返回。
+  final String leadEnteredTime;
   final int imageCount;
   final int teacherCount;
   final int reviewedCount;
@@ -220,6 +239,7 @@ class ArtworkSummary {
   final String studentNo;
   final String studentName;
   final String organizationName;
+  final String className;
   final String avatarUrl;
   final bool myReviewed;
 }
@@ -278,7 +298,10 @@ class ArtworkDimensionDef {
 
   factory ArtworkDimensionDef.fromJson(Object? raw) {
     final json = _map(raw);
-    return ArtworkDimensionDef(key: _str(json['key']), name: _str(json['name']));
+    return ArtworkDimensionDef(
+      key: _str(json['key']),
+      name: _str(json['name']),
+    );
   }
 
   final String key;
@@ -533,6 +556,8 @@ class ArtworkReview {
     this.tags = const <ArtworkTag>[],
     this.tagResolutions = const <({String tag, bool resolved})>[],
     this.annotations = const <AnnotationStroke>[],
+    this.voiceUrl = '',
+    this.voiceSeconds = 0,
   });
 
   factory ArtworkReview.fromJson(Object? raw) {
@@ -555,6 +580,7 @@ class ArtworkReview {
       }
       resolutions.add((tag: tag, resolved: _bool(item['resolved'])));
     }
+    final voice = _str(json['voiceUrl']);
     return ArtworkReview(
       teacherId: _str(json['teacherId']),
       teacherName: _str(json['teacherName']),
@@ -571,6 +597,8 @@ class ArtworkReview {
       annotations: _maps(
         json['annotations'],
       ).map(AnnotationStroke.fromJson).toList(),
+      voiceUrl: voice.isEmpty ? _str(json['voiceRef']) : voice,
+      voiceSeconds: _int(json['voiceSeconds']),
     );
   }
 
@@ -588,9 +616,20 @@ class ArtworkReview {
   final List<({String tag, bool resolved})> tagResolutions;
   final List<AnnotationStroke> annotations;
 
+  /// 语音评语：上传接口返回的相对路径或完整地址（接口字段 `voiceUrl` / `voiceRef`），
+  /// 没有时为空。
+  final String voiceUrl;
+
+  /// 语音评语时长（秒）。
+  final int voiceSeconds;
+
   /// 点评内容对当前查看者可见。
   bool get visible =>
-      reviewed && (score != null || content.isNotEmpty || tags.isNotEmpty);
+      reviewed &&
+      (score != null ||
+          content.isNotEmpty ||
+          tags.isNotEmpty ||
+          voiceUrl.isNotEmpty);
 }
 
 @immutable
@@ -608,8 +647,13 @@ class ArtworkDetail {
     this.versions = const <ArtworkSummary>[],
     this.dimensions = const <ArtworkDimensionDef>[],
     this.canReview = false,
+    this.canSupplement = false,
     this.canComment = false,
     this.canFeature = false,
+    this.seesLeadReasons = false,
+    this.seesQuality = false,
+    this.isOwner = false,
+    this.canLeadReview = false,
   });
 
   factory ArtworkDetail.fromJson(Object? raw) {
@@ -654,8 +698,13 @@ class ArtworkDetail {
         json['dimensions'],
       ).map(ArtworkDimensionDef.fromJson).toList(),
       canReview: _bool(access['canReview']),
+      canSupplement: _bool(access['canSupplement']),
       canComment: _bool(access['canComment']),
       canFeature: _bool(access['canFeature']),
+      seesLeadReasons: _bool(access['seesLeadReasons']),
+      seesQuality: _bool(access['seesQuality']),
+      isOwner: _bool(access['owner']),
+      canLeadReview: _bool(access['canLeadReview']),
     );
   }
 
@@ -674,9 +723,24 @@ class ArtworkDetail {
   final List<ArtworkTimelineEvent> timeline;
   final List<ArtworkSummary> versions;
   final List<ArtworkDimensionDef> dimensions;
+
+  /// 以下几项来自接口的 `access`：当前查看者能做什么、能看到什么。
+  ///
+  /// 责任老师可以点评。
   final bool canReview;
+
+  /// 非责任的美术老师可以补充点评（不计分）。
+  final bool canSupplement;
+
+  /// 校长可以点评、推优。
   final bool canComment;
   final bool canFeature;
+
+  /// 能看到进入复核的原因、点评质量星级与意见。
+  final bool seesLeadReasons;
+  final bool seesQuality;
+  final bool isOwner;
+  final bool canLeadReview;
 
   ArtworkReview? get myReview {
     for (final item in reviews) {

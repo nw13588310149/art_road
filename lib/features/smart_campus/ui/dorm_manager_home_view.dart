@@ -327,22 +327,22 @@ class _DormDutySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final currentPanel = _CurrentTaskCard(
-      task: currentTask,
-      fillHeight: fillRemaining,
-    );
-    final todayPanel = _TodayDutyCard(
-      tasks: todayDutyTasks,
-      fillHeight: fillRemaining,
-    );
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final cw = constraints.maxWidth;
         final stackVertically = !cw.isFinite || cw < ui(690);
+        final fillCards = fillRemaining && !stackVertically;
+        final currentPanel = _CurrentTaskCard(
+          task: currentTask,
+          fillHeight: fillCards,
+        );
+        final todayPanel = _TodayDutyCard(
+          tasks: todayDutyTasks,
+          fillHeight: fillCards,
+        );
 
         if (stackVertically) {
-          return Column(
+          final cards = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -355,6 +355,7 @@ class _DormDutySection extends StatelessWidget {
               todayPanel,
             ],
           );
+          return fillRemaining ? SingleChildScrollView(child: cards) : cards;
         }
 
         final cardsRow = Row(
@@ -499,11 +500,7 @@ class _DormStatsRow extends StatelessWidget {
       _StatItem('${index.todayNormalCount}', '已归寝'),
       _StatItem('${index.todayLateCount}', '晚归'),
       _StatItem('${index.todayAbsentCount}', '未打卡'),
-      _StatItem(
-        rate,
-        batch.isEmpty ? '在寝率' : '$batch在寝率',
-        shortLabel: '在寝率',
-      ),
+      _StatItem(rate, batch.isEmpty ? '在寝率' : '$batch在寝率', shortLabel: '在寝率'),
     ];
     return SizedBox(
       height: ui(67),

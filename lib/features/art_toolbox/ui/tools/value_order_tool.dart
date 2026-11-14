@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/value_order_records.dart';
 import '../../logic/value_order_game.dart';
@@ -218,24 +220,52 @@ class _ValueOrderToolState extends ConsumerState<ValueOrderTool> {
               tone: AppTone.danger,
             ),
           const SizedBox(height: AppSpace.s16),
-          Row(
-            children: [
-              AppButton(
-                label: '换一组',
-                icon: Icons.refresh_rounded,
-                variant: AppButtonVariant.secondary,
-                onTap: _deal,
-              ),
-              const Spacer(),
-              AppButton(
-                label: _solved ? '已完成' : '检查顺序',
-                icon: Icons.check_rounded,
-                onTap: _solved ? null : _check,
-              ),
-            ],
-          ),
+          _buildActions(),
         ],
       ),
+    );
+  }
+
+  /// 主操作「检查顺序」取原版练习页底部的主按钮（240×52、居中），「换一组」是
+  /// 左侧的操作胶囊（原版刷新图标）。画面很窄时上下排。
+  Widget _buildActions() {
+    final check = SizedBox(
+      width: 240,
+      height: 52,
+      child: AppButton(
+        label: _solved ? '已完成' : '检查顺序',
+        icon: Icons.check_rounded,
+        expand: true,
+        onTap: _solved ? null : _check,
+      ),
+    );
+    final deal = LibraryActionPill(
+      label: '换一组',
+      iconAsset: AppAssets.coursewareRefresh,
+      onTap: _deal,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 480) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              check,
+              const SizedBox(height: AppSpace.s12),
+              deal,
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(
+              child: Align(alignment: Alignment.centerLeft, child: deal),
+            ),
+            check,
+            const Expanded(child: SizedBox.shrink()),
+          ],
+        );
+      },
     );
   }
 
@@ -332,7 +362,7 @@ class _ValueOrderToolState extends ConsumerState<ValueOrderTool> {
           boxed: true,
         ),
         const SizedBox(height: AppSpace.s8),
-        Text('个人纪录只保存在本机', style: AppText.caption12),
+        const ToolNote('个人纪录只保存在本机'),
         const SizedBox(height: AppSpace.s20),
         const ToolTipCard(
           title: '为什么练明度',

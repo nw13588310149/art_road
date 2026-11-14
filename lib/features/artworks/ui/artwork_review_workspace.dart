@@ -5,13 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/art/art_tokens.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/image_gallery_viewer.dart';
+import '../../smart_campus/ui/widgets/homework_voice_comment.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/artwork_review_controller.dart';
 import '../state/artwork_tags_controller.dart';
 import '../state/principal_artwork_actions_controller.dart';
+import 'artwork_compare_page.dart';
 import 'artwork_tag_manager_dialog.dart';
 import 'widgets/artwork_annotation.dart';
+import 'widgets/artwork_review_actions.dart';
+import 'widgets/artwork_review_timeline.dart';
+import 'widgets/artwork_voice_comment_field.dart';
 import 'widgets/artwork_widgets.dart';
 
 final _scoreFormatter = FilteringTextInputFormatter.allow(
@@ -46,6 +51,9 @@ class _ArtworkReviewWorkspaceState
   final _transform = TransformationController();
   final _tagIds = <String>[];
   final _dimensions = <String, int>{};
+  final _tagResolutions = <String, bool>{};
+  String _voiceUrl = '';
+  int _voiceSeconds = 0;
   bool _requestLeadReview = false;
   bool _formReady = false;
   String _savedForm = '';
@@ -74,6 +82,9 @@ class _ArtworkReviewWorkspaceState
     _maxScore.text.trim(),
     _comment.text.trim(),
     '$_requestLeadReview',
+    _voiceUrl,
+    '$_voiceSeconds',
+    ..._tagResolutions.entries.map((e) => '${e.key}:${e.value}'),
     ..._tagIds,
     ..._dimensions.entries.map((e) => '${e.key}:${e.value}'),
   ].join('\u0001');
@@ -89,6 +100,14 @@ class _ArtworkReviewWorkspaceState
       ..clear()
       ..addAll(saved?.dimensions ?? const <String, int>{});
     _requestLeadReview = saved?.requestLeadReview ?? false;
+    _voiceUrl = saved?.voiceUrl ?? '';
+    _voiceSeconds = saved?.voiceSeconds ?? 0;
+    _tagResolutions
+      ..clear()
+      ..addEntries([
+        for (final item in saved?.tagResolutions ?? [])
+          MapEntry(item.tag, item.resolved),
+      ]);
     _maxScore.text = ArtworkRules.formatScore(
       detail.requiredFullScore ??
           saved?.maxScore ??
@@ -155,7 +174,7 @@ class _ArtworkReviewWorkspaceState
 
   Future<void> _save({required bool next}) async {
     final detail = ref.read(_provider).detail;
-    if (detail == null) {
+    if (detail == null || !detail.canReview) {
       return;
     }
     FocusScope.of(context).unfocus();
@@ -186,6 +205,12 @@ class _ArtworkReviewWorkspaceState
           next: next,
           dimensions: Map<String, int>.of(_dimensions),
           requestLeadReview: _requestLeadReview,
+          tagResolutions: [
+            for (final entry in _tagResolutions.entries)
+              (tag: entry.key, resolved: entry.value),
+          ],
+          voiceUrl: _voiceUrl,
+          voiceSeconds: _voiceSeconds,
         );
     if (!mounted || result == null) {
       return;
@@ -245,6 +270,10 @@ class _ArtworkReviewWorkspaceState
     final tagsController = ref.read(artworkTagsControllerProvider.notifier);
     ref.listen<ArtworkReviewState>(_provider, (previous, next) {
       final detail = next.detail;
+      if (previous?.detail?.work.leadStatus == ArtworkLeadStatus.inReview &&
+          detail?.work.leadStatus == ArtworkLeadStatus.done) {
+        AppToast.showSuccess(context, '复核已提交');
+      }
       if (!_formReady && detail != null) {
         setState(() => _initForm(detail));
       }
@@ -323,7 +352,7 @@ class _ArtworkReviewWorkspaceState
     return LayoutBuilder(
       builder: (context, constraints) {
         final imagePanel = _buildImagePanel(detail, state);
-        final form = _buildFormSections(detail, tagsState);
+        final form = _buildFormSections(detail, state, tagsState);
         final actions = _buildActions(state);
         const padding = EdgeInsets.fromLTRB(
           AppSpace.page,
@@ -462,7 +491,7 @@ class _ArtworkReviewWorkspaceState
   ) {
     final parts = <String>[
       images.length > 1 ? '第 ${index + 1}/${images.length} 张' : '作品原图',
-      if (strokes.isNotEmpty) '我的批注 ${strokes.length} 笔',
+      if (strokes.isNotEmpty) '批注 ${strokes.length} 笔',
       if (state.dirtyImages.contains(index)) '未保存',
     ];
     return Row(
@@ -496,14 +525,30 @@ class _ArtworkReviewWorkspaceState
             heroTagPrefix: 'review_${widget.artworkId}',
           ),
         ),
-        const SizedBox(width: AppSpace.s8),
-        AppButton(
-          label: '批注改画',
-          icon: Icons.brush_outlined,
-          variant: AppButtonVariant.quiet,
-          size: AppButtonSize.sm,
-          onTap: () => setState(() => _annotating = true),
-        ),
+        if ((state.previous?.images.isNotEmpty ?? false) && images.isNotEmpty)
+          AppButton(
+            label: '版本对比',
+            variant: AppButtonVariant.quiet,
+            size: AppButtonSize.sm,
+            onTap: () => openArtworkCompare(
+              context,
+              images: images.map((image) => image.url).toList(),
+              previousImages: state.previous!.images
+                  .map((image) => image.url)
+                  .toList(),
+              initialIndex: index,
+              subject: state.detail!.work.subject,
+            ),
+          ),
+        if (state.detail?.canReview == true) const SizedBox(width: AppSpace.s8),
+        if (state.detail?.canReview == true)
+          AppButton(
+            label: '批注改画',
+            icon: Icons.brush_outlined,
+            variant: AppButtonVariant.quiet,
+            size: AppButtonSize.sm,
+            onTap: () => setState(() => _annotating = true),
+          ),
       ],
     );
   }
@@ -573,104 +618,196 @@ class _ArtworkReviewWorkspaceState
 
   List<Widget> _buildFormSections(
     ArtworkDetail detail,
+    ArtworkReviewState state,
     ArtworkTagsState tagsState,
   ) {
+    final review = detail.review;
+    final previousTags =
+        state.previous?.review?.tags
+            .where((tag) => !ArtworkRules.isHighlightTag(tag.color))
+            .toList() ??
+        const <ArtworkTag>[];
     return <Widget>[
       _StudentCard(detail: detail),
       const SizedBox(height: AppSpace.s12),
-      AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppSectionHeader(
-              title: '评分',
-              subtitle: '可以只写评语、不打分',
-              titleStyle: AppText.title16,
-            ),
-            const SizedBox(height: AppSpace.s8),
-            _buildScoreInputs(detail),
-            const SizedBox(height: AppSpace.s16),
-            AppSectionHeader(
-              title: '点评标签',
-              subtitle:
-                  '已选 ${_tagIds.length} 个，最多 ${ArtworkRules.tagsPerReview} 个',
-              titleStyle: AppText.title16,
-              trailing: AppButton(
-                label: '管理标签',
-                variant: AppButtonVariant.text,
-                size: AppButtonSize.sm,
-                onTap: () => showArtworkTagManager(context),
-              ),
-            ),
-            const SizedBox(height: AppSpace.s8),
-            _buildTagPicker(detail, tagsState),
-            const SizedBox(height: AppSpace.s16),
-            AppSectionHeader(title: '评语', titleStyle: AppText.title16),
-            const SizedBox(height: AppSpace.s8),
-            AppInputField(
-              controller: _comment,
-              hint: '写下这张画的优点和需要改进的地方',
-              multiline: true,
-              minLines: 4,
-              maxLines: 8,
-              maxLength: ArtworkRules.commentLimit,
-            ),
-            if (detail.dimensions.isNotEmpty) ...[
-              const SizedBox(height: AppSpace.s16),
-              AppSectionHeader(title: '分项评价', titleStyle: AppText.title16),
-              const SizedBox(height: AppSpace.s8),
-              for (final def in detail.dimensions)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpace.s8),
-                  child: Row(
+      if (!detail.canReview && review != null) ...[
+        ArtworkReviewCard(review: review),
+        if (review.voiceUrl.isNotEmpty)
+          HomeworkVoiceCommentBubble(
+            relativePath: review.voiceUrl,
+            durationSec: review.voiceSeconds,
+          ),
+        if (review.dimensions.isNotEmpty)
+          Wrap(
+            spacing: AppSpace.s8,
+            children: [
+              for (final dimension in detail.dimensions)
+                if (review.dimensions[dimension.key] case final level?)
+                  AppTag(label: '${dimension.name} $level 级'),
+            ],
+          ),
+      ],
+      if (detail.canLeadReview) ArtworkLeadReviewForm(detail: detail),
+      if (detail.leadReview case final lead?)
+        if (detail.seesLeadReasons ||
+            (detail.seesQuality && lead.qualityStars > 0))
+          AppCard(
+            title: '复核记录',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (detail.seesLeadReasons)
+                  Wrap(
+                    spacing: AppSpace.s8,
                     children: [
-                      SizedBox(width: 72, child: Text(def.name, style: AppText.body13)),
-                      Expanded(
-                        child: Wrap(
-                          spacing: 6,
-                          children: [
-                            for (var level = 1; level <= 5; level++)
-                              AppChip(
-                                label: '$level',
-                                selected: _dimensions[def.key] == level,
-                                onTap: () => setState(() {
-                                  if (_dimensions[def.key] == level) {
-                                    _dimensions.remove(def.key);
-                                  } else {
-                                    _dimensions[def.key] = level;
-                                  }
-                                }),
-                              ),
-                          ],
+                      for (final reason in lead.reasons)
+                        AppTag(
+                          label: artworkLeadReasonLabels[reason] ?? reason,
                         ),
-                      ),
                     ],
                   ),
-                ),
-            ],
-            const SizedBox(height: AppSpace.s12),
-            AppPressable(
-              onTap: () =>
-                  setState(() => _requestLeadReview = !_requestLeadReview),
-              child: Row(
-                children: [
-                  Icon(
-                    _requestLeadReview
-                        ? Icons.check_box_rounded
-                        : Icons.check_box_outline_blank_rounded,
-                    color: AppColors.brand,
-                    size: 22,
-                  ),
-                  const SizedBox(width: AppSpace.s8),
-                  Expanded(
-                    child: Text('请组长复核', style: AppText.body14),
-                  ),
-                ],
-              ),
+                if (detail.seesQuality && lead.qualityStars > 0)
+                  Text('点评质量 ${lead.qualityStars} 星', style: AppText.body14),
+                if (detail.seesQuality && lead.qualityNote.isNotEmpty)
+                  Text(lead.qualityNote, style: AppText.body13),
+              ],
             ),
-          ],
+          ),
+      if (detail.canSupplement && !detail.canLeadReview)
+        ArtworkSupplementReviewForm(artworkId: widget.artworkId),
+      if (detail.canReview)
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppSectionHeader(
+                title: '评分',
+                subtitle: '可以只写评语、不打分',
+                titleStyle: AppText.title16,
+              ),
+              const SizedBox(height: AppSpace.s8),
+              _buildScoreInputs(detail),
+              const SizedBox(height: AppSpace.s16),
+              AppSectionHeader(
+                title: '点评标签',
+                subtitle:
+                    '已选 ${_tagIds.length} 个，最多 ${ArtworkRules.tagsPerReview} 个',
+                titleStyle: AppText.title16,
+                trailing: AppButton(
+                  label: '管理标签',
+                  variant: AppButtonVariant.text,
+                  size: AppButtonSize.sm,
+                  onTap: () => showArtworkTagManager(context),
+                ),
+              ),
+              const SizedBox(height: AppSpace.s8),
+              _buildTagPicker(detail, tagsState),
+              const SizedBox(height: AppSpace.s16),
+              AppSectionHeader(title: '评语', titleStyle: AppText.title16),
+              const SizedBox(height: AppSpace.s8),
+              AppInputField(
+                controller: _comment,
+                hint: '写下这张画的优点和需要改进的地方',
+                multiline: true,
+                minLines: 4,
+                maxLines: 8,
+                maxLength: ArtworkRules.commentLimit,
+              ),
+              const SizedBox(height: AppSpace.s16),
+              const AppSectionHeader(title: '语音评语'),
+              ArtworkVoiceCommentField(
+                path: _voiceUrl,
+                seconds: _voiceSeconds,
+                onUpload: ref.read(_provider.notifier).uploadVoice,
+                onChanged: (path, seconds) => setState(() {
+                  _voiceUrl = path;
+                  _voiceSeconds = seconds;
+                }),
+              ),
+              if (previousTags.isNotEmpty) ...[
+                const SizedBox(height: AppSpace.s16),
+                const AppSectionHeader(title: '上版问题'),
+                for (final tag in previousTags)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpace.s8),
+                    child: AppSegmented<int>(
+                      segments: [
+                        AppSegment(value: 0, label: tag.name),
+                        const AppSegment(value: 1, label: '已改善'),
+                        const AppSegment(value: 2, label: '仍需加强'),
+                      ],
+                      value: switch (_tagResolutions[tag.name]) {
+                        true => 1,
+                        false => 2,
+                        null => 0,
+                      },
+                      onChanged: (choice) => setState(() {
+                        if (choice == 0) {
+                          _tagResolutions.remove(tag.name);
+                        } else {
+                          _tagResolutions[tag.name] = choice == 1;
+                        }
+                      }),
+                    ),
+                  ),
+              ],
+              if (detail.dimensions.isNotEmpty) ...[
+                const SizedBox(height: AppSpace.s16),
+                AppSectionHeader(title: '分项评价', titleStyle: AppText.title16),
+                const SizedBox(height: AppSpace.s8),
+                for (final def in detail.dimensions)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpace.s8),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 72,
+                          child: Text(def.name, style: AppText.body13),
+                        ),
+                        Expanded(
+                          child: Wrap(
+                            spacing: 6,
+                            children: [
+                              for (var level = 1; level <= 5; level++)
+                                AppChip(
+                                  label: '$level',
+                                  selected: _dimensions[def.key] == level,
+                                  onTap: () => setState(() {
+                                    if (_dimensions[def.key] == level) {
+                                      _dimensions.remove(def.key);
+                                    } else {
+                                      _dimensions[def.key] = level;
+                                    }
+                                  }),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+              const SizedBox(height: AppSpace.s12),
+              AppPressable(
+                onTap: () =>
+                    setState(() => _requestLeadReview = !_requestLeadReview),
+                child: Row(
+                  children: [
+                    Icon(
+                      _requestLeadReview
+                          ? Icons.check_box_rounded
+                          : Icons.check_box_outline_blank_rounded,
+                      color: AppColors.brand,
+                      size: 22,
+                    ),
+                    const SizedBox(width: AppSpace.s8),
+                    Expanded(child: Text('请组长复核', style: AppText.body14)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       if (detail.canComment || detail.canFeature) ...[
         const SizedBox(height: AppSpace.s12),
         AppCard(
@@ -686,16 +823,7 @@ class _ArtworkReviewWorkspaceState
         const SizedBox(height: AppSpace.s12),
         AppCard(
           title: '时间线',
-          child: Column(
-            children: [
-              for (final event in detail.timeline)
-                AppListRow(
-                  title: '${event.name} · ${event.type}',
-                  subtitle: event.content,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                ),
-            ],
-          ),
+          child: ArtworkReviewTimeline(events: detail.timeline),
         ),
       ],
       if (detail.otherReviews.isNotEmpty) ...[
@@ -833,6 +961,7 @@ class _ArtworkReviewWorkspaceState
   }
 
   Widget _buildActions(ArtworkReviewState state) {
+    if (state.detail?.canReview != true) return const SizedBox.shrink();
     final busy = state.saving;
     return Row(
       children: [

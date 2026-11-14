@@ -231,14 +231,22 @@ class _ResponsiveCourseHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _TimeLabel(
-          startTime: startTime,
-          endTime: endTime,
-          textColor: textColor,
-          ui: ui,
+        Flexible(
+          fit: FlexFit.loose,
+          flex: 2,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: _TimeLabel(
+              startTime: startTime,
+              endTime: endTime,
+              textColor: textColor,
+              ui: ui,
+            ),
+          ),
         ),
         SizedBox(width: ui(6)),
-        Expanded(
+        Flexible(
           child: ClipRect(
             child: ScrollConfiguration(
               behavior: ScrollConfiguration.of(

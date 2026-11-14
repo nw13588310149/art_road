@@ -13,6 +13,7 @@ import '../state/student_artworks_controller.dart';
 import 'artwork_upload_dialog.dart';
 import 'student_artwork_detail_view.dart';
 import 'widgets/artwork_widgets.dart';
+import 'widgets/artwork_marks.dart';
 
 /// 学生「作品档案」：统计、点评小结、按月分组的作品墙，点开进入作品详情。
 class StudentArtworksView extends ConsumerStatefulWidget {
@@ -108,6 +109,7 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
               key: ValueKey(detailId),
               artworkId: detailId,
               onBack: _closeDetail,
+              onOpenArtwork: _openDetail,
             ),
         ],
       ),
@@ -130,9 +132,8 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
               icon: Icons.star_outline_rounded,
               variant: AppButtonVariant.secondary,
               size: AppButtonSize.sm,
-              onTap: () => Navigator.of(
-                context,
-              ).pushNamed(RoutePaths.excellentArtworks),
+              onTap: () =>
+                  Navigator.of(context).pushNamed(RoutePaths.excellentArtworks),
             ),
             AppButton(
               label: '上传作品',
@@ -204,8 +205,23 @@ class _StudentArtworksViewState extends ConsumerState<StudentArtworksView> {
                                   ),
                               ],
                               value: state.filter,
-                              onChanged: (f) =>
-                                  unawaited(controller.setFilter(f)),
+                              onChanged: (f) => unawaited(
+                                controller.setFilter(
+                                  f,
+                                  revisedOnly: state.revisedOnly,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpace.s8),
+                            AppChip(
+                              label: '有改画',
+                              selected: state.revisedOnly,
+                              onTap: () => unawaited(
+                                controller.setFilter(
+                                  state.filter,
+                                  revisedOnly: !state.revisedOnly,
+                                ),
+                              ),
                             ),
                             const Spacer(),
                             if (state.loaded &&
@@ -656,16 +672,30 @@ class _ArtworkCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   AppImage(src: item.coverUrl),
-                  Positioned(
-                    left: AppSpace.s8,
-                    top: AppSpace.s8,
-                    child: ArtworkStatusTag(done: item.reviewed),
-                  ),
-                  if (item.imageCount > 1)
+                  ArtworkStatusCornerBadge(reviewed: item.reviewed),
+                  if (item.versionCount > 1 || item.imageCount > 1)
                     Positioned(
                       right: AppSpace.s8,
                       bottom: AppSpace.s8,
-                      child: ArtworkImageCountTag(count: item.imageCount),
+                      child: ArtworkCoverPill(
+                        item.versionCount > 1
+                            ? '共 ${item.versionCount} 版'
+                            : '${item.imageCount} 张',
+                      ),
+                    ),
+                  if (artworkMarkTags(item).isNotEmpty)
+                    Positioned(
+                      left: AppSpace.s8,
+                      right: AppSpace.s8,
+                      bottom: AppSpace.s8,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 54),
+                        child: Wrap(
+                          spacing: AppSpace.s4,
+                          runSpacing: AppSpace.s4,
+                          children: artworkMarkTags(item),
+                        ),
+                      ),
                     ),
                 ],
               ),

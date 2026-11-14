@@ -121,6 +121,7 @@ class ArtworkRepository {
     required int size,
     String keyword = '',
     String subject = '',
+    String campus = '',
     String teacherId = '',
   }) {
     return client.get(
@@ -131,6 +132,7 @@ class ArtworkRepository {
         'size': size,
         if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
         if (subject.trim().isNotEmpty) 'subject': subject.trim(),
+        if (campus.trim().isNotEmpty) 'campus': campus.trim(),
         if (teacherId.trim().isNotEmpty) 'teacherId': teacherId.trim(),
       },
     );
@@ -172,6 +174,17 @@ class ArtworkRepository {
         if (voiceUrl.isNotEmpty) 'voiceUrl': voiceUrl,
         if (voiceSeconds > 0) 'voiceSeconds': voiceSeconds,
       },
+    );
+  }
+
+  /// 非责任的美术老师补充点评（不计分）。
+  Future<ApiResponse> supplementReview({
+    required String artworkId,
+    required String content,
+  }) {
+    return client.post(
+      '/school/teacher/artworks/${_id(artworkId)}/supplement',
+      data: <String, dynamic>{'content': content},
     );
   }
 

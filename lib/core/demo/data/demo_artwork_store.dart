@@ -344,7 +344,8 @@ abstract final class DemoArtworkStore {
       counts[root] = (counts[root] ?? 0) + 1;
       final current = best[root];
       if (current == null ||
-          DemoArtworkData.versionOf(work) > DemoArtworkData.versionOf(current)) {
+          DemoArtworkData.versionOf(work) >
+              DemoArtworkData.versionOf(current)) {
         best[root] = work;
       }
     }
@@ -484,8 +485,9 @@ abstract final class DemoArtworkStore {
         for (final version in versions) projectSummary(version, viewer),
       ],
       'dimensions': <Map<String, dynamic>>[
-        for (final def
-            in DemoArtworkData.dimensionsOf(DemoArtworkData.text(work['subject'])))
+        for (final def in DemoArtworkData.dimensionsOf(
+          DemoArtworkData.text(work['subject']),
+        ))
           <String, dynamic>{'key': def.key, 'name': def.name},
       ],
       'overdue': DemoArtworkData.isOverdue(work, at, settings),
@@ -493,6 +495,10 @@ abstract final class DemoArtworkStore {
       'access': <String, dynamic>{
         'canReview': access.canReview,
         'canSupplement': access.canSupplement,
+        'canLeadReview':
+            access.leader &&
+            viewer.teacherId == lead?['leaderId'] &&
+            DemoArtworkData.leadStatusOf(work) == 'IN_REVIEW',
         'canComment': access.canComment,
         'canFeature': access.canFeature,
         'seesLeadReasons': access.seesLeadReasons,
@@ -737,11 +743,14 @@ abstract final class DemoArtworkStore {
           .toList();
       if (latest.isNotEmpty) {
         latest.sort(
-          (a, b) => DemoArtworkData.text(
-            DemoArtworkData.reviewOf(b)?['reviewedTime'],
-          ).compareTo(
-            DemoArtworkData.text(DemoArtworkData.reviewOf(a)?['reviewedTime']),
-          ),
+          (a, b) =>
+              DemoArtworkData.text(
+                DemoArtworkData.reviewOf(b)?['reviewedTime'],
+              ).compareTo(
+                DemoArtworkData.text(
+                  DemoArtworkData.reviewOf(a)?['reviewedTime'],
+                ),
+              ),
         );
         final work = latest.first;
         final teacher = DemoArtworkData.teacherName(
@@ -804,7 +813,9 @@ abstract final class DemoArtworkStore {
   /// [appendNotice] 在对方的消息列表尚未生成时用它生成：与对方自己打开消息时看到的
   /// 是同一份种子，不会因为先收到一条作品消息就少了其他消息。
   static List<Map<String, dynamic>> seedNoticesForUserId(String userId) {
-    final account = DemoAccounts.all.where((a) => a.userId == userId).firstOrNull;
+    final account = DemoAccounts.all
+        .where((a) => a.userId == userId)
+        .firstOrNull;
     if (account == null) {
       return <Map<String, dynamic>>[];
     }
@@ -926,7 +937,9 @@ abstract final class DemoArtworkStore {
     }
     final at = DemoArtworkData.parseTime(lead['seedLeadAt']);
     if (at == null ||
-        DemoArtworkData.hasDemoAccount(DemoArtworkData.text(lead['leaderId']))) {
+        DemoArtworkData.hasDemoAccount(
+          DemoArtworkData.text(lead['leaderId']),
+        )) {
       return null;
     }
     return at;

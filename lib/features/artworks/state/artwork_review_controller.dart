@@ -4,14 +4,38 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_response.dart';
+import '../../../core/network/upload_result.dart';
+import '../../smart_campus/data/teacher_repository.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_repository.dart';
+import '../data/artwork_rules.dart';
+
+/// 上传一段语音评语，返回可保存的文件路径；失败返回 null。
+typedef ArtworkVoiceUploader =
+    Future<String?> Function(Uint8List bytes, String filename);
+
+/// 语音评语走平台的通用文件上传，与作业语音点评是同一个端点。
+final artworkVoiceUploaderProvider = Provider<ArtworkVoiceUploader>((ref) {
+  final repository = ref.watch(teacherRepositoryProvider);
+  return (bytes, filename) async {
+    final response = await repository.uploadHomeworkVoice(
+      bytes: bytes,
+      filename: filename,
+    );
+    if (!response.isSuccess) {
+      return null;
+    }
+    final saved = parseUploadResult(response.data).savable;
+    return saved.isEmpty ? null : saved;
+  };
+});
 
 @immutable
 class ArtworkReviewState {
   const ArtworkReviewState({
     this.loading = true,
     this.detail,
+    this.previous,
     this.strokes = const <int, List<AnnotationStroke>>{},
     this.dirtyImages = const <int>{},
     this.saving = false,
@@ -22,11 +46,16 @@ class ArtworkReviewState {
   final bool loading;
   final ArtworkDetail? detail;
 
-  /// 我的批注，按图片序号分组。
+  /// 改画版本的上一版（图片、上次点评与批注）；第 1 版或读取失败时为空。
+  final ArtworkDetail? previous;
+
+  /// 责任老师的批注，按图片序号分组（责任老师本人可以改，其他人只读）。
   final Map<int, List<AnnotationStroke>> strokes;
 
   /// 批注有改动、尚未保存的图片序号。
   final Set<int> dirtyImages;
+
+  /// 正在提交：保存点评、提交复核、补充点评、校长点评与推优共用。
   final bool saving;
   final bool savingStrokes;
   final String errorMessage;
@@ -36,9 +65,18 @@ class ArtworkReviewState {
 
   bool get hasUnsavedStrokes => dirtyImages.isNotEmpty;
 
+  /// 上一版图片上的老师批注，按图片序号分组。
+  List<AnnotationStroke> previousStrokesOf(int imageIndex) =>
+      <AnnotationStroke>[
+        for (final stroke
+            in previous?.review?.annotations ?? const <AnnotationStroke>[])
+          if (stroke.imageIndex == imageIndex) stroke,
+      ];
+
   ArtworkReviewState copyWith({
     bool? loading,
     ArtworkDetail? detail,
+    ArtworkDetail? previous,
     Map<int, List<AnnotationStroke>>? strokes,
     Set<int>? dirtyImages,
     bool? saving,
@@ -48,6 +86,7 @@ class ArtworkReviewState {
     return ArtworkReviewState(
       loading: loading ?? this.loading,
       detail: detail ?? this.detail,
+      previous: previous ?? this.previous,
       strokes: strokes ?? this.strokes,
       dirtyImages: dirtyImages ?? this.dirtyImages,
       saving: saving ?? this.saving,
@@ -57,15 +96,16 @@ class ArtworkReviewState {
   }
 }
 
-/// 教师端点评工作台（按作品 id）：作品详情、我的批注与点评保存。
+/// 点评工作台（按作品 id）：作品详情、批注，以及责任老师点评、组长复核、
+/// 补充点评这几种提交。
 final artworkReviewControllerProvider = StateNotifierProvider.autoDispose
     .family<ArtworkReviewController, ArtworkReviewState, String>((
       ref,
       artworkId,
     ) {
-      final repository = ref.watch(artworkRepositoryProvider);
       return ArtworkReviewController(
-        repository: repository,
+        repository: ref.watch(artworkRepositoryProvider),
+        voiceUploader: ref.watch(artworkVoiceUploaderProvider),
         artworkId: artworkId,
       );
     });
@@ -74,12 +114,15 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
   ArtworkReviewController({
     required ArtworkRepository repository,
     required this.artworkId,
+    ArtworkVoiceUploader? voiceUploader,
   }) : _repository = repository,
+       _voiceUploader = voiceUploader,
        super(const ArtworkReviewState()) {
     unawaited(load());
   }
 
   final ArtworkRepository _repository;
+  final ArtworkVoiceUploader? _voiceUploader;
   final String artworkId;
 
   Future<void> load() async {
@@ -110,11 +153,44 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
             .add(stroke);
       }
     }
+    final parsed = ArtworkDetail.fromJson(detail.data);
     state = state.copyWith(
       loading: false,
-      detail: ArtworkDetail.fromJson(detail.data),
+      detail: parsed,
       strokes: state.hasUnsavedStrokes ? null : strokes,
     );
+    await _loadPrevious(parsed);
+  }
+
+  /// 改画版本：读取上一版的图片与点评，供对照。读不到时不提示，对照区不显示。
+  Future<void> _loadPrevious(ArtworkDetail detail) async {
+    final previousId = previousVersionId(detail);
+    if (previousId == null || state.previous?.work.id == previousId) {
+      return;
+    }
+    final response = await _repository.getTeacherArtwork(previousId);
+    if (!mounted || !response.isSuccess) {
+      return;
+    }
+    state = state.copyWith(previous: ArtworkDetail.fromJson(response.data));
+  }
+
+  /// 同一条改画链上，紧挨着这一版的上一版 id；第 1 版返回 null。
+  static String? previousVersionId(ArtworkDetail detail) {
+    final current = detail.work.version;
+    if (current <= 1) {
+      return null;
+    }
+    ArtworkSummary? best;
+    for (final version in detail.versions) {
+      if (version.id == detail.work.id || version.version >= current) {
+        continue;
+      }
+      if (best == null || version.version > best.version) {
+        best = version;
+      }
+    }
+    return best?.id;
   }
 
   void addStroke(AnnotationStroke stroke) {
@@ -186,6 +262,19 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
     return true;
   }
 
+  /// 上传语音评语，返回可保存的路径；失败返回 null。
+  Future<String?> uploadVoice(Uint8List bytes, String filename) async {
+    final uploader = _voiceUploader;
+    if (uploader == null) {
+      return null;
+    }
+    try {
+      return await uploader(bytes, filename);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 保存点评（先保存未保存的批注）；失败返回 null，错误写入 [ArtworkReviewState.errorMessage]。
   Future<ReviewSaveResult?> save({
     required double? score,
@@ -197,6 +286,8 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
     bool requestLeadReview = false,
     List<({String tag, bool resolved})> tagResolutions =
         const <({String tag, bool resolved})>[],
+    String voiceUrl = '',
+    int voiceSeconds = 0,
   }) async {
     if (state.saving) {
       return null;
@@ -218,6 +309,8 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
       dimensions: dimensions,
       requestLeadReview: requestLeadReview,
       tagResolutions: tagResolutions,
+      voiceUrl: voiceUrl,
+      voiceSeconds: voiceSeconds,
     );
     if (!mounted) {
       return null;
@@ -231,16 +324,100 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
     }
     final result = ReviewSaveResult.fromJson(response.data, artworkId);
     if (!next || result.nextArtworkId == null) {
-      final refreshed = await _repository.getTeacherArtwork(artworkId);
+      await _reloadDetail();
       if (!mounted) {
         return result;
-      }
-      if (refreshed.isSuccess) {
-        state = state.copyWith(detail: ArtworkDetail.fromJson(refreshed.data));
       }
     }
     state = state.copyWith(saving: false);
     return result;
+  }
+
+  /// 组长提交复核。成功返回 null，否则返回提示文案（校验不通过或接口失败）。
+  Future<String?> submitLeadReview({
+    required String action,
+    required int qualityStars,
+    double? score,
+    String reason = '',
+    String content = '',
+    String qualityNote = '',
+  }) async {
+    final detail = state.detail;
+    if (detail == null) {
+      return '作品还没有加载完成';
+    }
+    final error = ArtworkRules.validateLeadReview(
+      action: action,
+      qualityStars: qualityStars,
+      reason: reason,
+      content: content,
+      score: score,
+      maxScore: detail.review?.maxScore ?? detail.work.maxScore,
+    );
+    if (error != null) {
+      return error;
+    }
+    return _submit(
+      () => _repository.submitLeadReview(
+        artworkId: artworkId,
+        action: action.trim().toUpperCase(),
+        score: score,
+        reason: reason.trim(),
+        content: content.trim(),
+        qualityStars: qualityStars,
+        qualityNote: qualityNote.trim(),
+      ),
+      '复核提交失败，请稍后重试',
+    );
+  }
+
+  /// 非责任老师补充点评（不计分）。成功返回 null。
+  Future<String?> supplement(String content) async {
+    final text = content.trim();
+    if (ArtworkRules.lengthOf(text) < 5) {
+      return '补充点评至少 5 个字';
+    }
+    if (ArtworkRules.lengthOf(text) > ArtworkRules.commentLimit) {
+      return '补充点评最多 ${ArtworkRules.commentLimit} 个字';
+    }
+    return _submit(
+      () => _repository.supplementReview(artworkId: artworkId, content: text),
+      '补充点评提交失败，请稍后重试',
+    );
+  }
+
+  /// 校长点评、推优等在别处提交后，重新读取作品详情。
+  Future<void> reload() => _reloadDetail();
+
+  Future<String?> _submit(
+    Future<ApiResponse> Function() request,
+    String fallback,
+  ) async {
+    if (state.saving) {
+      return '正在提交，请稍候';
+    }
+    state = state.copyWith(saving: true, errorMessage: '');
+    final response = await request();
+    if (!mounted) {
+      return null;
+    }
+    if (!response.isSuccess) {
+      state = state.copyWith(saving: false);
+      return response.errorOr(fallback);
+    }
+    await _reloadDetail();
+    if (mounted) {
+      state = state.copyWith(saving: false);
+    }
+    return null;
+  }
+
+  Future<void> _reloadDetail() async {
+    final refreshed = await _repository.getTeacherArtwork(artworkId);
+    if (!mounted || !refreshed.isSuccess) {
+      return;
+    }
+    state = state.copyWith(detail: ArtworkDetail.fromJson(refreshed.data));
   }
 
   void clearError() {

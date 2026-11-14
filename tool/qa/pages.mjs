@@ -305,7 +305,7 @@ export const ROLES = [
       {
         id: 'artwork-detail',
         route: '/artworks',
-        actions: [{ click: /石膏头像结构练习/, after: 2500 }],
+        actions: [{ click: /石膏头像结构练习/, after: 2500 }, { check: '点评时间线' }],
       },
       {
         id: 'artwork-excellent',
@@ -315,7 +315,7 @@ export const ROLES = [
       {
         id: 'artwork-upload',
         route: '/artworks',
-        actions: [{ click: '上传作品', after: 1800 }],
+        actions: [{ click: '上传作品', after: 1800 }, { check: '关联作业' }],
       },
       { id: 'gallery', route: '/gallery' },
       {
@@ -405,7 +405,7 @@ export const ROLES = [
       {
         id: 'artwork-review',
         route: '/artworks',
-        actions: [{ click: '开始点评', after: 2500 }],
+        actions: [{ click: '开始点评', after: 2500 }, { check: '保存并下一份', role: 'button' }],
       },
       {
         id: 'artwork-tags',
@@ -469,7 +469,16 @@ export const ROLES = [
         route: '/artworks/lead-reviews',
         actions: [
           { check: '复核池' },
-          { check: /超时|石膏头像结构练习|暂无待复核作品/ },
+          { check: '全部原因' },
+        ],
+      },
+      {
+        id: 'artwork-lead-workspace',
+        route: '/artworks/lead-reviews',
+        actions: [
+          { click: /^复核$/, after: 1600 },
+          { check: '点评质量（必选）' },
+          { check: '提交复核', role: 'button' },
         ],
       },
       { id: 'campus', route: '/smart-campus', settle: 1800 },

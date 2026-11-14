@@ -48,6 +48,7 @@ Future<void> openArtworkCompare(
   required List<String> images,
   required String subject,
   int initialIndex = 0,
+  List<String>? previousImages,
 }) {
   return Navigator.of(context, rootNavigator: true).push(
     PageRouteBuilder<void>(
@@ -58,6 +59,7 @@ Future<void> openArtworkCompare(
         images: images,
         subject: subject,
         initialIndex: initialIndex,
+        previousImages: previousImages,
       ),
       transitionsBuilder: (_, animation, _, child) =>
           FadeTransition(opacity: animation, child: child),
@@ -70,12 +72,14 @@ class ArtworkComparePage extends StatefulWidget {
     required this.images,
     required this.subject,
     this.initialIndex = 0,
+    this.previousImages,
     super.key,
   });
 
   final List<String> images;
   final String subject;
   final int initialIndex;
+  final List<String>? previousImages;
 
   @override
   State<ArtworkComparePage> createState() => _ArtworkComparePageState();
@@ -84,7 +88,8 @@ class ArtworkComparePage extends StatefulWidget {
 class _ArtworkComparePageState extends State<ArtworkComparePage> {
   static const _handleWidth = 28.0;
 
-  late final List<String> _samples = _samplesFor(widget.subject, widget.images);
+  late final List<String> _samples =
+      widget.previousImages ?? _samplesFor(widget.subject, widget.images);
   late int _mine = widget.images.isEmpty
       ? 0
       : widget.initialIndex.clamp(0, widget.images.length - 1);
@@ -93,6 +98,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
 
   @override
   Widget build(BuildContext context) {
+    final revision = widget.previousImages != null;
     final subjectLabel = _samplesBySubject.containsKey(widget.subject)
         ? widget.subject
         : '示范';
@@ -120,7 +126,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                   ),
                   const SizedBox(width: AppSpace.s8),
                   Text(
-                    '对比范画',
+                    revision ? '版本对比' : '对比范画',
                     style: AppText.title16.copyWith(color: AppColors.onBrand),
                   ),
                   const SizedBox(width: AppSpace.s12),
@@ -147,7 +153,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                           width: available * _split,
                           child: _ComparePane(
                             key: ValueKey(_mine),
-                            label: '我的作品',
+                            label: revision ? '当前版本' : '我的作品',
                             child: widget.images.isEmpty
                                 ? const SizedBox.shrink()
                                 : AppImage(
@@ -186,7 +192,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                         Expanded(
                           child: _ComparePane(
                             key: ValueKey(_samples[_sample]),
-                            label: '范画 · $subjectLabel',
+                            label: revision ? '上一版本' : '范画 · $subjectLabel',
                             child: AppImage(
                               src: _samples[_sample],
                               fit: BoxFit.contain,
@@ -207,7 +213,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                   if (widget.images.length > 1)
                     Flexible(
                       child: _ThumbRow(
-                        title: '我的作品',
+                        title: revision ? '当前版本' : '我的作品',
                         images: widget.images,
                         selected: _mine,
                         onSelect: (i) => setState(() => _mine = i),
@@ -216,7 +222,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                   const Spacer(),
                   Flexible(
                     child: _ThumbRow(
-                      title: '换一张范画',
+                      title: revision ? '上一版本图片' : '换一张范画',
                       images: _samples,
                       selected: _sample,
                       onSelect: (i) => setState(() => _sample = i),

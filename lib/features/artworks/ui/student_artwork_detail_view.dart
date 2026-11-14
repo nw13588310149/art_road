@@ -6,9 +6,13 @@ import '../../../core/widgets/image_gallery_viewer.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/artwork_detail_controller.dart';
+import '../state/artwork_review_controller.dart';
+import '../../smart_campus/ui/widgets/homework_voice_comment.dart';
 import 'artwork_compare_page.dart';
 import 'artwork_upload_dialog.dart';
 import 'widgets/artwork_annotation.dart';
+import 'widgets/artwork_marks.dart';
+import 'widgets/artwork_review_timeline.dart';
 import 'widgets/artwork_widgets.dart';
 
 /// 学生作品详情：大图（可切换老师批注、对比范画）、最终得分、作品信息与老师点评。
@@ -16,11 +20,15 @@ class StudentArtworkDetailView extends ConsumerStatefulWidget {
   const StudentArtworkDetailView({
     required this.artworkId,
     required this.onBack,
+    this.onOpenArtwork,
+    this.readOnly = false,
     super.key,
   });
 
   final String artworkId;
   final VoidCallback onBack;
+  final ValueChanged<String>? onOpenArtwork;
+  final bool readOnly;
 
   @override
   ConsumerState<StudentArtworkDetailView> createState() =>
@@ -61,7 +69,9 @@ class _StudentArtworkDetailViewState
               ? null
               : '${work.subject} · 绘于 ${ArtworkRules.dateText(work.drawingDate)}',
           onBack: widget.onBack,
-          actions: [if (work != null) ArtworkStatusTag(done: work.reviewed)],
+          actions: [
+            if (work != null) ArtworkStatusMark(reviewed: work.reviewed),
+          ],
         ),
         Expanded(
           child: detail == null
@@ -79,10 +89,38 @@ class _StudentArtworkDetailViewState
   }
 
   Widget _buildBody(ArtworkDetail detail) {
+    final previousId = ArtworkReviewController.previousVersionId(detail);
+    final previous = previousId == null
+        ? null
+        : ref.watch(studentArtworkDetailProvider(previousId)).detail;
     return LayoutBuilder(
       builder: (context, constraints) {
         final imagePanel = _buildImagePanel(detail);
-        final info = _InfoColumn(detail: detail);
+        final info = _InfoColumn(
+          detail: detail,
+          canRevise:
+              !widget.readOnly &&
+              detail.isOwner &&
+              detail.work.reviewed &&
+              detail.versions.every(
+                (version) => version.version <= detail.work.version,
+              ),
+          onOpenArtwork: widget.onOpenArtwork,
+          onCompare:
+              previous == null ||
+                  previous.images.isEmpty ||
+                  detail.images.isEmpty
+              ? null
+              : () => openArtworkCompare(
+                  context,
+                  images: detail.images.map((image) => image.url).toList(),
+                  previousImages: previous.images
+                      .map((image) => image.url)
+                      .toList(),
+                  subject: detail.work.subject,
+                  initialIndex: _imageIndex,
+                ),
+        );
         if (constraints.maxWidth >= 800) {
           return Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -226,9 +264,17 @@ class _StudentArtworkDetailViewState
 }
 
 class _InfoColumn extends StatelessWidget {
-  const _InfoColumn({required this.detail});
+  const _InfoColumn({
+    required this.detail,
+    required this.canRevise,
+    this.onOpenArtwork,
+    this.onCompare,
+  });
 
   final ArtworkDetail detail;
+  final bool canRevise;
+  final ValueChanged<String>? onOpenArtwork;
+  final VoidCallback? onCompare;
 
   @override
   Widget build(BuildContext context) {
@@ -241,14 +287,39 @@ class _InfoColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ScoreCard(detail: detail),
+        if (artworkMarkTags(work).isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpace.s8),
+            child: Wrap(spacing: AppSpace.s4, children: artworkMarkTags(work)),
+          ),
         const SizedBox(height: AppSpace.s12),
         _WorkInfoCard(work: work),
-        if (work.reviewed) ...[
+        if (detail.versions.length > 1 && onOpenArtwork != null) ...[
+          const SizedBox(height: AppSpace.s12),
+          Wrap(
+            spacing: AppSpace.s8,
+            runSpacing: AppSpace.s8,
+            children: [
+              for (final version in detail.versions)
+                AppChip(
+                  label: '第 ${version.version} 版',
+                  selected: work.id == version.id,
+                  onTap: () => onOpenArtwork!(version.id),
+                ),
+            ],
+          ),
+        ],
+        if (onCompare != null)
+          AppButton(
+            label: '版本对比',
+            variant: AppButtonVariant.secondary,
+            onTap: onCompare,
+          ),
+        if (canRevise) ...[
           const SizedBox(height: AppSpace.s12),
           AppButton(
             label: '改画重交',
             icon: Icons.brush_outlined,
-            variant: AppButtonVariant.secondary,
             onTap: () async {
               final ok = await showArtworkUploadDialog(
                 context,
@@ -287,57 +358,48 @@ class _InfoColumn extends StatelessWidget {
           for (var i = 0; i < reviewed.length; i++) ...[
             if (i > 0) const SizedBox(height: AppSpace.s8),
             ArtworkReviewCard(review: reviewed[i]),
+            if (reviewed[i].voiceUrl.isNotEmpty)
+              HomeworkVoiceCommentBubble(
+                relativePath: reviewed[i].voiceUrl,
+                durationSec: reviewed[i].voiceSeconds,
+              ),
           ],
         if (detail.timeline.isNotEmpty) ...[
           const SizedBox(height: AppSpace.s20),
           const AppSectionHeader(title: '点评时间线'),
           const SizedBox(height: AppSpace.s8),
-          for (final event in detail.timeline)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpace.s8),
-              child: AppListRow(
-                title: '${event.name} · ${_timelineLabel(event.type)}',
-                subtitle: [
-                  if (event.time.isNotEmpty)
-                    ArtworkRules.shortTime(event.time),
-                  if (event.score != null)
-                    '分数 ${ArtworkRules.displayScore(event.score)}',
-                  if (event.fromScore != null && event.toScore != null)
-                    '${ArtworkRules.displayScore(event.fromScore)} → ${ArtworkRules.displayScore(event.toScore)}',
-                  if (event.content.isNotEmpty) event.content,
-                ].where((e) => e.isNotEmpty).join(' · '),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpace.s4,
-                  vertical: AppSpace.s8,
-                ),
-              ),
+          ArtworkReviewTimeline(events: detail.timeline),
+        ],
+        if (detail.review case final review?
+            when review.dimensions.isNotEmpty) ...[
+          const SizedBox(height: AppSpace.s12),
+          AppCard(
+            title: '分项评价',
+            child: Column(
+              spacing: AppSpace.s8,
+              children: [
+                for (final dimension in detail.dimensions)
+                  if (review.dimensions[dimension.key] case final level?)
+                    AppListRow(
+                      title: dimension.name,
+                      trailing: Text('$level / 5', style: AppText.body14),
+                    ),
+                for (final resolution in review.tagResolutions)
+                  AppListRow(
+                    title: resolution.tag,
+                    trailing: AppTag(
+                      label: resolution.resolved ? '已改善' : '仍需加强',
+                      tone: resolution.resolved
+                          ? AppTone.success
+                          : AppTone.warning,
+                    ),
+                  ),
+              ],
             ),
+          ),
         ],
       ],
     );
-  }
-
-  static String _timelineLabel(String type) {
-    switch (type) {
-      case 'SUBMIT':
-        return '提交';
-      case 'REVIEW':
-        return '点评';
-      case 'SUPPLEMENT':
-        return '补充点评';
-      case 'LEAD_KEEP':
-        return '复核维持';
-      case 'LEAD_ADJUST':
-        return '复核调分';
-      case 'LEAD_SUPPLEMENT':
-        return '复核补充';
-      case 'PRINCIPAL_COMMENT':
-        return '校长点评';
-      case 'FEATURE':
-        return '推优';
-      default:
-        return type;
-    }
   }
 }
 

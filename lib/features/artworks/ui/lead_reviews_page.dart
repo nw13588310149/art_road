@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,8 +9,8 @@ import '../../../core/widgets/app_refresh_indicator.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/lead_reviews_controller.dart';
+import 'widgets/artwork_review_actions.dart';
 
-/// 组长复核池：最小可用列表与简易复核表单。
 class LeadReviewsPage extends ConsumerWidget {
   const LeadReviewsPage({super.key});
 
@@ -16,18 +18,87 @@ class LeadReviewsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(leadReviewsControllerProvider);
     final controller = ref.read(leadReviewsControllerProvider.notifier);
+    final items = state.visibleItems;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppPageHeader(
           title: '复核池',
-          subtitle: '待复核 ${state.pending} · 超时 ${state.overdue} · 已复核 ${state.done}',
+          subtitle:
+              '待复核 ${state.stats.pending} · 超时 ${state.stats.overdue} · 已复核 ${state.stats.done}',
           onBack: () => Navigator.of(context).maybePop(),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.page,
+            AppSpace.s4,
+            AppSpace.page,
+            AppSpace.s12,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: AppSpace.s12,
+            children: [
+              AppSegmented<LeadPoolStatus>(
+                value: state.status,
+                segments: [
+                  for (final status in LeadPoolStatus.values)
+                    AppSegment(value: status, label: status.label),
+                ],
+                onChanged: (status) => unawaited(controller.setStatus(status)),
+              ),
+              Wrap(
+                spacing: AppSpace.s12,
+                runSpacing: AppSpace.s8,
+                children: [
+                  SizedBox(
+                    width: 160,
+                    child: AppSelect<String>(
+                      value: state.teacherId,
+                      options: [
+                        const AppSelectOption(value: '', label: '全部老师'),
+                        for (final teacher in state.teachers)
+                          AppSelectOption(
+                            value: teacher.id,
+                            label: teacher.name,
+                          ),
+                      ],
+                      onChanged: (id) => unawaited(controller.setTeacher(id)),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 160,
+                    child: AppSelect<String>(
+                      value: state.reason,
+                      options: [
+                        const AppSelectOption(value: '', label: '全部原因'),
+                        for (final reason in artworkLeadReasonLabels.entries)
+                          AppSelectOption(
+                            value: reason.key,
+                            label: reason.value,
+                          ),
+                      ],
+                      onChanged: (reason) =>
+                          unawaited(controller.setReason(reason)),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 324,
+                    child: AppSearchField(
+                      hint: '搜索学生、老师或作品',
+                      onChanged: (keyword) =>
+                          unawaited(controller.setKeyword(keyword)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
         Expanded(
-          child: state.loading && state.items.isEmpty
+          child: state.loading || state.loadingList
               ? const Center(child: AppLoadingIndicator(size: 36))
-              : state.errorMessage.isNotEmpty && state.items.isEmpty
+              : state.listFailed
               ? AppErrorState(
                   title: '复核池加载失败',
                   description: state.errorMessage,
@@ -35,257 +106,116 @@ class LeadReviewsPage extends ConsumerWidget {
                 )
               : AppRefreshIndicator(
                   onRefresh: controller.refresh,
-                  child: state.items.isEmpty
-                      ? ListView(
-                          children: const [
-                            SizedBox(height: 120),
-                            AppEmptyState(
-                              icon: Icons.fact_check_outlined,
-                              title: '暂无待复核作品',
-                              description: '老师请组长复核、分数异常、点评过简或抽中后会出现在这里',
-                            ),
-                          ],
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpace.page,
-                            AppSpace.s8,
-                            AppSpace.page,
-                            AppSpace.s24,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpace.page,
+                      0,
+                      AppSpace.page,
+                      AppSpace.s24,
+                    ),
+                    children: [
+                      if (items.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 80),
+                          child: AppEmptyState(
+                            icon: Icons.fact_check_outlined,
+                            title: state.filtered
+                                ? '没有符合筛选条件的作品'
+                                : '暂无${state.status.label == '全部' ? '复核' : state.status.label}作品',
+                            description: state.filtered
+                                ? '试试调整筛选条件'
+                                : '需要复核的作品会出现在这里',
                           ),
-                          itemCount: state.items.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: AppSpace.s12),
-                          itemBuilder: (context, index) {
-                            final item = state.items[index];
-                            return _LeadCard(
-                              item: item,
-                              onOpen: () => Navigator.of(context).pushNamed(
-                                RoutePaths.artworks,
-                                arguments: <String, dynamic>{
-                                  'artworkId': item.id,
-                                },
-                              ),
-                              onReview: () => _openReviewSheet(
-                                context,
-                                ref,
-                                item,
-                              ),
-                            );
-                          },
                         ),
+                      for (final item in items)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpace.s12),
+                          child: _LeadCard(
+                            item: item,
+                            onOpen: () async {
+                              await Navigator.of(context).pushNamed(
+                                RoutePaths.artworks,
+                                arguments: {'artworkId': item.id},
+                              );
+                              if (context.mounted) await controller.refresh();
+                            },
+                          ),
+                        ),
+                      if (state.hasMore)
+                        Center(
+                          child: AppButton(
+                            label: '加载更多',
+                            variant: AppButtonVariant.secondary,
+                            loading: state.loadingMore,
+                            onTap: controller.loadMore,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
         ),
       ],
     );
   }
-
-  Future<void> _openReviewSheet(
-    BuildContext context,
-    WidgetRef ref,
-    ArtworkSummary item,
-  ) async {
-    final action = ValueNotifier<String>('KEEP');
-    final stars = ValueNotifier<int>(4);
-    final score = TextEditingController(
-      text: item.finalScore == null
-          ? ''
-          : ArtworkRules.formatScore(item.finalScore),
-    );
-    final reason = TextEditingController();
-    final content = TextEditingController();
-    final note = TextEditingController();
-    try {
-      final confirmed = await showAppDialog<bool>(
-        context: context,
-        builder: (context) {
-          return AppDialog(
-            title: '提交复核',
-            actions: [
-              AppButton(
-                label: '取消',
-                variant: AppButtonVariant.quiet,
-                onTap: () => Navigator.of(context).pop(false),
-              ),
-              AppButton(
-                label: '提交',
-                onTap: () => Navigator.of(context).pop(true),
-              ),
-            ],
-            child: SizedBox(
-              width: 420,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(item.title, style: AppText.body14),
-                  const SizedBox(height: AppSpace.s12),
-                  ValueListenableBuilder<String>(
-                    valueListenable: action,
-                    builder: (context, value, _) {
-                      return AppSegmented<String>(
-                        segments: const [
-                          AppSegment(value: 'KEEP', label: '维持'),
-                          AppSegment(value: 'ADJUST', label: '调分'),
-                          AppSegment(value: 'SUPPLEMENT', label: '补充'),
-                        ],
-                        value: value,
-                        onChanged: (next) => action.value = next,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppSpace.s12),
-                  ValueListenableBuilder<int>(
-                    valueListenable: stars,
-                    builder: (context, value, _) {
-                      return Wrap(
-                        spacing: 8,
-                        children: [
-                          for (var i = 1; i <= 5; i++)
-                            AppChip(
-                              label: '$i 星',
-                              selected: value == i,
-                              onTap: () => stars.value = i,
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppSpace.s12),
-                  ValueListenableBuilder<String>(
-                    valueListenable: action,
-                    builder: (context, value, _) {
-                      if (value == 'ADJUST') {
-                        return Column(
-                          children: [
-                            AppInputField(
-                              controller: score,
-                              label: '调整后分数',
-                            ),
-                            const SizedBox(height: AppSpace.s8),
-                            AppInputField(
-                              controller: reason,
-                              label: '调分理由（至少 10 字）',
-                              maxLines: 3,
-                            ),
-                          ],
-                        );
-                      }
-                      if (value == 'SUPPLEMENT') {
-                        return AppInputField(
-                          controller: content,
-                          label: '补充评语',
-                          maxLines: 3,
-                        );
-                      }
-                      return AppInputField(
-                        controller: note,
-                        label: '点评质量意见（可选）',
-                        maxLines: 2,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      if (confirmed != true || !context.mounted) {
-        return;
-      }
-      final parsed = double.tryParse(score.text.trim());
-      final error = await ref
-          .read(leadReviewsControllerProvider.notifier)
-          .submit(
-            artworkId: item.id,
-            action: action.value,
-            score: action.value == 'ADJUST' ? parsed : null,
-            reason: reason.text,
-            content: content.text,
-            qualityStars: stars.value,
-            qualityNote: note.text,
-            maxScore: item.maxScore,
-          );
-      if (!context.mounted) {
-        return;
-      }
-      if (error != null) {
-        AppToast.showError(context, error);
-      } else {
-        AppToast.showSuccess(context, '复核已提交');
-      }
-    } finally {
-      action.dispose();
-      stars.dispose();
-      score.dispose();
-      reason.dispose();
-      content.dispose();
-      note.dispose();
-    }
-  }
 }
 
 class _LeadCard extends StatelessWidget {
-  const _LeadCard({
-    required this.item,
-    required this.onOpen,
-    required this.onReview,
-  });
+  const _LeadCard({required this.item, required this.onOpen});
 
   final ArtworkSummary item;
   final VoidCallback onOpen;
-  final VoidCallback onReview;
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       child: Row(
+        spacing: AppSpace.s12,
         children: [
-          SizedBox(
-            width: 72,
-            height: 72,
+          SizedBox.square(
+            dimension: 92,
             child: AppImage(src: item.coverUrl, borderRadius: AppRadius.br8),
           ),
-          const SizedBox(width: AppSpace.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: AppSpace.s4,
               children: [
-                Text(item.title, style: AppText.body14),
-                const SizedBox(height: 4),
+                Text(
+                  item.title,
+                  style: AppText.body14Strong,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 Text(
                   '${item.studentName} · ${item.teacherName} · ${item.subject}',
                   style: AppText.caption12,
                 ),
-                if (item.leadOverdue)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '复核超时',
-                      style: AppText.caption12.copyWith(
-                        color: AppColors.danger,
-                      ),
-                    ),
+                if (item.leadEnteredTime.isNotEmpty)
+                  Text(
+                    '进入复核池 ${ArtworkRules.shortTime(item.leadEnteredTime)}',
+                    style: AppText.caption12,
                   ),
+                Wrap(
+                  spacing: AppSpace.s4,
+                  runSpacing: AppSpace.s4,
+                  children: [
+                    if (item.leadOverdue)
+                      const AppTag(label: '复核超时', tone: AppTone.danger),
+                    for (final reason in item.leadReasons)
+                      AppTag(label: artworkLeadReasonLabels[reason] ?? reason),
+                  ],
+                ),
               ],
             ),
           ),
           AppButton(
-            label: '查看',
-            variant: AppButtonVariant.quiet,
+            label: item.leadStatus == ArtworkLeadStatus.inReview ? '复核' : '查看',
+            variant: item.leadStatus == ArtworkLeadStatus.inReview
+                ? AppButtonVariant.primary
+                : AppButtonVariant.secondary,
             size: AppButtonSize.sm,
             onTap: onOpen,
-          ),
-          const SizedBox(width: 8),
-          AppButton(
-            label: item.leadStatus == ArtworkLeadStatus.inReview
-                ? '复核'
-                : '已复核',
-            size: AppButtonSize.sm,
-            onTap: item.leadStatus == ArtworkLeadStatus.inReview
-                ? onReview
-                : null,
           ),
         ],
       ),
