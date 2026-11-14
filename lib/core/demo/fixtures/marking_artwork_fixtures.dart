@@ -56,10 +56,14 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
           b['featuredTime'],
         ).compareTo(DemoArtworkData.text(a['featuredTime'])),
       );
+    // 优秀作品墙全校可见，带学生姓名和班级（规格 2.6）。
     return _projectPage(
       rows,
       req,
-      (w) => DemoArtworkStore.projectSummary(w, req.account),
+      (w) => <String, dynamic>{
+        ...DemoArtworkStore.projectSummary(w, req.account),
+        'className': _classNameOf(w),
+      },
     );
   });
 
@@ -88,10 +92,32 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     );
   });
 
+  // 学生本人的作品；被推优的作品挂在优秀作品墙上，任何身份都能从这里读详情。
   marking.get('/app/artworks/{id}', (req) {
-    final person = _studentIndex(req);
-    final work = _readableWork(req, req.param('id'), studentPerson: person);
-    return DemoArtworkStore.projectDetail(work, req.account);
+    final work = DemoArtworkStore.workById(req.param('id'));
+    final access = work == null
+        ? const DemoArtworkAccess()
+        : DemoArtworkData.accessOf(req.account, work);
+    if (work == null || !(access.owner || access.featured)) {
+      // 没被推优的作品只有学生本人能从这里读，教职身份走教职详情接口。
+      _studentIndex(req);
+      throw const DemoApiException('没有找到这份作品，请返回列表刷新', code: 404);
+    }
+    final detail = DemoArtworkStore.projectDetail(work, req.account);
+    // 只有本人能改画重交；其余读者只读。
+    (detail['access'] as Map<String, dynamic>)['owner'] = access.owner;
+    (detail['work'] as Map<String, dynamic>)['className'] = _classNameOf(work);
+    if (access.publicReader) {
+      // 只因推优读到这份作品的人，同一条改画链上没被推优的版本不给看。
+      final id = _text(work['id']);
+      detail['versions'] = <Object?>[
+        for (final version in detail['versions'] as List)
+          if (version is Map &&
+              (_text(version['id']) == id || version['featured'] == true))
+            version,
+      ];
+    }
+    return detail;
   });
 
   marking.post('/app/artworks/images/upload', (req) async {
@@ -948,20 +974,11 @@ List<Map<String, dynamic>> _leadQueue(DemoAccount account) {
     );
 }
 
-Map<String, dynamic> _readableWork(
-  DemoRequest req,
-  String id, {
-  int? studentPerson,
-}) {
+/// 教职接口读一份作品（学生详情接口的校验写在接口里）。
+Map<String, dynamic> _readableWork(DemoRequest req, String id) {
   final work = DemoArtworkStore.workById(id);
   if (work == null) {
     throw const DemoApiException('没有找到这份作品，请返回列表刷新', code: 404);
-  }
-  if (studentPerson != null) {
-    if (DemoArtworkData.personOf(work) != studentPerson) {
-      throw const DemoApiException('没有找到这份作品，请返回列表刷新', code: 404);
-    }
-    return work;
   }
   final access = DemoArtworkData.accessOf(req.account, work);
   if (!access.canRead && !access.artTeacher) {
@@ -1062,6 +1079,11 @@ DemoPerson? _personOf(Map<String, dynamic> work) {
       .where((p) => p.index == index)
       .firstOrNull;
 }
+
+/// 作品所属学生的班级名称；查不到学生时为空。
+String _classNameOf(Map<String, dynamic> work) => _personOf(work) == null
+    ? ''
+    : DemoArtworkData.classOf(DemoArtworkData.personOf(work)).name;
 
 // ── 校验工具 ──────────────────────────────────────────────────────────
 

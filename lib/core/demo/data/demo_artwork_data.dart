@@ -77,6 +77,7 @@ class DemoArtworkAccess {
     this.admin = false,
     this.headTeacher = false,
     this.artTeacher = false,
+    this.featured = false,
   });
 
   /// 提交这份作品的学生本人。
@@ -96,9 +97,19 @@ class DemoArtworkAccess {
   /// 查看者是美术科目老师（可以补充点评）。
   final bool artTeacher;
 
+  /// 作品已被校长推优，挂在优秀作品墙上，对全校公开。
+  final bool featured;
+
   bool get staff => responsible || leader || principal || admin || headTeacher;
 
-  bool get canRead => owner || staff;
+  /// 只因为作品被推优才读得到的人：不是本人，对这份作品也没有教职权限。
+  ///
+  /// 推优只多给一份只读权限：看到的内容与「学生」一列相同（没有进入复核的原因和
+  /// 点评质量星级），不带来任何操作；撤销推优后就读不到了。其余权限照旧按身份计算，
+  /// 不因推优增减。
+  bool get publicReader => featured && !owner && !staff;
+
+  bool get canRead => owner || staff || featured;
 
   /// 老师点评（分数、分项、标签、评语、批注、语音）。
   bool get seesReview => canRead;
@@ -484,8 +495,12 @@ abstract final class DemoArtworkData {
   ) {
     final role = viewer.role;
     final person = personOf(work);
+    final featured = work['featured'] == true;
     if (role == DemoRole.student) {
-      return DemoArtworkAccess(owner: viewer.personIndex == person);
+      return DemoArtworkAccess(
+        owner: viewer.personIndex == person,
+        featured: featured,
+      );
     }
     final teacherId = text(work['teacherId']);
     final viewerTeacher = viewer.teacherId ?? '';
@@ -500,6 +515,7 @@ abstract final class DemoArtworkData {
       admin: role == DemoRole.admin,
       headTeacher: viewerTeacher.isNotEmpty && viewerTeacher == headTeacherId,
       artTeacher: isReviewTeacher(viewerTeacher),
+      featured: featured,
     );
   }
 
