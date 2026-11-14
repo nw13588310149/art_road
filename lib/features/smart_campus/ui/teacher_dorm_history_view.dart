@@ -6,16 +6,17 @@
 //      路由到本视图。返回：banner 左上角返回按钮 → onBack。
 //
 // 视觉（Figma 970 设计宽）：
-//   1. banner（62 高, 紫白渐变 #F9EDFF→white, 圆角 16, 顶部居中 "查寝历史
-//      记录" 16/600 + 副标题 12/#B6B5BB「按自然日查看本班住宿生晚查寝
-//      结果」；
+//   1. banner（62 高, 紫白渐变 #F9EDFF→white, 圆角 16, 顶部居中「查寝历史记录」
+//      16/600 + 副标题 12/#B6B5BB「按日期查看本班住宿生的晚查寝结果」；
 //      左 12 返回 32×32 白底 outline #F3F2F3）。
 //   2. 日期条卡（970×110，圆角 16，白底）：
 //      - 顶部 12,12 处 `2026-04-17` 14/500 + 下拉小箭头（演示）；
-//      - 右侧 `应统计 N 人，当日流水 M 条。` 12 hint；
+//      - 右侧 `住宿生 N 人 · 共 M 条` 12 号；
 //      - 底部 14 个正方形圆角 8 灰底 cells（顶部 `星期` 12 hint /
-//        底部 `日期` 16 Barlow/600），第 7 个 "日 / 今" 紫底白字。
-//   3. 2 张统计卡（白底圆角 12）：晚查寝已归寝 / 晚查寝待关注。
+//        底部 `日期` 16 Barlow/600），选中格品牌紫底白字。
+//        本工程显示「到今天为止的 14 天」，今天一格上方写「今天」、下方保留日期；
+//        默认选昨天（今晚的查寝还没开始）。
+//   3. 2 张汇总卡（高 88、白底圆角 12）：晚查寝已归寝 / 晚查寝待关注。
 //   4. 卡片网格 3 列（每张 312 宽，padding 12，白底，圆角 16，gap 16）：
 //      - 宿舍口径卡：晨查寝 / 晚查寝 18 Barlow/600 标题 + 大色块状态徽章
 //        正常 #8E7FFF / 未打卡 #FF323C / 迟到 #325BFF 全为白字；下行
@@ -24,6 +25,8 @@
 //        "查寝" 12/#6D6B75 + 状态徽章 16 高（正常 #D7D5FF/#715EFE /
 //        未打卡 #FEE4E8/#FF323C）；下行 宿舍 12 + 日期；灰底块 #F5F6FA
 //        H50 居中两列：规定时间 / 打卡时间；底部 备注。
+//
+// 版式按音乐之路原版还原（横幅用智慧校园共享组件，其余为本页原版写法）。
 // =============================================================================
 
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
@@ -42,19 +45,20 @@ import '../../school/data/school_config_data.dart';
 import '../../school/state/school_config_controller.dart';
 import 'widgets/dormitory_detail_dialog.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-// —— 颜色 ————————————————————————————————————————————————————————
-const Color _kCardGreyBg = AppColors.surfaceSubtle;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
+// —— 颜色（原版色值；紫色统一为品牌紫）————————————————————————————————
+const Color _kCardGreyBg = Color(0xFFF5F6FA);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleSoftBg = AppColors.brandTint;
-const Color _kRed = AppColors.danger;
-const Color _kRedSoftBg = AppColors.dangerSoft;
+const Color _kPurpleSoftBg = Color(0xFFDAD2FF);
+const Color _kRed = Color(0xFFFF323C);
+const Color _kRedSoftBg = Color(0xFFFEE4E8);
 const Color _kBlue = Color(0xFF325BFF);
-const Color _kCalendarHint = AppColors.line;
+const Color _kCalendarHint = Color(0xFFE6E9F1);
 
 // —— 学生口径状态（仅出现 正常 / 未打卡 两种） ——————————————————————
 enum _StudentStatus {
@@ -221,8 +225,10 @@ class _TeacherDormHistoryViewState
         .toList(growable: false);
     final exceptionCount = state.stat.lateCount + state.stat.absentCount;
     return SmartCampusSecondaryPageShell(
-      header: AppPageHeader(
-        title: '查寝历史',
+      // 原版横幅与日期条之间留 12。
+      headerGap: 12,
+      header: SmartCampusPageBanner(
+        title: '查寝历史记录',
         subtitle: '按日期查看本班住宿生的晚查寝结果',
         onBack: widget.onBack,
       ),
@@ -303,9 +309,11 @@ List<_StudentRecord> _historyStudentRecords(
   ];
 }
 
-// —— Banner ————————————————————————————————————————————————————————
-
 // —— 日期条卡 ——————————————————————————————————————————————————
+//
+// 按日日期条：白卡圆角 16、内距 12；首行日期 14/500 + 16 下拉箭头 + 右侧 12 号
+// 统计；下方 14 个等宽正方形格（间距 6、圆角 8、灰底 #F5F6FA），星期 12 号、
+// 日期 Barlow 16/600，两行相隔 7；选中格品牌紫底、白字。
 
 class _DateStripCard extends StatelessWidget {
   const _DateStripCard({
@@ -328,7 +336,7 @@ class _DateStripCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(12)),
@@ -351,7 +359,7 @@ class _DateStripCard extends StatelessWidget {
               Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: ui(16),
-                color: AppColors.ink,
+                color: const Color(0xFF1A1A1A),
               ),
               const Spacer(),
               Text(
@@ -418,7 +426,7 @@ class _CalendarCell extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final bg = selected ? _kPurple : _kCardGreyBg;
     final weekdayColor = selected ? _kCalendarHint : _kTextHint;
-    final dayColor = selected ? AppColors.surface : _kTextDark;
+    final dayColor = selected ? Colors.white : _kTextDark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ui(8)),
@@ -459,7 +467,7 @@ class _CalendarCell extends StatelessWidget {
   }
 }
 
-// —— 4 张统计卡 ————————————————————————————————————————————————
+// —— 2 张汇总卡 ————————————————————————————————————————————————
 
 class _StatsRow extends StatelessWidget {
   const _StatsRow({required this.eveningReturned, required this.eveningWatch});
@@ -474,7 +482,7 @@ class _StatsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatCard(
-            title: '已归寝',
+            title: '晚查寝 · 已归寝',
             value: eveningReturned,
             subtitle: '含免检、已补卡',
           ),
@@ -482,7 +490,7 @@ class _StatsRow extends StatelessWidget {
         SizedBox(width: ui(12)),
         Expanded(
           child: _StatCard(
-            title: '待关注',
+            title: '晚查寝 · 待关注',
             value: eveningWatch,
             subtitle: '晚归、未打卡',
           ),
@@ -505,18 +513,53 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpace.s16),
+    // 原版汇总卡：高 88、白底圆角 12；标题 14/500，数值 Barlow SemiBold 24，
+    // 右侧 12 号灰字说明与数值底对齐。
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      height: ui(88),
+      padding: EdgeInsets.fromLTRB(ui(16), ui(16), ui(16), ui(14)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(ui(12)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppStatTile(label: '晚查寝 · $title', value: '$value', unit: '人'),
-          const SizedBox(height: AppSpace.s4),
           Text(
-            subtitle,
+            title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppText.caption12.copyWith(color: AppColors.textTertiary),
+            style: TextStyle(
+              fontSize: ui(14),
+              color: _kTextDark,
+              fontWeight: AppFont.w500,
+              height: 1.2,
+            ),
+          ),
+          const Spacer(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('$value', style: smartCampusStatValueTextStyle(ui)),
+              SizedBox(width: ui(8)),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: ui(2)),
+                  child: Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: ui(12),
+                      color: _kTextHint,
+                      fontWeight: AppFont.w400,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -541,11 +584,18 @@ class _CardsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     if (dormRecords.isEmpty && students.isEmpty) {
-      return const AppCard(
-        child: AppEmptyState(
-          icon: Icons.bedtime_outlined,
-          title: '当日暂无查寝记录',
-          description: '晚查寝结束后会显示查寝结果',
+      // 原版空状态：上下留 40 的一行灰字。
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: ui(40)),
+        child: Center(
+          child: Text(
+            '当日暂无查寝记录',
+            style: TextStyle(
+              fontSize: ui(14),
+              color: _kTextHint,
+              fontWeight: AppFont.w400,
+            ),
+          ),
         ),
       );
     }
@@ -604,7 +654,7 @@ class _DormCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(ui(12)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(16)),
       ),
       child: Column(
@@ -616,8 +666,8 @@ class _DormCard extends StatelessWidget {
               Text(
                 record.titleText,
                 style: TextStyle(
-                  fontSize: ui(16),
-                  color: AppColors.ink,
+                  fontSize: ui(18),
+                  color: const Color(0xFF1A1A1A),
                   fontFamily: 'Barlow',
                   fontWeight: FontWeight.w600,
                   height: 1.2,
@@ -691,7 +741,7 @@ class _DormStatusBadge extends StatelessWidget {
         status.label,
         style: TextStyle(
           fontSize: ui(12),
-          color: AppColors.surface,
+          color: Colors.white,
           fontWeight: AppFont.w400,
           height: 1.2,
         ),
@@ -754,7 +804,7 @@ class _DormStudentAvatar extends StatelessWidget {
               initial,
               style: TextStyle(
                 fontSize: ui(size * 0.38),
-                color: AppColors.surface,
+                color: Colors.white,
                 fontWeight: AppFont.w500,
                 height: 1,
               ),
@@ -762,7 +812,7 @@ class _DormStudentAvatar extends StatelessWidget {
           : Icon(
               Icons.person_rounded,
               size: ui(size * 0.5),
-              color: AppColors.surface,
+              color: Colors.white,
             ),
     );
   }
@@ -783,7 +833,7 @@ class _StudentCard extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(ui(12)),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(ui(16)),
         ),
         child: Column(
