@@ -25,6 +25,9 @@
 //      头像左上未读红徽章「10+」。
 //   6. 点击卡片打开 _ChatDetailDialog：428×500 紫白渐变头 + 学生/家长
 //      信息 + 老师/家长气泡 + 输入栏 + 退出链接。
+//
+// 版式按音乐之路原版还原：横幅（标题 + 副标题）与黑底页签用智慧校园共享组件，
+// 搜索框沿用本页原版写法（带清空按钮）；横幅固定在二级页外壳里，不随内容滚动。
 // =============================================================================
 
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
@@ -45,23 +48,25 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/widgets/wechat_emoji.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../shell/state/shell_controller.dart';
+import 'widgets/smart_campus_dark_tabs.dart';
+import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import '../data/home_school_chat_data.dart';
 import '../data/smart_campus_count_badge.dart';
 import '../data/teacher_repository.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-// —— 颜色 ————————————————————————————————————————————————————————
-const Color _kCardGreyBg = AppColors.surfaceSubtle;
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kTextHintLight = AppColors.textTertiary;
-const Color _kTextPlaceholder = AppColors.textPlaceholder;
+// —— 颜色（原版色值；紫色统一为品牌紫）————————————————————————————————
+const Color _kCardGreyBg = Color(0xFFF5F6FA);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kTextHintLight = Color(0xFFCECED1);
+const Color _kTextPlaceholder = Color(0xFFD1D1D1);
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleSoftBg = AppColors.brandTint;
-const Color _kBadgeRed = AppColors.danger;
+const Color _kPurpleSoftBg = Color(0xFFDAD2FF);
+const Color _kBadgeRed = Color(0xFFF04545);
 
 // —— 顶部 tab 枚举 ——————————————————————————————————————————————
 enum _TopTab {
@@ -172,7 +177,7 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
   void _openConversation(HomeSchoolConversation conv) {
     showScaledDialog<void>(
       context: context,
-      barrierColor: AppColors.ink.withValues(alpha: 0.80),
+      barrierColor: Colors.black.withValues(alpha: 0.80),
       builder: (dialogContext) =>
           _ChatDetailDialog(conversation: conv, onSent: _reloadAll),
     ).then((_) {
@@ -184,46 +189,45 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      color: AppColors.surface,
-      child: AppRefreshIndicator(
+    // 横幅固定在二级页外壳里，下拉刷新只作用于横幅下方的内容区。
+    return SmartCampusSecondaryPageShell(
+      bodyTopClipRadius: 8,
+      bodyScrollable: false,
+      header: SmartCampusPageBanner(
+        title: '家校沟通',
+        subtitle: '与本班家长就请假、成绩、心理等进行文字沟通',
+        onBack: widget.onBack,
+      ),
+      body: AppRefreshIndicator(
         onRefresh: _reloadAll,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(bottom: ui(20)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppPageHeader(title: '家校沟通', onBack: widget.onBack),
-              SizedBox(height: ui(16)),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _StatsRow(
-                    unread: _stat.unreadCount,
-                    pending: _stat.waitingReplyCount,
-                    total: _stat.totalCount,
-                    onTabChanged: _onTabChanged,
-                  ),
-                  SizedBox(height: ui(16)),
-                  _TabsAndSearchRow(
-                    current: _tab,
-                    query: _query,
-                    onTabChanged: _onTabChanged,
-                    onQueryChanged: _onQueryChanged,
-                  ),
-                  SizedBox(height: ui(16)),
-                  if (_loadError != null)
-                    _ErrorHint(message: _loadError!, onRetry: _reloadAll)
-                  else if (_conversations.isEmpty)
-                    _EmptyHint(query: _query, tab: _tab)
-                  else if (_conversations.isNotEmpty)
-                    _ConversationGrid(
-                      items: _conversations,
-                      onTap: _openConversation,
-                    ),
-                ],
+              _StatsRow(
+                unread: _stat.unreadCount,
+                pending: _stat.waitingReplyCount,
+                total: _stat.totalCount,
+                onTabChanged: _onTabChanged,
               ),
+              SizedBox(height: ui(16)),
+              _TabsAndSearchRow(
+                current: _tab,
+                query: _query,
+                onTabChanged: _onTabChanged,
+                onQueryChanged: _onQueryChanged,
+              ),
+              SizedBox(height: ui(16)),
+              if (_loadError != null)
+                _ErrorHint(message: _loadError!, onRetry: _reloadAll)
+              else if (_conversations.isEmpty)
+                _EmptyHint(query: _query, tab: _tab)
+              else if (_conversations.isNotEmpty)
+                _ConversationGrid(
+                  items: _conversations,
+                  onTap: _openConversation,
+                ),
             ],
           ),
         ),
@@ -232,7 +236,7 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
   }
 }
 
-// —— Banner ————————————————————————————————————————————————————————
+// —— 3 张统计卡 ————————————————————————————————————————————————
 
 class _StatsRow extends StatelessWidget {
   const _StatsRow({
@@ -301,73 +305,28 @@ class _TabsAndSearchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
+    // 原版：左黑底状态页签（带描边）+ 右 324×44 搜索，两端对齐。
     return Row(
       children: [
-        Container(
-          padding: EdgeInsets.all(ui(4)),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(ui(8)),
-            border: Border.all(color: _kBorderSoft, width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final t in _TopTab.values) ...[
-                _TabPill(
-                  label: t.label,
-                  active: current == t,
-                  onTap: () => onTabChanged(t),
-                ),
-                if (t != _TopTab.values.last) SizedBox(width: ui(8)),
-              ],
-            ],
-          ),
+        SmartCampusDarkTabs<_TopTab>(
+          segments: [
+            for (final t in _TopTab.values)
+              AppSegment(value: t, label: t.label),
+          ],
+          value: current,
+          onChanged: onTabChanged,
         ),
-        const Spacer(),
-        SizedBox(
-          width: ui(324),
-          child: _SearchBox(value: query, onChanged: onQueryChanged),
+        SizedBox(width: ui(12)),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: ui(324),
+              child: _SearchBox(value: query, onChanged: onQueryChanged),
+            ),
+          ),
         ),
       ],
-    );
-  }
-}
-
-class _TabPill extends StatelessWidget {
-  const _TabPill({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(8)),
-        decoration: BoxDecoration(
-          color: active ? _kTextDark : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(14),
-            color: active ? AppColors.surface : _kTextSecondary,
-            fontWeight: AppFont.w500,
-            height: 1.2,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -415,7 +374,7 @@ class _SearchBoxState extends State<_SearchBox> {
       height: ui(44),
       padding: EdgeInsets.symmetric(horizontal: ui(16)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Row(
@@ -463,7 +422,7 @@ class _SearchBoxState extends State<_SearchBox> {
                 child: Icon(
                   Icons.cancel,
                   size: ui(16),
-                  color: AppColors.textPlaceholder,
+                  color: const Color(0xFFC6C6C6),
                 ),
               ),
             ),
@@ -488,7 +447,7 @@ class _ErrorHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(32), horizontal: ui(16)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -543,7 +502,7 @@ class _EmptyHint extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: ui(40)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Center(
@@ -608,7 +567,7 @@ class _ConversationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: AppColors.surface,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(ui(12)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -805,8 +764,8 @@ class _AvatarWithBadge extends StatelessWidget {
                 child: Text(
                   smartCampusCountBadgeLabel(unreadCount)!,
                   style: TextStyle(
-                    fontSize: ui(12),
-                    color: AppColors.surface,
+                    fontSize: ui(10),
+                    color: Colors.white,
                     fontFamily: 'Manrope',
                     fontWeight: FontWeight.w800,
                     height: 1.0,
@@ -842,7 +801,7 @@ class _HomeSchoolAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.brandWash,
+        color: const Color(0xFFEFE5FF),
         shape: circular ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: circular ? null : BorderRadius.circular(radius),
       ),
@@ -1061,7 +1020,7 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
           child: Container(
             width: ui(428),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(ui(24)),
             ),
             clipBehavior: Clip.antiAlias,
@@ -1078,10 +1037,15 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
                     child: _loading
                         ? const SizedBox.shrink()
                         : _messages.isEmpty
-                        ? const Center(
-                            child: AppEmptyState(
-                              icon: Icons.chat_bubble_outline_rounded,
-                              title: '暂无消息',
+                        ? Center(
+                            // 原版是一行灰字；文案去掉了口语和序数词。
+                            child: Text(
+                              '暂无消息',
+                              style: TextStyle(
+                                fontSize: ui(13),
+                                color: _kTextHint,
+                                fontWeight: AppFont.w400,
+                              ),
                             ),
                           )
                         : Builder(
@@ -1157,7 +1121,7 @@ class _DialogHeader extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFD8CCFF), AppColors.surface],
+          colors: [Color(0xFFD8CCFF), Colors.white],
         ),
       ),
       padding: EdgeInsets.fromLTRB(ui(24), ui(20), ui(16), ui(16)),
@@ -1175,11 +1139,11 @@ class _DialogHeader extends StatelessWidget {
                       width: ui(56),
                       height: ui(56),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(ui(12)),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.ink.withValues(alpha: 0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),
@@ -1202,7 +1166,7 @@ class _DialogHeader extends StatelessWidget {
                             conversation.displayStudentName,
                             style: TextStyle(
                               fontSize: ui(16),
-                              color: AppColors.ink,
+                              color: Colors.black,
                               fontWeight: AppFont.w600,
                               height: 1.2,
                             ),
@@ -1233,7 +1197,7 @@ class _DialogHeader extends StatelessWidget {
                   width: ui(32),
                   height: ui(32),
                   decoration: BoxDecoration(
-                    color: AppColors.surface.withValues(alpha: 0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(ui(8)),
                   ),
                   alignment: Alignment.center,
@@ -1452,7 +1416,7 @@ class _HomeSchoolTextBubble extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final baseStyle = TextStyle(
       fontSize: ui(13),
-      color: fromTeacher ? AppColors.surface : _kTextDark,
+      color: fromTeacher ? Colors.white : _kTextDark,
       fontWeight: AppFont.w400,
       height: 1.7,
       leadingDistribution: TextLeadingDistribution.even,
@@ -1648,17 +1612,13 @@ class _InputBar extends StatelessWidget {
                     sending ? '发送中' : '发送',
                     style: TextStyle(
                       fontSize: ui(13),
-                      color: AppColors.surface,
+                      color: Colors.white,
                       fontWeight: AppFont.w400,
                       height: 1.2,
                     ),
                   ),
                   SizedBox(width: ui(4)),
-                  Icon(
-                    Icons.send_rounded,
-                    size: ui(14),
-                    color: AppColors.surface,
-                  ),
+                  Icon(Icons.send_rounded, size: ui(14), color: Colors.white),
                 ],
               ),
             ),

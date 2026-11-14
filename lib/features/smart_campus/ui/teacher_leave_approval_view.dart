@@ -8,8 +8,12 @@
 // 视觉（Figma 970 设计宽）：
 //   1. banner（62 高，背景图 xiaoquan/bg.png，圆角 16，标题「请假审批」；
 //      左 12 返回按钮 32×32 白底 outline #F3F2F3）。
-//   2. 4 张统计卡（100 高）：待审批 / 审批中 / 已通过 / 已拒绝。
-//   3. Tabs row + 搜索框 + 双列卡片网格（家长 → 班主任 stepper）。
+//   2. 4 张统计卡（100 高）：待我审批 / 待家长确认 / 已通过 / 已驳回。
+//   3. 黑底状态页签 + 324×44 搜索框 + 双列卡片网格（家长 → 班主任 stepper）；
+//      卡片：40 方头像、方角状态标签、40 高「通过 / 驳回」按钮（主按钮在左）。
+//
+// 版式按音乐之路原版还原（横幅、页签、搜索、头像、标签用智慧校园共享组件）；
+// 状态名称、「代家长确认并通过」和审批步骤是本工程的内容，保留。
 // =============================================================================
 
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
@@ -21,31 +25,34 @@ import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/api_response.dart';
-import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/scaled_dialog.dart';
+import 'widgets/smart_campus_dark_tabs.dart';
+import 'widgets/smart_campus_filter_bar.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_square_avatar.dart';
+import 'widgets/smart_campus_square_tag.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import '../data/student_leave_data.dart';
 import '../data/teacher_repository.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-// —— 颜色 ————————————————————————————————————————————————————————
-const Color _kBoardBg = AppColors.surfaceSubtle;
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kBorderHair = AppColors.line;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kTextHintLight = AppColors.textTertiary;
-const Color _kTextPlaceholder = AppColors.textPlaceholder;
+// —— 颜色（原版色值；紫色统一为品牌紫）————————————————————————————————
+const Color _kBoardBg = Color(0xFFF5F6FA);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kBorderHair = Color(0xFFE6E9F1);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kTextHintLight = Color(0xFFCECED1);
 const Color _kPurple = AppColors.brand;
-const Color _kGreen = AppColors.success;
-const Color _kGreenSoftBg = AppColors.successSoft;
-const Color _kRed = AppColors.danger;
-const Color _kRedSoftBg = AppColors.dangerSoft;
-const Color _kOrange = AppColors.warning;
-const Color _kOrangeSoftBg = AppColors.warningSoft;
+const Color _kPurpleSoftBg = Color(0xFFDAD2FF);
+const Color _kGreen = Color(0xFF12CE51);
+const Color _kGreenSoftBg = Color(0xFFE4FFED);
+const Color _kRed = Color(0xFFFF323C);
+const Color _kRedSoftBg = Color(0xFFFFE4E5);
+const Color _kOrange = Color(0xFFFF6A00);
+const Color _kOrangeSoftBg = Color(0xFFFFEDD3);
 
 // —— 状态枚举 ——————————————————————————————————————————————————————
 enum _StatusTab {
@@ -62,6 +69,24 @@ enum _StatusTab {
   int? get apiStatus => switch (this) {
     _StatusTab.approved => 3,
     _ => null,
+  };
+}
+
+extension _StudentLeaveStatusStyle on StudentLeaveStatus {
+  Color get bg => switch (this) {
+    StudentLeaveStatus.waitingParent => _kOrangeSoftBg,
+    StudentLeaveStatus.waitingTeacher => _kPurpleSoftBg,
+    StudentLeaveStatus.parentRejected => _kRedSoftBg,
+    StudentLeaveStatus.approved => _kGreenSoftBg,
+    StudentLeaveStatus.teacherRejected => _kRedSoftBg,
+  };
+
+  Color get fg => switch (this) {
+    StudentLeaveStatus.waitingParent => _kOrange,
+    StudentLeaveStatus.waitingTeacher => _kPurple,
+    StudentLeaveStatus.parentRejected => _kRed,
+    StudentLeaveStatus.approved => _kGreen,
+    StudentLeaveStatus.teacherRejected => _kRed,
   };
 }
 
@@ -95,6 +120,7 @@ class _TeacherLeaveApprovalViewState
     extends ConsumerState<TeacherLeaveApprovalView> {
   _StatusTab _tab = _StatusTab.all;
   String _searchQuery = '';
+  final _searchCtrl = TextEditingController();
   List<StudentLeaveRecord> _requests = const [];
   int _pendingCount = 0;
   int _reviewingCount = 0;
@@ -111,6 +137,12 @@ class _TeacherLeaveApprovalViewState
       unawaited(_loadStats());
       unawaited(_loadList());
     });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadStats() async {
@@ -225,11 +257,8 @@ class _TeacherLeaveApprovalViewState
     final pageLoading = _loading && _requests.isEmpty;
     final displayRecords = _filterSearch(_requests);
     return SmartCampusSecondaryPageShell(
-      header: AppPageHeader(
-        title: '请假审批',
-        subtitle: '本班学生的请假申请：家长确认后由你审批，已和家长沟通好的也可直接审批',
-        onBack: widget.onBack,
-      ),
+      bodyTopClipRadius: 8,
+      header: SmartCampusPageBanner(title: '请假审批', onBack: widget.onBack),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -244,14 +273,8 @@ class _TeacherLeaveApprovalViewState
               ),
               SizedBox(height: ui(16)),
               _TabsRow(
-                counts: {
-                  _StatusTab.mine: _pendingCount,
-                  _StatusTab.reviewing: _reviewingCount,
-                  _StatusTab.approved: _approvedCount,
-                  _StatusTab.rejected: _rejectedCount,
-                },
                 current: _tab,
-                searchValue: _searchQuery,
+                searchController: _searchCtrl,
                 onSearchChanged: (v) => setState(() => _searchQuery = v),
                 onTap: (t) {
                   if (_tab == t) return;
@@ -397,141 +420,54 @@ class _StatsRow extends StatelessWidget {
 
 class _TabsRow extends StatelessWidget {
   const _TabsRow({
-    required this.counts,
     required this.current,
     required this.onTap,
-    required this.searchValue,
+    required this.searchController,
     required this.onSearchChanged,
   });
 
-  final Map<_StatusTab, int> counts;
   final _StatusTab current;
   final ValueChanged<_StatusTab> onTap;
-  final String searchValue;
+  final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
 
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return LayoutBuilder(
-      builder: (context, constraints) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            child: SmartCampusStatusTabs<_StatusTab>(
-              segments: [
-                for (final t in _StatusTab.values)
-                  AppSegment(
-                    value: t,
-                    label: counts[t] == null
-                        ? t.label
-                        : '${t.label}（${counts[t]}）',
-                  ),
-              ],
-              value: current,
-              onChanged: onTap,
-            ),
-          ),
-          SizedBox(width: ui(16)),
-          Container(
-            width: (constraints.maxWidth * 0.28).clamp(ui(120), ui(260)),
-            height: ui(40),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(ui(12)),
-            ),
-            padding: EdgeInsets.fromLTRB(ui(14), 0, ui(24), 0),
-            child: Row(
-              children: [
-                AppAssetGraphic(
-                  AppAssets.shellV2Search,
-                  width: ui(16),
-                  height: ui(16),
-                  fit: BoxFit.contain,
-                ),
-                SizedBox(width: ui(8)),
-                Expanded(
-                  child: _LeaveApprovalSearchField(
-                    value: searchValue,
-                    onChanged: onSearchChanged,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    // 原版：左黑底状态页签（带描边）+ 右 324×44 搜索，两端对齐。
+    final tabs = SmartCampusDarkTabs<_StatusTab>(
+      segments: [
+        for (final t in _StatusTab.values) AppSegment(value: t, label: t.label),
+      ],
+      value: current,
+      onChanged: onTap,
     );
-  }
-}
-
-class _LeaveApprovalSearchField extends StatefulWidget {
-  const _LeaveApprovalSearchField({
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String value;
-  final ValueChanged<String> onChanged;
-
-  @override
-  State<_LeaveApprovalSearchField> createState() =>
-      _LeaveApprovalSearchFieldState();
-}
-
-class _LeaveApprovalSearchFieldState extends State<_LeaveApprovalSearchField> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.value);
-  }
-
-  @override
-  void didUpdateWidget(covariant _LeaveApprovalSearchField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.value != _controller.text) {
-      _controller.text = widget.value;
-      _controller.selection = TextSelection.collapsed(
-        offset: widget.value.length,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return AppTextField(
-      controller: _controller,
-      onChanged: widget.onChanged,
-      cursorColor: _kPurple,
-      cursorWidth: 1.5,
-      cursorHeight: ui(16),
-      style: TextStyle(
-        fontSize: ui(14),
-        color: _kTextDark,
-        fontWeight: AppFont.w400,
-        height: 1.2,
-      ),
-      decoration: InputDecoration(
-        hintText: '搜索姓名、学号、手机、宿舍、家长',
-        hintStyle: TextStyle(
-          fontSize: ui(14),
-          color: _kTextPlaceholder,
-          fontWeight: AppFont.w400,
-          height: 1.2,
-        ),
-        isCollapsed: true,
-        contentPadding: EdgeInsets.zero,
-        border: InputBorder.none,
-      ),
+    final search = SmartCampusFilterSearchField(
+      controller: searchController,
+      hintText: '搜索姓名、学号、手机、宿舍、家长',
+      onChanged: onSearchChanged,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 6 个页签约 506 宽，1024 横屏下与 324 的搜索并排差二十多像素：
+        // 搜索框收窄到剩余宽度，仍保持原版的一行；再窄才折行。
+        if (constraints.maxWidth < ui(760)) {
+          return SmartCampusFilterRow(
+            useWrap: true,
+            leading: tabs,
+            search: search,
+          );
+        }
+        return Row(
+          children: [
+            tabs,
+            SizedBox(width: ui(12)),
+            Expanded(
+              child: Align(alignment: Alignment.centerRight, child: search),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -614,7 +550,7 @@ class _LeaveCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(ui(12)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(12)),
       ),
       child: Column(
@@ -628,23 +564,21 @@ class _LeaveCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: AppButton(
-                    label: '驳回',
-                    variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.sm,
-                    expand: true,
-                    onTap: onReject,
+                  child: _CardActionButton(
+                    // 家长还没确认时班主任可以代为确认，按钮写明后果。
+                    label: record.status == StudentLeaveStatus.waitingParent
+                        ? '代家长确认并通过'
+                        : '通过',
+                    isPrimary: true,
+                    onTap: onApprove,
                   ),
                 ),
                 SizedBox(width: ui(12)),
                 Expanded(
-                  child: AppButton(
-                    label: record.status == StudentLeaveStatus.waitingParent
-                        ? '代家长确认并通过'
-                        : '通过',
-                    size: AppButtonSize.sm,
-                    expand: true,
-                    onTap: onApprove,
+                  child: _CardActionButton(
+                    label: '驳回',
+                    isPrimary: false,
+                    onTap: onReject,
                   ),
                 ),
               ],
@@ -733,8 +667,12 @@ class _StudentAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return AppAvatar(name: name, url: avatarUrl?.trim() ?? '', size: ui(40));
+    // 原版 40 方头像、圆角 8，没有照片时浅紫底 + 姓氏。
+    return SmartCampusSquareAvatar(
+      name: name,
+      url: avatarUrl?.trim() ?? '',
+      size: 40,
+    );
   }
 }
 
@@ -745,15 +683,13 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppStatusTag(
+    // 原版方角状态标签：内距 4×2、圆角 4、12 号字（行高 15.24）。
+    return SmartCampusSquareTag(
       label: status.label,
-      tone: switch (status) {
-        StudentLeaveStatus.waitingParent ||
-        StudentLeaveStatus.waitingTeacher => AppTone.warning,
-        StudentLeaveStatus.approved => AppTone.success,
-        StudentLeaveStatus.parentRejected ||
-        StudentLeaveStatus.teacherRejected => AppTone.danger,
-      },
+      background: status.bg,
+      foreground: status.fg,
+      height: 19.24,
+      horizontalPadding: 4,
     );
   }
 }
@@ -885,7 +821,7 @@ class _StepNode extends StatelessWidget {
           width: ui(14),
           height: ui(14),
           decoration: const BoxDecoration(
-            color: AppColors.brandWash,
+            color: Color(0xFFF7F2FF),
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
@@ -895,7 +831,7 @@ class _StepNode extends StatelessWidget {
             decoration: BoxDecoration(
               color: status.color,
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.surface, width: 1),
+              border: Border.all(color: Colors.white, width: 1),
             ),
           ),
         ),
@@ -914,7 +850,7 @@ class _StepNode extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
           decoration: BoxDecoration(
             color: status == StudentLeaveStepStatus.approved
-                ? AppColors.surface
+                ? Colors.white
                 : status.softBg,
             borderRadius: BorderRadius.circular(ui(4)),
           ),
@@ -937,6 +873,55 @@ class _StepNode extends StatelessWidget {
 
 // —— 审批中卡片 通过 / 驳回 按钮 ————————————————————————————————————
 
+/// 原版卡片操作按钮：高 40、圆角 8、14 号字；主按钮品牌紫渐变，次按钮白底描边。
+class _CardActionButton extends StatelessWidget {
+  const _CardActionButton({
+    required this.label,
+    required this.isPrimary,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isPrimary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        height: ui(40),
+        padding: EdgeInsets.symmetric(horizontal: ui(8)),
+        decoration: BoxDecoration(
+          gradient: isPrimary
+              ? const LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [AppColors.brandSoft, AppColors.brand],
+                )
+              : null,
+          color: isPrimary ? null : Colors.white,
+          border: Border.all(color: _kBorderSoft, width: 1),
+          borderRadius: BorderRadius.circular(ui(8)),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: ui(14),
+            color: isPrimary ? Colors.white : _kTextDark,
+            fontWeight: AppFont.w400,
+            height: 24 / 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // —— 审批意见弹窗（通过 / 驳回共用，默认预填审核理由） ——————————————————
 
 Future<String?> _showTeacherAuditReasonDialog(
@@ -949,7 +934,7 @@ Future<String?> _showTeacherAuditReasonDialog(
   final controller = TextEditingController(text: initialText);
   return showScaledDialog<String>(
     context: context,
-    barrierColor: AppColors.ink.withValues(alpha: 0.80),
+    barrierColor: Colors.black.withValues(alpha: 0.80),
     builder: (dialogContext) {
       final ui = DashboardScaleScope.of(dialogContext).ui;
       return GradientHeaderDialog(
