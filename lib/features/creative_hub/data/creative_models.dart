@@ -244,6 +244,7 @@ class MarketOrder {
           : null,
       shipment = creativeMap(json['shipment']),
       afterSale = creativeMap(json['afterSale']),
+      dispute = creativeMap(json['dispute']),
       review = creativeMap(json['review']),
       events = creativeRows(json['events']);
   final String id, time, buyerName, expiresAt, paidAt, updatedAt;
@@ -252,10 +253,11 @@ class MarketOrder {
   final bool buyer, seller;
   final int totalCents, shippingCents;
   final MarketAddress? address;
-  final CreativeJson shipment, afterSale, review;
+  final CreativeJson shipment, afterSale, dispute, review;
   final List<CreativeJson> events;
   bool get canRefund =>
       buyer &&
+      dispute['status'] != 'open' &&
       [
         MarketOrderStatus.completed,
         MarketOrderStatus.shipped,
@@ -263,7 +265,8 @@ class MarketOrder {
       ].contains(status);
   bool get canReview =>
       buyer && status == MarketOrderStatus.completed && review.isEmpty;
-  bool get canDispute => buyer && afterSale['status'] == 'rejected';
+  bool get canDispute =>
+      buyer && afterSale['status'] == 'rejected' && dispute.isEmpty;
   bool get canDeliver =>
       buyer &&
       listing.kind == MarketKind.digital &&

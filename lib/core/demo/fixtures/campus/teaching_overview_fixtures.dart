@@ -106,6 +106,44 @@ void registerTeachingOverviewFixtures(DemoRouter router) {
     _requireTeacher(request);
     return _Overview(request).teacherStudents(request.account.teacherId!);
   });
+  router.post('/school/teaching/students/{id}/follow-up', (request) {
+    final overview = _Overview(request);
+    final person = overview.students
+        .where((p) => p.archiveId == request.param('id'))
+        .firstOrNull;
+    if (person == null) throw const DemoApiException('学生不存在', code: 404);
+    if (request.account.role != DemoRole.principal) {
+      _requireTeacher(request);
+      if (!overview
+          .teacherStudents(request.account.teacherId!)
+          .any((r) => r['id'] == person.archiveId)) {
+        throw const DemoApiException('只能跟进本人所带班级的学生', code: 403);
+      }
+    }
+    final status = request.str('status');
+    final note = request.str('note');
+    if (!['pending', 'following', 'resolved'].contains(status)) {
+      throw const DemoApiException('请选择跟进状态');
+    }
+    if (note.runes.length < 5 || note.runes.length > 500) {
+      throw const DemoApiException('跟进记录须为 5 至 500 字');
+    }
+    final key = 'teaching:follow-up:${person.archiveId}';
+    final row = DemoStore.map(key, () => {});
+    final record = {
+      'status': status,
+      'note': note,
+      'owner': request.account.name,
+      'updatedAt': DemoArtworkData.fmt(DemoArtworkStore.now()),
+    };
+    final history = [
+      record,
+      ...DemoArtworkData.mapsOf(row['history']),
+    ].take(20).toList();
+    row.addAll({...record, 'history': history});
+    DemoStore.save(key);
+    return row;
+  });
   router.get('/school/principal/attendance', (request) {
     _requirePrincipal(request);
     return _Overview(request).attendance();
@@ -527,6 +565,10 @@ class _Overview {
       'quality': _mean(
         lead.map((l) => l['qualityStars']).whereType<num>().where((n) => n > 0),
       ),
+      'reviewSampleCount': reviewed.length,
+      'qualitySampleCount': lead
+          .where((l) => (l['qualityStars'] as num? ?? 0) > 0)
+          .length,
       'commentLength': _mean(
         reviewed.map(
           (w) => cbStr(DemoArtworkData.reviewOf(w)?['content']).runes.length,
@@ -836,6 +878,12 @@ class _Overview {
       ],
       'workCount': studentWorks.length,
       'latestWork': studentWorks.firstOrNull?['createTime'],
+      'latestWorkId': studentWorks.firstOrNull?['id'],
+      'followUp': DemoStore.map(
+        'teaching:follow-up:${person.archiveId}',
+        () => {},
+      ),
+      'subjectInsights': insights['dimensionLevels'],
       'dimensions': insights['dimensionLevels'],
       'unresolvedCount':
           ((insights['problemTagCount'] as int) -

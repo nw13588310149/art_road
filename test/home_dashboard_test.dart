@@ -152,6 +152,27 @@ void main() {
     });
   });
 
+  test('future course keeps today empty and identifies its actual date', () {
+    final state = HomeDashboardState(
+      weekItems: [_day('2026-11-15', 0, today: true)],
+      courseNotices: [_notice('2026-11-16')],
+    );
+    expect(state.showingUpcomingCourses, isTrue);
+    expect(state.courseHeading, '下一次课程 · 11月16日');
+    expect(state.weekItems.single.courseCount, 0);
+    expect(
+      state
+          .copyWith(courseNotices: [_notice('2026-11-15')])
+          .showingUpcomingCourses,
+      isFalse,
+    );
+    expect(
+      state.copyWith(courseNotices: [_notice('')]).showingUpcomingCourses,
+      isFalse,
+    );
+    expect(state.copyWith(courseNotices: []).showingUpcomingCourses, isFalse);
+  });
+
   test('only students, teachers and head teachers have a timetable', () {
     expect(homeRoleHasTimetable('student'), isTrue);
     expect(homeRoleHasTimetable('teacher'), isTrue);

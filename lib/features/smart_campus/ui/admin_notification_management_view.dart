@@ -60,6 +60,7 @@ import '../../shell/state/shell_controller.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../data/admin_notice_data.dart';
 import '../data/admin_repository.dart';
+import '../state/admin_notice_editor_controller.dart';
 import 'widgets/smart_campus_page_banner.dart';
 import 'widgets/smart_campus_stat_card.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
@@ -355,6 +356,7 @@ class _AdminNotificationManagementViewState
   }
 
   Future<bool> _submitNotice({
+    String? id,
     required String title,
     required String content,
     required String type,
@@ -379,11 +381,13 @@ class _AdminNotificationManagementViewState
       creator: user.displayName,
       deptName: user.school.isNotEmpty ? user.school : '校办',
     );
-    final repo = ref.read(adminRepositoryProvider);
-    final resp = await repo.noticeSave(request.toJson());
+    final error = await ref.read(adminNoticeEditorProvider.notifier).save({
+      ...request.toJson(),
+      'id': ?id,
+    });
     if (!mounted) return false;
-    if (!resp.isSuccess) {
-      AppToast.show(context, '保存失败：${resp.msg}');
+    if (error != null) {
+      AppToast.showError(context, error);
       return false;
     }
     await _loadRecords();
@@ -393,7 +397,7 @@ class _AdminNotificationManagementViewState
       _toastForStatus(switch (mode) {
         _PublishMode.now => _NStatus.published,
         _PublishMode.scheduled => _NStatus.scheduled,
-      }, isCreate: true),
+      }, isCreate: id == null),
     );
     return true;
   }
@@ -412,56 +416,44 @@ class _AdminNotificationManagementViewState
 
   // —— 行操作：查看 / 编辑 / 删除 / 新建 —————————————————————————————
 
-  Future<void> _openCreateDrawer() async {
+  Future<void> _openCreateDrawer() => _openNoticeForm();
+  Future<void> _openEditDrawer(_NotificationRecord origin) =>
+      _openNoticeForm(origin);
+  Future<void> _openNoticeForm([_NotificationRecord? origin]) async {
     final scale = DashboardScaleScope.of(context);
-    await showGeneralDialog<void>(
+    await showAppDrawer<void>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: '关闭新建通知',
-      barrierColor: AppColors.ink.withValues(alpha: 0.32),
-      transitionDuration: const Duration(milliseconds: 240),
-      pageBuilder: (ctx, anim, sec) => Align(
-        alignment: Alignment.centerRight,
-        child: DashboardScaleScope(
-          data: scale,
-          child: _NotificationFormDrawer(
-            initial: null,
-            onCancel: () => Navigator.of(ctx).pop(),
-            onSubmit: (params) =>
-                _submitNotice(
-                  title: params.title,
-                  content: params.content,
-                  type: params.type,
-                  priority: params.priority,
-                  scopes: params.scopes,
-                  mode: params.mode,
-                  scheduledAt: params.scheduledAt,
-                ).then((ok) {
-                  if (ok && ctx.mounted) Navigator.of(ctx).pop();
-                  return ok;
-                }),
-          ),
+      barrierDismissible: false,
+      builder: (ctx) => DashboardScaleScope(
+        data: scale,
+        child: _NotificationFormDrawer(
+          initial: origin,
+          onCancel: () => Navigator.of(ctx).pop(),
+          onSubmit: (params) =>
+              _submitNotice(
+                id: origin?.id,
+                title: params.title,
+                content: params.content,
+                type: params.type,
+                priority: params.priority,
+                scopes: params.scopes,
+                mode: params.mode,
+                scheduledAt: params.scheduledAt,
+              ).then((ok) {
+                if (ok && ctx.mounted) Navigator.of(ctx).pop();
+                return ok;
+              }),
         ),
-      ),
-      transitionBuilder: (ctx, anim, sec, child) => SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(1, 0),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-        child: child,
       ),
     );
   }
 
-  Future<void> _openEditDrawer(_NotificationRecord origin) async {
-    AppToast.show(context, 'APP端接口暂未提供通知更新能力');
-  }
-
   Future<void> _onDeleteRecord(_NotificationRecord r) async {
-    final ok = await showConfirmDialog(
+    final ok = await showAppConfirm(
       context: context,
       title: '删除通知',
-      content: '确认删除「${r.title}」？删除后该通知将不再可见，操作不可恢复。',
+      danger: true,
+      message: '确认删除「${r.title}」？删除后该通知将不再可见，操作不可恢复。',
       confirmLabel: '删除',
     );
     if (!ok || !mounted) return;
@@ -1558,7 +1550,7 @@ class _NotificationFormDrawerState extends State<_NotificationFormDrawer> {
             children: [
               _DrawerHeader(
                 title: isEdit ? '编辑通知' : '新建通知',
-                onClose: widget.onCancel,
+                onClose: _submitting ? null : widget.onCancel,
               ),
               Expanded(
                 child: SingleChildScrollView(
@@ -1570,6 +1562,7 @@ class _NotificationFormDrawerState extends State<_NotificationFormDrawer> {
                       SizedBox(height: ui(8)),
                       _TextField(
                         controller: _titleCtrl,
+                        label: '通知标题',
                         hint: '请输入通知标题（建议 ≤ 30 字）',
                         maxLength: 60,
                       ),
@@ -1578,6 +1571,7 @@ class _NotificationFormDrawerState extends State<_NotificationFormDrawer> {
                       SizedBox(height: ui(8)),
                       _TextField(
                         controller: _contentCtrl,
+                        label: '通知内容',
                         hint: '请输入正文，可包含时间、地点、参加人员等关键信息',
                         maxLines: 5,
                         maxLength: 500,
@@ -1664,7 +1658,7 @@ class _DrawerHeader extends StatelessWidget {
   const _DrawerHeader({required this.title, required this.onClose});
 
   final String title;
-  final VoidCallback onClose;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -1696,17 +1690,13 @@ class _DrawerHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          InkWell(
+          AppIconButton(
+            icon: Icons.close_rounded,
+            semanticLabel: '关闭通知编辑',
+            filled: false,
+            color: _kTextSecondary,
+            enabled: onClose != null,
             onTap: onClose,
-            borderRadius: BorderRadius.circular(ui(8)),
-            child: Padding(
-              padding: EdgeInsets.all(ui(8)),
-              child: Icon(
-                Icons.close_rounded,
-                size: ui(18),
-                color: _kTextSecondary,
-              ),
-            ),
           ),
         ],
       ),
@@ -1755,12 +1745,14 @@ class _SectionLabel extends StatelessWidget {
 class _TextField extends StatelessWidget {
   const _TextField({
     required this.controller,
+    required this.label,
     required this.hint,
     this.maxLines = 1,
     this.maxLength,
   });
 
   final TextEditingController controller;
+  final String label;
   final String hint;
   final int maxLines;
   final int? maxLength;
@@ -1775,29 +1767,32 @@ class _TextField extends StatelessWidget {
         borderRadius: BorderRadius.circular(ui(10)),
         border: Border.all(color: _kInnerGray, width: 1),
       ),
-      child: AppTextField(
-        controller: controller,
-        maxLines: maxLines,
-        maxLength: maxLength,
-        cursorColor: _kPurple,
-        cursorWidth: 1.5,
-        cursorHeight: ui(16),
-        style: TextStyle(
-          fontSize: ui(14),
-          color: _kTextDark,
-          fontWeight: AppFont.w400,
-          height: 22 / 14,
-        ),
-        decoration: InputDecoration(
-          isCollapsed: true,
-          counterText: '',
-          border: InputBorder.none,
-          hintText: hint,
-          hintStyle: TextStyle(
+      child: Semantics(
+        label: label,
+        child: AppTextField(
+          controller: controller,
+          maxLines: maxLines,
+          maxLength: maxLength,
+          cursorColor: _kPurple,
+          cursorWidth: 1.5,
+          cursorHeight: ui(16),
+          style: TextStyle(
             fontSize: ui(14),
-            color: _kTextHint,
+            color: _kTextDark,
             fontWeight: AppFont.w400,
             height: 22 / 14,
+          ),
+          decoration: InputDecoration(
+            isCollapsed: true,
+            counterText: '',
+            border: InputBorder.none,
+            hintText: hint,
+            hintStyle: TextStyle(
+              fontSize: ui(14),
+              color: _kTextHint,
+              fontWeight: AppFont.w400,
+              height: 22 / 14,
+            ),
           ),
         ),
       ),

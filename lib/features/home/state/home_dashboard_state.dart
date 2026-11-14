@@ -173,6 +173,22 @@ class HomeDashboardState {
   /// 宿管首页显示值班与查寝，不显示课表和成绩。
   bool get isDormManager => role == 'dormManager';
 
+  /// nextSchoolCourse 可以返回下一次有课日期，不把它当作今天的排课。
+  bool get showingUpcomingCourses {
+    final today = weekItems.where((day) => day.isToday).firstOrNull;
+    final courseDate = DateTime.tryParse(courseNotices.firstOrNull?.date ?? '');
+    final todayDate = DateTime.tryParse(today?.dateText ?? '');
+    return courseDate != null &&
+        todayDate != null &&
+        courseDate.isAfter(todayDate);
+  }
+
+  String get courseHeading {
+    if (!showingUpcomingCourses) return '课程';
+    final date = DateTime.parse(courseNotices.first.date);
+    return '下一次课程 · ${date.month}月${date.day}日';
+  }
+
   /// 至少有一块数据已到位。
   bool get hasContent =>
       bannerItems.isNotEmpty ||

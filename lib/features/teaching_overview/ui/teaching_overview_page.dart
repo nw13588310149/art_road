@@ -5,10 +5,10 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/art/art_subject.dart';
 import '../../../core/ui/ui.dart';
 import '../../artworks/data/artwork_models.dart';
-import '../../study_center/ui/growth/student_artwork_growth_view.dart';
 import '../data/teaching_overview_repository.dart';
 import '../state/teaching_overview_controller.dart';
 import 'teaching_trend_chart.dart';
+import 'teaching_student_list.dart';
 
 TeachingRequest _request(
   TeachingReport report,
@@ -183,7 +183,7 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
     ('timely', '点评及时率', '%'),
     ('quality', '点评质量', ' 星'),
     ('punctual', '签到准时率', '%'),
-    ('taskCount', '作品数', ' 份'),
+    ('taskCount', '作品任务', ' 个'),
     ('taskReviewRate', '批改率', '%'),
     ('scoreChange', '成绩变化', ' 分'),
     ('studentRating', '学生评价', ' 分'),
@@ -215,6 +215,7 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
     }
     return AppCard(
       title: '履职概览',
+      subtitle: '及时率与签到为近 7 天；作品、质量与学生评价为近 30 天。成绩变化对比最近两次模考。',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: AppSpace.s12,
@@ -294,6 +295,7 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
     children: [
       AppCard(
         title: '${row['name']} · ${row['subject']}',
+        subtitle: '点评仅统计本人记录，缺少样本时显示 —。',
         child: Wrap(
           spacing: AppSpace.s12,
           runSpacing: AppSpace.s8,
@@ -315,6 +317,8 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
       ),
       AppCard(
         title: '点评质量',
+        subtitle:
+            '近 30 天 · ${row['reviewSampleCount'] ?? 0} 份个人点评 · ${row['qualitySampleCount'] ?? 0} 条组长质量评价',
         child: Wrap(
           spacing: AppSpace.s12,
           runSpacing: AppSpace.s8,
@@ -329,6 +333,7 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
       ),
       AppCard(
         title: '点评样本',
+        subtitle: '最近已点评作品，点击查看原作和点评依据',
         child: Column(
           children: [
             for (final work in teachingRows(row['reviews']))
@@ -409,9 +414,7 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
                     context: context,
                     builder: (context) => AppDrawer(
                       title: teachingText(row['name']),
-                      child: ListView(
-                        children: [_people(teachingRows(row['students']), '')],
-                      ),
+                      child: _people(teachingRows(row['students']), ''),
                     ),
                   ),
                 ),
@@ -421,60 +424,26 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
     ],
   );
 
-  Widget _people(List<TeachingRow> rows, String selected) {
-    final visible = selected.isEmpty
-        ? rows
-        : rows.where((row) => row['id'] == selected).toList();
-    return Column(
-      children: [
-        if (visible.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(AppSpace.s16),
-            child: Text('暂无学生', style: AppText.body13),
-          ),
-        for (final row in visible) _studentListRow(row),
-      ],
-    );
-  }
-
-  Widget _studentListRow(TeachingRow row) {
-    final preview = teachingRows(row['dimensions'])
-        .where((subject) => subject['subject'] == row['previewSubject'])
-        .firstOrNull;
-    return AppListRow(
-      leading: AppAvatar(name: teachingText(row['name']), size: 40),
-      title: teachingText(row['name']),
-      subtitle: [
-        teachingText(row['className']),
-        if (row['teacher'] != null) '负责老师 ${row['teacher']}',
-        if (row['previewSubject'] != null) '近次提交 ${row['latestWork'] ?? '—'}',
-        ..._strings(row['reasons']),
-      ].join(' · '),
-      trailing: row['reasons'] == null && row['unresolvedCount'] != null
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: AppSpace.s12,
-              children: [
-                if (preview != null)
-                  ArtworkDimensionRadar(
-                    levels: ArtworkDimensionLevels.fromJson(preview),
-                    size: 44,
-                  ),
-                AppTag(label: '待改善 ${row['unresolvedCount']} 项'),
-              ],
-            )
-          : null,
-      onTap: () => _showStudent(row),
-    );
-  }
+  Widget _people(List<TeachingRow> rows, String selected) =>
+      TeachingStudentList(
+        rows: rows,
+        selected: selected,
+        request: _base!,
+        onSelect: _showStudent,
+        allowFollowUp: [
+          TeachingReport.attention,
+          TeachingReport.myAttention,
+          TeachingReport.myStudents,
+        ].contains(_base!.report),
+      );
 
   void _showStudent(TeachingRow row) {
     showAppDrawer<void>(
       context: context,
       builder: (context) => AppDrawer(
         title: teachingText(row['name']),
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpace.s16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
               '${row['className']} · ${row['campus']}',
@@ -513,23 +482,55 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
                   style: AppText.body14,
                 ),
               ),
+            if (teachingRows(row['dimensions']).isEmpty)
+              const Text('暂无有效分项样本，任课老师完成分项点评后显示。'),
             for (final subject in teachingRows(row['dimensions']))
-              AppCard(
-                title: teachingText(subject['subject']),
-                child: Wrap(
-                  spacing: AppSpace.s8,
-                  runSpacing: AppSpace.s4,
-                  children: [
-                    for (final dimension in teachingRows(subject['items']))
-                      AppTag(
-                        label:
-                            '${dimension['name']} ${_number(dimension['level'])}',
-                      ),
-                  ],
-                ),
-              ),
+              _studentDimensions(subject),
             for (final work in teachingRows(row['works']))
               _workCard(ArtworkSummary.fromJson(work)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _studentDimensions(TeachingRow subject) {
+    final items = teachingRows(subject['items']);
+    final hasSample = items.any((item) => item['level'] is num);
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpace.s12),
+      child: AppCard(
+        title: '${teachingText(subject['subject'])} · 分项观察',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              hasSample
+                  ? '5 级评价 · 最近 ${subject['sampleCount'] ?? 0} 份作品 · ${subject['reviewCount'] ?? 0} 条任课点评'
+                  : '暂无有效分项样本，任课老师完成分项点评后显示。',
+              style: AppText.caption12,
+            ),
+            if (hasSample) ...[
+              const SizedBox(height: AppSpace.s4),
+              Text(
+                '${teachingText(subject['fromDate'])}—${teachingText(subject['toDate'])}',
+                style: AppText.caption12,
+              ),
+              const SizedBox(height: AppSpace.s4),
+              Text('同一作品多位老师取均值，再按作品等权统计。', style: AppText.caption12),
+              const SizedBox(height: AppSpace.s12),
+              Wrap(
+                spacing: AppSpace.s8,
+                runSpacing: AppSpace.s8,
+                children: [
+                  for (final dimension in items)
+                    AppTag(
+                      label:
+                          '${dimension['name']} ${_number(dimension['level'])} / 5',
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

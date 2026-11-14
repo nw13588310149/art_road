@@ -43,6 +43,12 @@ class TeachingOverviewRepository {
 
   final ApiClient _client;
 
+  Future<ApiResponse> followUp(String id, String status, String note) =>
+      _client.post(
+        '/school/teaching/students/${Uri.encodeComponent(id)}/follow-up',
+        data: {'status': status, 'note': note},
+      );
+
   Future<ApiResponse> load(TeachingRequest request) {
     final report = request.report;
     final parameter = request.parameter;

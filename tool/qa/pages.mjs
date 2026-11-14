@@ -401,7 +401,7 @@ export const ROLES = [
       { id: 'quiz', route: '/camp', actions: [{ check: '练习方式' }, { check: '顺序练习' }] },
       { id: 'school-quiz', route: '/school-camp', actions: [{ check: '练习方式' }] },
       { id: 'school-video', route: '/school-video' },
-      { id: 'mock', route: '/mock', actions: [{ check: '模拟考试' }, { check: '功能开发中' }] },
+      { id: 'mock', route: '/mock', actions: [{ check: '我的学情' }, { check: '查看完整报告' }] },
       { id: 'design-system', route: '/design-system' },
       {
         id: 'quiz-answer', route: '/camp', actions: [
@@ -447,7 +447,7 @@ export const ROLES = [
       ] },
       { id: 'home-my-students', route: '/', actions: [
         skipGuide, { scroll: 720 }, { click: /^我的学生$/, after: 1700 },
-        { check: /近次提交/ }, { check: /待改善/ },
+        { check: /最近提交/ }, { check: /查看学情与作品/ },
       ] },
       guideStep,
       noticeStep,
@@ -802,5 +802,29 @@ ROLES.find((r) => r.id === 'student').steps.push(
  {id:'v32-market-audit-published',route:'/market',actions:[
   {account:'校长 · 陈建华'}, {click:'集市审核'}, {check:'光与空间练习'}, {click:'通过审核'}, {type:'作品与创作说明已核对，可以公开展示。',into:'处理依据'}, {click:/^通过审核$/}, {check:'当前没有待审核作品'},
   {account:'学生 · 林小雨'}, {click:'光与空间练习'}, {check:'管理这件作品'},
+ ]},
+);
+
+ROLES.find((r) => r.id === 'teacher').steps.push(
+ {id:'v32-teaching-followup',route:'/',actions:[skipGuide,{scroll:720},{click:/^我的学生$/},{check:'关注事项优先'},{click:'记录跟进'},{type:'已沟通明暗关系练习，安排下周复查局部改画。',into:'沟通结果、练习安排与下次复查要点'},{click:'保存跟进记录'},{check:'已沟通明暗关系练习'},{click:'查看学情与作品'},{check:'已提交作品'}]},
+ {id:'v32-student-dimensions',route:'/',actions:[skipGuide,{scroll:720},{click:/^我的学生$/},{click:'查看学情与作品'},{check:'已提交作品'},{scroll:650,at:[950,550]},{check:'5 级评价'},{check:'同一作品多位老师取均值'}]},
+);
+ROLES.find((r) => r.id === 'groupLeader').steps.push(
+ {id:'v32-next-course',route:'/',fixedTime:'2026-11-15T10:00:00+08:00',actions:[skipGuide,{check:'今日暂无排课'},{check:'下一次课程 · 11月16日'}]},
+);
+ROLES.find((r) => r.id === 'admin').steps.push(
+ {id:'v32-notice-edit',route:'/smart-campus',actions:[{click:'通知管理'},{click:/^编辑$/},{check:'编辑通知'},{type:'（已核对）',into:'通知标题'},{click:'保存并定时'},{check:'已核对'}]},
+);
+ROLES.find((r) => r.id === 'student').steps.push(
+ {id:'v32-picture-study',route:'/camp',actions:[{check:'看图赏析'},{click:'查看范画'},{check:'范画'}]},
+);
+
+ROLES.find((r) => r.id === 'student').steps.push(
+ {id:'v32-market-dispute',route:'/market',actions:[
+  {click:'我的订单'},{click:'午后的静物'},{click:'申请售后'},{type:'希望进一步核对本次数字授权的使用范围。',into:'问题说明'},{click:/^提交$/},{check:'售后处理中'},
+  {account:'任课老师 · 李静'},{click:'创作者工作台'},{click:'卖出的订单'},{click:'午后的静物'},{click:'拒绝申请'},{type:'已提供下单时约定的文件和许可范围说明。',into:'拒绝原因'},{click:/^提交$/},{check:'已完成'},
+  {account:'学生 · 林小雨'},{click:'我的订单'},{click:'午后的静物'},{click:'申请平台介入'},{type:'请平台对照下单许可说明协助处理。',into:'补充说明'},{click:/^提交$/},{check:'平台处理中'},
+  {account:'校长 · 陈建华'},{click:'集市审核'},{click:'查看相关记录'},{check:'售后申请'},{click:/^关闭$/},{click:/^不支持申请$/},{type:'已核对订单条款和交付记录，暂不支持本次退款申请。',into:'处理依据'},{click:'确认处理'},{check:'已处理'},
+  {account:'学生 · 林小雨'},{click:'我的订单'},{click:'午后的静物'},{check:'平台处理结果'},{check:'暂不支持本次退款申请'},
  ]},
 );

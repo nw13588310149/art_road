@@ -429,4 +429,61 @@ void main() {
       expect(order['listing'].containsKey('deliveryKinds'), false);
     },
   );
+  test(
+    'platform decision returns to buyer order and prevents duplicate escalation',
+    () async {
+      final order = await create('digital', 'decision-visible');
+      final id = order['id'];
+      await call('POST', '/app/market/orders/$id/pay');
+      await call(
+        'POST',
+        '/app/market/orders/$id/refund',
+        body: {'reason': '需要核对数字文件的授权范围'},
+      );
+      await call(
+        'POST',
+        '/app/market/orders/$id/refund-decision',
+        account: DemoAccounts.teacher,
+        body: {'approve': false, 'note': '交付文件与下单说明保持一致'},
+      );
+      await call(
+        'POST',
+        '/app/market/orders/$id/dispute',
+        body: {'reason': '请平台协助核对订单中的授权说明'},
+      );
+      final open = await call('GET', '/app/market/orders/$id');
+      expect(open['dispute']['status'], 'open');
+      await expectLater(
+        call(
+          'POST',
+          '/app/market/orders/$id/refund',
+          body: {'reason': '重复发起售后会覆盖原有申请'},
+        ),
+        rejected(409),
+      );
+      final queue = await call(
+        'GET',
+        '/app/market/moderation',
+        account: DemoAccounts.principal,
+      );
+      final caseId = queue['cases'].single['id'];
+      await call(
+        'POST',
+        '/app/market/cases/$caseId/resolve',
+        account: DemoAccounts.principal,
+        body: {'uphold': false, 'note': '已核对下单条款与交付资料，暂不支持申请'},
+      );
+      final resolved = await call('GET', '/app/market/orders/$id');
+      expect(resolved['dispute']['note'], contains('暂不支持申请'));
+      expect(resolved['events'].last['label'], '平台未支持售后申请');
+      await expectLater(
+        call(
+          'POST',
+          '/app/market/orders/$id/dispute',
+          body: {'reason': '重复提交同一次售后争议申请'},
+        ),
+        rejected(409),
+      );
+    },
+  );
 }

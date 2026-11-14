@@ -427,6 +427,33 @@ class MarketOrderPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         spacing: 20,
                         children: [
+                          if (o.dispute.isNotEmpty)
+                            AppCard(
+                              title: o.dispute['status'] == 'open'
+                                  ? '平台处理中'
+                                  : '平台处理结果',
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                spacing: 10,
+                                children: [
+                                  Text(
+                                    o.dispute['status'] == 'open'
+                                        ? '已收到介入申请，处理结果将在本订单中展示。'
+                                        : '${o.dispute['upheld'] == true ? '支持申请' : '不支持申请'} · ${o.dispute['operator']}',
+                                    style: AppText.body14Strong,
+                                  ),
+                                  if (o.dispute['note'] != null)
+                                    Text(
+                                      '${o.dispute['note']}',
+                                      style: AppText.body14,
+                                    ),
+                                  Text(
+                                    '${o.dispute['time']}',
+                                    style: AppText.caption12,
+                                  ),
+                                ],
+                              ),
+                            ),
                           if (o.afterSale.isNotEmpty)
                             AppCard(
                               title: '售后记录',

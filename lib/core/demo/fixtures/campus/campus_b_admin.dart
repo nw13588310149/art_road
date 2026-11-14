@@ -4,6 +4,7 @@ library;
 import '../../data/demo_campus_data.dart';
 import '../../data/demo_marking_data.dart';
 import '../../demo_backend.dart';
+import '../../demo_clock.dart';
 import '../../demo_store.dart';
 import '../interaction_circle.dart' show circlePendingReportCount;
 import 'campus_b_common.dart';
@@ -1030,6 +1031,9 @@ Object? _noticeList(DemoRequest req) {
 }
 
 Object? _noticeSave(DemoRequest req) {
+  if (!req.account.role.managesSchool) {
+    throw const DemoApiException('需要通知管理权限', code: 403);
+  }
   final title = req.str('title');
   final content = req.str('content');
   if (title.isEmpty) {
@@ -1043,7 +1047,7 @@ Object? _noticeSave(DemoRequest req) {
     throw const DemoApiException('请选择推送范围');
   }
   final mode = req.intOf('publishMode', 1);
-  final now = DateTime.now();
+  final now = DemoClock.now();
   DateTime? scheduled;
   if (mode == 2) {
     scheduled = cbParse(req.str('scheduledTime'));
@@ -1056,6 +1060,12 @@ Object? _noticeSave(DemoRequest req) {
   final existing = id.isEmpty
       ? null
       : cbNotices().where((n) => cbStr(n['id']) == id).firstOrNull;
+  if (id.isNotEmpty && existing == null) {
+    throw const DemoApiException('通知不存在或已删除', code: 404);
+  }
+  if (existing != null && cbNoticeStatus(existing) != 2) {
+    throw const DemoApiException('只有尚未发布的定时通知可以编辑，请刷新', code: 409);
+  }
   final notice = existing ?? <String, dynamic>{'id': DemoStore.nextId()};
   notice
     ..['title'] = title

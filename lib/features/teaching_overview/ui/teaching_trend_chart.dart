@@ -224,6 +224,7 @@ class TeachingTrendChart extends StatelessWidget {
               ),
             ),
             lineTouchData: LineTouchData(
+              handleBuiltInTouches: !highlightLatest,
               touchTooltipData: LineTouchTooltipData(
                 getTooltipColor: (_) =>
                     highlightLatest ? AppColors.brand : AppColors.ink,

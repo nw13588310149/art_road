@@ -685,7 +685,11 @@ class _MarketplaceFixture {
       ].contains(row['status'])) {
         fail('订单当前不能申请售后', 409);
       }
+      if ((row['dispute'] as Map?)?['status'] == 'open') {
+        fail('平台正在处理本次售后，请等待处理结果', 409);
+      }
       field(req.bodyMap, 'reason', '售后原因', 5, 500);
+      row.remove('dispute');
       row['afterSale'] = {
         'reason': req.str('reason'),
         'previousStatus': row['status'],
@@ -747,6 +751,7 @@ class _MarketplaceFixture {
       if ((row['afterSale'] as Map?)?['status'] != 'rejected') {
         fail('卖家拒绝售后后可申请平台介入', 409);
       }
+      if (row['dispute'] != null) fail('本次售后已有平台处理记录，请查看处理结果', 409);
       field(req.bodyMap, 'reason', '申请说明', 5, 500);
       final cases = DemoStore.list(casesKey, () => []);
       if (cases.any(
@@ -766,6 +771,11 @@ class _MarketplaceFixture {
         'status': 'open',
         'time': now(),
       });
+      row['dispute'] = {
+        'status': 'open',
+        'reason': req.str('reason'),
+        'time': now(),
+      };
       event(row, '已申请平台介入', req.account.name);
       DemoStore.save(casesKey);
       return saveOrder(row, req);
@@ -867,9 +877,28 @@ class _MarketplaceFixture {
           refund(order, req.account.name, req.str('note'));
           DemoStore.save(ordersKey);
         } else {
-          find(listings(), text(row['listingId']))['status'] = 'withdrawn';
+          final listing = find(listings(), text(row['listingId']));
+          listing['status'] = 'withdrawn';
+          listing['reviewNote'] = '平台处理举报：${req.str('note')}';
           DemoStore.save(listingsKey);
         }
+      }
+      if (row['kind'] == 'dispute') {
+        final order = find(orders(), text(row['orderId']));
+        order['dispute'] = {
+          'status': 'resolved',
+          'note': req.str('note'),
+          'upheld': req.boolOf('uphold'),
+          'operator': req.account.name,
+          'time': now(),
+        };
+        event(
+          order,
+          req.boolOf('uphold') ? '平台支持售后申请' : '平台未支持售后申请',
+          req.account.name,
+          note: req.str('note'),
+        );
+        DemoStore.save(ordersKey);
       }
       row.addAll({
         'status': 'resolved',

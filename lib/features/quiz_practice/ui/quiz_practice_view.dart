@@ -51,7 +51,7 @@ class QuizPracticeView extends ConsumerWidget {
   final String title;
   final String subtitle;
 
-  /// 公开题库展示「看图识画」（暂未开放）说明卡。
+  /// 公开题库提供范画赏析入口。
   final bool showPictureQuiz;
 
   @override
@@ -83,7 +83,8 @@ class QuizPracticeView extends ConsumerWidget {
         summaries: state.summaries,
         showPictureQuiz: showPictureQuiz,
         onSelect: (summary) => _openSession(context, controller, summary),
-        onPictureQuizTap: () => AppToast.showInfo(context, '功能暂未开放'),
+        onPictureQuizTap: () =>
+            Navigator.of(context).pushNamed(RoutePaths.gallery),
       );
     }
 
@@ -243,7 +244,7 @@ class _QuizContent extends StatelessWidget {
           ),
           if (showPictureQuiz) ...[
             SizedBox(height: ui(28)),
-            const _SectionTitle('看图识画'),
+            const _SectionTitle('看图赏析'),
             SizedBox(height: ui(12)),
             _PictureQuizCard(onTap: onPictureQuizTap),
           ],
@@ -338,9 +339,9 @@ class _PracticeRingCard extends StatelessWidget {
     final innerTop = (ringSize - innerSize) / 2;
     final isError = summary.type == QuizPracticeType.error;
 
-    return GestureDetector(
+    return AppPressable(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
+      semanticLabel: summary.type.label,
       child: Container(
         height: ui(260),
         decoration: BoxDecoration(
@@ -479,9 +480,9 @@ class _PictureQuizCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return GestureDetector(
+    return AppPressable(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
+      semanticLabel: '查看范画',
       child: Container(
         height: ui(86),
         padding: EdgeInsets.symmetric(horizontal: ui(20)),
@@ -497,7 +498,7 @@ class _PictureQuizCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '根据名作图片辨认作者、年代与流派',
+                    '观察范画的构图、用色与表现方法',
                     style: TextStyle(
                       color: _kStatTextDefault,
                       fontSize: ui(14),
@@ -507,7 +508,7 @@ class _PictureQuizCard extends StatelessWidget {
                   ),
                   SizedBox(height: ui(4)),
                   Text(
-                    '题目正在整理，开放后会在这里显示',
+                    '查看画面解析，收藏有启发的作品',
                     style: TextStyle(
                       color: _kStatLabelDefault,
                       fontSize: ui(12),
@@ -527,7 +528,7 @@ class _PictureQuizCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(ui(6)),
               ),
               child: Text(
-                '暂未开放',
+                '查看范画',
                 style: TextStyle(
                   color: AppColors.brand,
                   fontSize: ui(12),

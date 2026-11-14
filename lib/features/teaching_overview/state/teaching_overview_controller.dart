@@ -25,6 +25,22 @@ class TeachingOverviewController extends StateNotifier<AsyncValue<Object?>> {
   final TeachingRequest _request;
   int _generation = 0;
 
+  bool _saving = false;
+  Future<String?> followUp(String id, String status, String note) async {
+    if (_saving) return '正在保存，请稍候';
+    _saving = true;
+    try {
+      final response = await _repository.followUp(id, status, note);
+      if (!response.isSuccess) return response.displayMsg;
+      if (mounted) await refresh();
+      return null;
+    } catch (_) {
+      return '跟进记录保存失败，请重试';
+    } finally {
+      _saving = false;
+    }
+  }
+
   Future<void> refresh() async {
     final generation = ++_generation;
     state = const AsyncLoading();

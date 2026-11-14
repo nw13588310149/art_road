@@ -457,6 +457,7 @@ class _SongCollectionCardState extends State<_SongCollectionCard> {
     final action = await _showSongCollectionMenu(
       context: context,
       triggerKey: _menuTriggerKey,
+      canShare: !widget.item.isEbook,
     );
     if (!mounted || action == null) {
       return;
@@ -1133,11 +1134,12 @@ enum _SongMenuAction { share, remove }
 Future<_SongMenuAction?> _showSongCollectionMenu({
   required BuildContext context,
   required GlobalKey triggerKey,
+  bool canShare = true,
 }) {
   final scale = DashboardScaleScope.of(context);
   final menuWidth = scale.ui(142);
   // 估算高度：top padding(8) + 36 + 6(divider) + 36 + bottom padding(8) ≈ 94
-  final approxMenuHeight = scale.ui(96);
+  final approxMenuHeight = scale.ui(canShare ? 96 : 52);
 
   return showAnchoredPopupMenu<_SongMenuAction>(
     context: context,
@@ -1145,13 +1147,16 @@ Future<_SongMenuAction?> _showSongCollectionMenu({
     menuWidth: menuWidth,
     approxMenuHeight: approxMenuHeight,
     builder: (dialogContext, _) => _SongMenuPanel(
+      canShare: canShare,
       onSelected: (action) => Navigator.of(dialogContext).pop(action),
     ),
   );
 }
 
 class _SongMenuPanel extends StatelessWidget {
-  const _SongMenuPanel({required this.onSelected});
+  const _SongMenuPanel({required this.onSelected, required this.canShare});
+
+  final bool canShare;
 
   final ValueChanged<_SongMenuAction> onSelected;
 
@@ -1184,18 +1189,20 @@ class _SongMenuPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(height: ui(8)),
-          _SongMenuRow(
-            label: '分享',
-            icon: AppAssets.coursewareActionShare,
-            onTap: () => onSelected(_SongMenuAction.share),
-          ),
-          SizedBox(height: ui(2)),
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: ui(8)),
-            height: ui(1),
-            color: const Color(0xFFF3F4F6),
-          ),
-          SizedBox(height: ui(3)),
+          if (canShare) ...[
+            _SongMenuRow(
+              label: '分享',
+              icon: AppAssets.coursewareActionShare,
+              onTap: () => onSelected(_SongMenuAction.share),
+            ),
+            SizedBox(height: ui(2)),
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: ui(8)),
+              height: ui(1),
+              color: const Color(0xFFF3F4F6),
+            ),
+            SizedBox(height: ui(3)),
+          ],
           _SongMenuRow(
             label: '取消收藏',
             icon: AppAssets.coursewareActionDelete,

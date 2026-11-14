@@ -215,12 +215,17 @@ async function runRole(browser, role, report) {
     ),
   );
   let index = 0;
+  let hasFixedTime = false;
   for (const step of role.steps) {
     index++;
     if (onlyFilter && !onlyFilter.some((f) => step.id.startsWith(f))) continue;
     const file = path.join(dir, `${String(index).padStart(2, '0')}-${step.id}.png`);
     currentStep = step.id;
     try {
+      if (step.fixedTime || hasFixedTime) {
+        await page.clock.setFixedTime(new Date(step.fixedTime || Date.now()));
+        hasFixedTime = Boolean(step.fixedTime);
+      }
       await boot(page, step.route || '/');
       for (const action of step.actions || []) {
         await runAction(page, action);
@@ -250,9 +255,13 @@ const report = { viewport, ok: [], failed: [], errors: [] };
 const browser = await chromium.launch({ headless: true });
 try {
   const roles = ROLES.filter((role) => !roleFilter || roleFilter.includes(role.id));
-  for (let index = 0; index < roles.length; index += jobs) {
-    await Promise.all(roles.slice(index, index + jobs).map((role) => runRole(browser, role, report)));
-  }
+  let nextRole = 0;
+  await Promise.all(Array.from({ length: Math.min(jobs, roles.length) }, async () => {
+    while (nextRole < roles.length) {
+      const role = roles[nextRole++];
+      await runRole(browser, role, report);
+    }
+  }));
 } finally {
   await browser.close();
 }

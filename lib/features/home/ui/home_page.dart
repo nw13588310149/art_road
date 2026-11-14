@@ -306,6 +306,9 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                             loading: firstLoad,
                             weekItems: state.weekItems,
                             courses: state.courseNotices,
+                            heading: state.courseHeading,
+                            showingUpcomingCourses:
+                                state.showingUpcomingCourses,
                             onOpenSchedule: _openMySchedule,
                           ),
                   ),
@@ -844,12 +847,16 @@ class _CoursePanel extends StatefulWidget {
     required this.loading,
     required this.weekItems,
     required this.courses,
+    required this.heading,
+    required this.showingUpcomingCourses,
     required this.onOpenSchedule,
   });
 
   final bool loading;
   final List<HomeWeekDayItem> weekItems;
   final List<HomeCourseNotice> courses;
+  final String heading;
+  final bool showingUpcomingCourses;
   final VoidCallback onOpenSchedule;
 
   @override
@@ -929,7 +936,16 @@ class _CoursePanelState extends State<_CoursePanel> {
               ),
               const SizedBox(height: 14),
             ],
-            Text('课程', style: _courseHeading),
+            if (widget.showingUpcomingCourses) ...[
+              Text('今日暂无排课', style: AppText.body13),
+              const SizedBox(height: AppSpace.s8),
+            ],
+            Text(
+              widget.heading,
+              style: widget.showingUpcomingCourses
+                  ? AppText.body14Strong
+                  : _courseHeading,
+            ),
             const SizedBox(height: 6),
             if (courses.isEmpty)
               Expanded(

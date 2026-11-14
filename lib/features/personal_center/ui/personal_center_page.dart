@@ -924,7 +924,7 @@ class _ActionTile extends StatelessWidget {
 }
 
 // =============================================================================
-// 我的二维码弹窗：紫白渐变头 + 头像/名称 + 浅紫框 二维码 + 双按钮（保存到相册 / 关闭）。
+// 我的二维码弹窗：紫白渐变头 + 头像/名称 + 浅紫框 二维码 + 双按钮（保存二维码 / 关闭）。
 // 完全对齐 Figma 428×××（高度由内容撑起）布局：
 //   · 顶部 180 高 D8CCFF→white 渐变（由 GradientHeaderDialog 提供）
 //   · 标题「我的二维码」20/500 居中，距顶与「新建笔记」弹窗一致（25）
@@ -932,10 +932,10 @@ class _ActionTile extends StatelessWidget {
 //     包二维码 122×122，下方两行说明文字
 //   · 双按钮：取消（白）/ 主操作（紫渐变）
 //
-// 「保存到相册」走 `qr_image_saver`：
+// 「保存二维码」走 `qr_image_saver`：
 //   · web → 浏览器下载 PNG；
 //   · 桌面 → 弹系统保存对话框写入文件；
-//   · 移动暂不支持，提示用户截屏保存。
+//   · 移动通过系统文件选择器保存至所选位置。
 // =============================================================================
 class _MyQrCodeDialog extends StatefulWidget {
   const _MyQrCodeDialog({
@@ -1025,7 +1025,7 @@ class _MyQrCodeDialogState extends State<_MyQrCodeDialog> {
           const SizedBox(height: 24),
           AppDialogActionBar(
             cancelLabel: '关闭',
-            confirmLabel: _saving ? '保存中…' : '保存到相册',
+            confirmLabel: _saving ? '保存中…' : '保存二维码',
             confirmEnabled: !_saving,
             onCancel: () => Navigator.of(context).pop(),
             onConfirm: _onSave,
@@ -1190,7 +1190,7 @@ class _QrImage extends StatelessWidget {
   /// 兼容两种返回：
   /// - `data:image/png;base64,xxx` / `data:image/;base64,xxx`（接口实际格式）
   /// - 纯 base64 串（兜底）
-  /// 解码失败时返回 null，由调用方退化到占位图。「保存到相册」会复用本方法
+  /// 解码失败时返回 null，由调用方退化到占位图。「保存二维码」会复用本方法
   /// 把同一份 bytes 写入文件，避免再 decode 一次。
   static Uint8List? tryDecodeBase64(String raw) {
     if (raw.isEmpty) return null;

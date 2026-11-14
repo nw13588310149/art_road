@@ -297,4 +297,139 @@ void main() {
       expect((await task())['status'], 'SUBMITTED');
     },
   );
+  test(
+    'teaching follow-up persists audit history and enforces teaching scope',
+    () async {
+      final router = DemoBackend.marking;
+      final students =
+          await call(
+                router,
+                'GET',
+                '/school/teacher/students',
+                DemoAccounts.teacher,
+              )
+              as List;
+      final id = students.first['id'];
+      final path = '/school/teaching/students/$id/follow-up';
+      await expectLater(
+        call(
+          router,
+          'POST',
+          path,
+          DemoAccounts.student,
+          body: {'status': 'following', 'note': '安排明暗关系练习并下周复查'},
+        ),
+        throwsA(isA<DemoApiException>().having((e) => e.code, 'code', 403)),
+      );
+      await expectLater(
+        call(
+          router,
+          'POST',
+          path,
+          DemoAccounts.teacher,
+          body: {'status': 'following', 'note': '短'},
+        ),
+        throwsA(isA<DemoApiException>()),
+      );
+      await call(
+        router,
+        'POST',
+        path,
+        DemoAccounts.teacher,
+        body: {'status': 'following', 'note': '安排明暗关系练习并下周复查'},
+      );
+      await call(
+        router,
+        'POST',
+        path,
+        DemoAccounts.principal,
+        body: {'status': 'resolved', 'note': '已核对沟通记录，持续观察后续作品'},
+      );
+      final refreshed =
+          await call(
+                router,
+                'GET',
+                '/school/teacher/students',
+                DemoAccounts.teacher,
+              )
+              as List;
+      final follow = refreshed.firstWhere((r) => r['id'] == id)['followUp'];
+      expect(follow['status'], 'resolved');
+      expect(follow['owner'], DemoAccounts.principal.name);
+      expect(follow['history'], hasLength(2));
+      await DemoStore.reset();
+      final reset =
+          await call(
+                router,
+                'GET',
+                '/school/teacher/students',
+                DemoAccounts.teacher,
+              )
+              as List;
+      expect(reset.firstWhere((r) => r['id'] == id)['followUp'], isEmpty);
+    },
+  );
+  test('scheduled notice can be edited without creating a duplicate', () async {
+    final router = DemoBackend.platform;
+    const base = '/app/school/v2/manager';
+    final request = {
+      'title': '色彩讲评安排',
+      'content': '请同学们携带近期色彩静物作品参加周末讲评。',
+      'pushScope': 'student',
+      'publishMode': 2,
+      'scheduledTime': DateTime.now()
+          .add(const Duration(days: 2))
+          .toIso8601String(),
+    };
+    final created = await call(
+      router,
+      'POST',
+      '$base/noticeSave',
+      DemoAccounts.admin,
+      body: request,
+    );
+    final id = created['id'];
+    await call(
+      router,
+      'POST',
+      '$base/noticeSave',
+      DemoAccounts.admin,
+      body: {...request, 'id': id, 'title': '色彩讲评安排已核对'},
+    );
+    final detail = await call(
+      router,
+      'POST',
+      '$base/noticeDetail',
+      DemoAccounts.admin,
+      body: {'id': id},
+    );
+    expect(detail['title'], '色彩讲评安排已核对');
+    await expectLater(
+      call(
+        router,
+        'POST',
+        '$base/noticeSave',
+        DemoAccounts.student,
+        body: {...request, 'id': id},
+      ),
+      throwsA(isA<DemoApiException>().having((e) => e.code, 'code', 403)),
+    );
+    await call(
+      router,
+      'POST',
+      '$base/noticeSave',
+      DemoAccounts.admin,
+      body: {...request, 'id': id, 'publishMode': 1},
+    );
+    await expectLater(
+      call(
+        router,
+        'POST',
+        '$base/noticeSave',
+        DemoAccounts.admin,
+        body: {...request, 'id': id},
+      ),
+      throwsA(isA<DemoApiException>().having((e) => e.code, 'code', 409)),
+    );
+  });
 }
