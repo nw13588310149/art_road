@@ -8,6 +8,8 @@ import '../../shell/state/shell_state.dart';
 import '../state/study_center_args.dart';
 import 'staff/staff_study_view.dart';
 import 'student/student_study_view.dart';
+import '../../teaching_overview/data/teaching_overview_repository.dart';
+import '../../teaching_overview/ui/teaching_overview_page.dart';
 
 /// 学情中心（`/study`）：学生「我的学情」，教职角色「班级学情」。
 ///
@@ -36,6 +38,11 @@ class _StudyCenterPageState extends ConsumerState<StudyCenterPage> {
     final resolvedRole = role.trim().isNotEmpty
         ? role
         : DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
+    if (resolvedRole == 'principal' && args.examId.isEmpty) {
+      return const TeachingReportPage(
+        initial: (report: TeachingReport.classes, campus: '', parameter: ''),
+      );
+    }
     return isStaffRole(resolvedRole)
         ? StaffStudyView(key: const ValueKey<String>('study-staff'), args: args)
         : StudentStudyView(

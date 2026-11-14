@@ -1,5 +1,5 @@
 /// 学情中心入口直达的子视图。
-enum StudyCenterInitialView { report, paper, standard, trend }
+enum StudyCenterInitialView { report, paper, standard, trend, artworkGrowth }
 
 /// 路由参数：`{'examId': String, 'view': 'report' | 'paper' | 'standard' | 'trend',
 /// 'subjectId': String}`，均可省略。
@@ -25,6 +25,7 @@ class StudyCenterArgs {
       'paper' => StudyCenterInitialView.paper,
       'standard' => StudyCenterInitialView.standard,
       'trend' || 'growth' => StudyCenterInitialView.trend,
+      'artworkgrowth' => StudyCenterInitialView.artworkGrowth,
       _ => null,
     };
     return StudyCenterArgs(

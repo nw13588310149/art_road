@@ -879,6 +879,7 @@ class TeacherRepository {
     required String endTime,
     required int subjectId,
     String expectedExt = '',
+    String referenceWorkId = '',
   }) {
     return client.post(
       '$_base/teacherHomeworkSave',
@@ -889,6 +890,7 @@ class TeacherRepository {
         'endTime': endTime,
         'subjectId': subjectId,
         if (expectedExt.isNotEmpty) 'expectedExt': expectedExt,
+        if (referenceWorkId.isNotEmpty) 'referenceWorkId': referenceWorkId,
       },
     );
   }

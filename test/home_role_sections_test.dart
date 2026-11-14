@@ -222,6 +222,8 @@ Future<void> _pumpHome(WidgetTester tester, String role) async {
   await tester.pump();
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 100));
+  await tester.pump(const Duration(milliseconds: 350));
+  await tester.pump(const Duration(milliseconds: 350));
 }
 
 void main() {
@@ -255,7 +257,7 @@ void main() {
       expect(admin.courses, isFalse);
 
       final principal = homeSectionsFor('principal');
-      expect(principal.sideTodo && principal.studySnapshot, isTrue);
+      expect(principal.principalOverview, isTrue);
       expect(principal.courses || principal.practice, isFalse);
 
       final dorm = homeSectionsFor('dormManager');
@@ -448,24 +450,23 @@ void main() {
       );
     }
 
-    testWidgets(
-      'student sees today practice, latest review and study snapshot',
-      (tester) async {
-        await _pumpHome(tester, 'student');
-        expect(tester.takeException(), isNull);
-        expectSameHeight(tester, HomePracticeCard, HomeLatestReviewCard);
-        expect(find.textContaining('今日练习'), findsOneWidget);
-        expect(find.text('镜像翻转'), findsOneWidget);
-        expect(find.text('色彩范画对照'), findsOneWidget);
-        expect(find.textContaining('最近点评'), findsOneWidget);
-        expect(find.text('石膏头像结构练习'), findsOneWidget);
-        expect(find.textContaining('结构交代清楚'), findsOneWidget);
-        expect(find.textContaining('学情速览'), findsOneWidget);
-        expect(find.text('课程'), findsOneWidget);
-        expect(find.textContaining('今日待办'), findsNothing);
-        expect(find.byType(ArtSubjectCard), findsNWidgets(3));
-      },
-    );
+    testWidgets('student sees today tasks, latest review and study snapshot', (
+      tester,
+    ) async {
+      await _pumpHome(tester, 'student');
+      expect(tester.takeException(), isNull);
+      expectSameHeight(tester, HomePracticeCard, HomeLatestReviewCard);
+      expect(find.text('今日任务'), findsOneWidget);
+      expect(find.text('镜像翻转'), findsOneWidget);
+      expect(find.text('色彩范画对照'), findsOneWidget);
+      expect(find.textContaining('最近点评'), findsOneWidget);
+      expect(find.text('石膏头像结构练习'), findsOneWidget);
+      expect(find.textContaining('结构交代清楚'), findsOneWidget);
+      expect(find.textContaining('学情速览'), findsOneWidget);
+      expect(find.text('课程'), findsOneWidget);
+      expect(find.textContaining('今日待办'), findsNothing);
+      expect(find.byType(ArtSubjectCard), findsNWidgets(3));
+    });
 
     testWidgets('teacher sees the review queue next to the studio snapshot', (
       tester,
@@ -477,7 +478,7 @@ void main() {
       expect(find.textContaining('作品点评'), findsWidgets);
       expect(find.text('开始点评'), findsOneWidget);
       expect(find.textContaining('已点评 18 件'), findsOneWidget);
-      expect(find.textContaining('今日练习'), findsNothing);
+      expect(find.text('今日任务'), findsNothing);
       expect(find.text('课程'), findsOneWidget);
     });
 

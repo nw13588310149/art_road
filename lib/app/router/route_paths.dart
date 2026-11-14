@@ -18,6 +18,7 @@ abstract final class RoutePaths {
 
   /// 组长复核池。
   static const leadReviews = '/artworks/lead-reviews';
+  static const teachingOverview = '/teaching-overview';
 
   /// 范画库：素描 / 色彩 / 速写 / 高分卷。
   static const gallery = '/gallery';

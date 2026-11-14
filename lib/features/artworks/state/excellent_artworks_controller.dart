@@ -49,34 +49,41 @@ class ExcellentArtworksState {
   }
 }
 
-final excellentArtworksControllerProvider =
-    StateNotifierProvider.autoDispose<
-      ExcellentArtworksController,
-      ExcellentArtworksState
-    >((ref) {
+final excellentArtworksControllerProvider = StateNotifierProvider.autoDispose
+    .family<ExcellentArtworksController, ExcellentArtworksState, String>((
+      ref,
+      campusId,
+    ) {
       return ExcellentArtworksController(
         repository: ref.watch(artworkRepositoryProvider),
+        campusId: campusId,
       );
     });
 
 class ExcellentArtworksController
     extends StateNotifier<ExcellentArtworksState> {
-  ExcellentArtworksController({required ArtworkRepository repository})
-    : _repository = repository,
-      super(const ExcellentArtworksState()) {
+  ExcellentArtworksController({
+    required ArtworkRepository repository,
+    this.campusId = '',
+  }) : _repository = repository,
+       super(const ExcellentArtworksState()) {
     unawaited(refresh());
   }
 
   final ArtworkRepository _repository;
+  final String campusId;
+  int _generation = 0;
 
   Future<void> refresh() async {
-    state = state.copyWith(loading: true, errorMessage: '');
+    final generation = ++_generation;
+    state = state.copyWith(loading: true, loadingMore: false, errorMessage: '');
     final response = await _repository.getExcellentArtworks(
       subject: state.subject,
+      campusId: campusId,
       page: 1,
       size: _pageSize,
     );
-    if (!mounted) {
+    if (!mounted || generation != _generation) {
       return;
     }
     if (!response.isSuccess) {
@@ -107,13 +114,15 @@ class ExcellentArtworksController
     if (state.loading || state.loadingMore || !state.hasMore) {
       return;
     }
+    final generation = _generation;
     state = state.copyWith(loadingMore: true);
     final response = await _repository.getExcellentArtworks(
       subject: state.subject,
+      campusId: campusId,
       page: state.page + 1,
       size: _pageSize,
     );
-    if (!mounted) {
+    if (!mounted || generation != _generation) {
       return;
     }
     if (!response.isSuccess) {

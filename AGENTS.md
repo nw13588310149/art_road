@@ -2,13 +2,13 @@
 
 ## Product
 - 美育集: a landscape iPad app for art-exam (美术艺考) students, studio teachers and studio staff, built around the marking system (阅卷系统).
-- 2.0 is a demo build: every request is answered by the local demo backend while keeping the real API paths. The app name is 「美育集」. The logo is the ArtEd.Hub / 美育集 lockup in `assets/images/brand/meiyuji_logo.png`; the square app icon uses the 「美育集」 wordmark.
-- Product plan: `docs/美术之路产品规划.md`. Design rules and component library: `docs/设计规范.md`. Backend gaps before going live: `docs/后端缺口清单.md`. Run instructions and demo accounts: `README.md`. Audit findings and fix records: `docs/走查问题清单.md`, `docs/走查/`.
+- 3.0 is a demo build: every request is answered by the local demo backend using the app's API paths. The app name is 「美育集」. The logo is the ArtEd.Hub / 美育集 lockup in `assets/images/brand/meiyuji_logo.png`; the square app icon uses the 「美育集」 wordmark.
+- Product plan and implementation: `docs/美育集3.0产品方案.md`, `docs/美育集3.0实施规格.md`. Design rules and component library: `docs/设计规范.md`. Backend gaps before going live: `docs/后端缺口清单.md`. Run instructions and demo accounts: `README.md`. Audit findings and fix records: `docs/走查问题清单.md`, `docs/走查/`.
 
 ## Current Rules
 - All feature work uses Flutter. UI and business state stay strictly separated: feature folders `data/` (repository + models) → `state/` (Riverpod StateNotifier controllers) → `ui/`.
 - Read this file before every change and continue with the existing architecture.
-- After every change run `dart analyze` (must report no issues) and `flutter test --no-pub`. `flutter analyze` crashes on this machine; use `dart analyze`.
+- After every change run `dart analyze lib test` (must report no issues) and `flutter test --no-pub`. `flutter analyze` crashes on this machine.
 - Dependencies resolve offline only (`flutter pub get --offline`). Do not add packages without the user's approval.
 - No music wording or imagery anywhere: strings, comments, asset names and pictures. Subjects are 素描 / 色彩 / 速写 (plus 美术常识 / 文化课); use `ArtSubject` for subject labels and colors.
 - Every API the app calls must have a demo fixture with art-themed data, and demo data must stay consistent across modules (same students, teachers, exams, timetable, counts and scores). Demo times go through `DemoClock` so they land in daytime.
@@ -56,6 +56,7 @@
 - Data:
   - `DemoMarkingData` is a deterministic port of the uni-app mock data (mulberry32 RNG): 示范画室, three campuses, exams 21–27, 40 students, judges / trimmed mean / arbitration, A–E bands.
   - `DemoCampusData` covers classes, staff, timetable and dorm beds; `DemoArtworkData` and `DemoFavorites` cover artworks and favorites.
+  - `DemoArtworkStore` owns artwork versions and tasks. Campus homework adapters project their existing response shapes from this store. Teaching reports combine the same works and tasks with the campus sign records and marking results.
   - Smart campus part A and part B keep separate stores; only leave records are bridged between them.
 
 ## Platform Notes

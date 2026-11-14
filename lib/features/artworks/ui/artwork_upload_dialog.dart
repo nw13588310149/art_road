@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/ui.dart';
 import '../../../core/art/art_subject.dart';
+import '../../../app/router/route_paths.dart';
 import '../../../core/widgets/app_date_time_pickers.dart';
 import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
@@ -300,6 +301,9 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
     ];
     final subjectEditable =
         enabled && widget.parentId.isEmpty && _taskId.isEmpty;
+    final selectedTask = availableTasks
+        .where((task) => task.id == _taskId)
+        .firstOrNull;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -339,6 +343,23 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
               label: '重新加载作业',
               variant: AppButtonVariant.text,
               onTap: ref.read(artworkTasksControllerProvider.notifier).refresh,
+            ),
+          if (selectedTask != null && selectedTask.requirement.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpace.s8),
+              child: Text(selectedTask.requirement, style: AppText.body13),
+            ),
+          if (selectedTask != null && selectedTask.referenceWorkId.isNotEmpty)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppButton(
+                label: '查看参考范画',
+                variant: AppButtonVariant.text,
+                onTap: () => Navigator.of(context).pushNamed(
+                  RoutePaths.gallery,
+                  arguments: {'workId': selectedTask.referenceWorkId},
+                ),
+              ),
             ),
         ],
         Wrap(

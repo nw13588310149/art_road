@@ -260,8 +260,7 @@ List<Map<String, dynamic>> _seedApplies() {
       subject: '速写',
       lineNum: 1,
       days: [
-        for (var w = 0; w < 5; w++)
-          cbAddDays(upcoming(DateTime.sunday), w * 7),
+        for (var w = 0; w < 5; w++) cbAddDays(upcoming(DateTime.sunday), w * 7),
       ],
       students: [12, 15, 18, 5],
       status: 0,
@@ -399,8 +398,7 @@ List<CbCourse> cbCoursesOn(DateTime date) {
           classId: c.id,
           type: 0,
           subjectName: slot.courseName,
-          teacherUserId:
-              DemoCampusData.staffById(slot.teacherId)?.userId ?? '',
+          teacherUserId: DemoCampusData.staffById(slot.teacherId)?.userId ?? '',
           start: slot.start,
           end: slot.end,
           lineNum: lineNum,
@@ -429,10 +427,7 @@ List<CbCourse> cbCoursesOn(DateTime date) {
         start: slot.start,
         end: slot.end,
         lineNum: lineNum,
-        classroomId: cbClassroomId(
-          cbStr(cls['campusName'], '城东校区'),
-          slot.room,
-        ),
+        classroomId: cbClassroomId(cbStr(cls['campusName'], '城东校区'), slot.room),
         color: cbCourseColor(slot.courseName, small: true),
       ),
     );
@@ -533,7 +528,11 @@ Map<String, dynamic> _defaultSign(CbCourse c) {
     return <String, dynamic>{'signStatus': 0, 'students': <String, dynamic>{}};
   }
   final students = <String, dynamic>{};
-  final teacherIn = c.startAt.subtract(const Duration(minutes: 4));
+  final teacherSeed = cbHash(c.teacherUserId);
+  final late = cbHash(c.id) % 10 < teacherSeed % 5;
+  final teacherIn = c.startAt.add(
+    Duration(minutes: late ? 12 + teacherSeed % 7 : -4),
+  );
   final teacherOut = c.endAt.add(const Duration(minutes: 2));
   final makeups = {
     for (final m in cbSignMakeups())
@@ -578,7 +577,7 @@ Map<String, dynamic> _defaultSign(CbCourse c) {
       if (present) 'checkInTime': cbDateTime(checkIn),
       if (present && c.isSmall)
         'checkOutTime': cbDateTime(teacherOut.add(Duration(minutes: roll % 4))),
-      if (present && c.isSmall) 'score': roll % 3 == 0 ? 4 : 5,
+      if (present && c.isSmall) 'score': 3 + (roll + teacherSeed) % 3,
       if (present && c.isSmall)
         'comment': _evalComments[roll % _evalComments.length],
       if (status == 3) 'remark': '已提交请假条',
@@ -901,14 +900,8 @@ DateTime _weekdayOnOrBefore(DateTime day) {
 
 /// 补签申请的原因与审核意见（学生端与管理端共用）。
 const cbForcedMakeupTexts = (
-  approved: (
-    reason: '人脸识别设备故障未能打卡，任课老师可以作证',
-    remark: '经任课老师确认情况属实，同意补签',
-  ),
-  rejected: (
-    reason: '下午身体不舒服回宿舍休息，忘记请假',
-    remark: '未提前请假，按缺勤处理；后续请先向班主任报备',
-  ),
+  approved: (reason: '人脸识别设备故障未能打卡，任课老师可以作证', remark: '经任课老师确认情况属实，同意补签'),
+  rejected: (reason: '下午身体不舒服回宿舍休息，忘记请假', remark: '未提前请假，按缺勤处理；后续请先向班主任报备'),
 );
 
 List<Map<String, dynamic>> _seedSignMakeups() {

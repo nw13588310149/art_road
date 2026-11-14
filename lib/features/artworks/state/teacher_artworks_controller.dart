@@ -19,6 +19,9 @@ class TeacherArtworksState {
     this.stats = const ArtworkStats(),
     this.filter = ArtworkStatusFilter.pending,
     this.keyword = '',
+    this.subject = '',
+    this.campus = '',
+    this.teacherId = '',
     this.items = const <ArtworkSummary>[],
     this.page = 0,
     this.total = 0,
@@ -39,6 +42,9 @@ class TeacherArtworksState {
   final ArtworkStats stats;
   final ArtworkStatusFilter filter;
   final String keyword;
+  final String subject;
+  final String campus;
+  final String teacherId;
   final List<ArtworkSummary> items;
   final int page;
   final int total;
@@ -53,6 +59,9 @@ class TeacherArtworksState {
     ArtworkStats? stats,
     ArtworkStatusFilter? filter,
     String? keyword,
+    String? subject,
+    String? campus,
+    String? teacherId,
     List<ArtworkSummary>? items,
     int? page,
     int? total,
@@ -69,6 +78,9 @@ class TeacherArtworksState {
       stats: stats ?? this.stats,
       filter: filter ?? this.filter,
       keyword: keyword ?? this.keyword,
+      subject: subject ?? this.subject,
+      campus: campus ?? this.campus,
+      teacherId: teacherId ?? this.teacherId,
       items: items ?? this.items,
       page: page ?? this.page,
       total: total ?? this.total,
@@ -121,9 +133,7 @@ class TeacherArtworksController extends StateNotifier<TeacherArtworksState> {
       page: page?.current,
       total: page?.total,
       hasMore: page?.hasMore,
-      listFailed: listCurrent
-          ? (!list.isSuccess && state.items.isEmpty)
-          : null,
+      listFailed: listCurrent ? (!list.isSuccess && state.items.isEmpty) : null,
       errorMessage: failed?.errorOr('作品加载失败，请稍后重试') ?? '',
     );
   }
@@ -155,6 +165,19 @@ class TeacherArtworksController extends StateNotifier<TeacherArtworksState> {
     await _loadList(reset: false);
   }
 
+  Future<void> setScope({
+    String? subject,
+    String? campus,
+    String? teacherId,
+  }) async {
+    state = state.copyWith(
+      subject: subject,
+      campus: campus,
+      teacherId: teacherId,
+    );
+    await _loadList(reset: true);
+  }
+
   /// 「开始点评」：取第一份待我点评的作品。
   Future<({String? id, String error})> firstPendingId() async {
     final response = await _repository.getTeacherArtworks(
@@ -172,6 +195,9 @@ class TeacherArtworksController extends StateNotifier<TeacherArtworksState> {
   Future<ApiResponse> _fetchPage(int page) => _repository.getTeacherArtworks(
     status: state.filter,
     keyword: state.keyword,
+    subject: state.subject,
+    campus: state.campus,
+    teacherId: state.teacherId,
     page: page,
     size: _pageSize,
   );

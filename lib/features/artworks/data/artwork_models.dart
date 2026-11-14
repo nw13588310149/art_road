@@ -432,6 +432,7 @@ class ArtworkTask {
     this.teacherName = '',
     this.status = '',
     this.classIds = const <String>[],
+    this.referenceWorkId = '',
   });
 
   factory ArtworkTask.fromJson(Object? raw) {
@@ -447,6 +448,7 @@ class ArtworkTask {
       teacherId: _str(json['teacherId']),
       teacherName: _str(json['teacherName']),
       status: _str(json['status']).toUpperCase(),
+      referenceWorkId: _str(json['referenceWorkId']),
       classIds: classes is List
           ? <String>[for (final item in classes) _str(item)]
           : const <String>[],
@@ -463,6 +465,7 @@ class ArtworkTask {
   final String teacherName;
   final String status;
   final List<String> classIds;
+  final String referenceWorkId;
 }
 
 /// 一笔批注：[points] 按图片宽高归一化到 0–1，[width] 以 600 宽的图片为基准。
@@ -763,6 +766,7 @@ class ArtworkInsightTag {
     required this.count,
     this.explanation = '',
     this.positive = false,
+    this.resolvedCount = 0,
   });
 
   factory ArtworkInsightTag.fromJson(Object? raw) {
@@ -773,6 +777,7 @@ class ArtworkInsightTag {
       count: _int(json['count']),
       explanation: _str(json['explanation']),
       positive: _bool(json['positive']),
+      resolvedCount: _int(json['resolvedCount']),
     );
   }
 
@@ -783,6 +788,7 @@ class ArtworkInsightTag {
 
   /// 表扬类标签（如「细节出彩」），不计入问题建议。
   final bool positive;
+  final int resolvedCount;
 }
 
 @immutable
@@ -833,6 +839,7 @@ class ArtworkInsights {
     this.streakDays = 0,
     this.recentSubmitCount = 0,
     this.resolveRate,
+    this.dimensions = const <ArtworkDimensionLevels>[],
   });
 
   factory ArtworkInsights.fromJson(Object? raw) {
@@ -849,6 +856,9 @@ class ArtworkInsights {
       streakDays: _int(json['streakDays']),
       recentSubmitCount: _int(json['recentSubmitCount']),
       resolveRate: _num(json['resolveRate']),
+      dimensions: _maps(
+        json['dimensionLevels'],
+      ).map(ArtworkDimensionLevels.fromJson).toList(),
     );
   }
 
@@ -861,6 +871,46 @@ class ArtworkInsights {
   final int streakDays;
   final int recentSubmitCount;
   final double? resolveRate;
+  final List<ArtworkDimensionLevels> dimensions;
+}
+
+class ArtworkDimensionLevels {
+  const ArtworkDimensionLevels({
+    required this.subject,
+    required this.sampleCount,
+    required this.items,
+    this.history = const [],
+  });
+
+  factory ArtworkDimensionLevels.fromJson(Map<String, dynamic> json) {
+    return ArtworkDimensionLevels(
+      subject: _str(json['subject']),
+      sampleCount: _int(json['sampleCount']),
+      items: [
+        for (final row in _maps(json['items']))
+          (
+            key: _str(row['key']),
+            name: _str(row['name']),
+            level: _num(row['level']),
+          ),
+      ],
+      history: [
+        for (final row in _maps(json['history']))
+          (
+            date: _str(row['date']),
+            levels: {
+              for (final entry in _map(row['levels']).entries)
+                entry.key: ?_num(entry.value),
+            },
+          ),
+      ],
+    );
+  }
+
+  final String subject;
+  final int sampleCount;
+  final List<({String key, String name, double? level})> items;
+  final List<({String date, Map<String, double> levels})> history;
 }
 
 /// 分页结构 `{records, total, size, current, pages}`。

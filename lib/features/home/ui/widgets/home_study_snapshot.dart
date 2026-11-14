@@ -11,6 +11,8 @@ import '../../../shell/state/shell_controller.dart';
 import '../../../shell/state/shell_state.dart';
 import '../../../study_center/data/study_center_repository.dart';
 import '../../../study_center/data/study_models.dart';
+import '../../../study_center/data/composite_estimate.dart';
+import '../../../study_center/state/composite_estimate_controller.dart';
 
 class HomeStudySnapshot {
   const HomeStudySnapshot({
@@ -25,6 +27,7 @@ class HomeStudySnapshot {
     this.scoreChange,
     this.rankingChange,
     this.subjects = const <({String name, double? score, String grade})>[],
+    this.nextExamDays,
   });
 
   final bool staff;
@@ -45,6 +48,7 @@ class HomeStudySnapshot {
 
   /// 名次变化：正数表示名次上升。
   final int? rankingChange;
+  final int? nextExamDays;
 
   /// 学生：各科分数与档位；老师：各科平均分。
   final List<({String name, double? score, String grade})> subjects;
@@ -138,6 +142,11 @@ final homeStudySnapshotProvider =
       final stage = overview.recentStage;
       if (stage == null) return null;
       final exam = stage.exam;
+      final raw = response.data;
+      final next = raw is Map
+          ? DateTime.tryParse('${raw['nextExamDate']}')
+          : null;
+      final today = raw is Map ? DateTime.tryParse('${raw['today']}') : null;
       return HomeStudySnapshot(
         staff: false,
         examName: exam.examName,
@@ -150,6 +159,9 @@ final homeStudySnapshotProvider =
         participants: exam.participantCount,
         scoreChange: stage.scoreChange,
         rankingChange: stage.rankingChange,
+        nextExamDays: next == null || today == null
+            ? null
+            : next.difference(today).inDays.clamp(0, 365),
         subjects: [
           for (final subject in exam.subjects)
             (
@@ -217,19 +229,27 @@ class HomeStudySnapshotCard extends ConsumerWidget {
   }
 }
 
-class _SnapshotCard extends StatelessWidget {
+class _SnapshotCard extends ConsumerWidget {
   const _SnapshotCard({required this.data, required this.onOpen});
 
   final HomeStudySnapshot data;
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (data.staff) {
       return _StudioSnapshotCard(data: data, onOpen: onOpen);
     }
 
     final full = data.maxScore;
+    final form = ref.watch(compositeEstimateFormProvider).form;
+    final gap = estimateComposite(
+      province: form.province,
+      professionalScore: data.totalScore,
+      professionalFull: full,
+      culture: form.culture,
+      target: form.target,
+    ).gap;
     final tiles = <(int, Widget)>[
       (
         6,
@@ -275,13 +295,28 @@ class _SnapshotCard extends StatelessWidget {
         color: AppColors.textPlaceholder,
       ),
       onTap: onOpen,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: AppSpace.s8,
         children: [
-          for (var i = 0; i < tiles.length; i++) ...[
-            if (i > 0) const SizedBox(width: AppSpace.s8),
-            Expanded(flex: tiles[i].$1, child: tiles[i].$2),
-          ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < tiles.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpace.s8),
+                Expanded(flex: tiles[i].$1, child: tiles[i].$2),
+              ],
+            ],
+          ),
+          Wrap(
+            spacing: AppSpace.s8,
+            runSpacing: AppSpace.s4,
+            children: [
+              if (data.nextExamDays case final days?)
+                AppTag(label: days == 0 ? '下次模考在今天' : '距下次模考 $days 天'),
+              if (gap != null) AppTag(label: '目标与预估相差 ${formatScore(gap)} 分'),
+            ],
+          ),
         ],
       ),
     );

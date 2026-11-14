@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import '../data/demo_marking_data.dart';
 import '../demo_backend.dart';
 import '../media/demo_media.dart';
+import 'campus/campus_a_common.dart';
+import '../demo_clock.dart';
 
 /// 学情中心演示接口（阅卷系统 exam-api）：学生「我的学情」与教职「班级学情」。
 void registerMarkingStudyFixtures(DemoRouter marking) {
@@ -45,6 +47,11 @@ void registerMarkingStudyFixtures(DemoRouter marking) {
               'rankingChange': recentChanges?.ranking,
             },
       'exams': [for (final entry in newestFirst.take(6)) _examRecord(entry)],
+      'nextExamDate': CampusA.nextMonthlyExamDay().toIso8601String().substring(
+        0,
+        10,
+      ),
+      'today': DemoClock.now().toIso8601String().substring(0, 10),
     };
   });
 

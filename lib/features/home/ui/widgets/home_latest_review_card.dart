@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../core/art/art_tokens.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../artworks/ui/artwork_upload_dialog.dart';
 import '../../state/home_student_cards.dart';
 
 /// 学生首页「最近点评」：最近一份点评完成的作品，分数与老师的一句评语，点开进入作品详情。
@@ -61,6 +62,20 @@ class HomeLatestReviewCard extends ConsumerWidget {
             : _ReviewBody(
                 review: data,
                 onTap: () => _open(context, ref, data.artworkId),
+                onRevise: data.canRevise
+                    ? () async {
+                        final saved = await showArtworkUploadDialog(
+                          context,
+                          parentId: data.artworkId,
+                          title: data.title,
+                          subject: data.subject,
+                        );
+                        if (context.mounted && saved == true) {
+                          ref.invalidate(homeLatestReviewProvider);
+                          AppToast.showSuccess(context, '改画已提交');
+                        }
+                      }
+                    : null,
               ),
       ),
     );
@@ -68,10 +83,11 @@ class HomeLatestReviewCard extends ConsumerWidget {
 }
 
 class _ReviewBody extends StatelessWidget {
-  const _ReviewBody({required this.review, required this.onTap});
+  const _ReviewBody({required this.review, required this.onTap, this.onRevise});
 
   final HomeLatestReview review;
   final VoidCallback onTap;
+  final VoidCallback? onRevise;
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +147,9 @@ class _ReviewBody extends StatelessWidget {
                   text: formatScore(score),
                   style: AppText.number(
                     size: 24,
-                    color: score == null ? AppColors.textTertiary : AppColors.brand,
+                    color: score == null
+                        ? AppColors.textTertiary
+                        : AppColors.brand,
                   ),
                 ),
                 if (score != null)
@@ -157,6 +175,27 @@ class _ReviewBody extends StatelessWidget {
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if (review.roles.isNotEmpty || onRevise != null) ...[
+            const SizedBox(height: AppSpace.s8),
+            Wrap(
+              spacing: AppSpace.s4,
+              runSpacing: AppSpace.s4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (review.roles.contains('TEACHER')) const AppTag(label: '老师'),
+                if (review.roles.contains('LEADER')) const AppTag(label: '组长'),
+                if (review.roles.contains('PRINCIPAL'))
+                  const AppTag(label: '校长'),
+                if (onRevise != null)
+                  AppButton(
+                    label: '改画重交',
+                    size: AppButtonSize.sm,
+                    variant: AppButtonVariant.text,
+                    onTap: onRevise,
+                  ),
+              ],
             ),
           ],
         ],

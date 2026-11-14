@@ -8,6 +8,7 @@ import '../../state/student_study_controller.dart';
 import '../../state/study_center_args.dart';
 import '../../state/study_report_controller.dart';
 import '../growth/study_growth_view.dart';
+import '../growth/student_artwork_growth_view.dart';
 import '../paper/study_paper_viewer_page.dart';
 import '../report/study_report_view.dart';
 import '../standard/grade_standard_dialog.dart';
@@ -64,6 +65,9 @@ class StudentStudyView extends ConsumerWidget {
         subtitle: '仅统计已出分的考试 · 成绩来自艺考网阅卷系统',
         onBack: controller.back,
       ),
+      StudentStudySection.artworkGrowth => StudentArtworkGrowthView(
+        onBack: controller.back,
+      ),
     };
   }
 }
@@ -84,6 +88,12 @@ class _StudentOverview extends StatelessWidget {
     final header = AppPageHeader(
       title: '我的学情',
       actions: [
+        AppButton(
+          label: '作品成长',
+          size: AppButtonSize.sm,
+          variant: AppButtonVariant.secondary,
+          onTap: controller.openArtworkGrowth,
+        ),
         AppButton(
           label: '成长曲线',
           icon: Icons.show_chart_rounded,

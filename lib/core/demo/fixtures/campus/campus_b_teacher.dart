@@ -851,7 +851,7 @@ List<Map<String, dynamic>> _scopeHomework(DemoRequest req) {
       if (scope.ownsTeacher(hw['teacherUserId']) &&
           (classId.isEmpty ||
               classId == '0' ||
-              cbStr(hw['classId']) == classId))
+              cbStrList(hw['classIds']).contains(classId)))
         hw,
   ];
 }
@@ -920,7 +920,7 @@ Object? _homeworkList(DemoRequest req) {
   return demoPage([for (final hw in list) cbHomeworkJson(hw)], req);
 }
 
-Object? _homeworkSave(DemoRequest req) {
+Future<Object?> _homeworkSave(DemoRequest req) async {
   final scope = cbScope(req);
   final classIds = [
     for (final id in cbStrList(req.value('classIds')))
@@ -941,17 +941,12 @@ Object? _homeworkSave(DemoRequest req) {
     throw const DemoApiException('截止时间需晚于当前时间');
   }
   final subjectId = req.intOf('subjectId', 38);
-  final ids = cbCreateHomework(
+  final ids = await cbCreateHomework(
+    req,
     classIds: classIds,
-    title: title,
-    description: req.str('description'),
-    endTime: cbDateTime(end),
-    subjectId: subjectId,
-    subjectName:
+    subject:
         cbSubjectNameOf(subjectId) ??
         ((scope.staff?.subject ?? '').isEmpty ? '素描' : scope.staff!.subject),
-    teacherUserId: scope.userId,
-    expectedExt: req.str('expectedExt', 'image'),
   );
   return <String, dynamic>{'ids': ids};
 }
@@ -960,6 +955,9 @@ Map<String, dynamic> _homeworkOf(DemoRequest req) {
   final hw = cbHomeworkById(req.str('id'));
   if (hw == null) {
     throw const DemoApiException('作业不存在或已删除');
+  }
+  if (!cbScope(req).ownsTeacher(hw['teacherUserId'])) {
+    throw const DemoApiException('没有权限查看这份作业', code: 403);
   }
   return hw;
 }
@@ -971,6 +969,9 @@ Object? _homeworkDelete(DemoRequest req) {
   final hw = _homeworkOf(req);
   if (!cbScope(req).ownsTeacher(hw['teacherUserId'])) {
     throw const DemoApiException('只能删除自己布置的作业');
+  }
+  if (cbRecordsOf(hw['id']).any((record) => record['artworkId'] != null)) {
+    throw const DemoApiException('已有学生提交作品，无法删除这份作业', code: 400);
   }
   cbDeleteHomework(cbStr(hw['id']));
   return true;
@@ -985,20 +986,7 @@ Map<String, dynamic> _recordOf(DemoRequest req) {
 }
 
 Object? _homeworkCorrect(DemoRequest req) {
-  final record = _recordOf(req);
-  final score = req.intOf('score', -1);
-  if (score < 0 || score > 100) {
-    throw const DemoApiException('请输入有效分数（0-100）');
-  }
-  record['status'] = 2;
-  record['score'] = score;
-  record['feedback'] = req.str('feedback');
-  record['teacherParam1'] = cbRef(req.str('teacherParam1'));
-  record['teacherParam2'] = req.str('teacherParam2');
-  record['teacherParam3'] = req.str('teacherParam3');
-  record['correctTime'] = cbDateTime(DateTime.now());
-  cbSaveHomework();
-  return true;
+  throw const DemoApiException('请在作品点评工作台批改作业', code: 400);
 }
 
 Object? _studentHomeworkDetail(DemoRequest req) {

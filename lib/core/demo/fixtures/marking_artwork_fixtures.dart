@@ -23,9 +23,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
   // ── 学生：作品档案 ──────────────────────────────────────────────────
   marking.get('/app/artworks/statistics', (req) {
     final works = _studentLatest(_studentIndex(req));
-    final reviewed = works
-        .where((w) => DemoArtworkData.isReviewed(w))
-        .length;
+    final reviewed = works.where((w) => DemoArtworkData.isReviewed(w)).length;
     return <String, dynamic>{
       'total': works.length,
       'reviewed': reviewed,
@@ -45,17 +43,25 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
 
   marking.get('/app/artworks/excellent', (req) {
     final subject = req.str('subject');
-    final rows = DemoArtworkStore.works().where((w) {
-      if (w['featured'] != true) {
-        return false;
-      }
-      return subject.isEmpty || DemoArtworkData.text(w['subject']) == subject;
-    }).toList()
-      ..sort(
-        (a, b) => DemoArtworkData.text(
-          b['featuredTime'],
-        ).compareTo(DemoArtworkData.text(a['featuredTime'])),
-      );
+    final campusId = req.str('campusId');
+    final rows =
+        DemoArtworkStore.works().where((w) {
+          if (w['featured'] != true) {
+            return false;
+          }
+          final person = _personOf(w);
+          if (campusId.isNotEmpty &&
+              (person == null ||
+                  DemoArtworkData.classOf(person.index).id != campusId)) {
+            return false;
+          }
+          return subject.isEmpty ||
+              DemoArtworkData.text(w['subject']) == subject;
+        }).toList()..sort(
+          (a, b) => DemoArtworkData.text(
+            b['featuredTime'],
+          ).compareTo(DemoArtworkData.text(a['featuredTime'])),
+        );
     // 优秀作品墙全校可见，带学生姓名和班级（规格 2.6）。
     return _projectPage(
       rows,
@@ -72,9 +78,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final revised = req.str('revised').toLowerCase();
     var rows = _studentLatest(_studentIndex(req));
     if (status != 'ALL') {
-      rows = rows
-          .where((w) => DemoArtworkData.statusOf(w) == status)
-          .toList();
+      rows = rows.where((w) => DemoArtworkData.statusOf(w) == status).toList();
     }
     if (revised == '1' || revised == 'true') {
       rows = rows
@@ -152,7 +156,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final subject = _text(body['subject']);
     final drawingDate = _text(body['drawingDate']);
     final description = _text(body['description']);
-    final taskId = _text(body['taskId']);
+    var taskId = _text(body['taskId']);
     final parentId = _text(body['parentId']);
     final imageIds = req.listOf('imageIds').map((e) => e.toString()).toList();
     if (title.isEmpty || title.runes.length > 100) {
@@ -180,17 +184,37 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       if (parent == null || DemoArtworkData.personOf(parent) != person) {
         throw const DemoApiException('没有找到要改画的原作品', code: 404);
       }
+      final version = DemoArtworkData.versionOf(parent);
+      if (!DemoArtworkData.isReviewed(parent) ||
+          DemoArtworkStore.versionsOf(
+            parent,
+          ).any((work) => DemoArtworkData.versionOf(work) > version)) {
+        throw const DemoApiException('请从已点评的当前版本改画', code: 400);
+      }
+      taskId = _text(parent['taskId']);
     }
 
     String teacherId;
-    if (taskId.isNotEmpty) {
+    if (parent != null) {
+      teacherId = _text(parent['teacherId']);
+    } else if (taskId.isNotEmpty) {
       final task = DemoArtworkStore.taskById(taskId);
       if (task == null) {
         throw const DemoApiException('没有找到对应的作业', code: 404);
       }
+      final classId = DemoArtworkData.classOf(person).id;
+      if (!(task['classIds'] as List).contains(classId) ||
+          task['subject'] != subject) {
+        throw const DemoApiException('请选择本班同科目的作业', code: 400);
+      }
+      if (DemoArtworkStore.works().any(
+        (work) =>
+            work['taskId'] == taskId &&
+            DemoArtworkData.personOf(work) == person,
+      )) {
+        throw const DemoApiException('这份作业已提交，可在作品档案查看', code: 400);
+      }
       teacherId = _text(task['teacherId']);
-    } else if (parent != null) {
-      teacherId = _text(parent['teacherId']);
     } else {
       teacherId = DemoArtworkData.responsibleTeacherId(
         DemoArtworkData.classOf(person).id,
@@ -306,9 +330,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final archiveId = req.str('archiveId');
     var rows = _visibleWorks(req.account);
     if (status != 'ALL') {
-      rows = rows
-          .where((w) => DemoArtworkData.statusOf(w) == status)
-          .toList();
+      rows = rows.where((w) => DemoArtworkData.statusOf(w) == status).toList();
     }
     if (subject.isNotEmpty) {
       rows = rows
@@ -339,6 +361,11 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         DemoArtworkData.teacherName(_text(w['teacherId'])),
       ];
     });
+    if (status == 'PENDING') {
+      matched.sort(
+        (a, b) => _text(a['createTime']).compareTo(_text(b['createTime'])),
+      );
+    }
     return _projectPage(
       matched,
       req,
@@ -370,7 +397,11 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final requestLead = body['requestLeadReview'] == true;
     final voiceRef = _text(body['voiceUrl'] ?? body['voiceRef']);
     final voiceSeconds = (body['voiceSeconds'] as num?)?.toInt() ?? 0;
-    final tagIds = req.listOf('tagIds').map((e) => e.toString()).toSet().toList();
+    final tagIds = req
+        .listOf('tagIds')
+        .map((e) => e.toString())
+        .toSet()
+        .toList();
     final dimensions = _parseDimensions(body['dimensions'], work);
     final tagResolutions = _parseResolutions(body['tagResolutions']);
 
@@ -476,7 +507,9 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       };
       work['leadReview'] = lead;
       if (auto &&
-          !entered.add(DemoArtworkData.autoDelay).isAfter(DemoArtworkStore.now())) {
+          !entered
+              .add(DemoArtworkData.autoDelay)
+              .isAfter(DemoArtworkStore.now())) {
         DemoArtworkSeed.autoLead(
           work,
           lead,
@@ -576,7 +609,8 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final account = req.account;
     final teacherId = account.teacherId ?? '';
     final all = DemoArtworkStore.tasks().where((task) {
-      if (account.role == DemoRole.principal || account.role == DemoRole.admin) {
+      if (account.role == DemoRole.principal ||
+          account.role == DemoRole.admin) {
         return true;
       }
       return _text(task['teacherId']) == teacherId;
@@ -601,14 +635,24 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     if (classIds.isEmpty) {
       throw const DemoApiException('请选择班级', code: 400);
     }
-    if (DemoArtworkData.parseTime(dueTime) == null) {
-      throw const DemoApiException('请填写截止时间', code: 400);
+    final due = DemoArtworkData.parseTime(dueTime);
+    if (due == null || !due.isAfter(DemoArtworkStore.now())) {
+      throw const DemoApiException('截止时间需晚于当前时间', code: 400);
+    }
+    final teacher = DemoCampusData.staffById(teacherId);
+    if (teacher?.subject != subject ||
+        !classIds.every(
+          (classId) =>
+              DemoCampusData.classById(classId) != null &&
+              teacher!.classIds.contains(classId),
+        )) {
+      throw const DemoApiException('请选择本人任教的科目和班级', code: 403);
     }
     final id = DemoStore.nextId('tk-');
     final task = <String, dynamic>{
       'id': id,
       'teacherId': teacherId,
-      'classIds': classIds,
+      'classIds': classIds.toSet().toList(),
       'subject': subject,
       'title': title,
       'requirement': requirement,
@@ -643,11 +687,23 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
           (w) => DemoArtworkData.leadStatusOf(w) == DemoArtworkData.leadDone,
         )
         .length;
+    final now = DemoArtworkStore.now();
+    final weekStart = DemoArtworkData.dateOnly(
+      now,
+    ).subtract(const Duration(days: 6));
+    final adjustedThisWeek = queue.where((work) {
+      final lead = DemoArtworkData.leadOf(work);
+      final time = DemoArtworkData.parseTime(lead?['time']);
+      return lead?['action'] == 'ADJUST' &&
+          time != null &&
+          !time.isBefore(weekStart);
+    }).length;
     return <String, dynamic>{
       'total': queue.length,
       'pending': pending,
       'overdue': overdue,
       'done': done,
+      'adjustedThisWeek': adjustedThisWeek,
     };
   });
 
@@ -733,7 +789,8 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         throw DemoApiException('分数须在 0 至 $max 之间，最多两位小数', code: 400);
       }
     }
-    if (action == DemoArtworkData.actionSupplement && content.runes.length < 5) {
+    if (action == DemoArtworkData.actionSupplement &&
+        content.runes.length < 5) {
       throw const DemoApiException('补充评语至少 5 个字', code: 400);
     }
     final lead = DemoArtworkData.leadOf(work)!;
@@ -830,14 +887,17 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       throw const DemoApiException('只有教务或校长可以修改点评设置', code: 403);
     }
     final body = req.bodyMap;
-    final percent = (body['spotCheckPercent'] as num?)?.toInt() ??
+    final percent =
+        (body['spotCheckPercent'] as num?)?.toInt() ??
         DemoArtworkStore.settings().spotCheckPercent;
     if (percent < 10 || percent > 50) {
       throw const DemoApiException('抽查比例须在 10% 至 50% 之间', code: 400);
     }
-    final reviewHours = (body['reviewHours'] as num?)?.toInt() ??
+    final reviewHours =
+        (body['reviewHours'] as num?)?.toInt() ??
         DemoArtworkStore.settings().reviewHours;
-    final leadHours = (body['leadHours'] as num?)?.toInt() ??
+    final leadHours =
+        (body['leadHours'] as num?)?.toInt() ??
         DemoArtworkStore.settings().leadHours;
     if (reviewHours < 1 || leadHours < 1) {
       throw const DemoApiException('时限至少 1 小时', code: 400);
@@ -937,9 +997,11 @@ List<Map<String, dynamic>> _visibleWorks(DemoAccount account) {
         .map((c) => c.id)
         .toSet();
     return all
-        .where((w) => classId.contains(DemoArtworkData.classOf(
-              DemoArtworkData.personOf(w),
-            ).id))
+        .where(
+          (w) => classId.contains(
+            DemoArtworkData.classOf(DemoArtworkData.personOf(w)).id,
+          ),
+        )
         .toList();
   }
   if (role.teaches) {
@@ -964,14 +1026,12 @@ List<Map<String, dynamic>> _leadQueue(DemoAccount account) {
     }
     final teacher = DemoArtworkData.teacherOf(_text(w['teacherId']));
     return teacher != null && subjects.contains(teacher.subject);
-  }).toList()
-    ..sort(
-      (a, b) => DemoArtworkData.text(
-        DemoArtworkData.leadOf(b)?['enteredTime'],
-      ).compareTo(
-        DemoArtworkData.text(DemoArtworkData.leadOf(a)?['enteredTime']),
-      ),
-    );
+  }).toList()..sort(
+    (a, b) => DemoArtworkData.text(DemoArtworkData.leadOf(b)?['enteredTime'])
+        .compareTo(
+          DemoArtworkData.text(DemoArtworkData.leadOf(a)?['enteredTime']),
+        ),
+  );
 }
 
 /// 教职接口读一份作品（学生详情接口的校验写在接口里）。
@@ -995,9 +1055,9 @@ Map<String, dynamic> _readableWork(DemoRequest req, String id) {
 }
 
 String? _nextPending(DemoAccount account, String currentId) {
-  final all = _visibleWorks(account)
-      .where((w) => !DemoArtworkData.isReviewed(w))
-      .toList();
+  final all = _visibleWorks(
+    account,
+  ).where((w) => !DemoArtworkData.isReviewed(w)).toList();
   final position = all.indexWhere((w) => w['id'] == currentId);
   final ordered = [
     ...all.skip(position + 1),
@@ -1022,7 +1082,11 @@ String _taskStatus(
     }
     return 'PENDING';
   }
-  if (submitted.any(DemoArtworkData.isReviewed)) {
+  final current = submitted.reduce(
+    (a, b) =>
+        DemoArtworkData.versionOf(a) >= DemoArtworkData.versionOf(b) ? a : b,
+  );
+  if (DemoArtworkData.isReviewed(current)) {
     return 'REVIEWED';
   }
   return 'SUBMITTED';
@@ -1186,9 +1250,7 @@ Map<String, dynamic> _tagInput(
   }
   final lower = name.toLowerCase();
   if (existing.any(
-    (t) =>
-        t['id'] != exceptId &&
-        _text(t['name']).toLowerCase() == lower,
+    (t) => t['id'] != exceptId && _text(t['name']).toLowerCase() == lower,
   )) {
     throw const DemoApiException('已有同名标签，请换一个名称', code: 400);
   }
@@ -1200,7 +1262,10 @@ Map<String, dynamic> _tagInput(
   };
 }
 
-List<Map<String, dynamic>> _normalizeStrokes(List<dynamic> raw, int imageIndex) {
+List<Map<String, dynamic>> _normalizeStrokes(
+  List<dynamic> raw,
+  int imageIndex,
+) {
   final strokes = <Map<String, dynamic>>[];
   for (final item in raw) {
     if (item is! Map) {
@@ -1215,8 +1280,12 @@ List<Map<String, dynamic>> _normalizeStrokes(List<dynamic> raw, int imageIndex) 
       if (p is! List || p.length < 2) {
         continue;
       }
-      final x = p[0] is num ? (p[0] as num).toDouble() : double.tryParse('${p[0]}');
-      final y = p[1] is num ? (p[1] as num).toDouble() : double.tryParse('${p[1]}');
+      final x = p[0] is num
+          ? (p[0] as num).toDouble()
+          : double.tryParse('${p[0]}');
+      final y = p[1] is num
+          ? (p[1] as num).toDouble()
+          : double.tryParse('${p[1]}');
       if (x == null || y == null) {
         continue;
       }

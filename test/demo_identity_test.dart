@@ -192,7 +192,7 @@ void main() {
       expect(homeRoleHasTimetable(DemoAccounts.groupLeader.roleKey), isTrue);
 
       final principal = homeSectionsFor('principal');
-      expect(principal.sideTodo && principal.studySnapshot, isTrue);
+      expect(principal.principalOverview, isTrue);
       expect(principal.courses, isFalse);
       expect(homeRoleHasTimetable('principal'), isFalse);
 

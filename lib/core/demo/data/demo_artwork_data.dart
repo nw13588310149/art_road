@@ -198,7 +198,9 @@ abstract final class DemoArtworkData {
 
   static DateTime? parseTime(Object? raw) {
     final value = text(raw);
-    return value.isEmpty ? null : DateTime.tryParse(value.replaceFirst(' ', 'T'));
+    return value.isEmpty
+        ? null
+        : DateTime.tryParse(value.replaceFirst(' ', 'T'));
   }
 
   static DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -695,36 +697,11 @@ abstract final class DemoArtworkData {
 
   /// 名称、解释、颜色、所属分项（可为空）。
   static const standardTags = <(String, String, String, String)>[
-    (
-      '结构错误',
-      '形体比例或透视关系不准确。先用辅助线核对大的比例和骨点位置，再深入刻画。',
-      problemColor,
-      'form',
-    ),
-    (
-      '明暗层次弱',
-      '黑白灰关系没有拉开，暗部与亮部之间的过渡层次不足，画面显得发平。',
-      problemColor,
-      'value',
-    ),
-    (
-      '构图失衡',
-      '主体位置或大小不合适，画面重心偏移。动笔前先用小构图推敲布局。',
-      problemColor,
-      'composition',
-    ),
-    (
-      '线条生硬',
-      '线条缺少轻重、虚实变化，转折处可以更有节奏，避免描边式的均匀线条。',
-      problemColor,
-      'line',
-    ),
-    (
-      '色调不统一',
-      '画面冷暖倾向不明确，局部颜色跳出整体色调，注意环境色的相互影响。',
-      problemColor,
-      'color',
-    ),
+    ('结构错误', '形体比例或透视关系不准确。先用辅助线核对大的比例和骨点位置，再深入刻画。', problemColor, 'form'),
+    ('明暗层次弱', '黑白灰关系没有拉开，暗部与亮部之间的过渡层次不足，画面显得发平。', problemColor, 'value'),
+    ('构图失衡', '主体位置或大小不合适，画面重心偏移。动笔前先用小构图推敲布局。', problemColor, 'composition'),
+    ('线条生硬', '线条缺少轻重、虚实变化，转折处可以更有节奏，避免描边式的均匀线条。', problemColor, 'line'),
+    ('色调不统一', '画面冷暖倾向不明确，局部颜色跳出整体色调，注意环境色的相互影响。', problemColor, 'color'),
     ('细节出彩', '局部刻画深入到位，质感与空间表现准确，值得在后续作品中保持。', highlightColor, 'rendering'),
     ('透视错误', '近大远小和消失点不统一，先确定视平线和主要透视线再起形。', problemColor, 'form'),
   ];
@@ -733,12 +710,7 @@ abstract final class DemoArtworkData {
   static const exclusiveTags = <String, (String, String, String, String)>{
     't-2': ('暗部偏闷', '暗部笔触过于平涂，缺少反光和细微变化。', problemColor, 'value'),
     't-3': ('环境色不足', '物体暗部和投影缺少周围环境色的影响，颜色显得孤立。', problemColor, 'color'),
-    't-4': (
-      '动态僵硬',
-      '人物重心和动势不明确，动作像摆拍，先用几根动态线确定姿态。',
-      problemColor,
-      'gesture',
-    ),
+    't-4': ('动态僵硬', '人物重心和动势不明确，动作像摆拍，先用几根动态线确定姿态。', problemColor, 'gesture'),
     't-5': ('画面偏灰', '颜色纯度不足，亮部和暗部都偏灰，注意保留色彩的饱和度。', problemColor, 'color'),
     't-6': ('比例失调', '头身比例或四肢长短不准，先定头顶、脚底和重心线。', problemColor, 'gesture'),
   };
@@ -823,7 +795,7 @@ abstract final class DemoArtworkData {
   /// 学生的点评小结：高频问题、练习建议、分项水平、问题解决率、连续练习天数与
   /// 近 7 天提交数。分数与标签只统计已点评的作品。
   ///
-  /// 问题解决率 = 改画时被标为「已改善」的问题标签数 ÷ 改画时逐个标记过的问题标签数。
+  /// 问题解决率 = 改画时被标为「已改善」的问题标签数 ÷ 出现过的问题标签数。
   static Map<String, dynamic> insightsOf(
     List<Map<String, dynamic>> works,
     DateTime now,
@@ -940,6 +912,23 @@ abstract final class DemoArtworkData {
                   : round2(sums[def.key]! / counts[def.key]!),
             },
         ],
+        'history': <Map<String, dynamic>>[
+          for (final work
+              in reviewed
+                  .where(
+                    (work) =>
+                        text(work['subject']) == subject &&
+                        (mapOf(reviewOf(work)?['dimensions'])?.isNotEmpty ??
+                            false),
+                  )
+                  .take(10)
+                  .toList()
+                  .reversed)
+            <String, dynamic>{
+              'date': reviewOf(work)?['reviewedTime'],
+              'levels': reviewOf(work)?['dimensions'],
+            },
+        ],
       });
     }
 
@@ -970,9 +959,9 @@ abstract final class DemoArtworkData {
       'problemTagCount': problemTags,
       'markedTagCount': markedTags,
       'resolvedTagCount': resolvedTags,
-      'resolveRate': markedTags == 0
+      'resolveRate': problemTags == 0
           ? null
-          : round2(resolvedTags / markedTags),
+          : round2((resolvedTags / problemTags).clamp(0.0, 1.0)),
       'streakDays': streakDays(works, now),
       'recentSubmitCount': recentSubmitCount(works, now),
     };

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/app_providers.dart';
+import '../../../core/demo/demo_config.dart';
 import '../data/composite_estimate.dart';
 
 class CompositeEstimateFormState {
@@ -20,9 +21,15 @@ final compositeEstimateFormProvider =
       CompositeEstimateFormController,
       CompositeEstimateFormState
     >((ref) {
-      final account = ref.watch(appStorageProvider).mobile;
+      final storage = ref.watch(appStorageProvider);
+      final account = storage.mobile;
       return CompositeEstimateFormController(
-        CompositeEstimateStore(account: account),
+        CompositeEstimateStore(
+          account: account,
+          client: kDemoMode && storage.token.startsWith('demo.student.')
+              ? ref.watch(markingApiClientProvider)
+              : null,
+        ),
       );
     });
 
@@ -36,6 +43,7 @@ class CompositeEstimateFormController
 
   final CompositeEstimateStore _store;
   bool _edited = false;
+  Future<void> _saving = Future<void>.value();
 
   Future<void> _load() async {
     final form = await _store.load();
@@ -48,10 +56,13 @@ class CompositeEstimateFormController
     );
   }
 
-  void update(CompositeEstimateForm Function(CompositeEstimateForm form) change) {
+  void update(
+    CompositeEstimateForm Function(CompositeEstimateForm form) change,
+  ) {
     _edited = true;
     final form = change(state.form);
     state = CompositeEstimateFormState(loading: false, form: form);
-    unawaited(_store.save(form));
+    _saving = _saving.then((_) => _store.save(form));
+    unawaited(_saving);
   }
 }

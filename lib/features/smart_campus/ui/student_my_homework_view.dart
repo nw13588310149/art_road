@@ -33,6 +33,9 @@
 // =============================================================================
 
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
+import '../../../app/router/route_paths.dart';
+import '../../../core/demo/demo_config.dart';
+import '../../artworks/ui/artwork_upload_dialog.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -372,19 +375,39 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
       AppToast.show(context, '缺少作业记录编号，无法提交');
       return;
     }
-    final ok = await showScaledDialog<bool>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.18),
-      builder: (dialogCtx) => _SubmitHomeworkDialog(data: data),
-    );
+    final ok = kDemoMode
+        ? await showArtworkUploadDialog(
+            context,
+            taskId: data.recordId,
+            title: data.title,
+            subject: switch (data.subject) {
+              _HomeworkSubject.sketch => ArtSubject.sketch.label,
+              _HomeworkSubject.color => ArtSubject.color.label,
+              _HomeworkSubject.speed => ArtSubject.speed.label,
+              _HomeworkSubject.other => '',
+            },
+          )
+        : await showScaledDialog<bool>(
+            context: context,
+            barrierColor: Colors.black.withValues(alpha: 0.18),
+            builder: (dialogCtx) => _SubmitHomeworkDialog(data: data),
+          );
     if (!mounted || ok != true) return;
-    await _loadList();
+    await Future.wait([_loadList(), _loadSummary()]);
     if (!mounted) return;
     AppToast.show(context, '作业已提交，等待教师批阅');
   }
 
   Future<void> _onDetail(_HomeworkData data) async {
     final snapshot = _latestHomeworkSnapshot(data);
+    if (snapshot.artworkId.isNotEmpty) {
+      await Navigator.of(context).pushNamed(
+        RoutePaths.artworks,
+        arguments: {'artworkId': snapshot.artworkId},
+      );
+      if (mounted) await Future.wait([_loadList(), _loadSummary()]);
+      return;
+    }
     await showScaledDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.18),
@@ -410,7 +433,7 @@ class _StudentMyHomeworkViewState extends ConsumerState<StudentMyHomeworkView> {
       bodyScrollable: false,
       header: SmartCampusPageBanner(
         title: '我的作业',
-        subtitle: '老师布置的作业在这里提交照片、视频或文档，批阅结果和点评也在这里查看',
+        subtitle: kDemoMode ? '提交作品照片，在这里查看老师点评' : '提交作业并查看老师点评',
         onBack: widget.onBack,
       ),
       body: AppRefreshIndicator(
@@ -1150,6 +1173,7 @@ enum _ReviewMediaType { audio, video, none }
 class _HomeworkData {
   const _HomeworkData({
     this.recordId = '',
+    this.artworkId = '',
     required this.title,
     required this.subject,
     required this.status,
@@ -1175,6 +1199,7 @@ class _HomeworkData {
 
   /// 学生作业记录 id（列表 **`homeworkStudentId`**），用于详情 / 提交接口。
   final String recordId;
+  final String artworkId;
   final String title;
   final _HomeworkSubject subject;
   final _HomeworkStatus status;
@@ -1303,6 +1328,7 @@ class _HomeworkData {
 
     return _HomeworkData(
       recordId: recordId,
+      artworkId: m['artworkId']?.toString() ?? '',
       title: title,
       subject: subject,
       status: st,

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/network/api_client.dart';
 
 import '../../art_toolbox/logic/score_calculator.dart';
 
@@ -34,7 +35,9 @@ double? professionalOn300(double? score, double? fullScore) {
 String scoreInputText(double value) {
   var text = value.toStringAsFixed(2);
   if (text.contains('.')) {
-    text = text.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+    text = text
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
   }
   return text;
 }
@@ -160,15 +163,22 @@ class CompositeEstimateForm {
 
 /// 预估输入保存在本机，按账号（手机号）分开存。
 class CompositeEstimateStore {
-  const CompositeEstimateStore({this.account = ''});
+  const CompositeEstimateStore({this.account = '', this.client});
 
   static const _key = 'study_composite_estimate_v1';
 
   final String account;
+  final ApiClient? client;
 
-  String get storageKey => account.trim().isEmpty ? _key : '$_key:${account.trim()}';
+  String get storageKey =>
+      account.trim().isEmpty ? _key : '$_key:${account.trim()}';
 
   Future<CompositeEstimateForm> load() async {
+    if (client case final api?) {
+      final response = await api.get('/app/study/goal');
+      final data = response.data;
+      return CompositeEstimateForm.fromJson(data);
+    }
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(storageKey);
     if (raw == null) {
@@ -182,6 +192,10 @@ class CompositeEstimateStore {
   }
 
   Future<void> save(CompositeEstimateForm form) async {
+    if (client case final api?) {
+      await api.post('/app/study/goal', data: form.toJson());
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(storageKey, jsonEncode(form.toJson()));
   }

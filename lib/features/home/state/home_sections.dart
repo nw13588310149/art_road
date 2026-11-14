@@ -20,6 +20,7 @@ class HomeSections {
     this.studySnapshot = false,
     this.reviewQueue = false,
     this.todo = false,
+    this.principalOverview = false,
   });
 
   /// 功能入口旁的三科范画入口。
@@ -42,6 +43,7 @@ class HomeSections {
 
   /// 学情速览右侧的今日待办（班主任）。
   final bool todo;
+  final bool principalOverview;
 }
 
 /// 身份未知（`/myInfo` 未回包）时只保留各身份共有的区块，避免先闪出别的身份的卡片。
@@ -54,11 +56,10 @@ HomeSections homeSectionsFor(String role) => switch (role.trim()) {
     sideTodo: true,
     studySnapshot: true,
   ),
-  // 校长首页在第二期换成完整驾驶舱；第 0 期先给管理端同款区块，避免空首页。
   'principal' => const HomeSections(
+    subjects: false,
     courses: false,
-    sideTodo: true,
-    studySnapshot: true,
+    principalOverview: true,
   ),
   'dormManager' => const HomeSections(
     subjects: false,

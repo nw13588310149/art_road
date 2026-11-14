@@ -55,6 +55,7 @@ class ArtworkRepository {
 
   Future<ApiResponse> getExcellentArtworks({
     String subject = '',
+    String campusId = '',
     required int page,
     required int size,
   }) {
@@ -62,6 +63,7 @@ class ArtworkRepository {
       '/app/artworks/excellent',
       queryParameters: <String, dynamic>{
         if (subject.trim().isNotEmpty) 'subject': subject.trim(),
+        if (campusId.isNotEmpty) 'campusId': campusId,
         'current': page,
         'size': size,
       },
@@ -278,6 +280,22 @@ class ArtworkRepository {
   Future<ApiResponse> getLeadReviewStatistics() {
     return client.get('/school/leader/reviews/statistics');
   }
+
+  Future<ApiResponse> getReviewSettings() =>
+      client.get('/school/review-settings');
+
+  Future<ApiResponse> saveReviewSettings({
+    required int percent,
+    required int reviewHours,
+    required int leadHours,
+  }) => client.post(
+    '/school/review-settings',
+    data: {
+      'spotCheckPercent': percent,
+      'reviewHours': reviewHours,
+      'leadHours': leadHours,
+    },
+  );
 
   Future<ApiResponse> submitLeadReview({
     required String artworkId,

@@ -36,6 +36,7 @@ import '../../features/feedback/ui/app_feedback_page.dart';
 import '../../features/gallery/ui/gallery_page.dart';
 import '../../features/smart_campus/ui/smart_campus_page.dart';
 import '../../features/study_center/ui/study_center_page.dart';
+import '../../features/teaching_overview/ui/teaching_overview_page.dart';
 import '../../features/video_tutorial/ui/video_tutorial_page.dart';
 import 'route_paths.dart';
 
@@ -99,6 +100,8 @@ class AppRouter {
         return const ExcellentArtworksPage();
       case RoutePaths.leadReviews:
         return const LeadReviewsPage();
+      case RoutePaths.teachingOverview:
+        return const TeachingReportPage();
       case RoutePaths.gallery:
         return const GalleryPage();
       case RoutePaths.artToolbox:

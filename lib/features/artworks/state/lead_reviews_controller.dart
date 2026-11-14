@@ -34,6 +34,7 @@ class LeadReviewStats {
     this.pending = 0,
     this.overdue = 0,
     this.done = 0,
+    this.adjustedThisWeek = 0,
   });
 
   factory LeadReviewStats.fromJson(Object? raw) {
@@ -47,6 +48,7 @@ class LeadReviewStats {
       pending: read('pending'),
       overdue: read('overdue'),
       done: read('done'),
+      adjustedThisWeek: read('adjustedThisWeek'),
     );
   }
 
@@ -54,6 +56,7 @@ class LeadReviewStats {
   final int pending;
   final int overdue;
   final int done;
+  final int adjustedThisWeek;
 }
 
 /// 筛选下拉里的一位老师。

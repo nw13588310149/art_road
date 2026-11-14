@@ -307,6 +307,8 @@ void main() {
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump(const Duration(milliseconds: 350));
 
     expect(tester.takeException(), isNull);
     expect(find.text('课程'), findsOneWidget);

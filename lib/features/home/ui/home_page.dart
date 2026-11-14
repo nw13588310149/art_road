@@ -20,6 +20,12 @@ import '../../../core/widgets/seamless_banner_carousel.dart';
 import '../../shell/navigation/shell_notice_routes.dart';
 import '../../shell/state/shell_controller.dart';
 import '../../smart_campus/state/smart_campus_controller.dart';
+import '../../teaching_overview/data/teaching_overview_repository.dart';
+import '../../teaching_overview/ui/teaching_overview_page.dart';
+import '../../teaching_overview/state/teaching_overview_controller.dart';
+import '../../artworks/state/lead_reviews_controller.dart';
+import '../../artworks/state/student_artworks_controller.dart';
+import '../../study_center/ui/growth/student_artwork_growth_view.dart';
 import '../state/home_dashboard_controller.dart';
 import '../state/home_dashboard_state.dart';
 import '../state/home_sections.dart';
@@ -38,6 +44,16 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeDashboardControllerProvider);
+    final user = ref.watch(
+      shellControllerProvider.select((state) => state.user),
+    );
+    final role = resolveHomeRole(
+      state.role,
+      token: ref.read(appStorageProvider).token,
+    );
+    if (homeSectionsFor(role).principalOverview) {
+      return PrincipalOverview(name: user.displayName);
+    }
     return _HomePageView(state: state);
   }
 }
@@ -344,6 +360,8 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
       if (sections.practice) ...[
         const SizedBox(height: _gap),
         _pair(const HomePracticeCard(), const HomeLatestReviewCard()),
+        const SizedBox(height: _gap),
+        const _StudentGrowthCard(),
       ],
       if (sections.studySnapshot) ...[
         const SizedBox(height: _gap),
@@ -356,6 +374,37 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
           )
         else
           const HomeStudySnapshotCard(),
+      ],
+      if (role == 'teacher' || role == 'headTeacher') ...[
+        const SizedBox(height: _gap),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: _gap,
+          children: const [
+            Expanded(
+              child: _TeacherOverviewCard(report: TeachingReport.myAttention),
+            ),
+            SizedBox(
+              width: _rightWidth,
+              child: _TeacherOverviewCard(report: TeachingReport.myPerformance),
+            ),
+          ],
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: AppButton(
+            label: '我的学生',
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: () => openTeachingReport(context, TeachingReport.myStudents),
+          ),
+        ),
+        if (ref.watch(
+          shellControllerProvider.select((state) => state.user.isGroupLeader),
+        )) ...[
+          const SizedBox(height: _gap),
+          const _LeaderOverviewCard(),
+        ],
       ],
       const SizedBox(height: _gap),
       const HomeEbookShelfSection(),
@@ -376,6 +425,188 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
       ),
       const SizedBox(height: _gap),
     ];
+  }
+}
+
+class _StudentGrowthCard extends ConsumerWidget {
+  const _StudentGrowthCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(studentArtworksControllerProvider);
+    final insights = state.insights;
+    final subject =
+        insights.dimensions
+            .where((item) => item.subject == insights.weakestSubject)
+            .firstOrNull ??
+        insights.dimensions.firstOrNull;
+    return AppCard(
+      title: '我的短板',
+      subtitle: subject?.subject,
+      trailing: AppButton(
+        label: '查看作品成长',
+        variant: AppButtonVariant.text,
+        size: AppButtonSize.sm,
+        onTap: () => Navigator.of(context).pushNamed(
+          RoutePaths.studyCenter,
+          arguments: {'view': 'artworkGrowth'},
+        ),
+      ),
+      child: state.loading && !state.loaded
+          ? const AppSkeletonText(lines: 2)
+          : subject == null
+          ? Text('老师填写分项评价后会显示在这里', style: AppText.body13)
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: AppSpace.s12,
+              children: [
+                ArtworkDimensionChart(levels: subject),
+                Wrap(
+                  spacing: AppSpace.s8,
+                  runSpacing: AppSpace.s8,
+                  children: [
+                    for (final tag
+                        in insights.topTags
+                            .where((tag) => !tag.positive)
+                            .take(3))
+                      AppTag(
+                        label:
+                            '${tag.name} · ${tag.resolvedCount > 0 ? '已有改善' : '仍需练习'}',
+                        tone: tag.resolvedCount > 0
+                            ? AppTone.success
+                            : AppTone.warning,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _TeacherOverviewCard extends ConsumerWidget {
+  const _TeacherOverviewCard({required this.report});
+  final TeachingReport report;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(
+      teachingOverviewProvider((report: report, campus: '', parameter: '')),
+    );
+    final row = teachingRow(state.asData?.value);
+    final people = teachingRows(state.asData?.value);
+    String metric(Object? value, String unit) =>
+        value is num ? '${value.toStringAsFixed(1)}$unit' : '—';
+    return AppCard(
+      title: report.title,
+      trailing: AppButton(
+        label: '查看',
+        variant: AppButtonVariant.text,
+        size: AppButtonSize.sm,
+        onTap: () => openTeachingReport(context, report),
+      ),
+      child: state.isLoading
+          ? const AppSkeletonText(lines: 2)
+          : state.hasError
+          ? Text('数据暂未加载', style: AppText.body13)
+          : report == TeachingReport.myAttention
+          ? Column(
+              children: [
+                if (people.isEmpty) Text('暂无需要关注的学生', style: AppText.body13),
+                for (final person in people.take(3))
+                  AppListRow(
+                    title: teachingText(person['name']),
+                    subtitle: teachingText(
+                      (person['reasons'] as List?)?.firstOrNull,
+                    ),
+                    onTap: () => openTeachingReport(
+                      context,
+                      report,
+                      parameter: teachingText(person['id']),
+                    ),
+                  ),
+              ],
+            )
+          : Wrap(
+              spacing: AppSpace.s8,
+              runSpacing: AppSpace.s8,
+              children: [
+                AppTag(label: '近 7 天点评 ${row['reviewCount'] ?? '—'} 份'),
+                AppTag(label: '点评及时率 ${metric(row['timely'], '%')}'),
+                AppTag(label: '点评质量 ${metric(row['quality'], ' 星')}'),
+              ],
+            ),
+    );
+  }
+}
+
+class _LeaderOverviewCard extends ConsumerWidget {
+  const _LeaderOverviewCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(leadReviewsControllerProvider);
+    final teachers = teachingRows(
+      ref
+          .watch(
+            teachingOverviewProvider((
+              report: TeachingReport.groupTeachers,
+              campus: '',
+              parameter: '',
+            )),
+          )
+          .asData
+          ?.value,
+    );
+    final rates = teachers
+        .map((row) => row['timely'])
+        .whereType<num>()
+        .toList();
+    final average = rates.isEmpty
+        ? '—'
+        : '${(rates.reduce((a, b) => a + b) / rates.length).toStringAsFixed(1)}%';
+    return AppCard(
+      title: '组长复核',
+      child: Wrap(
+        spacing: AppSpace.s12,
+        runSpacing: AppSpace.s8,
+        children: [
+          AppTag(label: '待复核 ${state.stats.pending} 份'),
+          AppTag(label: '本组点评及时率 $average'),
+          AppTag(label: '近 7 天调分 ${state.stats.adjustedThisWeek} 份'),
+          AppTag(
+            label: '超时 ${state.stats.overdue} 份',
+            tone: state.stats.overdue > 0 ? AppTone.danger : AppTone.neutral,
+          ),
+          AppButton(
+            label: '进入复核池',
+            size: AppButtonSize.sm,
+            onTap: () async {
+              await Navigator.of(context).pushNamed(RoutePaths.leadReviews);
+              if (context.mounted) {
+                await ref
+                    .read(leadReviewsControllerProvider.notifier)
+                    .refresh();
+              }
+            },
+          ),
+          AppButton(
+            label: '本组老师',
+            size: AppButtonSize.sm,
+            variant: AppButtonVariant.secondary,
+            onTap: () =>
+                openTeachingReport(context, TeachingReport.groupTeachers),
+          ),
+          AppButton(
+            label: '本组学情',
+            size: AppButtonSize.sm,
+            variant: AppButtonVariant.secondary,
+            onTap: () =>
+                openTeachingReport(context, TeachingReport.groupClasses),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -7,7 +7,7 @@ import '../data/study_models.dart';
 import 'study_center_args.dart';
 
 /// 「我的学情」页内视图：总览 / 成绩报告 / 成长曲线。
-enum StudentStudySection { overview, report, growth }
+enum StudentStudySection { overview, report, growth, artworkGrowth }
 
 enum StudyExamFilter {
   all('ALL', '全部'),
@@ -145,6 +145,11 @@ class StudentStudyController extends StateNotifier<StudentStudyState> {
       : null;
 
   static StudentStudyState _initialState(StudyCenterArgs args) {
+    if (args.view == StudyCenterInitialView.artworkGrowth) {
+      return const StudentStudyState(
+        section: StudentStudySection.artworkGrowth,
+      );
+    }
     if (args.view == StudyCenterInitialView.trend) {
       return const StudentStudyState(section: StudentStudySection.growth);
     }
@@ -268,6 +273,10 @@ class StudentStudyController extends StateNotifier<StudentStudyState> {
       section: StudentStudySection.growth,
       growthFromReport: state.section == StudentStudySection.report,
     );
+  }
+
+  void openArtworkGrowth() {
+    state = state.copyWith(section: StudentStudySection.artworkGrowth);
   }
 
   void back() {

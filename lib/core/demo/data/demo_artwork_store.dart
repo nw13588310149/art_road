@@ -218,6 +218,7 @@ abstract final class DemoArtworkStore {
     for (final task in _ensureSeed().tasks) {
       final id = DemoArtworkData.text(task['id']);
       final override = overrides[id];
+      if (override == false) continue;
       byId[id] = _freeze(override is Map ? override : task);
     }
     for (final entry in overrides.entries) {
@@ -294,6 +295,12 @@ abstract final class DemoArtworkStore {
       return;
     }
     _taskOverrides()[id] = _clone(task);
+    _revision++;
+    DemoStore.save(DemoArtworkData.tasksKey);
+  }
+
+  static void deleteTask(String id) {
+    _taskOverrides()[id] = false;
     _revision++;
     DemoStore.save(DemoArtworkData.tasksKey);
   }

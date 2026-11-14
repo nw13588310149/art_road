@@ -294,13 +294,16 @@ export const ROLES = [
       {
         id: 'home-toolbox-return', route: '/', actions: [
           skipGuide, { click: /^工具箱$/ },
-          { check: '分析工具' }, /^返回$/, { check: '今日练习' },
+          { check: '分析工具' }, /^返回$/, { check: '今日任务' },
         ],
       },
       guideStep,
       noticeStep,
       { id: 'account-menu', route: '/', actions: [skipGuide, { click: /^账户菜单/, after: 500 }, { check: '资料修改', role: 'menuitem' }] },
       { id: 'study', route: '/study' },
+      { id: 'study-artwork-growth', route: '/study', actions: [
+        { click: /^作品成长$/, after: 1400 }, { check: '近 7 天提交' }, { check: '问题解决率' }, { check: '分项趋势' },
+      ] },
       { id: 'artworks', route: '/artworks' },
       {
         id: 'artwork-detail',
@@ -425,7 +428,7 @@ export const ROLES = [
       campusAction('homework-review', '作业批改'),
       campusSub('homework-closed', '作业批改', [
         { click: /^已截止$/, after: 1200 },
-        { check: /石膏头像结构练习/ }, { check: /素描几何体组合/, absent: true },
+        { check: '作业列表' }, { check: /已截止|暂无/ },
       ]),
       campusSub('homework-publish', '作业批改', [
         { click: /^发布作业$/, after: 900 },
@@ -435,8 +438,8 @@ export const ROLES = [
         { click: /^历史作业$/, after: 900 }, { check: '历史发布记录' },
       ]),
       campusSub('homework-grade', '作业批改', [
-        { click: /^查看\/评分$/, after: 900 },
-        { check: '批改与点评' }, { check: /^发布批改$/, role: 'button' },
+        { click: /^查看(?:\/评分)?$/, after: 1200 },
+        { check: '保存并下一份', role: 'button' },
       ]),
       campusAction('exam-review', '考评管理'),
       {
@@ -481,6 +484,9 @@ export const ROLES = [
           { check: '提交复核', role: 'button' },
         ],
       },
+      { id: 'home-leader', route: '/', actions: [
+        skipGuide, { scroll: 720 }, { check: '组长复核' }, { check: '本组老师', role: 'button' },
+      ] },
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('schedule', '授课课表'),
       campusAction('group-chat', '群聊'),
@@ -593,7 +599,19 @@ export const ROLES = [
     id: 'principal',
     chip: '校长 · 陈建华',
     steps: [
-      homeStep,
+      { ...homeStep, actions: [skipGuide, { check: '校长驾驶舱' }, { check: '今日新交作品' }] },
+      { id: 'home-principal-campus', route: '/', actions: [skipGuide,
+        { click: /^城西$/, after: 1600 }, { check: '今日到校学生' }, { check: '数据看板' },
+      ] },
+      { id: 'home-principal-review-chain', route: '/', actions: [skipGuide,
+        { click: /^作品点评链$/, after: 1500 }, { check: '点评链概览' }, { check: '全部日期' },
+      ] },
+      { id: 'home-principal-teachers', route: '/', actions: [skipGuide,
+        { click: /^老师履职$/, after: 1500 }, { check: '履职概览' }, { check: '签到准时率' },
+      ] },
+      { id: 'home-principal-attention', route: '/', actions: [skipGuide,
+        { click: /^需要关注的学生$/, after: 1500 }, { check: /负责老师|暂无学生/ },
+      ] },
       guideStep,
       noticeStep,
       { id: 'study', route: '/study' },
@@ -603,6 +621,10 @@ export const ROLES = [
         route: '/artworks',
         actions: [{ check: '全部作品' }, { check: /共 \d+ 件|暂无/ }],
       },
+      { id: 'artwork-review-settings', route: '/artworks', actions: [
+        { click: /^点评设置$/, after: 1200 }, { check: '教学组长' },
+        { check: '保存设置', role: 'button' },
+      ] },
       {
         id: 'artwork-excellent',
         route: '/artworks/excellent',

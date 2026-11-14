@@ -54,6 +54,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../app/router/route_paths.dart';
+import '../../../core/demo/demo_config.dart';
+import '../../gallery/data/gallery_models.dart';
+import '../../gallery/data/gallery_repository.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/api_response.dart';
@@ -249,6 +253,7 @@ enum _SubmissionState { passed, pending, missing, reviewed }
 
 class _Submission {
   const _Submission({
+    this.artworkId = '',
     required this.id,
     required this.studentName,
     required this.avatarSeed,
@@ -278,6 +283,7 @@ class _Submission {
   final String? fileName;
   final int? score;
   final String? feedback;
+  final String artworkId;
 
   factory _Submission.fromMap(
     Map<dynamic, dynamic> m, {
@@ -346,6 +352,7 @@ class _Submission {
         : fromTop('headUrl');
 
     return _Submission(
+      artworkId: fromTop('artworkId'),
       id: m['id']?.toString().trim() ?? '',
       studentName: name,
       avatarSeed: (name.isNotEmpty ? name.codeUnitAt(0) % 3 : 0),
@@ -951,7 +958,20 @@ class _TeacherHomeworkReviewViewState
     );
   }
 
-  void _openReviewDrawer(_HomeworkItem item, _Submission submission) {
+  Future<void> _openReviewDrawer(
+    _HomeworkItem item,
+    _Submission submission,
+  ) async {
+    if (submission.artworkId.isNotEmpty) {
+      await Navigator.of(context).pushNamed(
+        RoutePaths.artworks,
+        arguments: {'artworkId': submission.artworkId},
+      );
+      if (mounted) {
+        await Future.wait([_loadHomeworkDetail(item.id), _loadStats()]);
+      }
+      return;
+    }
     showSmartCampusSideDrawer<void>(
       context: context,
       barrierLabel: '关闭作业点评',
@@ -2138,6 +2158,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
   int? _selectedSubjectId;
   bool _loadingSubjects = false;
   String _medium = '图片';
+  GalleryWork? _reference;
   DateTime? _deadlineDate;
   final Set<int> _selectedClassIndices = {};
   List<Map> _classList = [];
@@ -2248,7 +2269,8 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
           description: _descCtrl.text.trim(),
           endTime: _formatYmdHms(_deadlineDate!),
           subjectId: sid,
-          expectedExt: _mediumExtMap[_medium] ?? '',
+          expectedExt: kDemoMode ? 'image' : _mediumExtMap[_medium] ?? '',
+          referenceWorkId: _reference?.id ?? '',
         );
     if (!mounted) return;
     setState(() => _publishing = false);
@@ -2264,6 +2286,47 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
     final d = _deadlineDate;
     if (d == null) return '请选择截止时间';
     return _formatYmdHms(d);
+  }
+
+  Future<void> _pickReference() async {
+    final subject = _selectedSubjectName;
+    final response = await ref
+        .read(galleryRepositoryProvider)
+        .getWorks(subject: subject, size: 48);
+    if (!mounted) return;
+    if (!response.isSuccess) {
+      AppToast.showError(context, '范画加载失败，请重试');
+      return;
+    }
+    final works = GalleryWorksPage.fromJson(response.data).records;
+    final selected = await showAppDialog<GalleryWork>(
+      context: context,
+      builder: (context) => AppDialog(
+        title: '选择参考范画',
+        child: SizedBox(
+          height: 320,
+          child: ListView(
+            children: [
+              if (works.isEmpty) Text('该科目暂无范画', style: AppText.body14),
+              for (final work in works)
+                AppListRow(
+                  leading: SizedBox.square(
+                    dimension: 44,
+                    child: AppImage(
+                      src: work.imageUrl,
+                      borderRadius: AppRadius.br8,
+                    ),
+                  ),
+                  title: work.title,
+                  subtitle: work.subject,
+                  onTap: () => Navigator.of(context).pop(work),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (mounted && selected != null) setState(() => _reference = selected);
   }
 
   String get _selectedSubjectName {
@@ -2334,7 +2397,10 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                           onChanged: (v) {
                             for (final s in _subjects) {
                               if (s.name == v) {
-                                setState(() => _selectedSubjectId = s.id);
+                                setState(() {
+                                  _selectedSubjectId = s.id;
+                                  _reference = null;
+                                });
                                 break;
                               }
                             }
@@ -2350,12 +2416,15 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                     children: [
                       _FieldLabel('期望提交格式'),
                       SizedBox(height: ui(12)),
-                      PopupSelectorField<String>(
-                        value: _medium,
-                        items: _mediumOptions,
-                        itemLabel: (v) => v,
-                        onChanged: (v) => setState(() => _medium = v),
-                      ),
+                      if (kDemoMode)
+                        AppTag(label: '图片')
+                      else
+                        PopupSelectorField<String>(
+                          value: _medium,
+                          items: _mediumOptions,
+                          itemLabel: (v) => v,
+                          onChanged: (v) => setState(() => _medium = v),
+                        ),
                     ],
                   ),
                 ),
@@ -2428,6 +2497,27 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
               height: ui(80),
               controller: _descCtrl,
             ),
+            if (kDemoMode) ...[
+              SizedBox(height: ui(20)),
+              _FieldLabel('参考范画（选填）'),
+              SizedBox(height: ui(12)),
+              Wrap(
+                spacing: AppSpace.s8,
+                children: [
+                  AppButton(
+                    label: _reference?.title ?? '选择参考范画',
+                    variant: AppButtonVariant.secondary,
+                    onTap: _selectedSubjectId == null ? null : _pickReference,
+                  ),
+                  if (_reference != null)
+                    AppButton(
+                      label: '清除范画',
+                      variant: AppButtonVariant.text,
+                      onTap: () => setState(() => _reference = null),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

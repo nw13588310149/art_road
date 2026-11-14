@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/art/art_subject.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../../core/demo/demo_clock.dart';
+import '../../../artworks/state/artwork_tasks_controller.dart';
+import '../../../artworks/ui/artwork_upload_dialog.dart';
 import '../../state/home_student_cards.dart';
 
-/// 学生首页「今日练习」：1–3 条按高频问题与弱项科目推荐的练习，点开直达工具或范画库。
+/// 今日任务优先显示当天到期的作业，再给出练习建议。
 class HomePracticeCard extends ConsumerWidget {
   const HomePracticeCard({super.key});
 
@@ -14,9 +17,14 @@ class HomePracticeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final practices = ref.watch(homePracticeProvider);
+    final date = DemoClock.now().toIso8601String().substring(0, 10);
+    final taskState = ref.watch(artworkTasksControllerProvider);
+    final tasks = taskState.items
+        .where((task) => task.dueTime.startsWith(date))
+        .take(3)
+        .toList();
     return AppCard(
-      title: '今日练习',
-      subtitle: '根据老师点评和最近一次月考推荐',
+      title: '今日任务',
       child: practices.when(
         loading: () => const _PracticeSkeleton(),
         error: (_, _) => SizedBox(
@@ -31,7 +39,41 @@ class HomePracticeCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (var i = 0; i < items.length; i++)
+            if (taskState.errorMessage.isNotEmpty)
+              AppButton(
+                label: '重新加载作业',
+                variant: AppButtonVariant.text,
+                onTap: ref
+                    .read(artworkTasksControllerProvider.notifier)
+                    .refresh,
+              ),
+            for (final task in tasks)
+              AppListRow(
+                title: task.title,
+                subtitle: '${task.subject} · 今日到期',
+                trailing: task.status == 'PENDING' || task.status == 'OVERDUE'
+                    ? AppButton(
+                        label: '去提交',
+                        size: AppButtonSize.sm,
+                        onTap: () async {
+                          final saved = await showArtworkUploadDialog(
+                            context,
+                            taskId: task.id,
+                            title: task.title,
+                            subject: task.subject,
+                          );
+                          if (context.mounted && saved == true) {
+                            AppToast.showSuccess(context, '作品已提交');
+                          }
+                        },
+                      )
+                    : AppTag(label: task.status == 'REVIEWED' ? '已点评' : '已提交'),
+              ),
+            for (
+              var i = 0;
+              i < items.length && i < (tasks.isEmpty ? 3 : 1);
+              i++
+            )
               _PracticeRow(
                 item: items[i],
                 divider: i < items.length - 1,

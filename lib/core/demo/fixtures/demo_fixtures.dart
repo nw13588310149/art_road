@@ -1,6 +1,7 @@
 import '../demo_backend.dart';
 import 'campus/campus_a_registry.dart';
 import 'campus/campus_b_registry.dart';
+import 'campus/teaching_overview_fixtures.dart';
 import 'content_registry.dart';
 import 'interaction_registry.dart';
 import 'marking_artwork_fixtures.dart';
@@ -25,6 +26,7 @@ void registerDemoFixtures() {
   registerMarkingStudyFixtures(marking);
   registerMarkingArtworkFixtures(marking);
   registerMarkingGalleryFixtures(marking);
+  registerTeachingOverviewFixtures(marking);
 
   DemoBackend.markRegistered();
 }

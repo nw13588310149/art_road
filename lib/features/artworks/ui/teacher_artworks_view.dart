@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/art/art_subject.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
 import '../../shell/state/shell_controller.dart';
 import '../data/artwork_models.dart';
@@ -13,6 +14,7 @@ import '../state/teacher_artworks_controller.dart';
 import 'artwork_review_workspace.dart';
 import 'artwork_tag_manager_dialog.dart';
 import 'widgets/artwork_widgets.dart';
+import 'widgets/artwork_review_settings_dialog.dart';
 
 /// 教职「作品点评」：待点评队列、搜索、点评标签管理，点开进入点评工作台。
 class TeacherArtworksView extends ConsumerStatefulWidget {
@@ -165,9 +167,23 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
       children: [
         AppPageHeader(
           title: isPrincipal ? '全部作品' : '作品点评',
-          subtitle: isPrincipal
-              ? '查看全校作品，可点评与推优'
-              : '责任老师点评后学生立即可见；需要时请组长复核',
+          actions: [
+            if (isPrincipal)
+              AppButton(
+                label: '点评设置',
+                size: AppButtonSize.sm,
+                variant: AppButtonVariant.secondary,
+                onTap: () async {
+                  await showReviewSettings(context);
+                  if (mounted) await _controller.refresh();
+                },
+              ),
+          ],
+          subtitle: user.role == 'principal'
+              ? '查看全校作品、校长点评与推优'
+              : isPrincipal
+              ? '查看全校作品与点评记录'
+              : '责任老师点评后学生即可查看，需要时可请组长复核',
           bottom: Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -219,13 +235,14 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
                       },
                     ),
                   ),
-                  AppButton(
-                    label: '点评标签',
-                    icon: Icons.sell_outlined,
-                    variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.sm,
-                    onTap: () => showArtworkTagManager(context),
-                  ),
+                  if (!isPrincipal)
+                    AppButton(
+                      label: '点评标签',
+                      icon: Icons.sell_outlined,
+                      variant: AppButtonVariant.secondary,
+                      size: AppButtonSize.sm,
+                      onTap: () => showArtworkTagManager(context),
+                    ),
                   if (isLeader)
                     AppButton(
                       label: '复核池',
@@ -245,15 +262,47 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
                       context,
                     ).pushNamed(RoutePaths.excellentArtworks),
                   ),
-                  AppButton(
-                    label: isPrincipal ? '查看作品' : '开始点评',
-                    icon: Icons.rate_review_outlined,
-                    size: AppButtonSize.sm,
-                    loading: _starting,
-                    onTap: _startReview,
-                  ),
+                  if (!isPrincipal)
+                    AppButton(
+                      label: '开始点评',
+                      icon: Icons.rate_review_outlined,
+                      size: AppButtonSize.sm,
+                      loading: _starting,
+                      onTap: _startReview,
+                    ),
                 ],
               ),
+              if (isPrincipal) ...[
+                SizedBox(
+                  width: 132,
+                  child: AppSelect<String>(
+                    value: state.subject,
+                    options: [
+                      const AppSelectOption(value: '', label: '全部科目'),
+                      for (final subject in ArtSubject.values)
+                        AppSelectOption(
+                          value: subject.label,
+                          label: subject.label,
+                        ),
+                    ],
+                    onChanged: (value) =>
+                        unawaited(_controller.setScope(subject: value)),
+                  ),
+                ),
+                SizedBox(
+                  width: 132,
+                  child: AppSelect<String>(
+                    value: state.campus,
+                    options: [
+                      const AppSelectOption(value: '', label: '全部校区'),
+                      for (final campus in const ['城东', '城西', '安宁'])
+                        AppSelectOption(value: campus, label: campus),
+                    ],
+                    onChanged: (value) =>
+                        unawaited(_controller.setScope(campus: value)),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -472,7 +521,7 @@ class _TeacherArtworkCard extends StatelessWidget {
               if (item.myReviewed && score != null)
                 ArtworkScore(score: score, maxScore: item.maxScore, size: 16)
               else if (item.myReviewed && !item.reviewed)
-                Text('等其他老师点评', style: AppText.caption12)
+                Text('待责任老师点评', style: AppText.caption12)
               else
                 const Icon(
                   Icons.chevron_right_rounded,

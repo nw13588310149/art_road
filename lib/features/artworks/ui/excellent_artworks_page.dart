@@ -21,6 +21,14 @@ class ExcellentArtworksPage extends ConsumerStatefulWidget {
 
 class _ExcellentArtworksPageState extends ConsumerState<ExcellentArtworksPage> {
   final _scrollController = ScrollController();
+  String _campusId = '';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    _campusId = args is Map ? args['campusId']?.toString() ?? '' : '';
+  }
 
   @override
   void initState() {
@@ -29,7 +37,9 @@ class _ExcellentArtworksPageState extends ConsumerState<ExcellentArtworksPage> {
       if (_scrollController.hasClients &&
           _scrollController.position.extentAfter < 360) {
         unawaited(
-          ref.read(excellentArtworksControllerProvider.notifier).loadMore(),
+          ref
+              .read(excellentArtworksControllerProvider(_campusId).notifier)
+              .loadMore(),
         );
       }
     });
@@ -43,8 +53,9 @@ class _ExcellentArtworksPageState extends ConsumerState<ExcellentArtworksPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(excellentArtworksControllerProvider);
-    final controller = ref.read(excellentArtworksControllerProvider.notifier);
+    final provider = excellentArtworksControllerProvider(_campusId);
+    final state = ref.watch(provider);
+    final controller = ref.read(provider.notifier);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

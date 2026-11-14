@@ -7,6 +7,7 @@ import '../../../core/art/art_subject.dart';
 import '../../../core/art/art_tokens.dart';
 import '../../art_toolbox/data/toolbox_catalog.dart';
 import '../../artworks/data/artwork_models.dart';
+import '../../artworks/data/artwork_rules.dart';
 import '../../artworks/data/artwork_repository.dart';
 import '../ui/widgets/home_study_snapshot.dart';
 
@@ -50,7 +51,8 @@ List<HomePractice> buildHomePractices({
 }) {
   final result = <HomePractice>[];
   final usedTools = <String>{};
-  for (final suggestion in insights?.suggestions ?? const <ArtworkSuggestion>[]) {
+  for (final suggestion
+      in insights?.suggestions ?? const <ArtworkSuggestion>[]) {
     if (result.length >= 2 || result.length >= limit) {
       break;
     }
@@ -165,10 +167,7 @@ List<HomePractice> buildHomePractices({
   }
   final subject = insights?.weakestSubject ?? '';
   if (ArtSubject.tryParse(subject) != null) {
-    return (
-      subject: subject,
-      reason: '日常作品里$subject的点评得分偏低，挑一张同类范画对照着练。',
-    );
+    return (subject: subject, reason: '日常作品里$subject的点评得分偏低，挑一张同类范画对照着练。');
   }
   return null;
 }
@@ -193,6 +192,8 @@ class HomeLatestReview {
     this.teacherName = '',
     this.comment = '',
     this.reviewedTime = '',
+    this.roles = const [],
+    this.canRevise = false,
   });
 
   /// 评语优先取责任老师点评；兼容旧的多师列表时取时间最新且有正文的一条。
@@ -226,6 +227,16 @@ class HomeLatestReview {
           : work.teacherName,
       comment: homeCommentLine(pick?.content ?? ''),
       reviewedTime: pick?.reviewedTime ?? '',
+      roles: [
+        for (final role in <String>{
+          for (final event in detail?.timeline ?? []) event.role,
+        })
+          if (role != 'STUDENT') role,
+      ],
+      canRevise:
+          work.reviewed &&
+          (pick?.tags.any((tag) => !ArtworkRules.isHighlightTag(tag.color)) ??
+              false),
     );
   }
 
@@ -239,6 +250,8 @@ class HomeLatestReview {
   final String teacherName;
   final String comment;
   final String reviewedTime;
+  final List<String> roles;
+  final bool canRevise;
 }
 
 /// 今日练习：高频问题来自作品点评小结（`GET /app/artworks/insights`），弱项科目来自学情速览。
@@ -266,25 +279,26 @@ final homePracticeProvider = FutureProvider.autoDispose<List<HomePractice>>((
 });
 
 /// 最近点评：已点评作品按绘画日期倒序取第一份，再取详情拿到老师评语。
-final homeLatestReviewProvider =
-    FutureProvider.autoDispose<HomeLatestReview?>((ref) async {
-      final repository = ref.watch(artworkRepositoryProvider);
-      final response = await repository.getArtworks(
-        status: ArtworkStatusFilter.reviewed,
-        page: 1,
-        size: 1,
-      );
-      if (!response.isSuccess) {
-        throw StateError(response.errorOr('最近点评加载失败'));
-      }
-      final records = ArtworkPage.fromJson(response.data).records;
-      if (records.isEmpty) {
-        return null;
-      }
-      final work = records.first;
-      final detail = await repository.getArtwork(work.id);
-      return HomeLatestReview.from(
-        work,
-        detail.isSuccess ? ArtworkDetail.fromJson(detail.data) : null,
-      );
-    });
+final homeLatestReviewProvider = FutureProvider.autoDispose<HomeLatestReview?>((
+  ref,
+) async {
+  final repository = ref.watch(artworkRepositoryProvider);
+  final response = await repository.getArtworks(
+    status: ArtworkStatusFilter.reviewed,
+    page: 1,
+    size: 1,
+  );
+  if (!response.isSuccess) {
+    throw StateError(response.errorOr('最近点评加载失败'));
+  }
+  final records = ArtworkPage.fromJson(response.data).records;
+  if (records.isEmpty) {
+    return null;
+  }
+  final work = records.first;
+  final detail = await repository.getArtwork(work.id);
+  return HomeLatestReview.from(
+    work,
+    detail.isSuccess ? ArtworkDetail.fromJson(detail.data) : null,
+  );
+});

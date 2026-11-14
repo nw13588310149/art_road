@@ -1,9 +1,10 @@
+import '../../data/demo_artwork_store.dart';
 import '../../data/demo_marking_data.dart';
 import '../../demo_accounts.dart';
 import '../../demo_backend.dart';
 import '../../demo_store.dart';
 import 'campus_a_common.dart';
-import 'campus_a_courses.dart';
+import 'campus_b_homework.dart';
 
 /// 学生考试、成绩与作业：`myExamList` / `myExamDetail` / `examSeat` /
 /// `examSubmit` / `examOverview` / `examRecordList` / `studentHomework*`。
@@ -14,7 +15,6 @@ abstract final class CampusAStudy {
   static const upcomingExamId = '28';
   static const onlineExamId = '29';
   static const _maxOnlineSubmits = 2;
-  static const _autoReviewDelay = Duration(minutes: 2);
 
   static const _statusText = <String, String>{
     'NOT_STARTED': '未开始',
@@ -251,7 +251,10 @@ abstract final class CampusAStudy {
         : _round1(scores.reduce((a, b) => a + b) / scores.length);
   }
 
-  static Map<String, dynamic> _overview(DemoAccount account, String? subjectId) {
+  static Map<String, dynamic> _overview(
+    DemoAccount account,
+    String? subjectId,
+  ) {
     final scored = _scored(account);
     double valueOf(DemoExamEntry e) =>
         subjectId == null ? e.total! : (e.subject(subjectId)?.score ?? 0);
@@ -348,8 +351,8 @@ abstract final class CampusAStudy {
   static Map<String, dynamic> _record(DemoExamEntry e) {
     final index = e.person.index;
     final subjects = e.subjects!;
-    final avg = subjects.map((s) => s.score).reduce((a, b) => a + b) /
-        subjects.length;
+    final avg =
+        subjects.map((s) => s.score).reduce((a, b) => a + b) / subjects.length;
     return <String, dynamic>{
       'examId': e.exam.examId,
       'examName': e.exam.examName,
@@ -388,287 +391,18 @@ abstract final class CampusAStudy {
 
   // ── 作业 ────────────────────────────────────────────────────────────
 
-  static const _feedbackPool = <String, List<String>>{
-    '素描': [
-      '形体结构交代清楚，明暗交界线再肯定一些，暗部注意整体。',
-      '构图饱满，五大调子完整；亮部层次可以再丰富，避免画花。',
-    ],
-    '色彩': [
-      '色调统一，冷暖关系到位；衬布转折处颜色再丰富些，高光不要用纯白。',
-      '主体物塑造充分，背景可以适当降低纯度，让画面更透气。',
-    ],
-    '速写': [
-      '动态抓得准，线条流畅；手脚结构再交代清楚会更好。',
-      '组合人物前后关系清楚，注意头身比例，重心再稳一些。',
-    ],
-  };
-
-  static String _feedbackFor(String subject, int seed) {
-    for (final entry in _feedbackPool.entries) {
-      if (subject.contains(entry.key)) {
-        return entry.value[seed % entry.value.length];
-      }
-    }
-    return '完成认真，论述清晰，继续保持。';
-  }
-
-  static String _homeworkKey(DemoAccount account) =>
-      'campusA:homework:${account.userId}';
-
-  static List<Map<String, dynamic>> homework(DemoAccount account) {
-    final key = _homeworkKey(account);
-    final list = DemoStore.list(key, () => _seedHomework(account));
-    final now = DateTime.now().millisecondsSinceEpoch;
-    var changed = false;
-    for (final item in list) {
-      final submitted = (item['submittedAtMs'] as num?)?.toInt();
-      if (item['status'] == 1 &&
-          submitted != null &&
-          now - submitted >= _autoReviewDelay.inMilliseconds) {
-        final seed = CampusA.hash('${item['homeworkStudentId']}');
-        item['status'] = 2;
-        item['score'] = 82 + seed % 12;
-        item['feedback'] = _feedbackFor(item['subjectName'].toString(), seed);
-        item['reviewTime'] = CampusA.dateTime(
-          DateTime.fromMillisecondsSinceEpoch(
-            submitted + _autoReviewDelay.inMilliseconds,
-          ),
-        );
-        item.remove('submittedAtMs');
-        changed = true;
-      }
-    }
-    if (changed) {
-      DemoStore.save(key);
-    }
-    return list;
-  }
+  static List<Map<String, dynamic>> homework(DemoAccount account) =>
+      studentArtworkHomework(account);
 
   static bool _overdue(Map<String, dynamic> item) {
     final end = CampusA.parseDateTime(item['endTime'].toString());
-    return item['status'] == 0 && end != null && DateTime.now().isAfter(end);
+    return item['status'] == 0 &&
+        end != null &&
+        DemoArtworkStore.now().isAfter(end);
   }
 
   static int pendingHomeworkCount(DemoAccount account) =>
       homework(account).where((e) => e['status'] == 0).length;
-
-  static List<Map<String, dynamic>> _seedHomework(DemoAccount account) {
-    final c = CampusA.classOf(CampusA.personIndexOf(account));
-    String day(int offset, String clock) =>
-        CampusA.dateTime(CampusA.at(CampusA.today().add(Duration(days: offset)), clock));
-    Map<String, dynamic> hw({
-      required String id,
-      required String title,
-      required String subject,
-      required String teacherId,
-      required String ext,
-      required String desc,
-      required int created,
-      required int due,
-      int status = 0,
-      int? submitted,
-      String? file,
-      String? fileName,
-      String note = '',
-      int? score,
-      String feedback = '',
-    }) {
-      final teacher = CampusA.staff(teacherId);
-      return <String, dynamic>{
-        'id': '7$id',
-        'homeworkStudentId': id,
-        'title': title,
-        'description': desc,
-        'subjectName': subject,
-        'subjectId': CampusACourses.subjectIdOf(subject),
-        'teacherId': teacher.userId,
-        'teacherName': teacher.name,
-        'classId': c.id,
-        'className': c.name,
-        'expectedExt': ext,
-        'createTime': day(created, '19:20'),
-        'endTime': day(due, '21:00'),
-        'status': status,
-        'submitTime': submitted == null ? '' : day(submitted, '20:15'),
-        'score': score,
-        'feedback': feedback,
-        'studentParam1': file ?? '',
-        'studentParam2': fileName ?? '',
-        'studentParam3': submitted == null
-            ? ''
-            : (ext == 'video' ? '视频' : (ext == 'doc' ? '文档' : '照片')),
-        'studentDescription': note,
-      };
-    }
-
-    return [
-      hw(
-        id: '6101',
-        title: '素描几何体组合（明暗）',
-        subject: '素描',
-        teacherId: 't-1',
-        ext: 'image',
-        desc: '4 开素描纸完成正方体、圆锥、球体组合写生，要求明暗交界线清晰、五大调子完整，时长 3 小时，拍照上传。',
-        created: -1,
-        due: 2,
-      ),
-      hw(
-        id: '6104',
-        title: '速写过程录制（10 分钟人物动态）',
-        subject: '速写',
-        teacherId: 't-4',
-        ext: 'video',
-        desc: '录制一段 10 分钟人物动态速写过程视频，展示起形—定动态—深入刻画的步骤，横屏拍摄。',
-        created: -1,
-        due: 3,
-      ),
-      hw(
-        id: '6103',
-        title: '名作临摹：伦勃朗自画像局部',
-        subject: '素描',
-        teacherId: 't-1',
-        ext: 'image',
-        desc: '临摹伦勃朗自画像头部局部，重点体会光影塑造与体积感，8 开纸，可用炭笔。',
-        created: -2,
-        due: 5,
-      ),
-      hw(
-        id: '6102',
-        title: '色彩静物默写',
-        subject: '色彩',
-        teacherId: 't-3',
-        ext: 'image',
-        desc: '默写一组冷色调静物（陶罐、苹果、蓝灰衬布），8 开水粉纸，注意色调统一与冷暖对比。',
-        created: -4,
-        due: -1,
-      ),
-      hw(
-        id: '6105',
-        title: '色彩风景写生小稿',
-        subject: '色彩',
-        teacherId: 't-3',
-        ext: 'image',
-        desc: '黄河岸边写生小稿 2 张，16 开，表现傍晚时分的光色变化。',
-        created: -6,
-        due: -2,
-        status: 1,
-        submitted: -3,
-        file: 'asset:assets/demo/art/color-landscape-1.jpg',
-        fileName: '黄河岸边写生小稿.jpg',
-        note: '天空部分感觉有点灰，请老师指导一下。',
-      ),
-      hw(
-        id: '6106',
-        title: '速写组合人物 3 张',
-        subject: '速写',
-        teacherId: 't-4',
-        ext: 'image',
-        desc: '以画室同学为模特完成 3 张两人以上组合速写，注意人物之间的前后与呼应关系。',
-        created: -5,
-        due: -1,
-        status: 1,
-        submitted: -2,
-        file: 'asset:assets/demo/art/speed-group-1.jpg',
-        fileName: '组合人物速写.jpg',
-        note: '第三张画了画室一角的同学们。',
-      ),
-      hw(
-        id: '6107',
-        title: '石膏头像结构练习（大卫）',
-        subject: '素描',
-        teacherId: 't-1',
-        ext: 'image',
-        desc: '大卫石膏像结构素描，用线面结合的方式交代头骨结构与五官穿插关系。',
-        created: -12,
-        due: -9,
-        status: 2,
-        submitted: -10,
-        file: 'asset:assets/demo/art/sketch-bust-2.jpg',
-        fileName: '大卫结构素描.jpg',
-        score: 88,
-        feedback: '结构交代清楚，暗部再整体一些，眼窝和鼻底的投影要统一在同一光源下。',
-      ),
-      hw(
-        id: '6108',
-        title: '静物色彩·冷暖对比',
-        subject: '色彩',
-        teacherId: 't-3',
-        ext: 'image',
-        desc: '暖光源下的静物写生，重点表现亮部暖、暗部冷的色彩关系。',
-        created: -14,
-        due: -11,
-        status: 2,
-        submitted: -12,
-        file: 'asset:assets/demo/art/color-still-3.jpg',
-        fileName: '冷暖对比静物.jpg',
-        score: 85,
-        feedback: '色调明确，冷暖对比到位；衬布转折处颜色再丰富些，高光不要用纯白。',
-      ),
-      hw(
-        id: '6109',
-        title: '人物动态速写 20 张',
-        subject: '速写',
-        teacherId: 't-4',
-        ext: 'image',
-        desc: '一周内完成 20 张 5 分钟人物动态速写，挑选 5 张最满意的拍照上传。',
-        created: -16,
-        due: -9,
-        status: 2,
-        submitted: -10,
-        file: 'asset:assets/demo/art/speed-figure-3.jpg',
-        fileName: '动态速写精选.jpg',
-        score: 90,
-        feedback: '动态抓得准，线条流畅；手脚的结构再交代清楚就更好了。',
-      ),
-      hw(
-        id: '6110',
-        title: '美术常识：中国画六法',
-        subject: '美术常识',
-        teacherId: 't-7',
-        ext: 'doc',
-        desc: '阅读谢赫「六法论」，结合一幅宋代山水画作品写 800 字读书笔记。',
-        created: -18,
-        due: -13,
-        status: 2,
-        submitted: -14,
-        fileName: '中国画六法读书笔记.docx',
-        score: 92,
-        feedback: '论述清晰，「气韵生动」部分举例恰当，继续保持。',
-      ),
-      hw(
-        id: '6111',
-        title: '素描五官局部（眼睛）',
-        subject: '素描',
-        teacherId: 't-1',
-        ext: 'image',
-        desc: '眼睛局部写生 4 个角度，注意上下眼睑的厚度与眼球的球体感。',
-        created: -21,
-        due: -18,
-        status: 2,
-        submitted: -19,
-        file: 'asset:assets/demo/art/sketch-portrait-1.jpg',
-        fileName: '五官局部-眼睛.jpg',
-        score: 86,
-        feedback: '眼球体积感塑造得不错，眼睑的厚度再表现出来，睫毛不要画成线。',
-      ),
-      hw(
-        id: '6112',
-        title: '色彩花卉写生',
-        subject: '色彩',
-        teacherId: 't-3',
-        ext: 'image',
-        desc: '瓶花写生一张，8 开，注意花卉的纯度变化与背景的空间感。',
-        created: -26,
-        due: -23,
-        status: 2,
-        submitted: -24,
-        file: 'asset:assets/demo/art/color-flower-1.jpg',
-        fileName: '瓶花写生.jpg',
-        score: 89,
-        feedback: '花卉颜色鲜活，背景处理得透气；花瓶的投影可以再冷一点。',
-      ),
-    ];
-  }
 
   static Map<String, dynamic> _homeworkRow(Map<String, dynamic> item) {
     final status = item['status'] as int;
@@ -676,6 +410,7 @@ abstract final class CampusAStudy {
       'id': item['id'],
       'homeworkId': item['id'],
       'homeworkStudentId': item['homeworkStudentId'],
+      'artworkId': item['artworkId'],
       'title': item['title'],
       'description': item['description'],
       'createTime': item['createTime'],
@@ -701,6 +436,7 @@ abstract final class CampusAStudy {
     return <String, dynamic>{
       'homework': <String, dynamic>{
         'id': item['id'],
+        'referenceWorkId': item['referenceWorkId'],
         'title': item['title'],
         'description': item['description'],
         'createTime': item['createTime'],
@@ -720,8 +456,8 @@ abstract final class CampusAStudy {
         'studentParam2': item['studentParam2'],
         'studentParam3': item['studentParam3'],
         'description': item['studentDescription'],
-        'teacherParam1': '',
-        'teacherParam2': '',
+        'teacherParam1': CampusA.media(item['teacherParam1']?.toString() ?? ''),
+        'teacherParam2': item['teacherParam2'],
       },
       'subject': <String, dynamic>{
         'id': item['subjectId'],
@@ -738,9 +474,10 @@ abstract final class CampusAStudy {
   static Map<String, dynamic> _homeworkSummary(DemoAccount account) {
     final list = homework(account);
     final reviewed = list.where((e) => e['status'] == 2).toList();
+    final scored = reviewed.where((e) => e['score'] is num).toList();
     List<Map<String, dynamic>> averages(String key) {
       final groups = <String, List<num>>{};
-      for (final item in reviewed) {
+      for (final item in scored) {
         groups
             .putIfAbsent(item[key].toString(), () => <num>[])
             .add(item['score'] as num);
@@ -768,16 +505,16 @@ abstract final class CampusAStudy {
       'scoreRanges': [
         for (final range in ranges)
           () {
-            final count = reviewed.where((e) {
+            final count = scored.where((e) {
               final score = e['score'] as num;
               return score >= range.$2 && score < range.$3;
             }).length;
             return <String, dynamic>{
               'range': range.$1,
               'count': count,
-              'percent': reviewed.isEmpty
+              'percent': scored.isEmpty
                   ? 0
-                  : (count * 100 / reviewed.length).round(),
+                  : (count * 100 / scored.length).round(),
             };
           }(),
       ],
@@ -809,7 +546,10 @@ abstract final class CampusAStudy {
       ];
     });
 
-    r.post('$base/myExamDetail', (req) => _examById(req.account, req.str('id')));
+    r.post(
+      '$base/myExamDetail',
+      (req) => _examById(req.account, req.str('id')),
+    );
 
     r.post('$base/examSeat', (req) {
       final exam = _examById(req.account, req.str('id'));
@@ -875,9 +615,7 @@ abstract final class CampusAStudy {
     });
 
     r.post('$base/examRecordList', (req) {
-      return [
-        for (final e in _scored(req.account).reversed) _record(e),
-      ];
+      return [for (final e in _scored(req.account).reversed) _record(e)];
     });
 
     r.post('$base/studentHomeworkList', (req) {
@@ -902,31 +640,7 @@ abstract final class CampusAStudy {
     });
 
     r.post('$base/studentHomeworkSubmit', (req) {
-      final account = req.account;
-      final id = req.str('id');
-      Map<String, dynamic>? target;
-      for (final item in homework(account)) {
-        if (item['homeworkStudentId'] == id) {
-          target = item;
-        }
-      }
-      if (target == null) {
-        throw const DemoApiException('作业不存在');
-      }
-      if (target['status'] != 0) {
-        throw const DemoApiException('作业已提交，请等待老师批阅');
-      }
-      final now = DateTime.now();
-      target
-        ..['status'] = 1
-        ..['submitTime'] = CampusA.dateTime(now)
-        ..['studentParam1'] = CampusA.toRef(req.str('studentParam1'))
-        ..['studentParam2'] = req.str('studentParam2')
-        ..['studentParam3'] = req.str('studentParam3')
-        ..['studentDescription'] = req.str('description')
-        ..['submittedAtMs'] = now.millisecondsSinceEpoch;
-      DemoStore.save(_homeworkKey(account));
-      return true;
+      throw const DemoApiException('请通过作品上传提交作业', code: 400);
     });
   }
 }
