@@ -22,6 +22,7 @@ import '../../shell/state/shell_controller.dart';
 import '../../smart_campus/state/smart_campus_controller.dart';
 import '../../teaching_overview/data/teaching_overview_repository.dart';
 import '../../teaching_overview/ui/teaching_overview_page.dart';
+import '../../teaching_overview/ui/principal_overview.dart';
 import '../../teaching_overview/state/teaching_overview_controller.dart';
 import '../../artworks/state/lead_reviews_controller.dart';
 import '../../artworks/state/student_artworks_controller.dart';

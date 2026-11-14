@@ -255,6 +255,19 @@ class _Overview {
               'title': cbStr(work['title']),
             },
     ]..sort((a, b) => cbStr(b['time']).compareTo(cbStr(a['time'])));
+    final latestWorks = DemoArtworkStore.latestVersions(
+      works,
+    )..sort((a, b) => cbStr(b['createTime']).compareTo(cbStr(a['createTime'])));
+    final recentSubjects = <String>{};
+    final recentArtworks = <_Row>[];
+    for (final work in latestWorks) {
+      if (recentSubjects.add(cbStr(work['subject']))) {
+        recentArtworks.add(
+          DemoArtworkStore.projectSummary(work, request.account),
+        );
+      }
+      if (recentArtworks.length == 3) break;
+    }
     return {
       'campuses': [
         for (final c in DemoCampusData.classes)
@@ -295,6 +308,7 @@ class _Overview {
           },
       ],
       'activity': activity.take(8).toList(),
+      'recentArtworks': recentArtworks,
     };
   }
 
@@ -316,6 +330,8 @@ class _Overview {
             '${DemoArtworkData.teacherName(entry.key)}有 ${entry.value} 份作品待$action超时',
         'target': target,
         'id': entry.key,
+        'name': DemoArtworkData.teacherName(entry.key),
+        'detail': '${entry.value}份作品待$action',
       };
     }
   }

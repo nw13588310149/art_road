@@ -110,12 +110,14 @@ class TeachingTrendChart extends StatelessWidget {
     required this.rows,
     this.percent = false,
     this.unit = '份',
+    this.highlightLatest = false,
     super.key,
   });
 
   final List<TeachingRow> rows;
   final bool percent;
   final String unit;
+  final bool highlightLatest;
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +137,29 @@ class TeachingTrendChart extends StatelessWidget {
 
     String number(double n) =>
         '${n.toStringAsFixed(n % 1 == 0 ? 0 : 1)}${percent ? '%' : ' $unit'}';
+    final bar = LineChartBarData(
+      spots: [
+        for (var i = 0; i < values.length; i++)
+          values[i] == null
+              ? FlSpot.nullSpot
+              : FlSpot(i.toDouble(), values[i]!),
+      ],
+      color: AppColors.brand,
+      barWidth: 2,
+      isCurved: false,
+      isStrokeCapRound: true,
+      belowBarData: BarAreaData(show: true, color: AppColors.brandWash),
+      dotData: FlDotData(
+        checkToShowDot: (spot, _) =>
+            !highlightLatest || spot.x == values.length - 1,
+        getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+          radius: highlightLatest ? 4 : 3,
+          color: highlightLatest ? AppColors.brand : AppColors.surface,
+          strokeWidth: highlightLatest ? 0 : 2,
+          strokeColor: AppColors.brand,
+        ),
+      ),
+    );
     return Semantics(
       label: rows
           .asMap()
@@ -145,7 +170,7 @@ class TeachingTrendChart extends StatelessWidget {
           )
           .join('，'),
       child: Padding(
-        padding: const EdgeInsets.only(top: 12, right: 14),
+        padding: EdgeInsets.only(top: highlightLatest ? 28 : 12, right: 14),
         child: LineChart(
           duration: Duration.zero,
           LineChartData(
@@ -200,11 +225,19 @@ class TeachingTrendChart extends StatelessWidget {
             ),
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (_) => AppColors.ink,
+                getTooltipColor: (_) =>
+                    highlightLatest ? AppColors.brand : AppColors.ink,
+                tooltipPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                fitInsideHorizontally: true,
                 getTooltipItems: (spots) => spots
                     .map(
                       (spot) => LineTooltipItem(
-                        '${label(spot.x.toInt())}\n${number(spot.y)}',
+                        highlightLatest
+                            ? number(spot.y)
+                            : '${label(spot.x.toInt())}\n${number(spot.y)}',
                         AppText.caption12Strong.copyWith(
                           color: AppColors.onBrand,
                         ),
@@ -213,33 +246,11 @@ class TeachingTrendChart extends StatelessWidget {
                     .toList(),
               ),
             ),
-            lineBarsData: [
-              LineChartBarData(
-                spots: [
-                  for (var i = 0; i < values.length; i++)
-                    values[i] == null
-                        ? FlSpot.nullSpot
-                        : FlSpot(i.toDouble(), values[i]!),
-                ],
-                color: AppColors.brand,
-                barWidth: 2.5,
-                isCurved: false,
-                isStrokeCapRound: true,
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: AppColors.brandWash,
-                ),
-                dotData: FlDotData(
-                  getDotPainter: (spot, percent, bar, index) =>
-                      FlDotCirclePainter(
-                        radius: 3,
-                        color: AppColors.surface,
-                        strokeWidth: 2,
-                        strokeColor: AppColors.brand,
-                      ),
-                ),
-              ),
+            showingTooltipIndicators: [
+              if (highlightLatest && values.lastOrNull != null)
+                ShowingTooltipIndicators([LineBarSpot(bar, 0, bar.spots.last)]),
             ],
+            lineBarsData: [bar],
           ),
         ),
       ),
