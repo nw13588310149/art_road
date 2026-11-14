@@ -8,8 +8,8 @@
 // 视觉（Figma 970 设计宽）：
 //   1. 顶部 banner（62 高）：白→#F9EDFF 渐变；左 12 返回；居中 "作业与批改"
 //      16/600；右上 "历史作业" + "发布作业" 两白底胶囊按钮（带紫色图标）。
-//   2. 状态 tabs（44 高 4 tab）：白底圆角胶囊，命中黑底 #0B081A 白字。
-//      tab：全部 / 待我批改 / 进行中 / 已截止/已收尾。
+//   2. 状态 tabs（44 高 4 tab）：白底圆角 8，命中黑底 #0B081A 白字。
+//      tab：全部 / 待我批改 / 进行中 / 已截止。
 //   3. 统计面板（单白卡 12 圆角 16 内边）：
 //      · 上行（spaceBetween）：左 120×44 「全部班级 ▾」白底 1px #F3F2F3 边
 //        胶囊 → 点击 PopupSelectorField；右 累计/本学期/本月 toggle（黑底白字）。
@@ -17,16 +17,16 @@
 //        待批改人次 / 发布作业数 / 已评阅人次 / 已评均分 / 最高分 / 最低分。
 //   4. 主体双列：
 //      · 左 340 白卡：标题 "作业列表" + 6 张 316×104 卡片（灰底/紫底 #F4F4FF
-//        选中态），每张卡顶部右上 68×22 状态角标（已截止 / 待评(N)），主区
-//        显示截止时间 / 班级 / 科目 tag / 标题。点击切换 active。
+//        选中态），每张卡顶部右上 68×22 状态角标（已截止 / 待批改 N / 进行中），
+//        主区显示截止时间 / 班级 / 科目 tag + 待批改 tag / 标题。点击切换 active。
 //      · 右 615 白卡：当前作业详情：
 //          - 标题 + 截止时间（spaceBetween）
-//          - 灰底卡：建议提交（AppTag）+ 描述说明
+//          - 灰底卡：【建议提交：图片】+ 描述说明 12 号、1.6 行高
 //          - 4 项数据指示（126×32 灰底胶囊：标签 + 数字 + 28×28 紫色渐变图标）
-//          - 学生表格：表头 + N 行（32×32 头像 + 姓名 + 状态 tag + 科目 + 介质
-//            + 上传时间 + 80×40 黑底操作按钮）
+//          - 学生表格：表头 + N 行（32×32 圆头像 + 姓名 + 方角状态 tag + 科目
+//            + 上传时间 + 90×32 黑底操作按钮）
 //
-//   5. 三个右抽屉（showGeneralDialog + Align(centerRight) + SlideTransition）：
+//   5. 三个右抽屉（[showSmartCampusSideDrawer]：贴右全高、240ms 从右滑入）：
 //      · 发布作业（600 宽）：作业标题输入 + 学科/期望提交格式双下拉 + 截止时间
 //        picker + 发布对象（带紫色 checkbox 的班级列表）+ 作业要求 textarea
 //        + 底部紫色渐变 "发布" CTA。
@@ -41,6 +41,10 @@
 //      #9585FF→#715EFE 紫渐变 CTA / #FF6A00 待评橙 / #12CE51 已通过绿 /
 //      #71717A 表头灰 / #B6B5BB 提示灰
 // 字体：PingFang SC（10/11/12/13/14/16/600）+ Barlow（28 数值 + 16 分母）
+//
+// 版式按音乐之路原版还原：横幅与横幅按钮、状态页签、抽屉的打开方式、抽屉标题
+// 和底部渐变按钮用智慧校园共享组件，其余按原版数值写在本文件里。
+// 本页只还原版式，读写数据的方式不变。
 // =============================================================================
 
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
@@ -71,6 +75,7 @@ import 'widgets/smart_campus_stat_card.dart';
 import '../data/teacher_repository.dart';
 import 'widgets/schedule_course_card.dart';
 import 'widgets/smart_campus_page_banner.dart';
+import 'widgets/smart_campus_side_drawer.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
 // ---- 日期时间（与后端约定 `yyyy-MM-dd HH:mm:ss`）----------------------------
@@ -216,20 +221,24 @@ Map<dynamic, dynamic> _flattenHomeworkPayload(Map<dynamic, dynamic> m) {
 }
 
 // ---- 配色 -------------------------------------------------------------------
-const Color _kCardBg = AppColors.surface;
-const Color _kPageGrey = AppColors.surfaceSubtle;
-const Color _kPickGrey = AppColors.brandWash;
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextBlack = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kTextMuted = AppColors.textSecondary;
+// 原版色值；紫色统一为品牌紫（渐变 #9585FF → #715EFE）。
+const Color _kCardBg = Colors.white;
+const Color _kPageGrey = Color(0xFFF5F6FA);
+const Color _kPickGrey = Color(0xFFF4F4FF);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextBlack = Color(0xFF1A1A1A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kTextMuted = Color(0xFF71717A);
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleEnd = AppColors.brandSoft;
-const Color _kPurpleStart = AppColors.brand;
-const Color _kRecordRed = AppColors.danger;
-const Color _kRecordRedLight = AppColors.danger;
+const Color _kRecordRed = Color(0xFFFF323C);
+const Color _kRecordRedLight = Color(0xFFFF7A7A);
+const Color _kOrange = Color(0xFFFF6A00);
+const Color _kOrangeBg = Color(0xFFFFEDD3);
+const Color _kGreen = Color(0xFF12CE51);
+const Color _kGreenBg = Color(0xFFE4FFED);
+const Color _kSubjectBg = Colors.white;
 
 /// 页面各板块之间的固定间距。
 const double _kSectionGap = 14;
@@ -828,23 +837,18 @@ class _TeacherHomeworkReviewViewState
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
       bodyScrollable: false,
-      header: AppPageHeader(
-        title: '作业批改',
-        subtitle: '布置作业、查看提交情况并逐份批改',
+      header: SmartCampusPageBanner(
+        title: '作业与批改',
         onBack: widget.onBack,
         actions: [
-          AppButton(
+          SmartCampusBannerButton(
             label: '历史作业',
             iconAsset: AppAssets.homeworkHistoryIcon,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
             onTap: _openHistoryDrawer,
           ),
-          AppButton(
+          SmartCampusBannerButton(
             label: '发布作业',
             iconAsset: AppAssets.homeworkPublishIcon,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
             onTap: _openPublishDrawer,
           ),
         ],
@@ -893,11 +897,10 @@ class _TeacherHomeworkReviewViewState
           SizedBox(height: ui(_kSectionGap)),
           Expanded(
             child: _all.isEmpty
-                ? const AppCard(
-                    child: AppEmptyState(
-                      icon: Icons.assignment_outlined,
-                      title: '还没有作业',
-                      description: '点右上角「发布作业」给学生布置第一份作业',
+                ? Center(
+                    child: Text(
+                      '暂无作业数据',
+                      style: TextStyle(color: _kTextHint, fontSize: ui(14)),
                     ),
                   )
                 : _BodyRow(
@@ -923,116 +926,50 @@ class _TeacherHomeworkReviewViewState
     );
   }
 
+  // 三个右抽屉都用原版的打开方式（[showSmartCampusSideDrawer]）：贴右、全高、
+  // 240ms easeOutCubic 从右滑入、20% 黑色遮罩，点遮罩关闭。
+
   void _openHistoryDrawer() {
-    final scale = DashboardScaleScope.of(context);
-    showGeneralDialog<void>(
+    showSmartCampusSideDrawer<void>(
       context: context,
-      barrierDismissible: true,
       barrierLabel: '关闭历史发布记录',
-      barrierColor: AppColors.ink.withValues(alpha: 0.20),
-      transitionDuration: const Duration(milliseconds: 240),
-      pageBuilder: (ctx, anim, sec) {
-        return Align(
-          alignment: Alignment.centerRight,
-          child: DashboardScaleScope(
-            data: scale,
-            child: _HistoryDrawer(classId: _classId),
-          ),
-        );
-      },
-      transitionBuilder: (ctx, anim, sec, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-          child: child,
-        );
-      },
+      builder: (ctx) => _HistoryDrawer(classId: _classId),
     );
   }
 
   void _openPublishDrawer() {
-    final scale = DashboardScaleScope.of(context);
-    showGeneralDialog<void>(
+    showSmartCampusSideDrawer<void>(
       context: context,
-      barrierDismissible: true,
       barrierLabel: '关闭发布作业',
-      barrierColor: AppColors.ink.withValues(alpha: 0.20),
-      transitionDuration: const Duration(milliseconds: 240),
-      pageBuilder: (ctx, anim, sec) {
-        return Align(
-          alignment: Alignment.centerRight,
-          child: DashboardScaleScope(
-            data: scale,
-            child: _PublishDrawer(
-              onPublished: () {
-                Navigator.of(ctx).maybePop();
-                _loadHomeworkList();
-                _loadStats();
-              },
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (ctx, anim, sec, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-          child: child,
-        );
-      },
+      builder: (ctx) => _PublishDrawer(
+        onPublished: () {
+          Navigator.of(ctx).maybePop();
+          _loadHomeworkList();
+          _loadStats();
+        },
+      ),
     );
   }
 
   void _openReviewDrawer(_HomeworkItem item, _Submission submission) {
-    final scale = DashboardScaleScope.of(context);
-    showGeneralDialog<void>(
+    showSmartCampusSideDrawer<void>(
       context: context,
-      barrierDismissible: true,
       barrierLabel: '关闭作业点评',
-      barrierColor: AppColors.ink.withValues(alpha: 0.20),
-      transitionDuration: const Duration(milliseconds: 240),
-      pageBuilder: (ctx, anim, sec) {
-        return Align(
-          alignment: Alignment.centerRight,
-          child: DashboardScaleScope(
-            data: scale,
-            child: _ReviewDrawer(
-              item: item,
-              submission: submission,
-              homeworkSubjectDisplay: item.resolveSubjectDisplay(
-                _subjectNameById,
-              ),
-              onReviewed: () {
-                Navigator.of(ctx).maybePop();
-                if (_all.isNotEmpty) {
-                  _loadHomeworkDetail(_all[_activeHomeworkIdx].id);
-                }
-                _loadStats();
-              },
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (ctx, anim, sec, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-          child: child,
-        );
-      },
+      builder: (ctx) => _ReviewDrawer(
+        item: item,
+        submission: submission,
+        homeworkSubjectDisplay: item.resolveSubjectDisplay(_subjectNameById),
+        onReviewed: () {
+          Navigator.of(ctx).maybePop();
+          if (_all.isNotEmpty) {
+            _loadHomeworkDetail(_all[_activeHomeworkIdx].id);
+          }
+          _loadStats();
+        },
+      ),
     );
   }
 }
-
-// =============================================================================
-// 顶部 banner（白→#F9EDFF 渐变；左返回 + 居中标题 + 右两按钮）
-// =============================================================================
 
 // =============================================================================
 // 状态 tabs（4 项；命中黑底白字 6 圆角）
@@ -1095,7 +1032,7 @@ class _SegmentChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: ui(14),
-            color: active ? AppColors.surface : _kTextSecondary,
+            color: active ? Colors.white : _kTextSecondary,
             fontWeight: AppFont.w500,
             height: 1,
           ),
@@ -1158,7 +1095,7 @@ class _StatsPanel extends StatelessWidget {
                 height: ui(44),
                 padding: EdgeInsets.all(ui(4)),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(ui(12)),
                   border: Border.all(color: _kBorderSoft),
                 ),
@@ -1457,7 +1394,7 @@ class _HomeworkListCard extends StatelessWidget {
                   Text(
                     '截止 ${item.deadline}',
                     style: TextStyle(
-                      fontSize: ui(12),
+                      fontSize: ui(10),
                       color: _kTextHint,
                       fontWeight: AppFont.w400,
                       height: 1.2,
@@ -1474,7 +1411,14 @@ class _HomeworkListCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: ui(6)),
-                  Row(children: [_SubjectTag(label: subjectDisplay)]),
+                  Row(
+                    children: [
+                      _SubjectTag(label: subjectDisplay),
+                      SizedBox(width: ui(4)),
+                      if (item.pendingReview > 0)
+                        _PendingReviewTag(count: item.pendingReview),
+                    ],
+                  ),
                   SizedBox(height: ui(8)),
                   Text(
                     item.title,
@@ -1514,6 +1458,7 @@ class _HomeworkListCard extends StatelessWidget {
   }
 }
 
+/// 原版科目方角标签：内距 4×2、圆角 4、白底 12 号灰字（科目名取自作业数据）。
 class _SubjectTag extends StatelessWidget {
   const _SubjectTag({required this.label});
 
@@ -1521,10 +1466,55 @@ class _SubjectTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppTag.subject(label);
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
+      decoration: BoxDecoration(
+        color: _kSubjectBg,
+        borderRadius: BorderRadius.circular(ui(4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: ui(12),
+          color: _kTextHint,
+          fontWeight: AppFont.w400,
+          height: 1.2,
+        ),
+      ),
+    );
   }
 }
 
+/// 原版卡内「待批改」方角标签（橙底橙字），紧跟在科目标签后面。
+class _PendingReviewTag extends StatelessWidget {
+  const _PendingReviewTag({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
+      decoration: BoxDecoration(
+        color: _kOrangeBg,
+        borderRadius: BorderRadius.circular(ui(4)),
+      ),
+      child: Text(
+        '待批改 $count',
+        style: TextStyle(
+          fontSize: ui(12),
+          color: _kOrange,
+          fontWeight: AppFont.w400,
+          height: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+/// 原版卡片右上角标：68×22，右上与左下圆角 12；已截止灰底，其余橙底。
 class _CornerLabel extends StatelessWidget {
   const _CornerLabel({required this.label, required this.kind});
 
@@ -1533,12 +1523,33 @@ class _CornerLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = kind == _CornerKind.closed
-        ? AppTone.neutral
-        : (label.startsWith('待批改') ? AppTone.warning : AppTone.brand);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 10, 12, 0),
-      child: AppStatusTag(label: label, tone: tone),
+    final ui = DashboardScaleScope.of(context).ui;
+    final bg = kind == _CornerKind.closed
+        ? const Color(0xFFE6E9F1)
+        : _kOrangeBg;
+    final fg = kind == _CornerKind.closed ? _kTextHint : _kOrange;
+    return Container(
+      width: ui(68),
+      height: ui(22),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(ui(12)),
+          bottomLeft: Radius.circular(ui(12)),
+        ),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        softWrap: false,
+        style: TextStyle(
+          fontSize: ui(12),
+          color: fg,
+          fontWeight: AppFont.w400,
+          height: 1,
+        ),
+      ),
     );
   }
 }
@@ -1642,17 +1653,14 @@ class _SuggestedBlock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Text(
-                '建议提交',
-                style: AppText.caption12.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              SizedBox(width: ui(6)),
-              AppTag(label: suggested),
-            ],
+          Text(
+            '【建议提交：$suggested】',
+            style: TextStyle(
+              fontSize: ui(12),
+              color: _kTextDark,
+              fontWeight: AppFont.w500,
+              height: 1.6,
+            ),
           ),
           SizedBox(height: ui(2)),
           Text(
@@ -1790,8 +1798,9 @@ class _ProgressMetricCell extends StatelessWidget {
 
 // ---- 学生提交表格 -----------------------------------------------------------
 
+// 表头与各行共用同一组列宽，保证列对齐（原版表头 94/80、行 94+12/90，略有错位）。
 const _submissionStudentWidth = 94.0;
-const _submissionActionWidth = 100.0;
+const _submissionActionWidth = 90.0;
 
 class _SubmissionsTable extends StatelessWidget {
   const _SubmissionsTable({
@@ -1815,7 +1824,7 @@ class _SubmissionsTable extends StatelessWidget {
           height: ui(40),
           padding: EdgeInsets.symmetric(horizontal: ui(8)),
           decoration: BoxDecoration(
-            color: AppColors.surfaceSubtle,
+            color: const Color(0xFFF9FAFB),
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           child: Row(
@@ -1916,13 +1925,27 @@ class _SubmissionRow extends StatelessWidget {
             width: _submissionActionWidth,
             child: item.state == _SubmissionState.missing
                 ? const SizedBox.shrink()
-                : Align(
-                    alignment: Alignment.centerLeft,
-                    child: AppButton(
-                      label: item.action,
-                      variant: AppButtonVariant.quiet,
-                      size: AppButtonSize.sm,
-                      onTap: onOpenReview,
+                // 原版行内操作：高 32、圆角 8 的墨色实底按钮，13 号白字。
+                : AppPressable(
+                    onTap: onOpenReview,
+                    child: Container(
+                      height: ui(32),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _kTextDark,
+                        borderRadius: BorderRadius.circular(ui(8)),
+                      ),
+                      child: Text(
+                        item.action,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontSize: ui(13),
+                          color: Colors.white,
+                          fontWeight: AppFont.w400,
+                          height: 1.4,
+                        ),
+                      ),
                     ),
                   ),
           ),
@@ -1954,6 +1977,7 @@ class _CellText extends StatelessWidget {
   }
 }
 
+/// 原版提交状态方角标签：内距 4×2、圆角 4、12 号字，浅底深字。
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.state});
 
@@ -1961,30 +1985,40 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    final ({Color bg, Color fg, String text}) tone = switch (state) {
+      _SubmissionState.passed => (bg: _kGreenBg, fg: _kGreen, text: '已通过'),
+      _SubmissionState.pending => (bg: _kOrangeBg, fg: _kOrange, text: '待批改'),
+      _SubmissionState.missing => (
+        bg: const Color(0xFFFFE5E5),
+        fg: const Color(0xFFE54848),
+        text: '未交',
+      ),
+      _SubmissionState.reviewed => (bg: _kGreenBg, fg: _kGreen, text: '已批改'),
+    };
     return Align(
       alignment: Alignment.centerLeft,
-      child: switch (state) {
-        _SubmissionState.passed => const AppStatusTag(
-          label: '已通过',
-          tone: AppTone.success,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
+        decoration: BoxDecoration(
+          color: tone.bg,
+          borderRadius: BorderRadius.circular(ui(4)),
         ),
-        _SubmissionState.pending => const AppStatusTag(
-          label: '待批改',
-          tone: AppTone.warning,
+        child: Text(
+          tone.text,
+          style: TextStyle(
+            fontSize: ui(12),
+            color: tone.fg,
+            fontWeight: AppFont.w400,
+            height: 1.2,
+          ),
         ),
-        _SubmissionState.missing => const AppStatusTag(
-          label: '未交',
-          tone: AppTone.danger,
-        ),
-        _SubmissionState.reviewed => const AppStatusTag(
-          label: '已批改',
-          tone: AppTone.success,
-        ),
-      },
+      ),
     );
   }
 }
 
+/// 原版圆头像：有照片时裁成圆形；没有照片时按学生取一组渐变底 + 白色姓氏。
 class _AvatarCircle extends StatelessWidget {
   const _AvatarCircle({
     required this.name,
@@ -1998,13 +2032,50 @@ class _AvatarCircle extends StatelessWidget {
   final double size;
   final String? imageUrl;
 
+  static const _palettes = [
+    [AppColors.brandSoft, AppColors.brand],
+    [Color(0xFFFFB68E), Color(0xFFFF8741)],
+    [Color(0xFF8EE0FF), Color(0xFF418EFF)],
+  ];
+
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return AppAvatar(
-      name: name,
-      url: _resolveMediaUrl(imageUrl) ?? '',
-      size: ui(size),
+    final resolved = _resolveMediaUrl(imageUrl);
+    final palette = _palettes[seed.abs() % _palettes.length];
+    final initial = name.isNotEmpty ? name.characters.first : '?';
+    final fallback = Container(
+      width: ui(size),
+      height: ui(size),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: palette,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: ui(13),
+          color: Colors.white,
+          fontWeight: AppFont.w500,
+          height: 1,
+        ),
+      ),
+    );
+    if (resolved == null) return fallback;
+    return ClipOval(
+      child: AppImage(
+        src: resolved,
+        width: ui(size),
+        height: ui(size),
+        fit: BoxFit.cover,
+        placeholder: fallback,
+        error: fallback,
+      ),
     );
   }
 }
@@ -2170,7 +2241,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: AppColors.surface,
+      color: Colors.white,
       child: SizedBox(
         width: ui(600),
         height: double.infinity,
@@ -2182,7 +2253,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _DrawerTitleBar(title: '发布作业'),
+                    const SmartCampusDrawerTitleBar(title: '发布作业'),
                     SizedBox(height: ui(20)),
                     Container(height: 1, color: _kBorderSoft),
                     SizedBox(height: ui(20)),
@@ -2337,7 +2408,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
               left: ui(20),
               right: ui(20),
               bottom: ui(20),
-              child: _PrimaryGradientButton(
+              child: SmartCampusDrawerGradientButton(
                 icon: Icons.send_rounded,
                 label: _publishing ? '发布中…' : '发布',
                 onTap: _publishing ? null : _publish,
@@ -2376,7 +2447,7 @@ class _ClassCheckRow extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(14)),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kPageGrey),
         ),
@@ -2404,7 +2475,7 @@ class _ClassCheckRow extends StatelessWidget {
                     vertical: ui(2),
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(ui(4)),
                     border: Border.all(color: _kBorderSoft, width: 1.4),
                   ),
@@ -2480,13 +2551,13 @@ class _CheckBox extends StatelessWidget {
       width: ui(14),
       height: ui(14),
       decoration: BoxDecoration(
-        color: checked ? _kPurple : AppColors.surface,
+        color: checked ? _kPurple : Colors.white,
         borderRadius: BorderRadius.circular(ui(4)),
         border: Border.all(color: _kPurple),
       ),
       alignment: Alignment.center,
       child: checked
-          ? Icon(Icons.check, size: ui(10), color: AppColors.surface)
+          ? Icon(Icons.check, size: ui(10), color: Colors.white)
           : null,
     );
   }
@@ -2590,7 +2661,7 @@ class _HistoryDrawerState extends ConsumerState<_HistoryDrawer> {
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     return Material(
-      color: AppColors.surface,
+      color: Colors.white,
       child: SizedBox(
         width: ui(344),
         height: double.infinity,
@@ -2703,7 +2774,7 @@ class _HistoryCard extends StatelessWidget {
               Text(
                 '${item.publishedRatio.submitted}',
                 style: TextStyle(
-                  fontSize: ui(24),
+                  fontSize: ui(28),
                   color: _kTextDark,
                   fontFamily: 'Barlow',
                   fontWeight: FontWeight.w600,
@@ -2730,7 +2801,7 @@ class _HistoryCard extends StatelessWidget {
           Text(
             '截止 ${item.deadline}',
             style: TextStyle(
-              fontSize: ui(12),
+              fontSize: ui(10),
               color: _kTextHint,
               fontWeight: AppFont.w400,
               height: 1.4,
@@ -2963,7 +3034,7 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
     final bottomPad = _isReviewed ? ui(20) : ui(80);
 
     return Material(
-      color: AppColors.surface,
+      color: Colors.white,
       child: SizedBox(
         width: ui(600),
         height: double.infinity,
@@ -2975,7 +3046,7 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _DrawerTitleBar(title: '作业点评'),
+                    const SmartCampusDrawerTitleBar(title: '作业点评'),
                     SizedBox(height: ui(20)),
                     Container(height: 1, color: _kBorderSoft),
                     SizedBox(height: ui(16)),
@@ -3116,7 +3187,7 @@ class _ReviewDrawerState extends ConsumerState<_ReviewDrawer> {
                 left: ui(20),
                 right: ui(20),
                 bottom: ui(20),
-                child: _PrimaryGradientButton(
+                child: SmartCampusDrawerGradientButton(
                   icon: Icons.check_circle_outline_rounded,
                   label: _submitting ? '提交中…' : '发布批改',
                   onTap: _submitting ? null : _submitReview,
@@ -3524,7 +3595,7 @@ class _HomeworkVoiceHoldBar extends StatelessWidget {
       iconChild = HomeworkAssetIcon(
         AppAssets.homeworkReviewVoiceIcon,
         size: ui(_kButtonSize),
-        colorFilter: const ColorFilter.mode(AppColors.surface, BlendMode.srcIn),
+        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
       );
       decoration = BoxDecoration(
         gradient: const LinearGradient(
@@ -3591,7 +3662,7 @@ class _HomeworkRecordingHintCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: ui(12)),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(ui(10)),
         border: Border.all(color: _kBorderSoft),
       ),
@@ -3717,7 +3788,7 @@ class _ReviewProfileRow extends StatelessWidget {
           width: ui(40),
           height: ui(40),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(ui(8)),
           ),
           child: _AvatarCircle(
@@ -3742,7 +3813,7 @@ class _ReviewProfileRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: ui(16),
-                        color: AppColors.ink,
+                        color: Colors.black,
                         fontWeight: AppFont.w600,
                         height: 1.2,
                       ),
@@ -3821,7 +3892,7 @@ class _AttachmentCard extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFFD7E2FF), AppColors.surfaceSubtle],
+                colors: [Color(0xFFD7E2FF), Color(0xFFF9FBFF)],
               ),
               borderRadius: BorderRadius.circular(ui(8)),
               border: Border.all(color: const Color(0xFFE5EFFF)),
@@ -3830,14 +3901,14 @@ class _AttachmentCard extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
               decoration: BoxDecoration(
-                color: AppColors.danger,
+                color: const Color(0xFFFF5040),
                 borderRadius: BorderRadius.circular(ui(2)),
               ),
               child: Text(
                 badgeLabel,
                 style: TextStyle(
-                  fontSize: ui(12),
-                  color: AppColors.surface,
+                  fontSize: ui(8),
+                  color: Colors.white,
                   fontWeight: FontWeight.w700,
                   height: 1,
                   letterSpacing: 0.4,
@@ -3866,7 +3937,7 @@ class _AttachmentCard extends StatelessWidget {
                 Text(
                   size,
                   style: TextStyle(
-                    fontSize: ui(12),
+                    fontSize: ui(11),
                     color: _kTextSecondary,
                     fontWeight: AppFont.w400,
                     height: 1.2,
@@ -3914,7 +3985,7 @@ class _GhostButton extends StatelessWidget {
         height: ui(33),
         padding: EdgeInsets.symmetric(horizontal: ui(12)),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(ui(8)),
           border: Border.all(color: _kBorderSoft),
         ),
@@ -4000,40 +4071,6 @@ class _ScoreInput extends StatelessWidget {
 // 抽屉里通用零件
 // =============================================================================
 
-class _DrawerTitleBar extends StatelessWidget {
-  const _DrawerTitleBar({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: ui(3.25),
-          height: ui(14.85),
-          decoration: BoxDecoration(
-            color: _kPurple,
-            borderRadius: BorderRadius.circular(ui(6)),
-          ),
-        ),
-        SizedBox(width: ui(4)),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: ui(16),
-            color: _kTextDark,
-            fontWeight: AppFont.w600,
-            height: 1,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.text);
 
@@ -4046,7 +4083,7 @@ class _FieldLabel extends StatelessWidget {
       text,
       style: TextStyle(
         fontSize: ui(14),
-        color: AppColors.ink,
+        color: Colors.black,
         fontWeight: AppFont.w500,
         height: 1.4,
       ),
@@ -4170,54 +4207,6 @@ class _PlainTextAreaState extends State<_PlainTextArea> {
           color: _kTextDark,
           fontWeight: AppFont.w400,
           height: 1.4,
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryGradientButton extends StatelessWidget {
-  const _PrimaryGradientButton({
-    required this.icon,
-    required this.label,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        height: ui(48),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.centerRight,
-            end: Alignment.centerLeft,
-            colors: [_kPurpleEnd, _kPurpleStart],
-          ),
-          borderRadius: BorderRadius.circular(ui(12)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: ui(16), color: AppColors.surface),
-            SizedBox(width: ui(8)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: ui(14),
-                color: AppColors.surface,
-                fontWeight: AppFont.w500,
-                height: 1.6,
-              ),
-            ),
-          ],
         ),
       ),
     );
