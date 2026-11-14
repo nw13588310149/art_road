@@ -12,6 +12,10 @@
 // 视觉：970 设计宽度自适应到容器宽度，左列约 0.5918，右列约 0.3959，gap 12。
 // 颜色：白卡 #FFFFFF / 浅灰底 #F5F6FA / 紫色主色 #715EFE / 蓝色 #325BFF / 红色 #FF323C
 // 字体：PingFang SC（标题 18 / 正文 12~14）+ Barlow（数字 20~24）
+//
+// 版式按音乐之路原版还原：横幅用智慧校园共享组件（标题居中、右侧三段切换），
+// 分区标题 18、班级通知卡、身份徽章、假别角标、成绩标签等按原版数值写在本文件里；
+// 文案、演示数据和取数口径（待我审批、美术标签、时间格式等）是本工程的，保留。
 // =============================================================================
 
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
@@ -39,23 +43,24 @@ import '../data/student_leave_data.dart';
 import '../data/teacher_repository.dart';
 import 'student_homework_submission_preview.dart';
 import 'widgets/smart_campus_page_banner.dart';
-import 'widgets/smart_campus_notice_card.dart';
 import 'widgets/smart_campus_stripe_bar_chart.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-const Color _kPanelBg = AppColors.surface;
-const Color _kInnerGray = AppColors.surfaceSubtle;
-const Color _kTextDark = AppColors.ink;
-const Color _kTextSection = AppColors.ink;
-const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
-const Color _kTextHintLight = AppColors.textPlaceholder;
+// 原版色值；紫色统一为品牌紫（辅助紫用 brandSoft）。
+const Color _kPanelBg = Colors.white;
+const Color _kInnerGray = Color(0xFFF5F6FA);
+const Color _kTextDark = Color(0xFF0B081A);
+const Color _kTextSection = Color(0xFF1A1A1A);
+const Color _kTextSecondary = Color(0xFF6D6B75);
+const Color _kTextHint = Color(0xFFB6B5BB);
+const Color _kTextHintLight = Color(0xFFD1D1D1);
 const Color _kPurple = AppColors.brand;
 const Color _kPurpleSoft = AppColors.brandSoft;
 const Color _kBlue = Color(0xFF325BFF);
-const Color _kRed = AppColors.danger;
-const Color _kBorderSoft = AppColors.lineSoft;
-const Color _kAnnounceBg = AppColors.brandWash;
+const Color _kRed = Color(0xFFFF323C);
+const Color _kYellow = Color(0xFFDBEE49);
+const Color _kBorderSoft = Color(0xFFF3F2F3);
+const Color _kAnnounceBg = Color(0xFFF0E8FC);
 
 // ---- 班级通知数据模型（来自 API）----------------------------------------
 
@@ -174,7 +179,7 @@ class _StudentManageData {
       tags: tagsRaw,
       tag: firstTag,
       tagColor: firstTag != null ? _kPurple : null,
-      tagTextColor: firstTag != null ? AppColors.surface : null,
+      tagTextColor: firstTag != null ? Colors.white : null,
       avatarUrl: m['headUrl']?.toString() ?? m['avatar']?.toString(),
     );
   }
@@ -300,28 +305,29 @@ class _TeacherClassWorkbenchViewState
 
   @override
   Widget build(BuildContext context) {
-    final header = AppPageHeader(
+    final ui = DashboardScaleScope.of(context).ui;
+    // 原版横幅：居中标题，右侧是「概况 / 学生管理 / 成绩」三段切换。
+    final header = SmartCampusPageBanner(
       title: '班级工作台',
-      subtitle: '本班学生、班级通知、请假与成绩',
       onBack: widget.onBack,
       actions: [
-        AppSegmented<_WorkbenchTab>(
-          segments: [
-            for (final t in _WorkbenchTab.values)
-              AppSegment(value: t, label: t.label),
-          ],
-          value: _tab,
-          selectedColor: AppColors.ink,
-          onChanged: (t) => setState(() => _tab = t),
+        _WorkbenchTabSegmented(
+          tab: _tab,
+          onTabChanged: (t) => setState(() => _tab = t),
         ),
       ],
     );
 
     if (_classError.isNotEmpty) {
+      // 原版：横幅下方 60 处居中一行灰字。
       return SmartCampusSecondaryPageShell(
         header: header,
-        body: AppCard(
-          child: AppErrorState(title: '班级工作台加载失败', description: _classError),
+        headerGap: 60,
+        body: Center(
+          child: Text(
+            _classError,
+            style: TextStyle(fontSize: ui(14), color: _kTextHint),
+          ),
         ),
       );
     }
@@ -357,7 +363,79 @@ class _TeacherClassWorkbenchViewState
 
 // =============================================================================
 // 顶部 Banner：左侧返回按钮 / 居中「班级工作台」标题 / 右侧 3 段 Tab
+// （横幅本身用共享的 SmartCampusPageBanner，三段切换按原版写在这里）
 // =============================================================================
+
+/// 原版横幅右侧三段切换：灰底圆角 8、内距 2、最小高 32；选项内距 16×7、圆角 6、
+/// 12 号字，选中墨色底白字（500），未选灰字（400）。点了立即切换。
+class _WorkbenchTabSegmented extends StatelessWidget {
+  const _WorkbenchTabSegmented({required this.tab, required this.onTabChanged});
+
+  final _WorkbenchTab tab;
+  final ValueChanged<_WorkbenchTab> onTabChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      // minHeight 而不是 fixed height：避免中文字 height:1 被切顶。
+      constraints: BoxConstraints(minHeight: ui(32)),
+      padding: EdgeInsets.all(ui(2)),
+      decoration: BoxDecoration(
+        color: _kInnerGray,
+        borderRadius: BorderRadius.circular(ui(8)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final t in _WorkbenchTab.values)
+            _SegmentItem(
+              label: t.label,
+              selected: t == tab,
+              onTap: () => onTabChanged(t),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SegmentItem extends StatelessWidget {
+  const _SegmentItem({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return AppPressable(
+      onTap: onTap,
+      selected: selected,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: ui(16), vertical: ui(7)),
+        decoration: BoxDecoration(
+          color: selected ? _kTextDark : Colors.transparent,
+          borderRadius: BorderRadius.circular(ui(6)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: ui(12),
+            color: selected ? Colors.white : _kTextHint,
+            fontWeight: selected ? AppFont.w500 : AppFont.w400,
+            height: 1.2,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 // =============================================================================
 // 概况 Tab
@@ -628,7 +706,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: ui(16),
+        fontSize: ui(18),
         color: _kTextSection,
         fontWeight: FontWeight.w500,
         height: 1,
@@ -673,7 +751,7 @@ class _SectionTitleWithAction extends StatelessWidget {
                 Icon(
                   Icons.chevron_right_rounded,
                   size: ui(16),
-                  color: AppColors.textTertiary,
+                  color: const Color(0xFFCECED1),
                 ),
               ],
             ),
@@ -751,15 +829,19 @@ class _NoticeSectionState extends ConsumerState<_NoticeSection> {
           child: _loading
               ? const SizedBox.shrink()
               : _notices.isEmpty
-              ? AppEmptyState(
-                  icon: Icons.campaign_outlined,
-                  title: '暂无班级通知',
-                  actionLabel: '发布通知',
-                  onAction: () => _showPublishNoticeDialog(
-                    context,
-                    ref,
-                    classId: widget.classId,
-                    onPublished: _loadNotices,
+              ? Padding(
+                  // 原版空状态：上下留 20 的一行灰字。
+                  padding: EdgeInsets.symmetric(vertical: ui(20)),
+                  child: Center(
+                    child: Text(
+                      '暂无班级通知，点击右上角「发布通知」发给本班学生。',
+                      style: TextStyle(
+                        fontSize: ui(13),
+                        color: _kTextHint,
+                        fontWeight: AppFont.w400,
+                        height: 20 / 13,
+                      ),
+                    ),
                   ),
                 )
               : LayoutBuilder(
@@ -796,7 +878,7 @@ class _NoticeSectionState extends ConsumerState<_NoticeSection> {
   void _confirmDeleteNoticeItem(BuildContext ctx, _NoticeItem notice) async {
     final ok = await showScaledDialog<bool>(
       context: ctx,
-      barrierColor: AppColors.ink.withValues(alpha: 0.80),
+      barrierColor: Colors.black.withValues(alpha: 0.80),
       builder: (dialogContext) {
         final ui = DashboardScaleScope.of(dialogContext).ui;
         return GradientHeaderDialog(
@@ -872,20 +954,48 @@ class _NoticeSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
     return Row(
       children: [
         Expanded(child: _SectionTitle('班级通知')),
-        AppButton(
-          label: '发布通知',
-          icon: Icons.add_rounded,
-          size: AppButtonSize.sm,
+        // 原版「发布通知」：内距 12×7、圆角 8 的品牌紫渐变按钮，16 加号 + 13 号白字。
+        AppPressable(
           onTap: onPublish,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(7)),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [_kPurple, _kPurpleSoft],
+              ),
+              borderRadius: BorderRadius.circular(ui(8)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add_rounded, size: ui(16), color: Colors.white),
+                SizedBox(width: ui(4)),
+                Text(
+                  '发布通知',
+                  style: TextStyle(
+                    fontSize: ui(13),
+                    color: Colors.white,
+                    fontWeight: AppFont.w500,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
   }
 }
 
+/// 原版班级通知卡（班主任视角）：浅紫底圆角 8、内距 8；8 圆点 + 13/500 标题，
+/// 右上 20 白底圆形「×」撤回，正文 12 号两行，日期 11 号。
 class _NoticeCardEditable extends StatelessWidget {
   const _NoticeCardEditable({required this.notice, required this.onDelete});
 
@@ -893,17 +1003,102 @@ class _NoticeCardEditable extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) => SmartCampusNoticeCard(
-    title: notice.title,
-    content: notice.content,
-    date: notice.date,
-    action: AppButton(
-      label: '撤回',
-      variant: AppButtonVariant.text,
-      size: AppButtonSize.sm,
-      onTap: onDelete,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final ui = DashboardScaleScope.of(context).ui;
+    return Container(
+      padding: EdgeInsets.all(ui(8)),
+      decoration: BoxDecoration(
+        color: _kAnnounceBg,
+        borderRadius: BorderRadius.circular(ui(8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: ui(12),
+                height: ui(20),
+                child: Center(
+                  child: Container(
+                    width: ui(8),
+                    height: ui(8),
+                    decoration: const BoxDecoration(
+                      color: _kPurple,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: ui(6)),
+              Expanded(
+                child: Text(
+                  notice.title.isNotEmpty ? notice.title : notice.content,
+                  style: TextStyle(
+                    fontSize: ui(13),
+                    color: _kTextDark,
+                    fontWeight: AppFont.w500,
+                    height: 20 / 13,
+                  ),
+                ),
+              ),
+              SizedBox(width: ui(4)),
+              AppPressable(
+                onTap: onDelete,
+                semanticLabel: '撤回通知',
+                child: Container(
+                  width: ui(20),
+                  height: ui(20),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(ui(10)),
+                  ),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: ui(14),
+                    color: _kTextSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (notice.title.isNotEmpty && notice.content.isNotEmpty) ...[
+            SizedBox(height: ui(4)),
+            Padding(
+              padding: EdgeInsets.only(left: ui(18)),
+              child: Text(
+                notice.content,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: ui(12),
+                  color: _kTextSecondary,
+                  fontWeight: AppFont.w400,
+                  height: 16 / 12,
+                ),
+              ),
+            ),
+          ],
+          SizedBox(height: ui(4)),
+          Padding(
+            padding: EdgeInsets.only(left: ui(18)),
+            child: Text(
+              notice.date,
+              style: TextStyle(
+                fontSize: ui(11),
+                color: _kTextSecondary,
+                fontWeight: AppFont.w400,
+                height: 12 / 11,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // —— 发布通知弹窗 ——————————————————————————————————————————————————
@@ -918,7 +1113,7 @@ Future<void> _showPublishNoticeDialog(
   final contentCtrl = TextEditingController();
   final result = await showScaledDialog<({String title, String content})>(
     context: context,
-    barrierColor: AppColors.ink.withValues(alpha: 0.80),
+    barrierColor: Colors.black.withValues(alpha: 0.80),
     builder: (dialogContext) {
       final ui = DashboardScaleScope.of(dialogContext).ui;
       return GradientHeaderDialog(
@@ -965,7 +1160,7 @@ Future<void> _showPublishNoticeDialog(
               height: ui(44),
               padding: EdgeInsets.symmetric(horizontal: ui(16)),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(ui(8)),
                 border: Border.all(color: _kBorderSoft, width: 1),
               ),
@@ -1013,7 +1208,7 @@ Future<void> _showPublishNoticeDialog(
                 vertical: ui(12),
               ),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(ui(8)),
                 border: Border.all(color: _kBorderSoft, width: 1),
               ),
@@ -1453,7 +1648,27 @@ class _TeacherInfoHeader extends StatelessWidget {
               Positioned(
                 left: 0,
                 top: ui(36),
-                child: const AppTag(label: '班主任', tone: AppTone.brand),
+                // 原版身份徽章：黄绿底胶囊（圆角 10）、1px 白描边、11 号字。
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ui(7),
+                    vertical: ui(2),
+                  ),
+                  decoration: BoxDecoration(
+                    color: _kYellow,
+                    borderRadius: BorderRadius.circular(ui(10)),
+                    border: Border.all(color: Colors.white, width: 1),
+                  ),
+                  child: Text(
+                    '班主任',
+                    style: TextStyle(
+                      fontSize: ui(11),
+                      color: _kTextDark,
+                      fontWeight: FontWeight.w400,
+                      height: 1,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -1486,7 +1701,7 @@ class _TeacherInfoHeader extends StatelessWidget {
                       vertical: ui(4),
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(ui(4)),
                       border: Border.all(color: _kBorderSoft, width: 0.5),
                     ),
@@ -1497,7 +1712,7 @@ class _TeacherInfoHeader extends StatelessWidget {
                           width: ui(6),
                           height: ui(6),
                           decoration: const BoxDecoration(
-                            color: AppColors.success,
+                            color: Color(0xFF12C58A),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -1585,13 +1800,13 @@ class _WorkbenchAvatar extends StatelessWidget {
           ? Text(
               name.characters.first,
               style: TextStyle(
-                fontSize: ui(16),
-                color: AppColors.surface,
+                fontSize: ui(18),
+                color: Colors.white,
                 fontWeight: FontWeight.w500,
                 height: 1,
               ),
             )
-          : Icon(Icons.person_rounded, size: ui(22), color: AppColors.surface),
+          : Icon(Icons.person_rounded, size: ui(22), color: Colors.white),
     );
   }
 }
@@ -1648,7 +1863,7 @@ class _StudentManageAvatar extends StatelessWidget {
               initial,
               style: TextStyle(
                 fontSize: ui(size * 0.38),
-                color: AppColors.surface,
+                color: Colors.white,
                 fontWeight: FontWeight.w500,
                 height: 1,
               ),
@@ -1656,7 +1871,7 @@ class _StudentManageAvatar extends StatelessWidget {
           : Icon(
               Icons.person_rounded,
               size: ui(size * 0.5),
-              color: AppColors.surface,
+              color: Colors.white,
             ),
     );
   }
@@ -1790,7 +2005,7 @@ class _ShortcutStatGrid extends StatelessWidget {
           height: ui(82),
           padding: EdgeInsets.fromLTRB(ui(24), ui(8), ui(24), ui(8)),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(ui(16)),
           ),
           child: Stack(
@@ -2035,7 +2250,7 @@ class _QuickActionTile extends StatelessWidget {
               width: ui(44),
               height: ui(44),
               decoration: BoxDecoration(
-                color: AppColors.brandTint,
+                color: const Color(0xFFEAE5FF),
                 borderRadius: BorderRadius.circular(ui(8)),
               ),
               alignment: Alignment.center,
@@ -2212,7 +2427,12 @@ class _LeaveListCardState extends ConsumerState<_LeaveListCard> {
   }
 
   _LeaveItem _mapLeaveRecord(StudentLeaveRecord record) {
-    final (tagColor, tagTextColor) = (_kInnerGray, _kTextSecondary);
+    // 原版假别角标配色：病假黄绿底、事假紫底白字，其余灰底。
+    final (tagColor, tagTextColor) = switch (record.leaveType) {
+      '病假' => (_kYellow, _kTextDark),
+      '事假' => (_kPurple, Colors.white),
+      _ => (_kInnerGray, _kTextSecondary),
+    };
     return _LeaveItem(
       name: record.studentName,
       headUrl: record.headUrl,
@@ -2529,7 +2749,7 @@ class _PersonRowCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: ui(12),
+                          fontSize: ui(10),
                           color: _kTextHint,
                           fontWeight: FontWeight.w400,
                           height: 1,
@@ -2596,8 +2816,8 @@ class _PersonRowCard extends StatelessWidget {
       child: Text(
         avatarSeed,
         style: TextStyle(
-          fontSize: ui(16),
-          color: AppColors.surface,
+          fontSize: ui(15),
+          color: Colors.white,
           fontWeight: FontWeight.w500,
           height: 1,
         ),
@@ -2783,7 +3003,7 @@ class _StudentsHeader extends StatelessWidget {
             height: ui(40),
             padding: EdgeInsets.symmetric(horizontal: ui(16)),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(ui(12)),
             ),
             child: Row(
@@ -2805,7 +3025,7 @@ class _StudentsHeader extends StatelessWidget {
                       hintText: '搜索姓名、学号、手机、宿舍、家长',
                       hintStyle: TextStyle(
                         fontSize: ui(14),
-                        color: AppColors.textPlaceholder,
+                        color: const Color(0xFFD1D1D1),
                         fontWeight: FontWeight.w400,
                       ),
                       isCollapsed: true,
@@ -2963,7 +3183,7 @@ class _StudentManageCard extends StatelessWidget {
                         data.tag!,
                         style: TextStyle(
                           fontSize: ui(12),
-                          color: data.tagTextColor ?? AppColors.surface,
+                          color: data.tagTextColor ?? Colors.white,
                           fontWeight: FontWeight.w400,
                           height: 1,
                         ),
@@ -3299,7 +3519,7 @@ class _LegendItem extends StatelessWidget {
           width: ui(8),
           height: ui(8),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Colors.white,
             shape: BoxShape.circle,
             border: Border.all(color: color, width: 1),
           ),
@@ -3519,7 +3739,7 @@ class _GradesMultiLineChartPainter extends CustomPainter {
     final innerLeft = size.width * _GradesChartPlotMetrics.innerLeftRatio;
     final innerRight = size.width * _GradesChartPlotMetrics.innerRightRatio;
     final gridPaint = Paint()
-      ..color = AppColors.line
+      ..color = const Color(0xFFE6E9F1)
       ..strokeWidth = 1;
 
     for (final tick in _GradesChartPlotMetrics.yTicks) {
@@ -3575,7 +3795,7 @@ class _GradesMultiLineChartPainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(linePath, linePaint);
 
-      final dotFill = Paint()..color = AppColors.surface;
+      final dotFill = Paint()..color = Colors.white;
       final dotBorder = Paint()
         ..color = color
         ..strokeWidth = ui(1)
@@ -3738,7 +3958,7 @@ class _ExamSessionChip extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: ui(12), vertical: ui(8)),
         decoration: BoxDecoration(
-          color: selected ? AppColors.brandWash : _kInnerGray,
+          color: selected ? const Color(0xFFF4F4FF) : _kInnerGray,
           borderRadius: BorderRadius.circular(ui(8)),
           border: selected ? Border.all(color: _kPurpleSoft, width: 1) : null,
         ),
@@ -3786,10 +4006,10 @@ class _ExamScoreCard extends StatelessWidget {
     }
 
     if (item.hasStudentVideo) {
-      addTag('考试录像', AppColors.surfaceSubtle, _kTextSecondary);
+      addTag('考试录像', const Color(0xFFE6E9F1), _kTextSecondary);
     }
     if (item.hasVideoComment || item.hasAudioComment) {
-      addTag('老师点评', AppColors.brandTint, AppColors.brandDeep);
+      addTag('老师点评', _kPurpleSoft, Colors.white);
     }
     return tags;
   }
@@ -3897,7 +4117,7 @@ class _ExamScoreCard extends StatelessWidget {
             height: ui(45),
             padding: EdgeInsets.symmetric(horizontal: ui(8)),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(ui(8)),
             ),
             child: Row(
@@ -3993,8 +4213,8 @@ class _ScoreAvatarFallback extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: ui(16),
-          color: AppColors.surface,
+          fontSize: ui(15),
+          color: Colors.white,
           fontWeight: FontWeight.w500,
           height: 1,
         ),
@@ -4025,7 +4245,7 @@ class _MiniTag extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: ui(12),
+          fontSize: ui(11),
           color: textColor,
           fontWeight: FontWeight.w400,
           height: 1.2,
@@ -4259,10 +4479,10 @@ class _ScoreDetailPanelState extends ConsumerState<_ScoreDetailPanel> {
     }
 
     if (widget.record.hasStudentVideo) {
-      add('考试录像', AppColors.surfaceSubtle, _kTextSecondary);
+      add('考试录像', const Color(0xFFE6E9F1), _kTextSecondary);
     }
     if (widget.record.hasVideoComment || widget.record.hasAudioComment) {
-      add('老师点评', AppColors.brandTint, AppColors.brandDeep);
+      add('老师点评', _kPurpleSoft, Colors.white);
     }
     return tags;
   }
@@ -4286,7 +4506,7 @@ class _ScoreDetailPanelState extends ConsumerState<_ScoreDetailPanel> {
     return Align(
       alignment: Alignment.centerRight,
       child: Material(
-        color: AppColors.surface,
+        color: Colors.white,
         child: SizedBox(
           width: panelW,
           height: mq.height,
@@ -4315,7 +4535,7 @@ class _ScoreDetailPanelState extends ConsumerState<_ScoreDetailPanel> {
                           Text(
                             '成绩详情',
                             style: TextStyle(
-                              fontSize: ui(16),
+                              fontSize: ui(18),
                               color: _kTextDark,
                               fontWeight: FontWeight.w600,
                               height: 1,
@@ -4375,7 +4595,7 @@ class _ScoreDetailPanelState extends ConsumerState<_ScoreDetailPanel> {
                                       Text(
                                         record.displayName,
                                         style: TextStyle(
-                                          fontSize: ui(16),
+                                          fontSize: ui(18),
                                           color: _kTextDark,
                                           fontWeight: FontWeight.w600,
                                           height: 1.2,
@@ -5045,7 +5265,7 @@ class _StudentDetailPanelState extends ConsumerState<_StudentDetailPanel> {
     return Align(
       alignment: Alignment.centerRight,
       child: Material(
-        color: AppColors.surface,
+        color: Colors.white,
         child: SizedBox(
           width: panelW,
           height: mq.height,
@@ -5094,7 +5314,7 @@ class _StudentDetailPanelState extends ConsumerState<_StudentDetailPanel> {
                           width: ui(32),
                           height: ui(32),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(ui(8)),
                             border: Border.all(color: _kBorderSoft),
                           ),
@@ -5102,7 +5322,7 @@ class _StudentDetailPanelState extends ConsumerState<_StudentDetailPanel> {
                           child: Icon(
                             Icons.close_rounded,
                             size: ui(18),
-                            color: AppColors.ink,
+                            color: const Color(0xFF1C274C),
                           ),
                         ),
                       ),
@@ -5134,7 +5354,7 @@ class _StudentDetailPanelState extends ConsumerState<_StudentDetailPanel> {
                           data.name,
                           style: TextStyle(
                             fontSize: ui(16),
-                            color: AppColors.ink,
+                            color: Colors.black,
                             fontWeight: FontWeight.w600,
                             height: 1,
                           ),
@@ -5427,20 +5647,20 @@ class _StudentDetailPanelState extends ConsumerState<_StudentDetailPanel> {
                                     if (_saving)
                                       const AppLoadingIndicator(
                                         size: 16,
-                                        color: AppColors.surface,
+                                        color: Colors.white,
                                       )
                                     else
                                       Icon(
                                         Icons.check_rounded,
                                         size: ui(16),
-                                        color: AppColors.surface,
+                                        color: Colors.white,
                                       ),
                                     SizedBox(width: ui(8)),
                                     Text(
                                       _saving ? '保存中…' : '确认修改',
                                       style: TextStyle(
                                         fontSize: ui(14),
-                                        color: AppColors.surface,
+                                        color: Colors.white,
                                         fontWeight: FontWeight.w500,
                                         height: 24 / 14,
                                       ),
@@ -5572,7 +5792,7 @@ Widget _detailLabel(BuildContext context, String text) {
     text,
     style: TextStyle(
       fontSize: ui(14),
-      color: AppColors.ink,
+      color: Colors.black,
       fontWeight: FontWeight.w500,
       height: 20 / 14,
     ),
@@ -5638,7 +5858,7 @@ class _FocusStudentSection extends StatelessWidget {
             constraints: BoxConstraints(minHeight: ui(48)),
             padding: EdgeInsets.fromLTRB(ui(16), ui(12), ui(16), ui(12)),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(ui(8)),
               border: Border.all(color: _kBorderSoft),
             ),
@@ -5678,19 +5898,19 @@ class _FocusStudentSection extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(ui(8)),
-                color: isFocused ? AppColors.surface : _kPurple,
+                color: isFocused ? Colors.white : _kPurple,
                 border: Border.all(color: isFocused ? _kRed : _kPurple),
               ),
               child: submitting
                   ? AppLoadingIndicator(
                       size: ui(16),
-                      color: isFocused ? _kRed : AppColors.surface,
+                      color: isFocused ? _kRed : Colors.white,
                     )
                   : Text(
                       isFocused ? '取消重点关注' : '加入重点关注',
                       style: TextStyle(
                         fontSize: ui(14),
-                        color: isFocused ? _kRed : AppColors.surface,
+                        color: isFocused ? _kRed : Colors.white,
                         fontWeight: FontWeight.w500,
                         height: 1,
                       ),
@@ -5724,7 +5944,7 @@ class _FocusTagChip extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: ui(10), vertical: ui(6)),
         decoration: BoxDecoration(
-          color: selected ? colors.$1 : AppColors.surface,
+          color: selected ? colors.$1 : Colors.white,
           borderRadius: BorderRadius.circular(ui(6)),
           border: Border.all(color: selected ? colors.$1 : _kBorderSoft),
         ),
@@ -5859,7 +6079,7 @@ class _StudentTagEditorPanel extends StatelessWidget {
                           child: Icon(
                             Icons.add_rounded,
                             size: ui(18),
-                            color: AppColors.surface,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -5898,7 +6118,7 @@ class _TeacherTagChip extends StatelessWidget {
     final Color textColor;
     if (selected) {
       bg = _kPurpleSoft;
-      textColor = AppColors.surface;
+      textColor = Colors.white;
     } else {
       bg = _kInnerGray;
       textColor = _kTextSecondary;
@@ -5938,7 +6158,7 @@ class _TeacherTagChip extends StatelessWidget {
                   child: Icon(
                     Icons.close_rounded,
                     size: ui(14),
-                    color: AppColors.surface.withValues(alpha: 0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
               ],
