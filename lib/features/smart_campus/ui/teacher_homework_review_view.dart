@@ -1686,40 +1686,50 @@ class _ProgressMetrics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return Row(
+    final cells = <Widget>[
+      _ProgressMetricCell(
+        label: '全班人数',
+        value: '${item.totalPeople}',
+        icon: Icons.people_alt_rounded,
+      ),
+      _ProgressMetricCell(
+        label: '未交人数',
+        value: '${item.unsubmitted}',
+        icon: Icons.person_off_rounded,
+      ),
+      _ProgressMetricCell(
+        label: '待批人数',
+        value: '${item.pendingReview}',
+        icon: Icons.fact_check_outlined,
+      ),
+      _ProgressMetricCell(
+        label: '已批人数',
+        value: '${item.reviewed}',
+        icon: Icons.task_alt_rounded,
+      ),
+    ];
+    Widget row(List<Widget> items) => Row(
       children: [
-        Expanded(
-          child: _ProgressMetricCell(
-            label: '全班人数',
-            value: '${item.totalPeople}',
-            icon: Icons.people_alt_rounded,
-          ),
-        ),
-        SizedBox(width: ui(8)),
-        Expanded(
-          child: _ProgressMetricCell(
-            label: '未交人数',
-            value: '${item.unsubmitted}',
-            icon: Icons.person_off_rounded,
-          ),
-        ),
-        SizedBox(width: ui(8)),
-        Expanded(
-          child: _ProgressMetricCell(
-            label: '待批人数',
-            value: '${item.pendingReview}',
-            icon: Icons.fact_check_outlined,
-          ),
-        ),
-        SizedBox(width: ui(8)),
-        Expanded(
-          child: _ProgressMetricCell(
-            label: '已批人数',
-            value: '${item.reviewed}',
-            icon: Icons.task_alt_rounded,
-          ),
-        ),
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) SizedBox(width: ui(8)),
+          Expanded(child: items[i]),
+        ],
       ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 原版一行四格。每格放下「标签 + 数字 + 图标」至少要 124，窄横屏下
+        // 详情栏不够宽，改成两行两格，标签不被截断。
+        if (constraints.maxWidth >= ui(4 * 124 + 3 * 8)) return row(cells);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            row(cells.sublist(0, 2)),
+            SizedBox(height: ui(8)),
+            row(cells.sublist(2)),
+          ],
+        );
+      },
     );
   }
 }
@@ -1802,6 +1812,13 @@ class _ProgressMetricCell extends StatelessWidget {
 const _submissionStudentWidth = 94.0;
 const _submissionActionWidth = 90.0;
 
+/// 中间三列（状态 / 科目 / 上传时间）的宽度比例。原版三等分；窄横屏下表格只有
+/// 四百多宽，三等分时「11-14 03:26」几乎贴着操作按钮，把宽度让给时间列。
+typedef _SubmissionFlex = ({int status, int subject, int time});
+
+const _SubmissionFlex _submissionFlexWide = (status: 1, subject: 1, time: 1);
+const _SubmissionFlex _submissionFlexNarrow = (status: 5, subject: 4, time: 6);
+
 class _SubmissionsTable extends StatelessWidget {
   const _SubmissionsTable({
     required this.submissions,
@@ -1816,36 +1833,50 @@ class _SubmissionsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          height: ui(40),
-          padding: EdgeInsets.symmetric(horizontal: ui(8)),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF9FAFB),
-            borderRadius: BorderRadius.circular(ui(8)),
-          ),
-          child: Row(
-            children: const [
-              SizedBox(width: _submissionStudentWidth, child: _ColHeader('学生')),
-              Expanded(child: _ColHeader('状态')),
-              Expanded(child: _ColHeader('科目')),
-              Expanded(child: _ColHeader('上传时间')),
-              SizedBox(width: _submissionActionWidth, child: _ColHeader('操作')),
-            ],
-          ),
-        ),
-        for (final s in submissions)
-          _SubmissionRow(
-            item: s,
-            subjectCell: s.subject.trim().isNotEmpty
-                ? s.subject
-                : homeworkSubjectDisplay,
-            onOpenReview: () => onOpenReview(s),
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final flex = constraints.maxWidth < ui(520)
+            ? _submissionFlexNarrow
+            : _submissionFlexWide;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: ui(40),
+              padding: EdgeInsets.symmetric(horizontal: ui(8)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(ui(8)),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: _submissionStudentWidth,
+                    child: _ColHeader('学生'),
+                  ),
+                  Expanded(flex: flex.status, child: const _ColHeader('状态')),
+                  Expanded(flex: flex.subject, child: const _ColHeader('科目')),
+                  Expanded(flex: flex.time, child: const _ColHeader('上传时间')),
+                  const SizedBox(
+                    width: _submissionActionWidth,
+                    child: _ColHeader('操作'),
+                  ),
+                ],
+              ),
+            ),
+            for (final s in submissions)
+              _SubmissionRow(
+                item: s,
+                flex: flex,
+                subjectCell: s.subject.trim().isNotEmpty
+                    ? s.subject
+                    : homeworkSubjectDisplay,
+                onOpenReview: () => onOpenReview(s),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1873,11 +1904,13 @@ class _ColHeader extends StatelessWidget {
 class _SubmissionRow extends StatelessWidget {
   const _SubmissionRow({
     required this.item,
+    required this.flex,
     required this.subjectCell,
     required this.onOpenReview,
   });
 
   final _Submission item;
+  final _SubmissionFlex flex;
   final String subjectCell;
   final VoidCallback onOpenReview;
 
@@ -1918,9 +1951,9 @@ class _SubmissionRow extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(child: _StatusPill(state: item.state)),
-          Expanded(child: _CellText(subjectCell)),
-          Expanded(child: _CellText(item.uploadAt)),
+          Expanded(flex: flex.status, child: _StatusPill(state: item.state)),
+          Expanded(flex: flex.subject, child: _CellText(subjectCell)),
+          Expanded(flex: flex.time, child: _CellText(item.uploadAt)),
           SizedBox(
             width: _submissionActionWidth,
             child: item.state == _SubmissionState.missing

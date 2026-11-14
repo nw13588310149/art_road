@@ -5768,7 +5768,8 @@ class _DetailField extends StatelessWidget {
         SizedBox(height: ui(2)),
         Text(
           value,
-          maxLines: 1,
+          // 原版一行；本工程的宿舍信息较长（楼栋 · 楼层 · 房间 · 床位），允许折成两行。
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: ui(14),

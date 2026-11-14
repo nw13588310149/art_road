@@ -523,19 +523,23 @@ class _StatsRow extends StatelessWidget {
             ),
           ),
           SizedBox(width: ui(12)),
+          // 批次和口径放在数值右侧的小字里（原版「补卡待审」卡同款写法），
+          // 标题保持两三个字，窄横屏下不会被插图挤到截断。
           Expanded(
             child: SmartCampusStatCard(
               backgroundAsset: AppAssets.headTeacherDormDynamicStatReturned,
-              label: '已归寝（$batchLabel）',
+              label: '已归寝',
               value: returnedCount,
+              valueSuffix: batchLabel,
             ),
           ),
           SizedBox(width: ui(12)),
           Expanded(
             child: SmartCampusStatCard(
               backgroundAsset: AppAssets.headTeacherDormDynamicStatException,
-              label: '异常（未打卡 / 晚归）',
+              label: '异常',
               value: exceptionCount,
+              valueSuffix: '未打卡 / 晚归',
             ),
           ),
           SizedBox(width: ui(12)),
@@ -696,8 +700,10 @@ class _CardsGrid extends StatelessWidget {
         final w = constraints.maxWidth;
         final gap = ui(16);
         // Figma 设计 970 宽下 3 列 312；自适应：cw 不足时降到 2 / 1 列。
+        // 窄横屏（内容区 814）三列每张只有 260，「女生公寓1号楼 1层 101」会被
+        // 截断，所以 900 以下就用两列。
         var columns = 3;
-        if (w < ui(720)) columns = 2;
+        if (w < ui(900)) columns = 2;
         if (w < ui(480)) columns = 1;
         final cardWidth = (w - gap * (columns - 1)) / columns;
         return Wrap(

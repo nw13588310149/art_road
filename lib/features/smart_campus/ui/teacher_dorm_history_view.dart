@@ -601,7 +601,9 @@ class _CardsGrid extends StatelessWidget {
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        const columns = 3;
+        // 原版三列；窄横屏（内容区 814）三列每张只有 260，「女生公寓1号楼 1层 101」
+        // 会被截断，所以 900 以下用两列。
+        final columns = constraints.maxWidth >= ui(900) ? 3 : 2;
         const gap = 16.0;
         final scaledGap = ui(gap);
         final cardWidth =
