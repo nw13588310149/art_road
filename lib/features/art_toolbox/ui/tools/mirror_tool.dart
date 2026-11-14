@@ -4,7 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/image_filters.dart';
@@ -158,11 +160,7 @@ class _MirrorBodyState extends State<_MirrorBody> {
                     ),
                   ),
           ),
-          Positioned(
-            left: AppSpace.s12,
-            top: AppSpace.s12,
-            child: StageLabel(_label),
-          ),
+          Positioned(left: 0, top: 0, child: StageLabel(_label)),
         ],
       ),
     );
@@ -220,11 +218,9 @@ class _MirrorBodyState extends State<_MirrorBody> {
         ),
         Align(
           alignment: Alignment.centerLeft,
-          child: AppButton(
+          child: LibraryActionPill(
             label: '恢复原图',
-            icon: Icons.restart_alt_rounded,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
+            iconAsset: AppAssets.coursewareRefresh,
             onTap: _horizontal || _vertical || _invert || _alternate != null
                 ? _reset
                 : null,

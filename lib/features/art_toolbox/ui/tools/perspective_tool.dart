@@ -3,7 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/geometry.dart';
@@ -262,17 +264,15 @@ class _PerspectiveBodyState extends State<_PerspectiveBody> {
                       Text('灭点 ${i + 1}', style: AppText.body14Strong),
                       const SizedBox(width: AppSpace.s8),
                       Expanded(
-                        child: Text(
+                        child: ToolNote(
                           i < 2 ? '在视平线上，可左右拖动' : '控制竖线的汇聚，仰视在上、俯视在下',
-                          maxLines: 2,
-                          style: AppText.caption12,
                         ),
                       ),
                     ],
                   ),
                 ),
               const SizedBox(height: AppSpace.s4),
-              Text('拖动灭点或视平线调整位置，让辅助线贴合画中物体的边线', style: AppText.caption12),
+              const ToolNote('拖动灭点或视平线调整位置，让辅助线贴合画中物体的边线'),
             ],
           ),
         ),
@@ -301,11 +301,9 @@ class _PerspectiveBodyState extends State<_PerspectiveBody> {
         ),
         Align(
           alignment: Alignment.centerLeft,
-          child: AppButton(
+          child: LibraryActionPill(
             label: '恢复默认位置',
-            icon: Icons.restart_alt_rounded,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
+            iconAsset: AppAssets.coursewareRefresh,
             onTap: _reset,
           ),
         ),

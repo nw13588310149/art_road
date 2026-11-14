@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../../core/ui/ui.dart';
+import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/geometry.dart';
@@ -175,11 +176,7 @@ class _GridBodyState extends State<_GridBody> {
                   ),
                 ),
               ),
-              Positioned(
-                left: AppSpace.s12,
-                top: AppSpace.s12,
-                child: StageLabel(_stageLabel),
-              ),
+              Positioned(left: 0, top: 0, child: StageLabel(_stageLabel)),
             ],
           );
         },
@@ -228,6 +225,7 @@ class _GridBodyState extends State<_GridBody> {
         ToolPanelSection(
           title: '构图线',
           trailing: const Text('可同时打开'),
+          bottom: AppSpace.s4,
           child: Column(
             children: [
               ToolSwitchRow(
@@ -298,13 +296,15 @@ class _GridBodyState extends State<_GridBody> {
             ),
           ],
         ],
-        if (_grid != _GridMode.none)
+        if (_grid != _GridMode.none) ...[
           ToolSwitchRow(
             label: '格子编号',
             hint: '列 A、B、C…，行 1、2、3…，方便对照临摹',
             value: _labels,
             onChanged: (v) => setState(() => _labels = v),
           ),
+          const SizedBox(height: AppSpace.s4),
+        ],
         ToolPanelSection(
           title: '画纸比例',
           child: Column(
@@ -331,9 +331,8 @@ class _GridBodyState extends State<_GridBody> {
                   }),
                 ),
                 const SizedBox(height: AppSpace.s8),
-                Text(
+                ToolNote(
                   '${_paper!.label} ${_paper!.sizeText(landscape: _landscape)}，框外为裁掉的部分',
-                  style: AppText.caption12,
                 ),
               ],
             ],
@@ -367,11 +366,10 @@ class _GridBodyState extends State<_GridBody> {
         ),
         Align(
           alignment: Alignment.centerLeft,
-          child: AppButton(
+          child: LibraryActionPill(
             label: '复位缩放',
             icon: Icons.zoom_out_map_rounded,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
+            iconSize: 18,
             onTap: () => _transform.value = Matrix4.identity(),
           ),
         ),

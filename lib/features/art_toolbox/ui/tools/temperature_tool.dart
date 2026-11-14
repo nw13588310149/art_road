@@ -123,6 +123,7 @@ class _TemperatureBodyState extends State<_TemperatureBody>
           value: _compare,
           onChanged: (v) => setState(() => _compare = v),
         ),
+        const SizedBox(height: AppSpace.s4),
         const ToolTipCard(
           title: '怎样看冷暖',
           text:
@@ -130,7 +131,7 @@ class _TemperatureBodyState extends State<_TemperatureBody>
               '暖光下亮部偏暖，暗部和投影偏冷；环境色也会让暗部带上周围颜色的倾向。'
               '建议画面有明确的主色调，冷暖一方占主导，另一方作对比。',
         ),
-        const SizedBox(height: AppSpace.s12),
+        const SizedBox(height: AppSpace.s20),
         const ToolTipCard(
           title: '判断标准',
           text: '暖：红、橙、黄、黄绿、紫红；冷：绿、青、蓝、蓝紫；纯度很低或很暗的颜色算中性灰。',

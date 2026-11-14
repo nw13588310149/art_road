@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/ui/ui.dart';
+import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/color_analysis.dart';
@@ -283,11 +284,10 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
           if (_autoThreshold != null)
             Align(
               alignment: Alignment.centerLeft,
-              child: AppButton(
+              child: LibraryActionPill(
                 label: '使用自动阈值（$_autoThreshold）',
                 icon: Icons.auto_fix_high_rounded,
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.sm,
+                iconSize: 18,
                 onTap: _threshold == _autoThreshold
                     ? null
                     : () {
@@ -296,7 +296,7 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
                       },
               ),
             ),
-          const SizedBox(height: AppSpace.s16),
+          const SizedBox(height: AppSpace.s20),
           if (darkRatio != null)
             ToolPanelSection(
               title: '黑白面积',
@@ -321,6 +321,7 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
           value: _compare,
           onChanged: (v) => _update(() => _compare = v),
         ),
+        const SizedBox(height: AppSpace.s4),
         if (distribution != null)
           ToolPanelSection(
             title: '明度分布',
