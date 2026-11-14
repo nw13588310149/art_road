@@ -137,7 +137,7 @@ class _StudentMyClassViewState extends ConsumerState<StudentMyClassView> {
 
     final info = _classInfo;
     return SmartCampusSecondaryPageShell(
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
         title: '我的班级',
         subtitle: info == null
             ? '班级信息、班级通知、师资与同学'

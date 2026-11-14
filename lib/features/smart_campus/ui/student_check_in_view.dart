@@ -204,11 +204,11 @@ class _StudentCheckInViewState extends ConsumerState<StudentCheckInView>
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
       bodyScrollable: false,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 128,
         title: '课堂签到',
         subtitle: '小课签到、签退与课堂评价，大课由班主任统一考勤',
         onBack: widget.onBack,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
         actions: [
           AppButton(
             label: '历史记录',

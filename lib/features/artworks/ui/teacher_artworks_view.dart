@@ -18,9 +18,14 @@ import 'widgets/artwork_review_settings_dialog.dart';
 
 /// 教职「作品点评」：待点评队列、搜索、点评标签管理，点开进入点评工作台。
 class TeacherArtworksView extends ConsumerStatefulWidget {
-  const TeacherArtworksView({this.initialArtworkId, super.key});
+  const TeacherArtworksView({
+    this.initialArtworkId,
+    this.startReview = false,
+    super.key,
+  });
 
   final String? initialArtworkId;
+  final bool startReview;
 
   @override
   ConsumerState<TeacherArtworksView> createState() =>
@@ -45,6 +50,11 @@ class _TeacherArtworksViewState extends ConsumerState<TeacherArtworksView> {
     super.initState();
     _detailId = widget.initialArtworkId;
     _scrollController.addListener(_handleScroll);
+    if (_detailId == null && widget.startReview) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_startReview());
+      });
+    }
   }
 
   @override

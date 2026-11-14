@@ -509,7 +509,8 @@ class _AdminNotificationManagementViewState
     final list = _filtered;
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 128,
         title: '通知管理',
         subtitle: '发布、定时与撤回校级通知',
         onBack: widget.onBack,
@@ -969,9 +970,7 @@ class _TableRow extends StatelessWidget {
               child: _PriorityCell(priority: record.priority),
             ),
             const _HeaderGap(),
-            Expanded(
-              child: _TextCell(text: record.scopeLabel, maxLines: 2),
-            ),
+            Expanded(child: _TextCell(text: record.scopeLabel, maxLines: 2)),
             const _HeaderGap(),
             SizedBox(
               width: ui(_statusColumnWidth),

@@ -184,6 +184,7 @@ class TeacherArtworksController extends StateNotifier<TeacherArtworksState> {
       status: ArtworkStatusFilter.pending,
       page: 1,
       size: 1,
+      assigned: true,
     );
     if (!response.isSuccess) {
       return (id: null, error: response.errorOr('获取待点评作品失败，请稍后重试'));

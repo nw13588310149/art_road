@@ -1315,37 +1315,32 @@ class _AdminScheduleManagementViewState
     final ui = DashboardScaleScope.of(context).ui;
     return SmartCampusSchedulePageShell(
       bodyScrollable: false,
-      header: SmartCampusScheduleTopBar(
-        child: AppPageHeader(
-          title: '排课与课表',
-          subtitle: '按班级查看与调整周课表，审核任课老师的小课申请',
-          onBack: widget.onBack,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s20),
-          actions: [
-            AppSegmented<_AdminScheduleTab>(
-              segments: [
-                const AppSegment(
-                  value: _AdminScheduleTab.schedule,
-                  label: '课表',
-                ),
-                AppSegment(
-                  value: _AdminScheduleTab.applyAudit,
-                  label: '小课审核',
-                  badge: _pendingApplyCount > 0 ? '$_pendingApplyCount' : null,
-                ),
-              ],
-              value: _tab,
-              selectedColor: AppColors.ink,
-              onChanged: (t) {
-                setState(() => _tab = t);
-                if (t == _AdminScheduleTab.applyAudit) {
-                  _loadApplies();
-                  unawaited(_loadPendingApplyCount());
-                }
-              },
-            ),
-          ],
-        ),
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 170,
+        title: '排课与课表',
+        subtitle: '按班级查看与调整周课表，审核任课老师的小课申请',
+        onBack: widget.onBack,
+        actions: [
+          AppSegmented<_AdminScheduleTab>(
+            segments: [
+              const AppSegment(value: _AdminScheduleTab.schedule, label: '课表'),
+              AppSegment(
+                value: _AdminScheduleTab.applyAudit,
+                label: '小课审核',
+                badge: _pendingApplyCount > 0 ? '$_pendingApplyCount' : null,
+              ),
+            ],
+            value: _tab,
+            selectedColor: AppColors.ink,
+            onChanged: (t) {
+              setState(() => _tab = t);
+              if (t == _AdminScheduleTab.applyAudit) {
+                _loadApplies();
+                unawaited(_loadPendingApplyCount());
+              }
+            },
+          ),
+        ],
       ),
       body: _tab == _AdminScheduleTab.schedule
           ? _buildScheduleTab(ui)

@@ -7,6 +7,7 @@ import '../../../core/ui/ui.dart';
 import '../../artworks/data/artwork_models.dart';
 import '../../smart_campus/state/smart_campus_controller.dart';
 import '../../smart_campus/ui/widgets/smart_campus_page_banner.dart';
+import '../../study_center/ui/growth/student_artwork_growth_view.dart';
 import '../data/teaching_overview_repository.dart';
 import '../state/teaching_overview_controller.dart';
 
@@ -842,21 +843,39 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
             padding: const EdgeInsets.all(AppSpace.s16),
             child: Text('暂无学生', style: AppText.body13),
           ),
-        for (final row in visible)
-          AppListRow(
-            leading: AppAvatar(name: teachingText(row['name']), size: 40),
-            title: teachingText(row['name']),
-            subtitle: [
-              teachingText(row['className']),
-              if (row['teacher'] != null) '负责老师 ${row['teacher']}',
-              ..._strings(row['reasons']),
-            ].join(' · '),
-            trailing: row['reasons'] == null && row['unresolvedCount'] != null
-                ? AppTag(label: '待改善 ${row['unresolvedCount']} 项')
-                : null,
-            onTap: () => _showStudent(row),
-          ),
+        for (final row in visible) _studentListRow(row),
       ],
+    );
+  }
+
+  Widget _studentListRow(TeachingRow row) {
+    final preview = teachingRows(row['dimensions'])
+        .where((subject) => subject['subject'] == row['previewSubject'])
+        .firstOrNull;
+    return AppListRow(
+      leading: AppAvatar(name: teachingText(row['name']), size: 40),
+      title: teachingText(row['name']),
+      subtitle: [
+        teachingText(row['className']),
+        if (row['teacher'] != null) '负责老师 ${row['teacher']}',
+        if (row['previewSubject'] != null) '近次提交 ${row['latestWork'] ?? '—'}',
+        ..._strings(row['reasons']),
+      ].join(' · '),
+      trailing: row['reasons'] == null && row['unresolvedCount'] != null
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: AppSpace.s12,
+              children: [
+                if (preview != null)
+                  ArtworkDimensionRadar(
+                    levels: ArtworkDimensionLevels.fromJson(preview),
+                    size: 44,
+                  ),
+                AppTag(label: '待改善 ${row['unresolvedCount']} 项'),
+              ],
+            )
+          : null,
+      onTap: () => _showStudent(row),
     );
   }
 

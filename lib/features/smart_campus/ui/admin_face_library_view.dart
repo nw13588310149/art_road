@@ -973,7 +973,8 @@ class _AdminFaceLibraryViewState extends ConsumerState<AdminFaceLibraryView> {
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
       bodyScrollable: false,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 200,
         title: '人脸库',
         onBack: widget.onBack,
         actions: [

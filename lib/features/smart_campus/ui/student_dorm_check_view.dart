@@ -254,7 +254,8 @@ class _StudentDormCheckViewState extends ConsumerState<StudentDormCheckView> {
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
       headerGap: _kStatsBlockGap,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 310,
         title: '我的查寝',
         subtitle: '只显示$displayName的查寝记录；漏打卡可申请补卡，由宿管或班主任审核',
         onBack: widget.onBack,

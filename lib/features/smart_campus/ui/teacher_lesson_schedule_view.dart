@@ -1120,31 +1120,29 @@ class _TeacherLessonScheduleViewState
 
     return SmartCampusSchedulePageShell(
       bodyScrollable: false,
-      header: SmartCampusScheduleTopBar(
-        child: AppPageHeader(
-          title: '授课课表',
-          subtitle: _subtitle,
-          onBack: widget.onBack,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s20),
-          actions: [
-            AppButton(
-              label: '申请记录',
-              icon: Icons.assignment_outlined,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.sm,
-              onTap: _openApplyRecords,
-            ),
-            AppSegmented<_ScheduleMode>(
-              size: AppControlSize.sm,
-              segments: const [
-                AppSegment(value: _ScheduleMode.view, label: '查看'),
-                AppSegment(value: _ScheduleMode.edit, label: '编辑'),
-              ],
-              value: _mode,
-              onChanged: (m) => setState(() => _mode = m),
-            ),
-          ],
-        ),
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 244,
+        title: '授课课表',
+        subtitle: _subtitle,
+        onBack: widget.onBack,
+        actions: [
+          AppButton(
+            label: '申请记录',
+            icon: Icons.assignment_outlined,
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
+            onTap: _openApplyRecords,
+          ),
+          AppSegmented<_ScheduleMode>(
+            size: AppControlSize.sm,
+            segments: const [
+              AppSegment(value: _ScheduleMode.view, label: '查看'),
+              AppSegment(value: _ScheduleMode.edit, label: '编辑'),
+            ],
+            value: _mode,
+            onChanged: (m) => setState(() => _mode = m),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(

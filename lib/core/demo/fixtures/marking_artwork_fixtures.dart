@@ -329,6 +329,11 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     final teacherFilter = req.str('teacherId');
     final archiveId = req.str('archiveId');
     var rows = _visibleWorks(req.account);
+    if (req.boolOf('assigned')) {
+      rows = rows
+          .where((w) => DemoArtworkData.accessOf(req.account, w).canReview)
+          .toList();
+    }
     if (status != 'ALL') {
       rows = rows.where((w) => DemoArtworkData.statusOf(w) == status).toList();
     }
@@ -1055,18 +1060,19 @@ Map<String, dynamic> _readableWork(DemoRequest req, String id) {
 }
 
 String? _nextPending(DemoAccount account, String currentId) {
-  final all = _visibleWorks(
-    account,
-  ).where((w) => !DemoArtworkData.isReviewed(w)).toList();
-  final position = all.indexWhere((w) => w['id'] == currentId);
-  final ordered = [
-    ...all.skip(position + 1),
-    ...all.take(position < 0 ? 0 : position),
-  ];
-  return ordered
-      .where((w) => _text(w['id']) != currentId)
-      .map((w) => _text(w['id']))
-      .firstOrNull;
+  final pending =
+      _visibleWorks(account)
+          .where(
+            (w) =>
+                _text(w['id']) != currentId &&
+                !DemoArtworkData.isReviewed(w) &&
+                DemoArtworkData.accessOf(account, w).canReview,
+          )
+          .toList()
+        ..sort(
+          (a, b) => _text(a['createTime']).compareTo(_text(b['createTime'])),
+        );
+  return pending.isEmpty ? null : _text(pending.first['id']);
 }
 
 /// [submitted] 是这名学生为这份作业交过的作品。

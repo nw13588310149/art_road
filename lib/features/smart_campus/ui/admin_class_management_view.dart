@@ -1384,7 +1384,8 @@ class _AdminClassManagementViewState
 
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 212,
         title: '班级管理',
         subtitle: '管理行政班、小班与学生分班',
         onBack: widget.onBack,

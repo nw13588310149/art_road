@@ -20,6 +20,13 @@ const noticeStep = {
 };
 // 进入二级页后必须能看到的控件（工作台上没有），避免停在工作台也算通过。
 const campusPageChecks = {
+  classes: [{ check: /^创建班级$/, role: 'button' }],
+  face: [{ check: /^人脸库$/, role: 'heading' }],
+  'my-class': [{ check: /^我的班级$/, role: 'heading' }],
+  'check-in': [{ check: /^历史记录$/, role: 'button' }],
+  grades: [{ check: /^全部考试$/, role: 'button' }],
+  'dorm-check': [{ check: /^申请补卡$/, role: 'button' }],
+  notice: [{ check: /^发布通知$/, role: 'button' }],
   'homework-review': [{ check: '待批改人次' }, { check: /^发布作业$/, role: 'button' }],
   workbench: [{ check: /发布通知/, role: 'button' }],
   'leave-approval': [{ check: /^待家长确认$/, role: 'button' }],
@@ -304,6 +311,16 @@ export const ROLES = [
       { id: 'study-artwork-growth', route: '/study', actions: [
         { click: /^作品成长$/, after: 1400 }, { check: '近 7 天提交' }, { check: '问题解决率' }, { check: '分项趋势' },
       ] },
+      { id: 'study-exam-growth', route: '/study', actions: [
+        { click: /^成长曲线$/, after: 1200 }, { check: '历次成绩' },
+      ] },
+      { id: 'study-exam-report', route: '/study', actions: [
+        { click: /^查看完整报告$/, after: 1200 }, { check: /^看原卷$/, role: 'button' },
+      ] },
+      { id: 'study-exam-paper', route: '/study', actions: [
+        { click: /^查看完整报告$/, after: 1200 },
+        { click: /^看原卷$/, after: 1200 }, { check: '对照样图' },
+      ] },
       { id: 'artworks', route: '/artworks' },
       {
         id: 'artwork-detail',
@@ -401,6 +418,14 @@ export const ROLES = [
     chip: '任课老师 · 李静',
     steps: [
       homeStep,
+      { id: 'home-review-workspace', route: '/', actions: [
+        skipGuide, { scroll: 580 }, { click: /^开始点评$/, after: 1700 },
+        { check: '保存并下一份', role: 'button' },
+      ] },
+      { id: 'home-my-students', route: '/', actions: [
+        skipGuide, { scroll: 720 }, { click: /^我的学生$/, after: 1700 },
+        { check: /近次提交/ }, { check: /待改善/ },
+      ] },
       guideStep,
       noticeStep,
       { id: 'study', route: '/study' },

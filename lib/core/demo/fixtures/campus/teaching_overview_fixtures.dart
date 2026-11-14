@@ -447,6 +447,10 @@ class _Overview {
 
   _Row _teacherMetrics(DemoCampusStaff staff) {
     final own = works.where((w) => w['teacherId'] == staff.id).toList();
+    final dueThisWeek = own
+        .where((w) => _recent(w['createTime'], 7) && _dueOrReviewed(w))
+        .toList();
+    final onTimeThisWeek = dueThisWeek.where(_onTime).length;
     final reviewed = own
         .where((w) => _recent(DemoArtworkData.reviewOf(w)?['reviewedTime'], 30))
         .toList();
@@ -488,7 +492,9 @@ class _Overview {
         : _examTrend(classStudents, subjectId: subjectId);
     return {
       ..._teacherIdentity(staff),
-      'timely': _timely(own.where((w) => _recent(w['createTime'], 7))),
+      'timely': _rate(onTimeThisWeek, dueThisWeek.length),
+      'dueThisWeek': dueThisWeek.length,
+      'onTimeThisWeek': onTimeThisWeek,
       'quality': _mean(
         lead.map((l) => l['qualityStars']).whereType<num>().where((n) => n > 0),
       ),
@@ -624,7 +630,7 @@ class _Overview {
               DemoCampusData.classOfPerson(student.index).id,
             ) ==
             true)
-          _studentRow(student),
+          {..._studentRow(student), 'previewSubject': teacher?.subject},
     ];
   }
 

@@ -558,13 +558,17 @@ class _LeaderOverviewCard extends ConsumerWidget {
           .asData
           ?.value,
     );
-    final rates = teachers
-        .map((row) => row['timely'])
-        .whereType<num>()
-        .toList();
-    final average = rates.isEmpty
+    final due = teachers.fold(
+      0,
+      (count, row) => count + (row['dueThisWeek'] as int? ?? 0),
+    );
+    final onTime = teachers.fold(
+      0,
+      (count, row) => count + (row['onTimeThisWeek'] as int? ?? 0),
+    );
+    final timely = due == 0
         ? '—'
-        : '${(rates.reduce((a, b) => a + b) / rates.length).toStringAsFixed(1)}%';
+        : '${(100 * onTime / due).toStringAsFixed(1)}%';
     return AppCard(
       title: '组长复核',
       child: Wrap(
@@ -572,7 +576,7 @@ class _LeaderOverviewCard extends ConsumerWidget {
         runSpacing: AppSpace.s8,
         children: [
           AppTag(label: '待复核 ${state.stats.pending} 份'),
-          AppTag(label: '本组点评及时率 $average'),
+          AppTag(label: '本组点评及时率 $timely'),
           AppTag(label: '近 7 天调分 ${state.stats.adjustedThisWeek} 份'),
           AppTag(
             label: '超时 ${state.stats.overdue} 份',

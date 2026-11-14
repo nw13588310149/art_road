@@ -174,7 +174,7 @@ class _AdminDormLeaveApprovalViewState
     final error = _loadError;
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
         title: '教职工请假审批',
         subtitle: '审批教职工的请假申请',
         onBack: widget.onBack,

@@ -192,7 +192,8 @@ class _StudentMyGradesViewState extends ConsumerState<StudentMyGradesView> {
     final ui = DashboardScaleScope.of(context).ui;
     final visibleRecords = _visibleRecords;
     return SmartCampusSecondaryPageShell(
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 190,
         title: '我的考试',
         subtitle: '考试安排、考场座位与线上测评提交，成绩公布后在「我的成绩」查看',
         onBack: widget.onBack,

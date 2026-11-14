@@ -125,6 +125,7 @@ class ArtworkRepository {
     String subject = '',
     String campus = '',
     String teacherId = '',
+    bool assigned = false,
   }) {
     return client.get(
       '/school/teacher/artworks',
@@ -136,6 +137,7 @@ class ArtworkRepository {
         if (subject.trim().isNotEmpty) 'subject': subject.trim(),
         if (campus.trim().isNotEmpty) 'campus': campus.trim(),
         if (teacherId.trim().isNotEmpty) 'teacherId': teacherId.trim(),
+        if (assigned) 'assigned': true,
       },
     );
   }

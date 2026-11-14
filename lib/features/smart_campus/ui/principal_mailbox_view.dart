@@ -389,7 +389,8 @@ class _PrincipalMailboxViewState extends ConsumerState<PrincipalMailboxView> {
   Widget build(BuildContext context) {
     return SmartCampusSecondaryPageShell(
       bodyScrollable: false,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 145,
         title: '校长信箱',
         subtitle: '写给画室负责人（校长）的建议、举报或其他诉求，只有校长能看到',
         onBack: widget.onBack,

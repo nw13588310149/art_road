@@ -12,8 +12,14 @@ class HomeReviewQueueCard extends ConsumerWidget {
 
   static const double _bodyHeight = 124;
 
-  Future<void> _open(BuildContext context, WidgetRef ref) async {
-    await Navigator.of(context).pushNamed(RoutePaths.artworks);
+  Future<void> _open(
+    BuildContext context,
+    WidgetRef ref,
+    bool startReview,
+  ) async {
+    await Navigator.of(
+      context,
+    ).pushNamed(RoutePaths.artworks, arguments: {'startReview': startReview});
     if (context.mounted) {
       ref.invalidate(homeReviewStatsProvider);
     }
@@ -109,6 +115,16 @@ class HomeReviewQueueCard extends ConsumerWidget {
                   Text('共 ${data.total} 件', style: AppText.body13),
                 ],
               ),
+              if (data.overdue > 0) ...[
+                const SizedBox(height: AppSpace.s8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: AppTag(
+                    label: '超时 ${data.overdue} 件',
+                    tone: AppTone.danger,
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpace.s16),
               AppButton(
                 label: pending > 0 ? '开始点评' : '查看已点评',
@@ -117,7 +133,7 @@ class HomeReviewQueueCard extends ConsumerWidget {
                     : AppButtonVariant.secondary,
                 size: AppButtonSize.sm,
                 expand: true,
-                onTap: () => _open(context, ref),
+                onTap: () => _open(context, ref, pending > 0),
               ),
             ],
           );

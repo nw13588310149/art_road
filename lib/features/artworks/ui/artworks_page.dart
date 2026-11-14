@@ -23,6 +23,7 @@ class _ArtworksPageState extends ConsumerState<ArtworksPage> {
   String? _initialArtworkId;
   bool _argsRead = false;
   bool _readOnly = false;
+  bool _startReview = false;
 
   @override
   void didChangeDependencies() {
@@ -36,6 +37,7 @@ class _ArtworksPageState extends ConsumerState<ArtworksPage> {
       final id = args['artworkId']?.toString().trim() ?? '';
       _initialArtworkId = id.isEmpty ? null : id;
       _readOnly = args['readOnly'] == true;
+      _startReview = args['startReview'] == true;
     }
   }
 
@@ -56,6 +58,7 @@ class _ArtworksPageState extends ConsumerState<ArtworksPage> {
         ? TeacherArtworksView(
             key: const ValueKey('artworks-teacher'),
             initialArtworkId: _initialArtworkId,
+            startReview: _startReview,
           )
         : StudentArtworksView(
             key: const ValueKey('artworks-student'),

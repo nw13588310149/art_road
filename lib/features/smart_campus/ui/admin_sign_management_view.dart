@@ -99,7 +99,8 @@ class _AdminSignManagementViewState extends State<AdminSignManagementView> {
   Widget build(BuildContext context) {
     return SmartCampusSecondaryPageShell(
       bodyTopClipRadius: 8,
-      header: AppPageHeader(
+      header: SmartCampusPageBanner(
+        titleHorizontalInset: 280,
         title: '签课管理',
         subtitle: '大课批量签到 · 小课签到审核 · 补签审核',
         onBack: widget.onBack,

@@ -126,14 +126,7 @@ class ArtworkDimensionChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      SizedBox.square(
-        dimension: 92,
-        child: CustomPaint(
-          painter: _DimensionPainter(
-            levels.items.map((item) => item.level).toList(),
-          ),
-        ),
-      ),
+      ArtworkDimensionRadar(levels: levels),
       const SizedBox(width: AppSpace.s12),
       Expanded(
         child: Wrap(
@@ -148,6 +141,34 @@ class ArtworkDimensionChart extends StatelessWidget {
         ),
       ),
     ],
+  );
+}
+
+class ArtworkDimensionRadar extends StatelessWidget {
+  const ArtworkDimensionRadar({
+    required this.levels,
+    this.size = 92,
+    super.key,
+  });
+
+  final ArtworkDimensionLevels levels;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: [
+      levels.subject,
+      for (final item in levels.items)
+        '${item.name} ${item.level?.toStringAsFixed(1) ?? '—'}',
+    ].join('，'),
+    child: SizedBox.square(
+      dimension: size,
+      child: CustomPaint(
+        painter: _DimensionPainter(
+          levels.items.map((item) => item.level).toList(),
+        ),
+      ),
+    ),
   );
 }
 
