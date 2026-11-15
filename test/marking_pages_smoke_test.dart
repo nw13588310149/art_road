@@ -76,7 +76,7 @@ void main() {
 }
 
 void _pageTests() {
-  testWidgets('我的学情总览：成绩卡学号、超过百分比与各科卡片', (tester) async {
+  testWidgets('学情总览：成绩卡学号、超过百分比与各科卡片', (tester) async {
     await _pump(
       tester,
       const StudentStudyView(args: StudyCenterArgs()),

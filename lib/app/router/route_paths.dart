@@ -7,7 +7,7 @@ abstract final class RoutePaths {
   static const smartCampusSignRecords = '/smart-campus/sign-records';
   static const smartCampusSignApprovals = '/smart-campus/sign-approvals';
 
-  /// 学情中心：学生「我的学情」/ 老师「班级学情」（阅卷系统成绩、原卷、评分标准、成长曲线）。
+  /// 学情中心：学生「学情」/ 老师「班级学情」（阅卷系统成绩、原卷、评分标准、成长曲线）。
   static const studyCenter = '/study';
 
   /// 作品档案：学生上传日常作品、查看点评；老师角色为「作品点评」。

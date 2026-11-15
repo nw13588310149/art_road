@@ -220,7 +220,8 @@ void main() {
       ];
       expect(labels('principal'), contains('全校学情'));
       expect(labels('teacher'), contains('班级学情'));
-      expect(labels('student'), contains('我的学情'));
+      expect(labels('student'), isNot(contains('学情')));
+      expect(labels('student'), contains('素材中心'));
     });
 
     test('first-login guide', () {

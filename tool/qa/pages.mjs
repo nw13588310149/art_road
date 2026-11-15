@@ -150,12 +150,27 @@ const sharedContent = [
       { check: '复制文件地址', role: 'button' },
     ],
   },
-  { id: 'courseware', route: '/', actions: [nav('校园课件')] },
+  {
+    id: 'ebooks-nav',
+    route: '/',
+    actions: [nav('电子书刊'), { check: '编辑推荐' }],
+  },
+  { id: 'courseware', route: '/', actions: [nav('校园资料')] },
+  {
+    id: 'gallery-nav',
+    route: '/',
+    actions: [nav('素材中心'), { check: '全部科目' }],
+  },
+  {
+    id: 'topics-nav',
+    route: '/',
+    actions: [nav('优秀课件'), { check: '发现专题' }],
+  },
   {
     id: 'courseware-speed',
     route: '/',
     actions: [
-      nav('校园课件'),
+      nav('校园资料'),
       { click: /^速写课程/, role: 'button' },
       { check: /速写课堂实录|速写晚自习/ },
     ],
@@ -229,7 +244,7 @@ const sharedContent = [
   },
   { id: 'school-website', route: '/school-website', settle: 2500, actions: [
     { check: '官网加载失败', absent: true },
-    { check: '我的学情' },
+    { check: '学员可在「学情」中查看' },
   ] },
   { id: 'qrcode', route: '/qrcode', actions: [{ check: '我的二维码' }, { check: /保存/ }] },
   {
@@ -424,7 +439,7 @@ export const ROLES = [
       { id: 'quiz', route: '/camp', actions: [{ check: '练习方式' }, { check: '顺序练习' }] },
       { id: 'school-quiz', route: '/school-camp', actions: [{ check: '练习方式' }] },
       { id: 'school-video', route: '/school-video' },
-      { id: 'mock', route: '/mock', actions: [{ check: '我的学情' }, { check: '查看完整报告' }] },
+      { id: 'mock', route: '/mock', actions: [{ check: '学情' }, { check: '查看完整报告' }] },
       { id: 'design-system', route: '/design-system' },
       {
         id: 'quiz-answer', route: '/camp', actions: [

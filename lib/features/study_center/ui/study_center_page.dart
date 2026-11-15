@@ -11,7 +11,7 @@ import 'student/student_study_view.dart';
 import '../../teaching_overview/data/teaching_overview_repository.dart';
 import '../../teaching_overview/ui/teaching_overview_page.dart';
 
-/// 学情中心（`/study`）：学生「我的学情」，教职角色「班级学情」。
+/// 学情中心（`/study`）：学生「学情」，教职角色「班级学情」。
 ///
 /// 路由参数见 [StudyCenterArgs]。
 class StudyCenterPage extends ConsumerStatefulWidget {

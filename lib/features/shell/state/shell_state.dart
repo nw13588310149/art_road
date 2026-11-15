@@ -276,17 +276,21 @@ bool isStaffRole(String role) {
   return value.isNotEmpty && value != 'student';
 }
 
-/// 侧栏导航项（按显示顺序）。只保留首页、小美同学、学情、校园课件、
-/// 我的云盘、视频中心、智慧校园、我的笔记、我的收藏、个人中心。
+/// 侧栏导航项（按显示顺序）。只保留首页、小美同学、学情、电子书刊、校园资料、
+/// 优秀课件、素材中心、我的云盘、视频中心、智慧校园、我的笔记、我的收藏、个人中心。
 /// 底部「意见反馈」由 [buildFeedbackFooterNavItem] 单独固定，不在此列表中。
-/// [role] 为 dormManager（宿管）时不显示学情：宿管不查看学生成绩。
-/// 校园课件随学校开关显示。
+/// 学生的「学情」在首页快捷入口，不出现在侧栏。
+/// 教职显示「班级学情」，校长显示「全校学情」；宿管不查看学生成绩，不显示学情。
+/// 校园资料随学校开关显示。电子书刊始终显示，位于校园资料上方，进入精选书刊页。
+/// 优秀课件始终显示，位于校园资料下方，进入知识点专题。
+/// 素材中心始终显示，位于优秀课件下方，进入范画库。
 List<ShellNavItem> buildDefaultNavItems({
   required bool schoolCoursewareEnabled,
   bool isStaff = false,
   String role = '',
 }) {
-  final academic = role.trim() != 'dormManager';
+  final academic =
+      isStaff && role.trim().isNotEmpty && role.trim() != 'dormManager';
   return [
     const ShellNavItem(
       label: '首页',
@@ -302,20 +306,36 @@ List<ShellNavItem> buildDefaultNavItems({
     ),
     if (academic)
       ShellNavItem(
-        label: role.trim() == 'principal'
-            ? '全校学情'
-            : (isStaff ? '班级学情' : '我的学情'),
+        label: role.trim() == 'principal' ? '全校学情' : '班级学情',
         route: RoutePaths.studyCenter,
         icon: AppAssets.leftNavXueqing,
         activeIcon: AppAssets.leftNavXueqing,
       ),
+    const ShellNavItem(
+      label: '电子书刊',
+      route: RoutePaths.ebooks,
+      icon: AppAssets.leftNavShukan,
+      activeIcon: AppAssets.leftNavShukan,
+    ),
     if (schoolCoursewareEnabled)
       const ShellNavItem(
-        label: '校园课件',
+        label: '校园资料',
         route: RoutePaths.school,
         icon: AppAssets.leftNavSchool,
         activeIcon: AppAssets.leftNavSchool,
       ),
+    const ShellNavItem(
+      label: '优秀课件',
+      route: RoutePaths.microLessons,
+      icon: AppAssets.leftNavSchool,
+      activeIcon: AppAssets.leftNavSchool,
+    ),
+    const ShellNavItem(
+      label: '素材中心',
+      route: RoutePaths.gallery,
+      icon: AppAssets.leftNavFanhua,
+      activeIcon: AppAssets.leftNavFanhua,
+    ),
     const ShellNavItem(
       label: '我的云盘',
       route: RoutePaths.courseware,

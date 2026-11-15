@@ -183,31 +183,25 @@ void main() {
   });
 
   test('student and staff home entries follow the nine-button order', () {
-    const names = ['资讯', '校圈', '群聊', '工具箱', '作品', '素材库', '作品库', '小课件', '集市'];
+    const names = ['资讯', '校圈', '群聊', '工具', '作业', '集市'];
     final student = buildQuickActions();
-    expect(student.map((a) => a.name), names);
+    expect(student.map((a) => a.name), ['学情', ...names]);
     expect(
-      student.firstWhere((a) => a.name == '作品').campus,
-      HomeCampusTarget.myHomework,
+      student.firstWhere((a) => a.name == '学情').route,
+      RoutePaths.studyCenter,
     );
-    expect(
-      student.firstWhere((a) => a.name == '素材库').route,
-      RoutePaths.gallery,
-    );
-    expect(
-      student.firstWhere((a) => a.name == '作品库').route,
-      RoutePaths.artworks,
-    );
-    expect(
-      student.firstWhere((a) => a.name == '小课件').route,
-      RoutePaths.microLessons,
-    );
+    expect(student.map((a) => a.name), isNot(contains('素材库')));
+    expect(student.map((a) => a.name), isNot(contains('小课件')));
+    expect(student.map((a) => a.name), isNot(contains('作品库')));
+    final homework = student.firstWhere((a) => a.name == '作业');
+    expect(homework.route, RoutePaths.artworks);
+    expect(homework.campus, isNull);
     expect(student.firstWhere((a) => a.name == '集市').comingSoon, isFalse);
     final staff = buildQuickActions(isStaff: true, role: 'teacher');
     expect(staff.map((a) => a.name), names);
     expect(
-      staff.firstWhere((a) => a.name == '作品').campus,
-      HomeCampusTarget.homeworkReview,
+      staff.firstWhere((a) => a.name == '作业').route,
+      RoutePaths.artworks,
     );
   });
 
@@ -221,9 +215,7 @@ void main() {
     expect(
       dorm.every(
         (a) =>
-            a.campus != null ||
-            a.route == RoutePaths.microLessons ||
-            a.route == RoutePaths.marketplace,
+            a.campus != null || a.route == RoutePaths.marketplace,
       ),
       isTrue,
     );
@@ -350,7 +342,7 @@ void main() {
     expect(find.byType(HomeCourseNoticeCard), findsNWidgets(2));
     expect(find.text('资讯'), findsOneWidget);
     expect(find.text('集市'), findsOneWidget);
-    expect(find.text('我的学情'), findsNothing);
+    expect(find.text('学情'), findsOneWidget);
     expect(find.text('速写计时练习'), findsNothing);
     expect(find.textContaining('学情速览'), findsOneWidget);
     expect(find.text('↑9 分'), findsOneWidget);

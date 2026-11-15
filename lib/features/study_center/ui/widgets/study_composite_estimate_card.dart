@@ -11,7 +11,7 @@ import '../../data/study_models.dart';
 import '../../state/composite_estimate_controller.dart';
 import 'study_common.dart';
 
-/// 「我的学情」综合分预估：最近一次已出分考试的专业总分 + 学生填写的文化课预估分，
+/// 「学情」综合分预估：最近一次已出分考试的专业总分 + 学生填写的文化课预估分，
 /// 按省份公式估算艺术类综合分；可填目标分看差距。结果仅供参考。
 class StudyCompositeEstimateCard extends ConsumerStatefulWidget {
   const StudyCompositeEstimateCard({required this.exam, super.key});

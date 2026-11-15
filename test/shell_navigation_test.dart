@@ -43,6 +43,18 @@ void main() {
         indexOf(RoutePaths.videoTutorial),
       );
       expect(
+        shellActiveNavIndex(routes, RoutePaths.ebooks),
+        indexOf(RoutePaths.ebooks),
+      );
+      expect(
+        shellActiveNavIndex(routes, RoutePaths.gallery),
+        indexOf(RoutePaths.gallery),
+      );
+      expect(
+        shellActiveNavIndex(routes, RoutePaths.microLessons),
+        indexOf(RoutePaths.microLessons),
+      );
+      expect(
         shellActiveNavIndex(routes, '/smart-campus/sign-records'),
         indexOf(RoutePaths.smartCampus),
       );
@@ -128,8 +140,10 @@ void main() {
       [
         '首页',
         '小美同学',
-        '我的学情',
-        '校园课件',
+        '电子书刊',
+        '校园资料',
+        '优秀课件',
+        '素材中心',
         '我的云盘',
         '视频中心',
         '智慧校园',
@@ -137,6 +151,37 @@ void main() {
         '我的收藏',
         '个人中心',
       ],
+    );
+    final books = buildDefaultNavItems(
+      schoolCoursewareEnabled: true,
+    ).firstWhere((item) => item.label == '电子书刊');
+    expect(books.route, RoutePaths.ebooks);
+    expect(books.icon, AppAssets.leftNavShukan);
+    final gallery = buildDefaultNavItems(
+      schoolCoursewareEnabled: true,
+    ).firstWhere((item) => item.label == '素材中心');
+    expect(gallery.route, RoutePaths.gallery);
+    expect(gallery.icon, AppAssets.leftNavFanhua);
+    final lessons = buildDefaultNavItems(
+      schoolCoursewareEnabled: true,
+    ).firstWhere((item) => item.label == '优秀课件');
+    expect(lessons.route, RoutePaths.microLessons);
+    expect(lessons.icon, AppAssets.leftNavSchool);
+    final withoutSchool = buildDefaultNavItems(
+      schoolCoursewareEnabled: false,
+    ).map((item) => item.label).toList();
+    expect(withoutSchool, contains('电子书刊'));
+    expect(withoutSchool, contains('素材中心'));
+    expect(withoutSchool, isNot(contains('学情')));
+    expect(withoutSchool, contains('优秀课件'));
+    expect(withoutSchool, isNot(contains('校园资料')));
+    expect(
+      withoutSchool.indexOf('优秀课件'),
+      withoutSchool.indexOf('素材中心') - 1,
+    );
+    expect(
+      withoutSchool.indexOf('素材中心'),
+      withoutSchool.indexOf('我的云盘') - 1,
     );
   });
 

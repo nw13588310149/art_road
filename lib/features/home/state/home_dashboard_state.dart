@@ -219,11 +219,12 @@ class HomeDashboardState {
   }
 }
 
-/// 首页九宫格，按角色给入口。学生、任课老师、班主任从左到右、从上到下为：
-/// 资讯、校圈、群聊、工具箱、作品、素材库、作品库、小课件、集市。
-/// 作品对学生打开「我的作品」，对老师和班主任打开「作品批改」。
-/// 素材库打开范画库，作品库打开作品档案（老师为作品点评），小课件打开知识点阅读专题。
-/// 小课件与集市对全部身份开放。
+/// 首页九宫格，按角色给入口。学生从左到右、从上到下为：
+/// 学情、资讯、校圈、群聊、工具、作业、集市。老师与班主任没有「学情」，
+/// 他们的学情在左侧导航。
+/// 「作业」只是作品档案的入口名称，仍打开作品库（老师为作品点评）。
+/// 范画从左侧导航「素材中心」进入，知识点专题从左侧导航「优秀课件」进入。
+/// 集市对全部身份开放。
 List<HomeQuickAction> buildQuickActions({
   bool isStaff = false,
   String role = '',
@@ -231,11 +232,6 @@ List<HomeQuickAction> buildQuickActions({
   const campusIcons = AppAssets.campusHomeActions;
   if (role == 'dormManager') {
     return const <HomeQuickAction>[
-      HomeQuickAction(
-        name: '小课件',
-        icon: Icons.auto_stories_outlined,
-        route: RoutePaths.microLessons,
-      ),
       HomeQuickAction(
         name: '集市',
         icon: Icons.storefront_outlined,
@@ -285,11 +281,6 @@ List<HomeQuickAction> buildQuickActions({
   }
   if (role == 'admin' || role == 'principal') {
     return <HomeQuickAction>[
-      const HomeQuickAction(
-        name: '小课件',
-        icon: Icons.auto_stories_outlined,
-        route: RoutePaths.microLessons,
-      ),
       const HomeQuickAction(
         name: '集市',
         icon: Icons.storefront_outlined,
@@ -343,6 +334,12 @@ List<HomeQuickAction> buildQuickActions({
     ];
   }
   return <HomeQuickAction>[
+    if (!isStaff)
+      const HomeQuickAction(
+        name: '学情',
+        iconAsset: '$campusIcons/student/my_grades.png',
+        route: RoutePaths.studyCenter,
+      ),
     const HomeQuickAction(
       name: '资讯',
       iconAsset: AppAssets.homeQuickNews,
@@ -359,32 +356,15 @@ List<HomeQuickAction> buildQuickActions({
       campus: HomeCampusTarget.groupChat,
     ),
     const HomeQuickAction(
-      name: '工具箱',
+      name: '工具',
       iconAsset: '$campusIcons/head_teacher/class_workbench.png',
       route: RoutePaths.artToolbox,
       arguments: <String, dynamic>{'returnToSource': true},
     ),
-    HomeQuickAction(
-      name: '作品',
-      iconAsset: '$campusIcons/student/my_homework.png',
-      campus: isStaff
-          ? HomeCampusTarget.homeworkReview
-          : HomeCampusTarget.myHomework,
-    ),
     const HomeQuickAction(
-      name: '素材库',
-      iconAsset: '$campusIcons/admin/class_management.png',
-      route: RoutePaths.gallery,
-    ),
-    const HomeQuickAction(
-      name: '作品库',
+      name: '作业',
       iconAsset: '$campusIcons/teacher/student_roster.png',
       route: RoutePaths.artworks,
-    ),
-    const HomeQuickAction(
-      name: '小课件',
-      iconAsset: AppAssets.homeQuickQuestionBank,
-      route: RoutePaths.microLessons,
     ),
     const HomeQuickAction(
       name: '集市',

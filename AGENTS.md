@@ -21,7 +21,7 @@
 - Landscape dashboard shell (`ShellScaffold`: left nav + top bar) on a 1180×820 design base. `DashboardScaleScope.ui()` is identity now; kit components use fixed tokens. Kit overlays (`showAppDialog` / `showAppConfirm` / `showAppDrawer`) work inside and outside the shell; the legacy `showScaledDialog` / `showConfirmDialog` also inherit the shell scale when present and fall back to identity outside it.
 - The home page is role-based: `homeSectionsFor(role)` in `lib/features/home/state/home_sections.dart` decides the cards per role.
 - Shared shell areas such as the left navigation and top bar stay reusable and stable.
-- Left nav keeps 首页、小美同学、学情、校园课件（学校开启时）、我的云盘、视频中心、智慧校园、我的笔记、我的收藏、个人中心, plus a fixed footer 「意见反馈」. Labels are role-based (`isStaffRole`): students see 我的学情, staff see 班级学情; dorm managers do not see 学情.
+- Left nav keeps 首页、小美同学、学情（教职）、电子书刊、校园资料（学校开启时）、优秀课件、素材中心、我的云盘、视频中心、智慧校园、我的笔记、我的收藏、个人中心, plus a fixed footer 「意见反馈」. 电子书刊 sits above 校园资料 and opens `/ebooks` (精选书刊). 优秀课件 sits below 校园资料 and opens `/micro-lessons`. 素材中心 sits below 优秀课件 and opens `/gallery`. Staff see 班级学情 and the principal sees 全校学情; students open 学情 from the home quick actions; dorm managers do not see 学情.
 
 ## Architecture
 - Routing: Navigator 1.0 `onGenerateRoute` with `RoutePaths`. Art routes and their arguments:

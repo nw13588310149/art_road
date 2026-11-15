@@ -580,11 +580,6 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
   Widget _shortcuts(bool wide) {
     final entries = <(String, IconData, VoidCallback)>[
       (
-        '小课件',
-        Icons.auto_stories_outlined,
-        () => Navigator.of(context).pushNamed(RoutePaths.microLessons),
-      ),
-      (
         '集市',
         Icons.storefront_outlined,
         () => Navigator.of(context).pushNamed(RoutePaths.marketplace),

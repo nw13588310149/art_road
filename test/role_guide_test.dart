@@ -84,7 +84,7 @@ void main() {
         expect(guide.steps.length, inInclusiveRange(3, 4), reason: role);
       }
       expect(roleGuideFor('student').steps.map((s) => s.title), [
-        '我的学情',
+        '学情',
         '作品档案',
         '画室工具箱',
         '美术书刊',
@@ -120,7 +120,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(shown, [true]);
       expect(find.byType(RoleGuideDialog), findsOneWidget);
-      expect(find.text('我的学情'), findsOneWidget);
+      expect(find.text('学情'), findsOneWidget);
       expect(find.textContaining('学生新手引导'), findsOneWidget);
       expect(find.textContaining('1 / 4'), findsOneWidget);
 

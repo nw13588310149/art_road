@@ -6,7 +6,7 @@ import '../data/study_center_repository.dart';
 import '../data/study_models.dart';
 import 'study_center_args.dart';
 
-/// 「我的学情」页内视图：总览 / 成绩报告 / 成长曲线。
+/// 「学情」页内视图：总览 / 成绩报告 / 成长曲线。
 enum StudentStudySection { overview, report, growth, artworkGrowth }
 
 enum StudyExamFilter {

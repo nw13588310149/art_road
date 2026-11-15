@@ -19,7 +19,7 @@ import '../widgets/study_interpretations.dart';
 import '../widgets/study_subject_cards.dart';
 import 'student_exam_list.dart';
 
-/// 「我的学情」：总览 / 成绩报告 / 成长曲线三个页内视图，切换立即生效。
+/// 「学情」：总览 / 成绩报告 / 成长曲线三个页内视图，切换立即生效。
 class StudentStudyView extends ConsumerWidget {
   const StudentStudyView({required this.args, super.key});
 
@@ -86,7 +86,7 @@ class _StudentOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final overview = state.overview;
     final header = AppPageHeader(
-      title: '我的学情',
+      title: '学情',
       actions: [
         AppButton(
           label: '作品成长',

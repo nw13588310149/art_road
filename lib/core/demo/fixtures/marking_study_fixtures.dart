@@ -6,7 +6,7 @@ import '../media/demo_media.dart';
 import 'campus/campus_a_common.dart';
 import '../demo_clock.dart';
 
-/// 学情中心演示接口（阅卷系统 exam-api）：学生「我的学情」与教职「班级学情」。
+/// 学情中心演示接口（阅卷系统 exam-api）：学生「学情」与教职「班级学情」。
 void registerMarkingStudyFixtures(DemoRouter marking) {
   // ── 学生端（app-token）──────────────────────────────────────────────
 

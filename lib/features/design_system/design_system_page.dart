@@ -214,7 +214,7 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
   Widget _typography() {
     final rows = <(String, TextStyle, String)>[
       ('display32 · 32 / 40 · 600', AppText.display32, '美育集 2026 届'),
-      ('title24 · 24 / 32 · 600', AppText.title24, '我的学情'),
+      ('title24 · 24 / 32 · 600', AppText.title24, '学情'),
       ('title20 · 20 / 28 · 600', AppText.title20, '作品档案'),
       ('title16 · 16 / 24 · 600', AppText.title16, '本周课程'),
       ('body16 · 16 / 24 · 400', AppText.body16, '记录每一张画，收好老师的每一次点评'),

@@ -59,15 +59,15 @@ const _student = RoleGuide(
   steps: [
     RoleGuideStep(
       iconAsset: AppAssets.leftNavXueqing,
-      title: '我的学情',
+      title: '学情',
       body: '月考出分后，在这里看总分、排名和各科档位，也能打开原卷和评分标准对照着看。',
-      where: '左侧导航「我的学情」',
+      where: '首页「学情」',
     ),
     RoleGuideStep(
       iconAsset: AppAssets.leftNavZuopin,
       title: '作品档案',
       body: '日常作品拍照上传后，由责任老师打分、写评语、在图上批注；需要时组长会复核，校长也可点评或推优。',
-      where: '首页「作品库」',
+      where: '首页「作业」',
     ),
     RoleGuideStep(
       iconAsset: AppAssets.leftNavGongju,
@@ -79,7 +79,7 @@ const _student = RoleGuide(
       iconAsset: AppAssets.leftNavShukan,
       title: '美术书刊',
       body: '美术教辅与画室月刊，读到哪一页会记下来，下次从那一页继续。',
-      where: '首页「继续阅读」',
+      where: '左侧导航「电子书刊」',
     ),
   ],
 );
@@ -92,7 +92,7 @@ const _teacher = RoleGuide(
       iconAsset: AppAssets.leftNavZuopin,
       title: '作品点评',
       body: '学生上传的作品会进入你的点评队列，可以打分、选标签、写评语，也能直接在图上批注。',
-      where: '首页「作品库」，首页显示待点评件数',
+      where: '首页「作业」，首页显示待点评件数',
     ),
     RoleGuideStep(
       iconAsset: AppAssets.leftNavXueqing,
@@ -129,7 +129,7 @@ const _headTeacher = RoleGuide(
       iconAsset: AppAssets.leftNavZuopin,
       title: '作品点评',
       body: '分配给你的学生作品会进入点评队列，点评完成后学生会收到通知。',
-      where: '首页「作品库」',
+      where: '首页「作业」',
     ),
     RoleGuideStep(
       iconAsset: '${AppAssets.campusHomeActions}/student/my_homework.png',
