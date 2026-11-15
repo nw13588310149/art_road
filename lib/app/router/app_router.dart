@@ -38,6 +38,7 @@ import '../../features/gallery/ui/gallery_page.dart';
 import '../../features/smart_campus/ui/smart_campus_page.dart';
 import '../../features/study_center/ui/study_center_page.dart';
 import '../../features/teaching_overview/ui/teaching_overview_page.dart';
+import '../../features/today/ui/today_page.dart';
 import '../../features/video_tutorial/ui/video_tutorial_page.dart';
 import 'route_paths.dart';
 
@@ -102,6 +103,8 @@ class AppRouter {
     switch (routeName) {
       case RoutePaths.home:
         return const HomePage();
+      case RoutePaths.today:
+        return const TodayPage();
       case RoutePaths.personalAi:
         return const AiChatPage();
       case RoutePaths.studyCenter:

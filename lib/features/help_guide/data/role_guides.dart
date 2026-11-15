@@ -58,6 +58,12 @@ const _student = RoleGuide(
   roleLabel: '学生',
   steps: [
     RoleGuideStep(
+      iconAsset: AppAssets.leftNavJinri,
+      title: '今日学习',
+      body: '今天要交的作品、老师点评后的练习建议和当天课程都在这里，点一下就能去完成。',
+      where: '左侧导航「今日学习」',
+    ),
+    RoleGuideStep(
       iconAsset: AppAssets.leftNavXueqing,
       title: '学情',
       body: '月考出分后，在这里看总分、排名和各科档位，也能打开原卷和评分标准对照着看。',
@@ -73,13 +79,7 @@ const _student = RoleGuide(
       iconAsset: AppAssets.leftNavGongju,
       title: '画室工具箱',
       body: '看画分析、练习训练、备考助手三组工具，比如明度检查、眯眼模糊、速写计时练习和综合分计算器。',
-      where: '首页「工具箱」',
-    ),
-    RoleGuideStep(
-      iconAsset: AppAssets.leftNavShukan,
-      title: '美术书刊',
-      body: '美术教辅与画室月刊，读到哪一页会记下来，下次从那一页继续。',
-      where: '左侧导航「电子书刊」',
+      where: '首页「工具」',
     ),
   ],
 );
@@ -89,10 +89,16 @@ const _teacher = RoleGuide(
   roleLabel: '任课老师',
   steps: [
     RoleGuideStep(
+      iconAsset: AppAssets.leftNavJinri,
+      title: '今日工作',
+      body: '待点评的作品、要签的课和需要关注的学生都在这里，按轻重排好，点一下直接进入。',
+      where: '左侧导航「今日工作」',
+    ),
+    RoleGuideStep(
       iconAsset: AppAssets.leftNavZuopin,
       title: '作品点评',
       body: '学生上传的作品会进入你的点评队列，可以打分、选标签、写评语，也能直接在图上批注。',
-      where: '首页「作业」，首页显示待点评件数',
+      where: '今日工作「待点评作品」，或首页「作业」',
     ),
     RoleGuideStep(
       iconAsset: AppAssets.leftNavXueqing,
@@ -114,10 +120,16 @@ const _headTeacher = RoleGuide(
   roleLabel: '班主任',
   steps: [
     RoleGuideStep(
+      iconAsset: AppAssets.leftNavJinri,
+      title: '今日工作',
+      body: '待点评作品、学生请假审批、查寝异常和家长消息集中在这里，点一下直接进入。',
+      where: '左侧导航「今日工作」',
+    ),
+    RoleGuideStep(
       iconAsset: AppAssets.leftNavXiaoyuan,
       title: '班级工作台',
       body: '班级通知、请假审批、考勤和家校沟通，集中在智慧校园的班级工作台。',
-      where: '左侧导航「智慧校园」',
+      where: '今日工作底部「班级工作台」，或左侧导航「智慧校园」',
     ),
     RoleGuideStep(
       iconAsset: AppAssets.leftNavXueqing,
@@ -129,13 +141,7 @@ const _headTeacher = RoleGuide(
       iconAsset: AppAssets.leftNavZuopin,
       title: '作品点评',
       body: '分配给你的学生作品会进入点评队列，点评完成后学生会收到通知。',
-      where: '首页「作业」',
-    ),
-    RoleGuideStep(
-      iconAsset: '${AppAssets.campusHomeActions}/student/my_homework.png',
-      title: '今日待办',
-      body: '首页汇总待点评作品、班级工作台和未读消息，点一下直接进入。',
-      where: '首页「今日待办」',
+      where: '今日工作「待点评作品」，或首页「作业」',
     ),
   ],
 );
@@ -145,30 +151,30 @@ const _dormManager = RoleGuide(
   roleLabel: '宿管',
   steps: [
     RoleGuideStep(
-      iconAsset: '${AppAssets.campusHomeActions}/student/my_homework.png',
-      title: '今日待办',
-      body: '首页右侧显示今晚和明早的查寝时间，以及到岗打卡和未读消息。',
-      where: '首页「今日待办」',
+      iconAsset: AppAssets.leftNavJinri,
+      title: '今日工作',
+      body: '这一场查寝还有几人没打卡、待审核的补卡和当天的值班时间都在这里。',
+      where: '左侧导航「今日工作」',
     ),
     RoleGuideStep(
       iconAsset:
           '${AppAssets.campusHomeActions}/dorm_manager/dorm_check_by_room.png',
       title: '按宿舍查寝',
       body: '按宿舍逐间登记学生的归寝情况，往期结果在「查寝历史」里查看。',
-      where: '首页功能入口「按宿舍查寝」',
+      where: '今日工作「按宿舍查寝」，或首页「查寝」',
     ),
     RoleGuideStep(
       iconAsset:
           '${AppAssets.campusHomeActions}/dorm_manager/punch_management.png',
       title: '到岗打卡',
       body: '宿管本人的上下班打卡，以及历次打卡记录。',
-      where: '首页功能入口「到岗打卡」',
+      where: '今日工作「到岗打卡」',
     ),
     RoleGuideStep(
       iconAsset: '${AppAssets.campusHomeActions}/dorm_manager/dorm_leave.png',
       title: '宿管请假',
       body: '需要请假时在这里提交申请，由管理员审批。',
-      where: '首页功能入口「宿管请假」',
+      where: '今日工作底部「宿管请假」',
     ),
   ],
 );
@@ -178,23 +184,23 @@ const _admin = RoleGuide(
   roleLabel: '管理员',
   steps: [
     RoleGuideStep(
-      iconAsset: AppAssets.leftNavXiaoyuan,
-      title: '教务管理',
-      body: '学生、教师、班级管理与排课都在智慧校园，首页的功能入口可以直接打开。',
-      where: '左侧导航「智慧校园」',
+      iconAsset: AppAssets.leftNavJinri,
+      title: '今日工作',
+      body: '教职工请假审批、小课签课确认和小课申请集中在这里，常用的管理入口在页面底部。',
+      where: '左侧导航「今日工作」',
     ),
     RoleGuideStep(
-      iconAsset: '${AppAssets.campusHomeActions}/admin/dorm_leave_approval.png',
-      title: '审批与签课',
-      body: '老师和宿管的请假在「教师请假审批」处理，小课签课在「签课管理」确认。',
-      where: '首页「今日待办」与功能入口',
+      iconAsset: AppAssets.leftNavXiaoyuan,
+      title: '教务管理',
+      body: '学生、教师、班级管理与排课都在智慧校园。',
+      where: '左侧导航「智慧校园」',
     ),
     RoleGuideStep(
       iconAsset:
           '${AppAssets.campusHomeActions}/admin/notification_management.png',
       title: '通知管理',
       body: '向全校或指定班级发布通知，可以定时发布，也可以先存为草稿。',
-      where: '首页功能入口「通知管理」',
+      where: '今日工作底部「通知管理」',
     ),
     RoleGuideStep(
       iconAsset: AppAssets.leftNavXueqing,
@@ -210,9 +216,15 @@ const _principal = RoleGuide(
   roleLabel: '校长',
   steps: [
     RoleGuideStep(
+      iconAsset: AppAssets.leftNavJinri,
+      title: '今日工作',
+      body: '超时未点评的作品、校长信箱、请假审批和需要跟进的教学事项集中在这里。',
+      where: '左侧导航「今日工作」',
+    ),
+    RoleGuideStep(
       iconAsset: AppAssets.leftNavXueqing,
       title: '全校学情',
-      body: '按考试查看三个校区的分数分布、各科均分与校区对比，点开学生可以看成绩报告与成长曲线。',
+      body: '教学指标、近七天趋势和各类教学报表从这里进入，可以按校区查看，也能点开学生的成绩报告与成长曲线。',
       where: '左侧导航「全校学情」',
     ),
     RoleGuideStep(
@@ -220,12 +232,6 @@ const _principal = RoleGuide(
       title: '智慧校园',
       body: '学生、教师、班级管理与排课都在这里，「校长信箱」里可以查看并回复师生来信。',
       where: '左侧导航「智慧校园」',
-    ),
-    RoleGuideStep(
-      iconAsset: '${AppAssets.campusHomeActions}/admin/dorm_leave_approval.png',
-      title: '今日待办',
-      body: '首页汇总待审批的请假、待确认的小课和未读消息，点一下直接进入。',
-      where: '首页「今日待办」',
     ),
   ],
 );

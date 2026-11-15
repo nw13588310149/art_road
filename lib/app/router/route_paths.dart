@@ -1,5 +1,9 @@
 abstract final class RoutePaths {
   static const home = '/';
+
+  /// 今日：按身份汇总当天要处理的事、日程与需要关注的情况。
+  /// 学生显示「今日学习」，教职显示「今日工作」。
+  static const today = '/today';
   static const school = '/school';
   static const courseware = '/courseware';
   static const videoTutorial = '/video-tutorial';

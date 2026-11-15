@@ -14,8 +14,11 @@ const Map<String, String?> _ownerRoutes = {
   // 校圈只有一个归属：首页快捷入口与智慧校园入口打开时都高亮「智慧校园」。
   RoutePaths.circle: RoutePaths.smartCampus,
   RoutePaths.chat: RoutePaths.smartCampus,
-  RoutePaths.noteDetail: RoutePaths.myNotes,
-  RoutePaths.noteBg: RoutePaths.myNotes,
+  // 我的笔记、我的收藏从个人中心进入，打开时高亮「个人中心」。
+  RoutePaths.myNotes: RoutePaths.personalCenter,
+  RoutePaths.myCollection: RoutePaths.personalCenter,
+  RoutePaths.noteDetail: RoutePaths.personalCenter,
+  RoutePaths.noteBg: RoutePaths.personalCenter,
   RoutePaths.schoolWebsite: RoutePaths.school,
   RoutePaths.schoolCamp: RoutePaths.school,
   RoutePaths.schoolVideo: RoutePaths.school,

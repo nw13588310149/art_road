@@ -6,7 +6,6 @@ import 'package:the_road_of_art_flutter/core/network/api_response.dart';
 import 'package:the_road_of_art_flutter/features/ebooks/data/ebook_models.dart';
 import 'package:the_road_of_art_flutter/features/ebooks/data/ebook_repository.dart';
 import 'package:the_road_of_art_flutter/features/ebooks/ui/ebooks_page.dart';
-import 'package:the_road_of_art_flutter/features/ebooks/ui/home_ebook_shelf_section.dart';
 
 Map<String, dynamic> _book(
   String id,
@@ -248,18 +247,4 @@ void main() {
     expect(find.text('全部 3'), findsOneWidget);
   });
 
-  testWidgets('home section shows continue reading and picks', (tester) async {
-    final repository = _FakeRepository();
-    await _pumpInShell(
-      tester,
-      const SingleChildScrollView(child: HomeEbookShelfSection()),
-      repository,
-    );
-
-    expect(find.text('精选书刊'), findsOneWidget);
-    expect(find.text('继续阅读'), findsWidgets);
-    expect(find.text('素描静物解析（示例）'), findsWidgets);
-    expect(find.text('速写动态（示例）'), findsOneWidget);
-    expect(find.text('读到第 4 / 10 页'), findsOneWidget);
-  });
 }

@@ -10,6 +10,7 @@ import '../../features/personal_center/state/personal_center_controller.dart';
 import '../../features/school/state/school_page_controller.dart';
 import '../../features/shell/state/school_binding_controller.dart';
 import '../../features/shell/state/shell_controller.dart';
+import '../../features/today/state/today_controller.dart';
 import '../../features/courseware/state/cloud_drive_controller.dart';
 
 /// 网络恢复后刷新 Shell 公共数据与当前页业务数据。
@@ -21,6 +22,10 @@ Future<void> refreshAfterNetworkRestore(WidgetRef ref, String route) async {
   }
   if (ref.exists(schoolBindingControllerProvider)) {
     ref.read(schoolBindingControllerProvider.notifier).refresh();
+  }
+  // 今日看板同时给侧栏角标用，在哪一页恢复网络都重新取。
+  if (ref.exists(todaySnapshotProvider)) {
+    ref.invalidate(todaySnapshotProvider);
   }
 
   switch (route) {

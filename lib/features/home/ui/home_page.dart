@@ -7,37 +7,22 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/art/art_subject.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/network/media_url.dart';
-import '../../../core/providers/app_providers.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/theme/app_font.dart';
 import '../../../core/widgets/smooth_circle_network_avatar.dart';
+import '../../school/state/school_config_controller.dart';
 import '../../shell/ui/shell_layout.dart';
 import 'widgets/home_course_notice_card.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/art_subject_card.dart';
 import '../../../core/widgets/dashboard_course_notice_card.dart';
 import '../../../core/widgets/seamless_banner_carousel.dart';
-import '../../shell/navigation/shell_notice_routes.dart';
 import '../../shell/state/shell_controller.dart';
+import '../../smart_campus/state/campus_entry.dart';
 import '../../smart_campus/state/smart_campus_controller.dart';
-import '../../teaching_overview/data/teaching_overview_repository.dart';
-import '../../teaching_overview/ui/teaching_overview_page.dart';
-import '../../teaching_overview/ui/principal_overview.dart';
-import '../../teaching_overview/state/teaching_overview_controller.dart';
-import '../../artworks/state/lead_reviews_controller.dart';
-import '../../artworks/state/student_artworks_controller.dart';
-import '../../artworks/ui/widgets/artwork_focus_panel.dart';
+import '../../today/state/today_controller.dart';
 import '../state/home_dashboard_controller.dart';
 import '../state/home_dashboard_state.dart';
-import '../state/home_sections.dart';
-import '../state/home_staff_cards.dart';
-import '../state/home_student_cards.dart';
-import '../../ebooks/ui/home_ebook_shelf_section.dart';
-import 'widgets/home_latest_review_card.dart';
-import 'widgets/home_practice_card.dart';
-import 'widgets/home_review_queue_card.dart';
-import 'widgets/home_study_snapshot.dart';
-import 'widgets/home_todo_card.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -45,24 +30,14 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeDashboardControllerProvider);
-    final user = ref.watch(
-      shellControllerProvider.select((state) => state.user),
-    );
-    final role = resolveHomeRole(
-      state.role,
-      token: ref.read(appStorageProvider).token,
-    );
-    if (homeSectionsFor(role).principalOverview) {
-      return PrincipalOverview(name: user.displayName);
-    }
     return _HomePageView(state: state);
   }
 }
 
-/// 首页版式：上方左栏（轮播 + 功能入口 + 三科入口）与右栏（课程或今日待办），
-/// 下方按身份排列的卡片（[HomeSections]）、精选书刊与资讯。
+/// 首页版式：所有身份同一套，沿用原版四块。
 ///
-/// 右栏与左栏等高；第二行的卡片左宽右窄，与上方两栏对齐，同一行等高。
+/// 上方左栏是轮播、九宫格与三科入口，右栏是课表与课程；下方是最新资讯。
+/// 右栏与左栏等高。各身份当天要处理的事在「今日」页，分析报表在学情里。
 class _HomePageView extends ConsumerStatefulWidget {
   const _HomePageView({required this.state});
 
@@ -78,54 +53,26 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   static const double _boardHeight = 313;
   static const double _subjectWidth = 146;
 
-  Future<void> _refresh() {
-    ref
-      ..invalidate(homePracticeProvider)
-      ..invalidate(homeLatestReviewProvider)
-      ..invalidate(homeReviewStatsProvider)
-      ..invalidate(homeAdminTodoProvider);
-    return ref.read(homeDashboardControllerProvider.notifier).refresh();
+  Future<void> _refresh() =>
+      ref.read(homeDashboardControllerProvider.notifier).refresh();
+
+  /// 从首页进入别的页面处理了事情，回来后「今日」入口的角标跟着更新。
+  Future<void> _push(String route, {Object? arguments}) async {
+    await Navigator.pushNamed(context, route, arguments: arguments);
+    if (mounted) ref.invalidate(todaySnapshotProvider);
   }
 
-  String get _role => resolveHomeRole(
-    widget.state.role,
-    token: ref.read(appStorageProvider).token,
-  );
-
-  void _onTodo(HomeTodoAction action) {
-    switch (action) {
-      case HomeTodoAction.artworks:
-        Navigator.pushNamed(context, RoutePaths.artworks).then((_) {
-          if (mounted) ref.invalidate(homeReviewStatsProvider);
-        });
-      case HomeTodoAction.notices:
-        showShellNotices(context, ref);
-      case HomeTodoAction.classWorkbench:
-        _openCampus(HomeCampusTarget.classWorkbench);
-      case HomeTodoAction.dormCheckByRoom:
-        _openCampus(HomeCampusTarget.dormCheckByRoom);
-      case HomeTodoAction.dormDynamic:
-        _openCampus(HomeCampusTarget.dormDynamic);
-      case HomeTodoAction.dormCheckIn:
-        _openCampus(HomeCampusTarget.dormCheckIn);
-      case HomeTodoAction.dormLeave:
-        _openCampus(HomeCampusTarget.myLeave);
-      case HomeTodoAction.leaveApproval:
-        _openCampus(HomeCampusTarget.leaveApproval);
-      case HomeTodoAction.signManagement:
-        _openCampus(HomeCampusTarget.signManagement);
-      case HomeTodoAction.scheduleManagement:
-        _openCampus(HomeCampusTarget.scheduleManagement);
-    }
-  }
-
-  /// 跳转到智慧校园课表：按 `/myInfo` 真实身份进入「授课课表」或「我的课表」。
-  void _openMySchedule() {
+  /// 跳转到智慧校园课表：学生与带课老师进入本人的课表，管理员与校长进入
+  /// 排课与课表。
+  void _openSchedule() {
     final user = ref.read(shellControllerProvider).user;
-    ref
-        .read(smartCampusControllerProvider.notifier)
-        .openMyScheduleForUser(role: user.role, identity: user.identity);
-    Navigator.pushNamed(context, RoutePaths.smartCampus);
+    final campus = ref.read(smartCampusControllerProvider.notifier);
+    if (homeRoleSeesSchoolTimetable(widget.state.role)) {
+      campus.openEntry(CampusEntry.scheduleManagement);
+    } else {
+      campus.openMyScheduleForUser(role: user.role, identity: user.identity);
+    }
+    _push(RoutePaths.smartCampus);
   }
 
   void _onQuickActionTap(HomeQuickAction action) {
@@ -135,10 +82,11 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
     }
     final campus = action.campus;
     if (campus != null) {
-      _openCampus(campus);
+      ref.read(smartCampusControllerProvider.notifier).openEntry(campus);
+      _push(RoutePaths.smartCampus);
       return;
     }
-    Navigator.pushNamed(context, action.route, arguments: action.arguments);
+    _push(action.route, arguments: action.arguments);
   }
 
   void _showComingSoon() {
@@ -177,52 +125,6 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
     );
   }
 
-  /// 先切到智慧校园对应视图，再进入智慧校园页。
-  void _openCampus(HomeCampusTarget target) {
-    final campus = ref.read(smartCampusControllerProvider.notifier);
-    switch (target) {
-      case HomeCampusTarget.groupChat:
-        campus.openGroupChat();
-      case HomeCampusTarget.schoolCircle:
-        campus.openSchoolCircle();
-      case HomeCampusTarget.principalMailbox:
-        campus.openPrincipalMailbox();
-      case HomeCampusTarget.dormCheckByRoom:
-        campus.openDormCheckByRoom();
-      case HomeCampusTarget.dormDynamic:
-        campus.openDormDynamic();
-      case HomeCampusTarget.dormHistory:
-        campus.openDormHistory();
-      case HomeCampusTarget.dormCheckIn:
-        campus.openDormCheckInManagement();
-      case HomeCampusTarget.myLeave:
-        campus.openMyTeacherLeave();
-      case HomeCampusTarget.studentManagement:
-        campus.openStudentManagement();
-      case HomeCampusTarget.teacherManagement:
-        campus.openTeacherManagement();
-      case HomeCampusTarget.classManagement:
-        campus.openClassManagement();
-      case HomeCampusTarget.scheduleManagement:
-        campus.openScheduleManagement();
-      case HomeCampusTarget.signManagement:
-        campus.openSignManagement();
-      case HomeCampusTarget.leaveApproval:
-        campus.openDormLeaveApproval();
-      case HomeCampusTarget.faceLibrary:
-        campus.openFaceLibrary();
-      case HomeCampusTarget.notificationManagement:
-        campus.openNotificationManagement();
-      case HomeCampusTarget.classWorkbench:
-        campus.openClassWorkbench();
-      case HomeCampusTarget.myHomework:
-        campus.openMyHomework();
-      case HomeCampusTarget.homeworkReview:
-        campus.openHomeworkReview();
-    }
-    Navigator.pushNamed(context, RoutePaths.smartCampus);
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
@@ -234,8 +136,6 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
       );
     }
     final firstLoad = state.loading && !state.hasContent;
-    final role = _role;
-    final sections = homeSectionsFor(role);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -247,11 +147,8 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
           physics: const ClampingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: _sections(
-              role: role,
-              sections: sections,
-              firstLoad: firstLoad,
-              top: Row(
+            children: [
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
@@ -274,17 +171,14 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                               Expanded(
                                 child: _QuickActionBoard(
                                   actions: state.quickActions,
-                                  wide: !sections.subjects,
                                   onTap: _onQuickActionTap,
                                 ),
                               ),
-                              if (sections.subjects) ...[
-                                const SizedBox(width: _gap),
-                                const SizedBox(
-                                  width: _subjectWidth,
-                                  child: _SubjectColumn(),
-                                ),
-                              ],
+                              const SizedBox(width: _gap),
+                              const SizedBox(
+                                width: _subjectWidth,
+                                child: _SubjectColumn(),
+                              ),
                             ],
                           ),
                         ),
@@ -295,13 +189,8 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                   SizedBox(
                     width: _rightWidth,
                     height: leftHeight,
-                    child: sections.sideTodo
-                        ? HomeTodoCard(
-                            role: role,
-                            side: true,
-                            onAction: _onTodo,
-                            footer: _sideTodoFooter(role),
-                          )
+                    child: state.role == 'dormManager'
+                        ? _DutyPanel(onOpen: () => _push(RoutePaths.today))
                         : _CoursePanel(
                             loading: firstLoad,
                             weekItems: state.weekItems,
@@ -309,324 +198,30 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
                             heading: state.courseHeading,
                             showingUpcomingCourses:
                                 state.showingUpcomingCourses,
-                            onOpenSchedule: _openMySchedule,
+                            onOpenSchedule: _openSchedule,
                           ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 14),
+              _HomeLatestHeader(
+                title: '最新',
+                onMoreTap: () => _push(RoutePaths.consultation),
+              ),
+              const SizedBox(height: 10),
+              _NewsGrid(
+                loading: firstLoad,
+                items: state.newsItems,
+                onOpen: (item) => _push(
+                  RoutePaths.consultationDetail,
+                  arguments: <String, dynamic>{'id': item.id},
+                ),
+              ),
+              const SizedBox(height: _gap),
+            ],
           ),
         );
       },
-    );
-  }
-
-  /// 右栏今日待办底部的主操作：宿管直接开始查寝，管理员与校长进入智慧校园工作台。
-  Widget? _sideTodoFooter(String role) {
-    return switch (role) {
-      'dormManager' => AppButton(
-        label: '按宿舍查寝',
-        expand: true,
-        onTap: () => _onTodo(HomeTodoAction.dormCheckByRoom),
-      ),
-      'admin' || 'principal' => AppButton(
-        label: '进入智慧校园',
-        variant: AppButtonVariant.secondary,
-        expand: true,
-        onTap: () => Navigator.pushNamed(context, RoutePaths.smartCampus),
-      ),
-      _ => null,
-    };
-  }
-
-  /// 第二行：左侧卡片与上方左栏同宽，右侧卡片与右栏同宽，两张卡片等高。
-  Widget _pair(Widget left, Widget right) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: left),
-          const SizedBox(width: _gap),
-          SizedBox(width: _rightWidth, child: right),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _sections({
-    required String role,
-    required HomeSections sections,
-    required bool firstLoad,
-    required Widget top,
-  }) {
-    return [
-      top,
-      if (sections.practice) ...[
-        const SizedBox(height: _gap),
-        _pair(const HomePracticeCard(), const HomeLatestReviewCard()),
-        const SizedBox(height: _gap),
-        const _StudentGrowthCard(),
-      ],
-      if (sections.studySnapshot) ...[
-        const SizedBox(height: _gap),
-        if (sections.reviewQueue)
-          _pair(const HomeStudySnapshotCard(), const HomeReviewQueueCard())
-        else if (sections.todo)
-          _pair(
-            const HomeStudySnapshotCard(),
-            HomeTodoCard(role: role, onAction: _onTodo),
-          )
-        else
-          const HomeStudySnapshotCard(),
-      ],
-      if (role == 'teacher' || role == 'headTeacher') ...[
-        const SizedBox(height: _gap),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: _gap,
-          children: const [
-            Expanded(
-              child: _TeacherOverviewCard(report: TeachingReport.myAttention),
-            ),
-            SizedBox(
-              width: _rightWidth,
-              child: _TeacherOverviewCard(report: TeachingReport.myPerformance),
-            ),
-          ],
-        ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: AppButton(
-            label: '我的学生',
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.sm,
-            onTap: () => openTeachingReport(context, TeachingReport.myStudents),
-          ),
-        ),
-        if (ref.watch(
-          shellControllerProvider.select((state) => state.user.isGroupLeader),
-        )) ...[
-          const SizedBox(height: _gap),
-          const _LeaderOverviewCard(),
-        ],
-      ],
-      const SizedBox(height: _gap),
-      const HomeEbookShelfSection(),
-      const SizedBox(height: 14),
-      _HomeLatestHeader(
-        title: '最新',
-        onMoreTap: () => Navigator.pushNamed(context, RoutePaths.consultation),
-      ),
-      const SizedBox(height: 10),
-      _NewsGrid(
-        loading: firstLoad,
-        items: widget.state.newsItems,
-        onOpen: (item) => Navigator.pushNamed(
-          context,
-          RoutePaths.consultationDetail,
-          arguments: <String, dynamic>{'id': item.id},
-        ),
-      ),
-      const SizedBox(height: _gap),
-    ];
-  }
-}
-
-class _StudentGrowthCard extends ConsumerStatefulWidget {
-  const _StudentGrowthCard();
-  @override
-  ConsumerState<_StudentGrowthCard> createState() => _StudentGrowthCardState();
-}
-
-class _StudentGrowthCardState extends ConsumerState<_StudentGrowthCard> {
-  String? _subject;
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(studentArtworksControllerProvider);
-    final insights = state.insights;
-    final selected = _subject ?? insights.weakestSubject;
-    final subject =
-        insights.dimensions
-            .where((item) => item.subject == selected)
-            .firstOrNull ??
-        insights.dimensions.firstOrNull;
-    return AppCard(
-      title: '我的短板',
-      trailing: AppButton(
-        label: '查看作品成长',
-        variant: AppButtonVariant.text,
-        size: AppButtonSize.sm,
-        onTap: () => Navigator.of(context).pushNamed(
-          RoutePaths.studyCenter,
-          arguments: {'view': 'artworkGrowth'},
-        ),
-      ),
-      child: state.loading && !state.loaded
-          ? const AppSkeletonText(lines: 4)
-          : state.insightsError.isNotEmpty
-          ? AppErrorState(
-              title: '点评分析加载失败',
-              description: state.insightsError,
-              onRetry: ref
-                  .read(studentArtworksControllerProvider.notifier)
-                  .refresh,
-            )
-          : subject == null
-          ? AppEmptyState(
-              title: '积累点评，找到练习方向',
-              description: '老师填写分项评价后，这里会展示具体问题、点评依据与练习建议。',
-              actionLabel: '查看我的作品',
-              onAction: () =>
-                  Navigator.of(context).pushNamed(RoutePaths.artworks),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final item in insights.dimensions)
-                      AppChip(
-                        label: item.subject,
-                        selected: item.subject == subject.subject,
-                        onTap: () => setState(() => _subject = item.subject),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                ArtworkFocusPanel(levels: subject),
-              ],
-            ),
-    );
-  }
-}
-
-class _TeacherOverviewCard extends ConsumerWidget {
-  const _TeacherOverviewCard({required this.report});
-  final TeachingReport report;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(
-      teachingOverviewProvider((report: report, campus: '', parameter: '')),
-    );
-    final row = teachingRow(state.asData?.value);
-    final people = teachingRows(state.asData?.value);
-    String metric(Object? value, String unit) =>
-        value is num ? '${value.toStringAsFixed(1)}$unit' : '—';
-    return AppCard(
-      title: report.title,
-      trailing: AppButton(
-        label: '查看',
-        variant: AppButtonVariant.text,
-        size: AppButtonSize.sm,
-        onTap: () => openTeachingReport(context, report),
-      ),
-      child: state.isLoading
-          ? const AppSkeletonText(lines: 2)
-          : state.hasError
-          ? Text('数据暂未加载', style: AppText.body13)
-          : report == TeachingReport.myAttention
-          ? Column(
-              children: [
-                if (people.isEmpty) Text('暂无需要关注的学生', style: AppText.body13),
-                for (final person in people.take(3))
-                  AppListRow(
-                    title: teachingText(person['name']),
-                    subtitle: teachingText(
-                      (person['reasons'] as List?)?.firstOrNull,
-                    ),
-                    onTap: () => openTeachingReport(
-                      context,
-                      report,
-                      parameter: teachingText(person['id']),
-                    ),
-                  ),
-              ],
-            )
-          : Wrap(
-              spacing: AppSpace.s8,
-              runSpacing: AppSpace.s8,
-              children: [
-                AppTag(label: '近 7 天点评 ${row['reviewCount'] ?? '—'} 份'),
-                AppTag(label: '点评及时率 ${metric(row['timely'], '%')}'),
-                AppTag(label: '点评质量 ${metric(row['quality'], ' 星')}'),
-              ],
-            ),
-    );
-  }
-}
-
-class _LeaderOverviewCard extends ConsumerWidget {
-  const _LeaderOverviewCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(leadReviewsControllerProvider);
-    final teachers = teachingRows(
-      ref
-          .watch(
-            teachingOverviewProvider((
-              report: TeachingReport.groupTeachers,
-              campus: '',
-              parameter: '',
-            )),
-          )
-          .asData
-          ?.value,
-    );
-    final due = teachers.fold(
-      0,
-      (count, row) => count + (row['dueThisWeek'] as int? ?? 0),
-    );
-    final onTime = teachers.fold(
-      0,
-      (count, row) => count + (row['onTimeThisWeek'] as int? ?? 0),
-    );
-    final timely = due == 0
-        ? '—'
-        : '${(100 * onTime / due).toStringAsFixed(1)}%';
-    return AppCard(
-      title: '组长复核',
-      child: Wrap(
-        spacing: AppSpace.s12,
-        runSpacing: AppSpace.s8,
-        children: [
-          AppTag(label: '待复核 ${state.stats.pending} 份'),
-          AppTag(label: '本组点评及时率 $timely'),
-          AppTag(label: '近 7 天调分 ${state.stats.adjustedThisWeek} 份'),
-          AppTag(
-            label: '超时 ${state.stats.overdue} 份',
-            tone: state.stats.overdue > 0 ? AppTone.danger : AppTone.neutral,
-          ),
-          AppButton(
-            label: '进入复核池',
-            size: AppButtonSize.sm,
-            onTap: () async {
-              await Navigator.of(context).pushNamed(RoutePaths.leadReviews);
-              if (context.mounted) {
-                await ref
-                    .read(leadReviewsControllerProvider.notifier)
-                    .refresh();
-              }
-            },
-          ),
-          AppButton(
-            label: '本组老师',
-            size: AppButtonSize.sm,
-            variant: AppButtonVariant.secondary,
-            onTap: () =>
-                openTeachingReport(context, TeachingReport.groupTeachers),
-          ),
-          AppButton(
-            label: '本组学情',
-            size: AppButtonSize.sm,
-            variant: AppButtonVariant.secondary,
-            onTap: () =>
-                openTeachingReport(context, TeachingReport.groupClasses),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -703,21 +298,15 @@ class _HomeBannerState extends State<_HomeBanner> {
 // ─────────────────────── 功能入口 ───────────────────────
 
 class _QuickActionBoard extends StatelessWidget {
-  const _QuickActionBoard({
-    required this.actions,
-    required this.onTap,
-    this.wide = false,
-  });
+  const _QuickActionBoard({required this.actions, required this.onTap});
 
+  /// 九个入口，三行三列（见 [buildQuickActions]）。
   final List<HomeQuickAction> actions;
   final ValueChanged<HomeQuickAction> onTap;
 
-  /// 没有三科入口、独占左栏时，8 个入口排成 4 × 2。
-  final bool wide;
-
   @override
   Widget build(BuildContext context) {
-    final columns = actions.length > 9 || (wide && actions.length == 8) ? 4 : 3;
+    const columns = 3;
     final rows = (actions.length / columns).ceil();
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -836,6 +425,92 @@ class _SubjectColumn extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+// ─────────────────────── 值班 ───────────────────────
+
+/// 宿管没有课表，右栏显示当天的查寝时间；点开进入「今日工作」。
+class _DutyPanel extends ConsumerWidget {
+  const _DutyPanel({required this.onOpen});
+
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final config = ref.watch(schoolDormitoryCheckConfigProvider);
+    final times = config.valueOrNull;
+    String clock(String? raw) => (raw ?? '').replaceAll('前', '').trim();
+    final rows = [
+      (title: '早查寝', hint: '学生起床后在此时间前签到', time: clock(times?.morningDeadline)),
+      (title: '晚查寝', hint: '学生在此时间前归寝打卡', time: clock(times?.eveningDeadline)),
+    ];
+    final heading = TextStyle(
+      fontSize: 18,
+      color: const Color(0xFF1A1A1A),
+      fontWeight: AppFont.w500,
+      fontFamily: 'PingFang SC',
+    );
+    return AppCard(
+      bordered: false,
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('值班', style: heading),
+          const SizedBox(height: 6),
+          if (config.isLoading && !config.hasValue)
+            const AppSkeleton(height: 164, radius: AppRadius.card)
+          else
+            for (final row in rows) ...[
+              AppPressable(
+                onTap: onOpen,
+                child: Container(
+                  height: 76,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpace.s16),
+                  decoration: const BoxDecoration(
+                    color: AppColors.surfaceSubtle,
+                    borderRadius: AppRadius.br12,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(row.title, style: AppText.body14Strong),
+                            const SizedBox(height: 2),
+                            Text(
+                              row.hint,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption12,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpace.s8),
+                      Text(
+                        row.time.isEmpty ? '—' : row.time,
+                        style: AppText.number(size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 11),
+            ],
+          const Spacer(),
+          AppButton(
+            label: '查看今日工作',
+            variant: AppButtonVariant.secondary,
+            expand: true,
+            onTap: onOpen,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -5,7 +5,25 @@
 const nav = (label) => ({ click: label, after: 1800 });
 // 身份第一次进首页会弹新手引导（弹出即记为已看过），截首页本身前先关掉；没弹就跳过这一步。
 const skipGuide = { click: '跳过', optional: true, attempts: 4, after: 800 };
-const homeStep = { id: 'home', route: '/', actions: [skipGuide], settle: 1800 };
+// 首页对所有身份是同一套版式：九宫格与最新资讯在，按身份的卡片不在（它们在「今日」页）。
+const homeStep = {
+  id: 'home',
+  route: '/',
+  actions: [
+    skipGuide,
+    { check: /^作品墙$/ }, { check: /^题库$/ }, { check: /^最新$/ },
+    { check: /^今日任务$/, absent: true }, { check: /^今日待办$/, absent: true },
+    { check: '今日新交作品', absent: true },
+  ],
+  settle: 1800,
+};
+// 「今日」页：从侧栏进入，必须看到这个身份的看板内容。
+const todayStep = (label, checks) => ({
+  id: 'today',
+  route: '/',
+  actions: [skipGuide, nav(label), { check: /^待处理/ }, ...checks, { check: /^常用$/ }],
+  settle: 1200,
+});
 // 首页周历会滚到「今天」，后半周时周一在可视区外、点不到，所以点今天这一格。
 const todayChip = new RegExp(`^周${'日一二三四五六'[new Date().getDay()]}`);
 const guideStep = {
@@ -182,8 +200,12 @@ const sharedContent = [
     route: '/',
     actions: [nav('视频中心'), { click: /石膏几何体结构/, after: 2500 }],
   },
-  { id: 'notes', route: '/', actions: [nav('我的笔记')] },
-  { id: 'collection', route: '/', actions: [nav('我的收藏')] },
+  { id: 'notes', route: '/personal-center', actions: [
+    { click: /^我的笔记$/, after: 1800 }, { check: /^新建笔记$/ },
+  ] },
+  { id: 'collection', route: '/personal-center', actions: [
+    { click: /^我的收藏$/, after: 1800 }, { check: /^范画$/ },
+  ] },
   { id: 'cloud-folder', route: '/courseware', actions: [
     { click: /石膏几何体/, role: 'group', after: 700 }, { check: '上传资料' },
   ] },
@@ -346,26 +368,40 @@ export const ROLES = [
       ] },
       { id: 'rail-workspace-return', route: '/', actions: [skipGuide, { click: /^展开工具栏，拖动可移动$/ },
         { click: /^打开完整工具箱，17 个工具$/ }, { check: /^看画分析$/ },
-        { click: /^收起工具$/ }, { check: /^今日任务$/ },
+        { click: /^收起工具$/ }, { check: /^课表$/ },
         { check: /^恢复页面操作$/ },
       ] },
       {
         id: 'home-toolbox-return', route: '/', actions: [
-          skipGuide, { click: /^工具箱$/ },
-          { check: '分析工具' }, /^返回$/, { check: '今日任务' },
+          skipGuide, { click: /^工具$/ },
+          { check: '分析工具' }, /^返回$/, { check: /^课表$/ },
         ],
       },
       guideStep,
       noticeStep,
       { id: 'account-menu', route: '/', actions: [skipGuide, { click: /^账户菜单/, after: 500 }, { check: '资料修改', role: 'menuitem' }] },
       { id: 'study', route: '/study' },
-      { id: 'focus-overview', route: '/', actions: [skipGuide, { scroll: 650, after: 700 },
+      todayStep('今日学习', [
+        { check: /^今日练习/ }, { check: /今日课程/ }, { check: /最近点评/ },
+      ]),
+      { id: 'today-practice', route: '/today', actions: [
+        { click: /去练习/, nth: 0, after: 1700 }, { check: /^待处理/, absent: true },
+      ] },
+      { id: 'today-growth', route: '/today', actions: [
+        { click: /^需要加强的科目/, after: 1800 },
+        { check: /^作品成长$/ }, { check: '问题解决率' },
+      ] },
+      // 短板与练习闭环在学情的「作品成长」里。
+      { id: 'focus-overview', route: '/study', actions: [
+        { click: /^作品成长$/, after: 1400 }, { scroll: 500, after: 700 },
         { check: '分项观察' }, { check: '近期关注' }, { check: '制定练习' },
       ] },
-      { id: 'focus-evidence', route: '/', actions: [skipGuide, { scroll: 650, after: 700 },
+      { id: 'focus-evidence', route: '/study', actions: [
+        { click: /^作品成长$/, after: 1400 }, { scroll: 500, after: 700 },
         { click: /^查看依据$/, nth: 0 }, { check: '点评依据' }, { check: /^查看原作品$/ },
       ] },
-      { id: 'focus-practice', route: '/', actions: [skipGuide, { scroll: 650, after: 700 },
+      { id: 'focus-practice', route: '/study', actions: [
+        { click: /^作品成长$/, after: 1400 }, { scroll: 500, after: 700 },
         { click: /^制定练习$/ }, { check: '提交前自检' }, { click: /^提交练习作品$/ },
         { check: /^上传作品$/ }, { check: '多位任课老师独立点评' },
       ] },
@@ -479,12 +515,15 @@ export const ROLES = [
     chip: '任课老师 · 李静',
     steps: [
       homeStep,
-      { id: 'home-review-workspace', route: '/', actions: [
-        skipGuide, { scroll: 580 }, { click: /^开始点评$/, after: 1700 },
+      todayStep('今日工作', [
+        { check: /^待点评作品/ }, { check: /^今日课程/ }, { check: /^需要关注的学生$/ },
+      ]),
+      { id: 'today-review-workspace', route: '/today', actions: [
+        { click: /^开始点评$/, after: 1700 },
         { check: '保存并下一份', role: 'button' },
       ] },
-      { id: 'home-my-students', route: '/', actions: [
-        skipGuide, { scroll: 720 }, { click: /^我的学生$/, after: 1700 },
+      { id: 'today-my-students', route: '/today', actions: [
+        { click: /^我的学生$/, after: 1700 },
         { check: /最近提交/ }, { check: /查看学情与作品/ },
       ] },
       guideStep,
@@ -544,7 +583,7 @@ export const ROLES = [
     ],
   },
   {
-    // 教学组长：任课老师 + 组长权限，首页与任课老师同构。
+    // 教学组长：任课老师 + 组长权限，首页与任课老师相同，今日工作多出复核。
     id: 'groupLeader',
     chip: '组长 · 张明远',
     steps: [
@@ -570,8 +609,11 @@ export const ROLES = [
           { check: '提交复核', role: 'button' },
         ],
       },
-      { id: 'home-leader', route: '/', actions: [
-        skipGuide, { scroll: 720 }, { check: '组长复核' }, { check: '本组老师', role: 'button' },
+      todayStep('今日工作', [
+        { check: /^待复核作品/ }, { check: /^本组老师$/ }, { check: /^本组学情$/ },
+      ]),
+      { id: 'today-lead-pool', route: '/today', actions: [
+        { click: /^去复核$/, after: 1600 }, { check: '复核池' },
       ] },
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('schedule', '授课课表'),
@@ -583,6 +625,12 @@ export const ROLES = [
     chip: '班主任 · 赵雪',
     steps: [
       homeStep,
+      todayStep('今日工作', [
+        { check: /今日课程/ }, { check: /^需要关注的学生$/ }, { check: /^班级工作台$/ },
+      ]),
+      { id: 'today-workbench', route: '/today', actions: [
+        { click: /^班级工作台$/, after: 2000 }, { check: /发布通知/, role: 'button' },
+      ] },
       guideStep,
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('workbench', '班级工作台'),
@@ -636,7 +684,16 @@ export const ROLES = [
     id: 'dormManager',
     chip: '宿管 · 马红梅',
     steps: [
-      homeStep,
+      { ...homeStep, actions: [
+        skipGuide, { check: /^值班$/ }, { check: /^查寝$/ }, { check: /^校长信箱$/ },
+        { check: /^学情$/, absent: true }, { check: /^今日待办$/, absent: true },
+      ] },
+      todayStep('今日工作', [
+        { check: /今日值班/ }, { check: /^到岗打卡/ }, { check: /查寝情况/ },
+      ]),
+      { id: 'today-dorm-check', route: '/today', actions: [
+        { click: /^按宿舍查寝$|^查看$/, nth: 0, after: 2000 }, { check: /^待处理/, absent: true },
+      ] },
       guideStep,
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('check-by-room', '按宿舍查寝'),
@@ -664,7 +721,13 @@ export const ROLES = [
     id: 'admin',
     chip: '管理员 · 王敏',
     steps: [
-      homeStep,
+      { ...homeStep, actions: [...homeStep.actions, { check: /^课表$/ }, { check: /^课程$/ }] },
+      todayStep('今日工作', [
+        { check: /全校今日课程/ }, { check: /^画室概况$/ }, { check: /^学生管理$/ },
+      ]),
+      { id: 'today-students', route: '/today', actions: [
+        { click: /^学生管理$/, after: 2000 }, { check: /^待处理/, absent: true },
+      ] },
       guideStep,
       { id: 'campus', route: '/smart-campus', settle: 1800 },
       campusAction('students', '学生管理'),
@@ -685,18 +748,29 @@ export const ROLES = [
     id: 'principal',
     chip: '校长 · 陈建华',
     steps: [
-      { ...homeStep, actions: [skipGuide, { check: '今日新交作品' }, { check: '近期作品' }, { check: '更多管理' }, { check: '校长驾驶舱', absent: true }] },
-      { id: 'home-principal-campus', route: '/', actions: [skipGuide,
+      { ...homeStep, actions: [...homeStep.actions, { check: /^课表$/ }, { check: '校长驾驶舱', absent: true }] },
+      todayStep('今日工作', [
+        { check: /全校今日课程/ }, { check: /^在校情况$/ }, { check: /^教学跟进$/ },
+      ]),
+      { id: 'today-principal-overdue', route: '/today', actions: [
+        { click: /^去查看$/, nth: 0, after: 1600 }, { check: '点评链概览' },
+      ] },
+      // 教学指标、趋势与报表入口在「全校学情」里。
+      { id: 'study-principal', route: '/', actions: [skipGuide, nav('全校学情'),
+        { check: '今日新交作品' }, { check: '教学趋势' }, { check: /^教学报表$/ },
+        { check: '近期作品' }, { check: /^常用管理$/ }, { check: /^今日待办$/, absent: true },
+      ] },
+      { id: 'study-principal-campus', route: '/study', actions: [
         { click: /^城西校区$/, after: 1600 }, { check: '学生到校' }, { check: '教学趋势' },
       ] },
-      { id: 'home-principal-review-chain', route: '/', actions: [skipGuide,
-        { click: /^作品点评链$/, after: 1500 }, { check: '点评链概览' }, { check: '全部日期' },
+      { id: 'study-principal-review-chain', route: '/study', actions: [
+        { click: /^作品点评链/, after: 1500 }, { check: '点评链概览' }, { check: '全部日期' },
       ] },
-      { id: 'home-principal-teachers', route: '/', actions: [skipGuide,
-        { click: /^老师履职$/, after: 1500 }, { check: '履职概览' }, { check: '签到准时率' },
+      { id: 'study-principal-teachers', route: '/study', actions: [
+        { click: /^老师履职/, after: 1500 }, { check: '履职概览' }, { check: '签到准时率' },
       ] },
-      { id: 'home-principal-attention', route: '/', actions: [skipGuide,
-        { click: /需要关注的学生/, role: 'button', after: 1500 }, { check: /负责老师|暂无学生/ },
+      { id: 'study-principal-attention', route: '/study', actions: [
+        { click: /^需要关注的学生/, after: 1500 }, { check: /负责老师|暂无学生/ },
       ] },
       guideStep,
       noticeStep,

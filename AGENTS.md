@@ -19,12 +19,22 @@
 
 ## Layout Notes
 - Landscape dashboard shell (`ShellScaffold`: left nav + top bar) on a 1180×820 design base. `DashboardScaleScope.ui()` is identity now; kit components use fixed tokens. Kit overlays (`showAppDialog` / `showAppConfirm` / `showAppDrawer`) work inside and outside the shell; the legacy `showScaledDialog` / `showConfirmDialog` also inherit the shell scale when present and fall back to identity outside it.
-- The home page is role-based: `homeSectionsFor(role)` in `lib/features/home/state/home_sections.dart` decides the cards per role.
+- Content is split three ways; keep it that way when adding features:
+  - 首页 (`/`) is the same portal for every role, laid out like the music reference: banner, nine quick actions, three subject cards, the timetable column and 最新. No role cards here.
+    - `buildQuickActions(role)` returns the same nine entries in the same order (学情、工具、作业、题库、作品墙、集市、群聊、资讯、校圈). Only dorm managers swap 学情 / 作业 for 校长信箱 / 查寝.
+    - The right column shows the personal timetable for students and teaching staff, the school-wide timetable for admins and principals (`homeRoleSeesSchoolTimetable`), and the duty times for dorm managers.
+  - 今日 (`/today`) lists what this person has to handle today. Every role shares one skeleton: 待处理 (sorted by urgency, one number and one action per row), 今日日程 on the right, 值得关注 (at most three tiles, no charts) and 常用 shortcuts.
+  - Analytics and reports stay in 学情. The principal's 全校学情 opens `PrincipalOverview` (metrics, trend, report entries).
 - Shared shell areas such as the left navigation and top bar stay reusable and stable.
-- Left nav keeps 首页、小美同学、学情（教职）、电子书刊、校园资料（学校开启时）、优秀课件、素材中心、我的云盘、视频中心、智慧校园、我的笔记、我的收藏、个人中心, plus a fixed footer 「意见反馈」. 电子书刊 sits above 校园资料 and opens `/ebooks` (精选书刊). 优秀课件 sits below 校园资料 and opens `/micro-lessons`. 素材中心 sits below 优秀课件 and opens `/gallery`. Staff see 班级学情 and the principal sees 全校学情; students open 学情 from the home quick actions; dorm managers do not see 学情.
+- Left nav keeps 首页、今日、小美同学、学情（教职）、电子书刊、校园资料（学校开启时）、优秀课件、素材中心、我的云盘、视频中心、智慧校园、个人中心, plus a fixed footer 「意见反馈」.
+  - 今日 sits right below 首页: students see 「今日学习」, staff see 「今日工作」 (`todayNavLabel`). Its badge is the number of pending items (`todayPendingCountProvider`, applied in `ShellScaffold`).
+  - 电子书刊 sits above 校园资料 and opens `/ebooks` (精选书刊). 优秀课件 sits below 校园资料 and opens `/micro-lessons`. 素材中心 sits below 优秀课件 and opens `/gallery`.
+  - Staff see 班级学情 and the principal sees 全校学情; students open 学情 from the home quick actions; dorm managers do not see 学情.
+  - 我的笔记 and 我的收藏 open from 个人中心 and highlight it. Staff have twelve items, which fit 1180×820 and 1024×768 without scrolling; move an entry elsewhere before adding a thirteenth.
 
 ## Architecture
 - Routing: Navigator 1.0 `onGenerateRoute` with `RoutePaths`. Art routes and their arguments:
+  - `/today` → `TodayPage` (no arguments; the role comes from the session)
   - `/study` → `StudyCenterPage` (`examId`, `view`, `subjectId`)
   - `/artworks` → `ArtworksPage` (`artworkId`)
   - `/gallery` → `GalleryPage` (`subject`, `keyword`, `category`, `workId`)
@@ -40,7 +50,12 @@
   - `apiClientProvider`: platform API (api-v2), paths `/app/user|common|msg|courseware/*` and `/app/school/v2/*`.
   - `markingApiClientProvider`: marking API (exam-api), students send `app-token`, teachers `school-token`.
 - Art kit: `lib/core/art/` (`ArtSubject`, `ArtColors`, `ArtText`, `formatScore`), `lib/core/widgets/art_widgets.dart`, `art_subject_card.dart`.
-- Art modules: `study_center`, `artworks`, `gallery`, `ebooks`, `art_toolbox`. Toolbox tools work fully offline and run image processing through `compute`.
+- Art modules: `study_center`, `artworks`, `gallery`, `ebooks`, `art_toolbox`, `today`. Toolbox tools work fully offline and run image processing through `compute`.
+- Today (`lib/features/today`):
+  - `TodayRepository.load(role)` only reads APIs that other modules already use and returns a `TodaySnapshot`. Each source fails on its own, so one failed request does not blank the page. Do not add an endpoint just for this page.
+  - `buildTodayBoard(snapshot)` in `state/today_board.dart` is a pure function with one builder per role. Rows that need the person to act set `pending: true` and count toward the nav badge; finished rows and plain entries do not.
+  - Show a number only when an API provides it. 到岗打卡 has no status API, so it is an entry without a count.
+  - Rows open their destination through `TodayTarget`. Smart-campus views go through `CampusEntry` (`smart_campus/state/campus_entry.dart`), which the home quick actions share.
 - Generic modules kept from the original platform and art-ified: `ai_chat`, `courseware` (incl. cloud drive), `video_tutorial`, `my_notes`, `my_collection`, `quiz_practice`, `circle`, `school`, `smart_campus`, `personal_center`, `help_guide`, `feedback`, `consultation`.
 
 ## Demo Mode

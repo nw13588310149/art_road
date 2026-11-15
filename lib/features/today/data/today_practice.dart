@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show IconData, Icons;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/art/art_subject.dart';
@@ -8,16 +7,15 @@ import '../../../core/art/art_tokens.dart';
 import '../../art_toolbox/data/toolbox_catalog.dart';
 import '../../artworks/data/artwork_models.dart';
 import '../../artworks/data/artwork_rules.dart';
-import '../../artworks/data/artwork_repository.dart';
-import '../ui/widgets/home_study_snapshot.dart';
+import 'today_models.dart';
 
 /// 今日练习的来源：老师点评里的高频问题、最近一次考试的弱项科目、没有数据时的基本功。
-enum HomePracticeSource { problem, weakSubject, basics }
+enum TodayPracticeSource { problem, weakSubject, basics }
 
-/// 首页「今日练习」的一条建议：点开直达画室工具箱的某个工具或范画库的某个科目。
+/// 「今日练习」的一条建议：点开直达画室工具箱的某个工具或范画库的某个科目。
 @immutable
-class HomePractice {
-  const HomePractice({
+class TodayPractice {
+  const TodayPractice({
     required this.source,
     required this.title,
     required this.reason,
@@ -28,7 +26,7 @@ class HomePractice {
     this.subject = '',
   });
 
-  final HomePracticeSource source;
+  final TodayPracticeSource source;
   final String title;
   final String reason;
   final IconData icon;
@@ -44,12 +42,12 @@ class HomePractice {
 
 /// 生成 1–3 条今日练习：先取高频问题（最多 2 条，问题对应的工具直达，没有工具时
 /// 打开对应科目的范画），再补最近一次月考得分最低的科目；都没有数据时给两项基本功。
-List<HomePractice> buildHomePractices({
+List<TodayPractice> buildTodayPractices({
   ArtworkInsights? insights,
-  HomeStudySnapshot? snapshot,
+  TodayStudySnapshot? snapshot,
   int limit = 3,
 }) {
-  final result = <HomePractice>[];
+  final result = <TodayPractice>[];
   final usedTools = <String>{};
   for (final suggestion
       in insights?.suggestions ?? const <ArtworkSuggestion>[]) {
@@ -65,8 +63,8 @@ List<HomePractice> buildHomePractices({
         continue;
       }
       result.add(
-        HomePractice(
-          source: HomePracticeSource.problem,
+        TodayPractice(
+          source: TodayPracticeSource.problem,
           title: tool.label,
           reason: reason,
           icon: tool.icon,
@@ -82,8 +80,8 @@ List<HomePractice> buildHomePractices({
     }
     final subject = suggestion.gallerySubject;
     result.add(
-      HomePractice(
-        source: HomePracticeSource.problem,
+      TodayPractice(
+        source: TodayPracticeSource.problem,
         title: '$subject范画对照',
         reason: reason,
         icon: Icons.photo_library_outlined,
@@ -99,7 +97,7 @@ List<HomePractice> buildHomePractices({
     );
   }
 
-  final weak = _weakSubject(insights, snapshot);
+  final weak = todayWeakSubject(insights: insights, snapshot: snapshot);
   final weakCovered =
       weak != null &&
       result.any(
@@ -107,10 +105,10 @@ List<HomePractice> buildHomePractices({
       );
   if (weak != null && !weakCovered && result.length < limit) {
     result.add(
-      HomePractice(
-        source: HomePracticeSource.weakSubject,
+      TodayPractice(
+        source: TodayPracticeSource.weakSubject,
         title: '${weak.subject}范画对照',
-        reason: weak.reason,
+        reason: '${weak.reason}，挑一张同类范画对照着练。',
         icon: Icons.photo_library_outlined,
         tag: weak.subject,
         subject: weak.subject,
@@ -123,8 +121,8 @@ List<HomePractice> buildHomePractices({
   if (result.isEmpty) {
     for (final tool in const [ArtTool.valueOrder, ArtTool.figure]) {
       result.add(
-        HomePractice(
-          source: HomePracticeSource.basics,
+        TodayPractice(
+          source: TodayPracticeSource.basics,
           title: tool.label,
           reason: '还没有点评与成绩记录，先从基本功练起：${tool.description}。',
           icon: tool.icon,
@@ -140,11 +138,12 @@ List<HomePractice> buildHomePractices({
 }
 
 /// 弱项科目：优先最近一次已出分考试里分数最低的一科，没有考试时取日常作品的「有待加强」。
-({String subject, String reason})? _weakSubject(
+/// [reason] 是一句不带句号的依据。
+({String subject, String reason})? todayWeakSubject({
   ArtworkInsights? insights,
-  HomeStudySnapshot? snapshot,
-) {
-  if (snapshot != null && !snapshot.staff) {
+  TodayStudySnapshot? snapshot,
+}) {
+  if (snapshot != null) {
     ({String name, double? score, String grade})? weakest;
     for (final subject in snapshot.subjects) {
       final score = subject.score;
@@ -161,27 +160,27 @@ List<HomePractice> buildHomePractices({
         subject: weakest.name,
         reason:
             '${snapshot.examName}${weakest.name} ${formatScore(weakest.score)} 分$grade，'
-            '是三科中分数最低的一科，挑一张同类范画对照着练。',
+            '是三科中分数最低的一科',
       );
     }
   }
   final subject = insights?.weakestSubject ?? '';
   if (ArtSubject.tryParse(subject) != null) {
-    return (subject: subject, reason: '日常作品里$subject的点评得分偏低，挑一张同类范画对照着练。');
+    return (subject: subject, reason: '日常作品里$subject的点评得分偏低');
   }
   return null;
 }
 
-/// 点评意见的第一句，首页卡片只放一句。
-String homeCommentLine(String text) {
+/// 点评意见的第一句，卡片只放一句。
+String todayCommentLine(String text) {
   final clause = text.split(RegExp('[。；;！？]')).first.trim();
   return clause.isEmpty ? text.trim() : clause;
 }
 
-/// 首页「最近点评」：最近一份责任老师已点评的作品。
+/// 「最近点评」：最近一份责任老师已点评的作品。
 @immutable
-class HomeLatestReview {
-  const HomeLatestReview({
+class TodayLatestReview {
+  const TodayLatestReview({
     required this.artworkId,
     required this.title,
     this.subject = '',
@@ -192,12 +191,11 @@ class HomeLatestReview {
     this.teacherName = '',
     this.comment = '',
     this.reviewedTime = '',
-    this.roles = const [],
     this.canRevise = false,
   });
 
   /// 评语优先取责任老师点评；兼容旧的多师列表时取时间最新且有正文的一条。
-  factory HomeLatestReview.from(ArtworkSummary work, ArtworkDetail? detail) {
+  factory TodayLatestReview.from(ArtworkSummary work, ArtworkDetail? detail) {
     ArtworkReview? pick = detail?.review;
     if (pick == null || !pick.visible) {
       for (final review in detail?.reviews ?? const <ArtworkReview>[]) {
@@ -214,7 +212,7 @@ class HomeLatestReview {
         }
       }
     }
-    return HomeLatestReview(
+    return TodayLatestReview(
       artworkId: work.id,
       title: work.title,
       subject: work.subject,
@@ -225,14 +223,8 @@ class HomeLatestReview {
       teacherName: pick?.teacherName.isNotEmpty == true
           ? pick!.teacherName
           : work.teacherName,
-      comment: homeCommentLine(pick?.content ?? ''),
+      comment: todayCommentLine(pick?.content ?? ''),
       reviewedTime: pick?.reviewedTime ?? '',
-      roles: [
-        for (final role in <String>{
-          for (final event in detail?.timeline ?? []) event.role,
-        })
-          if (role != 'STUDENT') role,
-      ],
       canRevise:
           work.reviewed &&
           (pick?.tags.any((tag) => !ArtworkRules.isHighlightTag(tag.color)) ??
@@ -250,55 +242,7 @@ class HomeLatestReview {
   final String teacherName;
   final String comment;
   final String reviewedTime;
-  final List<String> roles;
+
+  /// 点评里带有问题标签：可以按点评改画后重交。
   final bool canRevise;
 }
-
-/// 今日练习：高频问题来自作品点评小结（`GET /app/artworks/insights`），弱项科目来自学情速览。
-/// 任一接口失败都不报错，按已有数据给建议。
-final homePracticeProvider = FutureProvider.autoDispose<List<HomePractice>>((
-  ref,
-) async {
-  final repository = ref.watch(artworkRepositoryProvider);
-  ArtworkInsights? insights;
-  try {
-    final response = await repository.getInsights();
-    if (response.isSuccess) {
-      insights = ArtworkInsights.fromJson(response.data);
-    }
-  } catch (_) {
-    insights = null;
-  }
-  HomeStudySnapshot? snapshot;
-  try {
-    snapshot = await ref.watch(homeStudySnapshotProvider.future);
-  } catch (_) {
-    snapshot = null;
-  }
-  return buildHomePractices(insights: insights, snapshot: snapshot);
-});
-
-/// 最近点评：已点评作品按绘画日期倒序取第一份，再取详情拿到老师评语。
-final homeLatestReviewProvider = FutureProvider.autoDispose<HomeLatestReview?>((
-  ref,
-) async {
-  final repository = ref.watch(artworkRepositoryProvider);
-  final response = await repository.getArtworks(
-    status: ArtworkStatusFilter.reviewed,
-    page: 1,
-    size: 1,
-  );
-  if (!response.isSuccess) {
-    throw StateError(response.errorOr('最近点评加载失败'));
-  }
-  final records = ArtworkPage.fromJson(response.data).records;
-  if (records.isEmpty) {
-    return null;
-  }
-  final work = records.first;
-  final detail = await repository.getArtwork(work.id);
-  return HomeLatestReview.from(
-    work,
-    detail.isSuccess ? ArtworkDetail.fromJson(detail.data) : null,
-  );
-});

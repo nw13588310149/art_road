@@ -1,36 +1,14 @@
-import 'package:flutter/material.dart' show IconData, Icons;
+import 'package:flutter/material.dart' show IconData;
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../smart_campus/state/campus_entry.dart';
 
 class HomeBannerItem {
   const HomeBannerItem({required this.imageUrl, this.title = ''});
 
   final String imageUrl;
   final String title;
-}
-
-/// 打开智慧校园里的某个视图（宿管、管理员首页的工作入口）。
-enum HomeCampusTarget {
-  groupChat,
-  schoolCircle,
-  principalMailbox,
-  dormCheckByRoom,
-  dormDynamic,
-  dormHistory,
-  dormCheckIn,
-  myLeave,
-  studentManagement,
-  teacherManagement,
-  classManagement,
-  scheduleManagement,
-  signManagement,
-  leaveApproval,
-  faceLibrary,
-  notificationManagement,
-  classWorkbench,
-  myHomework,
-  homeworkReview,
 }
 
 /// 首页九宫格入口：名称与侧栏、页头、智慧校园入口保持同一叫法。
@@ -52,7 +30,7 @@ class HomeQuickAction {
   final Map<String, dynamic>? arguments;
 
   /// 设置后打开智慧校园对应视图，[route] 不再使用。
-  final HomeCampusTarget? campus;
+  final CampusEntry? campus;
 
   /// 功能还没有页面时，点击只提示即将上线。
   final bool comingSoon;
@@ -164,14 +142,12 @@ class HomeDashboardState {
   final List<HomeBannerItem> bannerItems;
   final List<HomeQuickAction> quickActions;
 
-  /// 本周七天的课程数；没有个人课表的角色（宿管、管理员）为空，首页不显示周条。
+  /// 本周七天的课程数。学生、任课老师、班主任是本人课表，管理员与校长是全校
+  /// 课表；宿管没有课表，为空，首页不显示周条。
   final List<HomeWeekDayItem> weekItems;
   final List<HomeNewsItem> newsItems;
   final List<HomeCourseNotice> courseNotices;
   final String errorMessage;
-
-  /// 宿管首页显示值班与查寝，不显示课表和成绩。
-  bool get isDormManager => role == 'dormManager';
 
   /// nextSchoolCourse 可以返回下一次有课日期，不把它当作今天的排课。
   bool get showingUpcomingCourses {
@@ -219,127 +195,65 @@ class HomeDashboardState {
   }
 }
 
-/// 首页九宫格，按角色给入口。学生从左到右、从上到下为：
-/// 学情、资讯、校圈、群聊、工具、作业、集市。老师与班主任没有「学情」，
-/// 他们的学情在左侧导航。
-/// 「作业」只是作品档案的入口名称，仍打开作品库（老师为作品点评）。
-/// 范画从左侧导航「素材中心」进入，知识点专题从左侧导航「优秀课件」进入。
-/// 集市对全部身份开放。
-List<HomeQuickAction> buildQuickActions({
-  bool isStaff = false,
-  String role = '',
-}) {
-  const campusIcons = AppAssets.campusHomeActions;
-  if (role == 'dormManager') {
-    return const <HomeQuickAction>[
-      HomeQuickAction(
-        name: '集市',
-        icon: Icons.storefront_outlined,
-        route: RoutePaths.marketplace,
-      ),
-      HomeQuickAction(
-        name: '按宿舍查寝',
-        iconAsset: '$campusIcons/dorm_manager/dorm_check_by_room.png',
-        campus: HomeCampusTarget.dormCheckByRoom,
-      ),
-      HomeQuickAction(
-        name: '查寝动态',
-        iconAsset: '$campusIcons/head_teacher/dorm_dynamic.png',
-        campus: HomeCampusTarget.dormDynamic,
-      ),
-      HomeQuickAction(
-        name: '查寝历史',
-        iconAsset: '$campusIcons/dorm_manager/dorm_history.png',
-        campus: HomeCampusTarget.dormHistory,
-      ),
-      HomeQuickAction(
-        name: '到岗打卡',
-        iconAsset: '$campusIcons/dorm_manager/punch_management.png',
-        campus: HomeCampusTarget.dormCheckIn,
-      ),
-      HomeQuickAction(
-        name: '宿管请假',
-        iconAsset: '$campusIcons/dorm_manager/dorm_leave.png',
-        campus: HomeCampusTarget.myLeave,
-      ),
-      HomeQuickAction(
-        name: '校圈',
-        iconAsset: '$campusIcons/dorm_manager/school_circle.png',
-        campus: HomeCampusTarget.schoolCircle,
-      ),
-      HomeQuickAction(
-        name: '群聊',
-        iconAsset: '$campusIcons/dorm_manager/group_chat.png',
-        campus: HomeCampusTarget.groupChat,
-      ),
-      HomeQuickAction(
-        name: '校长信箱',
-        iconAsset: '$campusIcons/dorm_manager/principal_mailbox.png',
-        campus: HomeCampusTarget.principalMailbox,
-      ),
-    ];
-  }
-  if (role == 'admin' || role == 'principal') {
-    return <HomeQuickAction>[
-      const HomeQuickAction(
-        name: '集市',
-        icon: Icons.storefront_outlined,
-        route: RoutePaths.marketplace,
-      ),
-      const HomeQuickAction(
-        name: '学生管理',
-        iconAsset: '$campusIcons/admin/student_management.png',
-        campus: HomeCampusTarget.studentManagement,
-      ),
-      const HomeQuickAction(
-        name: '教师管理',
-        iconAsset: '$campusIcons/admin/teacher_management.png',
-        campus: HomeCampusTarget.teacherManagement,
-      ),
-      const HomeQuickAction(
-        name: '班级管理',
-        iconAsset: '$campusIcons/admin/class_management.png',
-        campus: HomeCampusTarget.classManagement,
-      ),
-      const HomeQuickAction(
-        name: '排课与课表',
-        iconAsset: '$campusIcons/admin/schedule_management.png',
-        campus: HomeCampusTarget.scheduleManagement,
-      ),
-      const HomeQuickAction(
-        name: '签课管理',
-        iconAsset: '$campusIcons/admin/schedule_management.png',
-        campus: HomeCampusTarget.signManagement,
-      ),
-      const HomeQuickAction(
-        name: '教师请假审批',
-        iconAsset: '$campusIcons/admin/dorm_leave_approval.png',
-        campus: HomeCampusTarget.leaveApproval,
-      ),
-      const HomeQuickAction(
-        name: '人脸库',
-        iconAsset: '$campusIcons/admin/face_library.png',
-        campus: HomeCampusTarget.faceLibrary,
-      ),
-      const HomeQuickAction(
-        name: '通知管理',
-        iconAsset: '$campusIcons/admin/notification_management.png',
-        campus: HomeCampusTarget.notificationManagement,
-      ),
-      HomeQuickAction(
-        name: role == 'principal' ? '全校学情' : '班级学情',
-        iconAsset: '$campusIcons/student/my_grades.png',
-        route: RoutePaths.studyCenter,
-      ),
-    ];
-  }
+/// 首页九宫格：所有身份同一版式、同一顺序，从左到右、从上到下为
+/// 学情、工具、作业、题库、作品墙、集市、群聊、资讯、校圈。
+///
+/// 每行每列都是粉、紫、青三色各一个。只有宿管不看成绩、不点评作品，
+/// 前两个位置换成「校长信箱」和「查寝」，其余七个不变。
+/// 「作业」打开作品档案（老师为作品点评）；各身份的工作入口在「今日」页。
+List<HomeQuickAction> buildQuickActions({String role = ''}) {
+  final dorm = role.trim() == 'dormManager';
   return <HomeQuickAction>[
-    if (!isStaff)
+    if (dorm)
+      const HomeQuickAction(
+        name: '校长信箱',
+        iconAsset: AppAssets.homeQuickMailbox,
+        campus: CampusEntry.principalMailbox,
+      )
+    else
       const HomeQuickAction(
         name: '学情',
-        iconAsset: '$campusIcons/student/my_grades.png',
+        iconAsset: AppAssets.homeQuickStudy,
         route: RoutePaths.studyCenter,
       ),
+    const HomeQuickAction(
+      name: '工具',
+      iconAsset: AppAssets.homeQuickTools,
+      route: RoutePaths.artToolbox,
+      arguments: <String, dynamic>{'returnToSource': true},
+    ),
+    if (dorm)
+      const HomeQuickAction(
+        name: '查寝',
+        iconAsset: AppAssets.homeQuickDorm,
+        campus: CampusEntry.dormCheckByRoom,
+      )
+    else
+      const HomeQuickAction(
+        name: '作业',
+        iconAsset: AppAssets.homeQuickHomework,
+        route: RoutePaths.artworks,
+      ),
+    const HomeQuickAction(
+      name: '题库',
+      iconAsset: AppAssets.homeQuickQuestionBank,
+      route: RoutePaths.camp,
+    ),
+    const HomeQuickAction(
+      name: '作品墙',
+      iconAsset: AppAssets.homeQuickWall,
+      route: RoutePaths.excellentArtworks,
+    ),
+    const HomeQuickAction(
+      name: '集市',
+      iconAsset: AppAssets.homeQuickMarket,
+      route: RoutePaths.marketplace,
+    ),
+    const HomeQuickAction(
+      name: '群聊',
+      iconAsset: AppAssets.homeQuickGroupChat,
+      campus: CampusEntry.groupChat,
+    ),
     const HomeQuickAction(
       name: '资讯',
       iconAsset: AppAssets.homeQuickNews,
@@ -349,27 +263,6 @@ List<HomeQuickAction> buildQuickActions({
       name: '校圈',
       iconAsset: AppAssets.homeQuickSchoolCircle,
       route: RoutePaths.circle,
-    ),
-    const HomeQuickAction(
-      name: '群聊',
-      iconAsset: AppAssets.homeQuickGroupChat,
-      campus: HomeCampusTarget.groupChat,
-    ),
-    const HomeQuickAction(
-      name: '工具',
-      iconAsset: '$campusIcons/head_teacher/class_workbench.png',
-      route: RoutePaths.artToolbox,
-      arguments: <String, dynamic>{'returnToSource': true},
-    ),
-    const HomeQuickAction(
-      name: '作业',
-      iconAsset: '$campusIcons/teacher/student_roster.png',
-      route: RoutePaths.artworks,
-    ),
-    const HomeQuickAction(
-      name: '集市',
-      icon: Icons.storefront_rounded,
-      route: RoutePaths.marketplace,
     ),
   ];
 }

@@ -12,6 +12,10 @@ import '../state/teaching_overview_controller.dart';
 import 'teaching_overview_page.dart';
 import 'teaching_trend_chart.dart';
 
+/// 校长的「全校学情」首屏：教学指标与近七天趋势、教学报表入口、近期作品。
+///
+/// 这里只放数据与报表。校长当天要处理的事（超时督办、校长信箱、审批、教学跟进）
+/// 在「今日工作」里。
 class PrincipalOverview extends ConsumerStatefulWidget {
   const PrincipalOverview({required this.name, super.key});
   final String name;
@@ -95,9 +99,10 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
                 data: (_) => LayoutBuilder(
                   builder: (context, box) {
                     final wide = box.maxWidth >= 740;
-                    final height = math.max(612.0, box.maxHeight);
-                  final lower = math.max(192.0, (height - 84) * .36);
-                  final upper = height - 84 - lower;
+                    // 上下两行正好占满一屏：上行是指标与趋势，下行是近期作品。
+                    final height = math.max(580.0, box.maxHeight);
+                    final lower = math.max(192.0, (height - 16) * .36);
+                    final upper = height - 16 - lower;
                     return RefreshIndicator(
                       onRefresh: _refresh,
                       child: SingleChildScrollView(
@@ -108,17 +113,16 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
                           children: [
                             _pair(
                               _overview(data, trend),
-                              _operations(data),
+                              _reports(data),
                               height: wide ? upper : 364,
                               wide: wide,
                             ),
                             _pair(
                               _artworks(data),
-                              _followups(data),
+                              _management(),
                               height: wide ? lower : 224,
                               wide: wide,
                             ),
-                            _shortcuts(wide),
                           ],
                         ),
                       ),
@@ -156,7 +160,15 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(_date(data['date']), style: AppText.body13),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
+          AppIconButton(
+            icon: Icons.refresh_rounded,
+            semanticLabel: '刷新教学数据',
+            size: AppButtonSize.sm,
+            background: AppColors.surface,
+            onTap: _refresh,
+          ),
+          const SizedBox(width: 8),
           AppButton(
             label: '查看作品',
             icon: Icons.north_east,
@@ -333,128 +345,112 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
     ),
   );
 
-  Widget _operations(TeachingRow data) {
+  /// 教学报表入口：每行一份报表，右侧带一个当前数字，点开看明细。
+  Widget _reports(TeachingRow data) {
     final attendance = teachingRow(data['attendance']);
+    String ratio(Object? present, Object? expected) =>
+        '${_number(present)} / ${_number(expected)}';
+    final rows = <(String, String, String, VoidCallback)>[
+      (
+        '班级学情',
+        '各校区、各班的月考成绩',
+        _number(data['examMean']),
+        () => _open(TeachingReport.classes),
+      ),
+      (
+        '老师履职',
+        '点评及时率与课堂签课',
+        _number(data['timelyReviewRate'], suffix: '%'),
+        () => _open(TeachingReport.teachers),
+      ),
+      (
+        '作品点评链',
+        '提交、老师点评、组长复核的进度',
+        '超时 ${_number(data['overdueReviews'])} 份',
+        () => _open(TeachingReport.reviewChain),
+      ),
+      (
+        '需要关注的学生',
+        '成绩下滑、缺勤或长时间未交作品',
+        '${_number(data['attentionCount'])} 人',
+        () => _open(TeachingReport.attention),
+      ),
+      (
+        '学生到校',
+        '今日已签到 / 应到',
+        ratio(attendance['studentPresent'], attendance['studentExpected']),
+        () => _open(TeachingReport.attendance, 'students'),
+      ),
+      (
+        '老师在岗',
+        '今日已签课 / 有课老师',
+        ratio(attendance['teacherPresent'], attendance['teacherExpected']),
+        () => _open(TeachingReport.attendance, 'teachers'),
+      ),
+    ];
     return AppCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(child: Text('今日待办', style: AppText.title16)),
-              _link('查看全部', () => _open(TeachingReport.reviewChain)),
-            ],
-          ),
+          Text('教学报表', style: AppText.title16),
           const SizedBox(height: 4),
-          _queue('待老师点评', data['overdueReviews'], 'overdue'),
-          _queue('待组长点评', data['overdueLeadReviews'], 'leadOverdue'),
-          const Divider(height: 12, color: AppColors.line),
-          AppPressable(
-            onTap: () => _open(TeachingReport.attention),
+          Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('需要关注的学生', style: AppText.body14Strong),
-                Row(
-                  children: [
-                    Text(
-                      _number(data['attentionCount']),
-                      style: AppText.displayNumber(size: 24),
+                for (var i = 0; i < rows.length; i++)
+                  Expanded(
+                    child: AppPressable(
+                      onTap: rows[i].$4,
+                      semanticLabel: '${rows[i].$1} ${rows[i].$3}',
+                      child: Container(
+                        decoration: i < rows.length - 1
+                            ? const BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: AppColors.lineSoft,
+                                  ),
+                                ),
+                              )
+                            : null,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    rows[i].$1,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.body14Strong,
+                                  ),
+                                  Text(
+                                    rows[i].$2,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.caption12,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(rows[i].$3, style: AppText.number(size: 14)),
+                            const SizedBox(width: 4),
+                            _chevron,
+                          ],
+                        ),
+                      ),
                     ),
-                    Text(' 人', style: AppText.body13),
-                    const Spacer(),
-                    Text('查看学情', style: AppText.caption12),
-                    const SizedBox(width: 6),
-                    _chevron,
-                  ],
-                ),
+                  ),
               ],
-            ),
-          ),
-          const Divider(height: 12, color: AppColors.line),
-          Text('在校情况', style: AppText.body14Strong),
-          _attendance(
-            '学生到校',
-            attendance['studentPresent'],
-            attendance['studentExpected'],
-            'students',
-          ),
-          _attendance(
-            '老师在岗',
-            attendance['teacherPresent'],
-            attendance['teacherExpected'],
-            'teachers',
-          ),
-          const Spacer(),
-          const Divider(height: 12, color: AppColors.line),
-          AppPressable(
-            onTap: () => _campusView((c) => c.openPrincipalMailbox()),
-            child: SizedBox(
-              height: 32,
-              child: Row(
-                children: [
-                  const Icon(Icons.mail_outline, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text('校长信箱', style: AppText.body14)),
-                  _chevron,
-                ],
-              ),
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _queue(String title, Object? count, String filter) => AppPressable(
-    onTap: () => _open(TeachingReport.reviewChain, 'filter=$filter'),
-    child: SizedBox(
-      height: 36,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: AppText.body13.copyWith(color: AppColors.ink),
-            ),
-          ),
-          AppTag(
-            label: '超时 ${_number(count)} 份',
-            tone: count is num && count > 0 ? AppTone.warning : AppTone.neutral,
-          ),
-          const SizedBox(width: 8),
-          _chevron,
-        ],
-      ),
-    ),
-  );
-
-  Widget _attendance(
-    String title,
-    Object? present,
-    Object? expected,
-    String kind,
-  ) => AppPressable(
-    onTap: () => _open(TeachingReport.attendance, kind),
-    child: SizedBox(
-      height: 30,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: AppText.body13.copyWith(color: AppColors.ink),
-            ),
-          ),
-          Text(
-            '${_number(present)} / ${_number(expected)}',
-            style: AppText.number(),
-          ),
-        ],
-      ),
-    ),
-  );
 
   Widget _artworks(TeachingRow data) {
     final items = teachingRows(data['recentArtworks']).take(3).toList();
@@ -518,113 +514,8 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
     ),
   );
 
-  Widget _followups(TeachingRow data) {
-    final alerts = teachingRows(data['alerts']);
-    return AppCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('教学跟进', style: AppText.title16),
-          const SizedBox(height: 8),
-          if (alerts.isEmpty)
-            Expanded(
-              child: Center(child: Text('暂无需要跟进的事项', style: AppText.body13)),
-            ),
-          for (final alert in alerts.take(3))
-            AppPressable(
-              onTap: () => _openAlert(alert),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 42),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        alert['detail'] == null
-                            ? teachingText(alert['label'])
-                            : '${alert['name']} · ${alert['detail']}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.body13.copyWith(color: AppColors.ink),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    _chevron,
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _openAlert(TeachingRow alert) {
-    final id = teachingText(alert['id']);
-    switch (alert['target']) {
-      case 'attention':
-        _open(TeachingReport.attention, id);
-      case 'classes':
-        openTeachingReport(context, TeachingReport.classes, campus: id);
-      default:
-        _open(
-          TeachingReport.reviewChain,
-          'filter=${alert['target']}&teacherId=${Uri.encodeQueryComponent(id)}',
-        );
-    }
-  }
-
-  Widget _shortcuts(bool wide) {
-    final entries = <(String, IconData, VoidCallback)>[
-      (
-        '集市',
-        Icons.storefront_outlined,
-        () => Navigator.of(context).pushNamed(RoutePaths.marketplace),
-      ),
-      ('老师履职', Icons.fact_check_outlined, () => _open(TeachingReport.teachers)),
-      ('全校学情', Icons.show_chart, () => _open(TeachingReport.classes)),
-      ('作品点评链', Icons.edit_outlined, () => _open(TeachingReport.reviewChain)),
-      ('更多管理', Icons.layers_outlined, _more),
-    ];
-    Widget entry((String, IconData, VoidCallback) item) => AppPressable(
-      onTap: item.$3,
-      child: SizedBox(
-        height: 44,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(item.$2, size: 20),
-            const SizedBox(width: 8),
-            Text(item.$1, style: AppText.body13.copyWith(color: AppColors.ink)),
-          ],
-        ),
-      ),
-    );
-    return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: wide
-          ? Row(
-              children: [
-                for (var i = 0; i < entries.length; i++) ...[
-                  if (i > 0)
-                    Container(width: 1, height: 24, color: AppColors.line),
-                  Expanded(child: entry(entries[i])),
-                ],
-              ],
-            )
-          : Wrap(
-              children: [
-                for (final item in entries)
-                  SizedBox(width: 150, child: entry(item)),
-              ],
-            ),
-    );
-  }
-
-  Future<void> _more() async {
+  /// 与教学数据相关的管理入口。审批与信箱在「今日工作」里。
+  Widget _management() {
     final entries = <(String, IconData, VoidCallback)>[
       (
         '优秀作品墙',
@@ -636,13 +527,8 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
       ),
       (
         '通知管理',
-        Icons.notifications_none,
+        Icons.campaign_outlined,
         () => _campusView((c) => c.openNotificationManagement()),
-      ),
-      (
-        '教师请假审批',
-        Icons.event_busy_outlined,
-        () => _campusView((c) => c.openDormLeaveApproval()),
       ),
       (
         '学生管理',
@@ -654,28 +540,54 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
         Icons.badge_outlined,
         () => _campusView((c) => c.openTeacherManagement()),
       ),
-      ('刷新教学数据', Icons.refresh, _refresh),
     ];
-    final chosen = await showAppDialog<int>(
-      context: context,
-      builder: (dialogContext) => AppDialog(
-        title: '更多管理',
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    Widget tile((String, IconData, VoidCallback) item) => AppPressable(
+      onTap: item.$3,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: const BoxDecoration(
+          color: AppColors.surfaceSubtle,
+          borderRadius: AppRadius.br12,
+        ),
+        child: Row(
           children: [
-            for (var i = 0; i < entries.length; i++)
-              AppListRow(
-                title: entries[i].$1,
-                leading: Icon(entries[i].$2, size: 20),
-                trailing: _chevron,
-                onTap: () => Navigator.of(dialogContext).pop(i),
+            Icon(item.$2, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                item.$1,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.body13.copyWith(color: AppColors.ink),
               ),
+            ),
           ],
         ),
       ),
     );
-    if (mounted && chosen != null) entries[chosen].$3();
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('常用管理', style: AppText.title16),
+          const SizedBox(height: 10),
+          for (var row = 0; row < 2; row++) ...[
+            if (row > 0) const SizedBox(height: 8),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: tile(entries[row * 2])),
+                  const SizedBox(width: 8),
+                  Expanded(child: tile(entries[row * 2 + 1])),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _link(String title, VoidCallback onTap) => AppPressable(

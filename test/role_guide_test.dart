@@ -84,16 +84,23 @@ void main() {
         expect(guide.steps.length, inInclusiveRange(3, 4), reason: role);
       }
       expect(roleGuideFor('student').steps.map((s) => s.title), [
+        '今日学习',
         '学情',
         '作品档案',
         '画室工具箱',
-        '美术书刊',
       ]);
       expect(roleGuideFor('teacher').steps.map((s) => s.title), [
+        '今日工作',
         '作品点评',
         '班级学情',
         '智慧校园',
       ]);
+      // 每个身份的引导都从「今日」入口讲起。
+      for (final role in roleGuideRoles) {
+        final first = roleGuideFor(role).steps.first;
+        expect(first.title, role == 'student' ? '今日学习' : '今日工作');
+        expect(first.where, contains('左侧导航'));
+      }
       final dorm = roleGuideFor('dormManager').steps.map((s) => '${s.title}${s.body}');
       expect(dorm.join(), isNot(contains('学情')));
       expect(roleGuideFor('').role, 'student');
@@ -120,7 +127,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(shown, [true]);
       expect(find.byType(RoleGuideDialog), findsOneWidget);
-      expect(find.text('学情'), findsOneWidget);
+      expect(find.text('今日学习'), findsOneWidget);
       expect(find.textContaining('学生新手引导'), findsOneWidget);
       expect(find.textContaining('1 / 4'), findsOneWidget);
 
@@ -147,11 +154,15 @@ void main() {
       await _pumpLauncher(tester, role: 'teacher', onShown: (_) {});
       await tester.tap(find.text('进入首页'));
       await tester.pumpAndSettle();
-      expect(find.text('作品点评'), findsOneWidget);
+      expect(find.text('今日工作'), findsOneWidget);
 
       await tester.tap(find.text('下一步'));
       await tester.pump();
       expect(tester.hasRunningAnimations, isFalse);
+      expect(find.text('作品点评'), findsOneWidget);
+
+      await tester.tap(find.text('下一步'));
+      await tester.pump();
       expect(find.text('班级学情'), findsOneWidget);
 
       await tester.tap(find.text('下一步'));
@@ -206,7 +217,7 @@ void main() {
       await tester.tap(find.text('新手引导'));
       await tester.pumpAndSettle();
       expect(find.byType(RoleGuideDialog), findsOneWidget);
-      expect(find.text('班级工作台'), findsOneWidget);
+      expect(find.text('今日工作'), findsOneWidget);
       expect(find.textContaining('班主任新手引导'), findsOneWidget);
     });
 

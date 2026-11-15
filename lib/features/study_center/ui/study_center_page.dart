@@ -8,10 +8,9 @@ import '../../shell/state/shell_state.dart';
 import '../state/study_center_args.dart';
 import 'staff/staff_study_view.dart';
 import 'student/student_study_view.dart';
-import '../../teaching_overview/data/teaching_overview_repository.dart';
-import '../../teaching_overview/ui/teaching_overview_page.dart';
+import '../../teaching_overview/ui/principal_overview.dart';
 
-/// 学情中心（`/study`）：学生「学情」，教职角色「班级学情」。
+/// 学情中心（`/study`）：学生「学情」，教职角色「班级学情」，校长「全校学情」。
 ///
 /// 路由参数见 [StudyCenterArgs]。
 class StudyCenterPage extends ConsumerStatefulWidget {
@@ -38,9 +37,12 @@ class _StudyCenterPageState extends ConsumerState<StudyCenterPage> {
     final resolvedRole = role.trim().isNotEmpty
         ? role
         : DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
+    // 校长的全校学情从教学指标、趋势与报表入口开始；带考试 id 时直接看那场考试。
     if (resolvedRole == 'principal' && args.examId.isEmpty) {
-      return const TeachingReportPage(
-        initial: (report: TeachingReport.classes, campus: '', parameter: ''),
+      return PrincipalOverview(
+        name: ref.watch(
+          shellControllerProvider.select((s) => s.user.displayName),
+        ),
       );
     }
     return isStaffRole(resolvedRole)

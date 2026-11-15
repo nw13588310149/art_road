@@ -7,16 +7,15 @@ import 'package:the_road_of_art_flutter/app/router/route_paths.dart';
 import 'package:the_road_of_art_flutter/core/network/api_response.dart';
 import 'package:the_road_of_art_flutter/core/permissions/first_launch_permission_host.dart';
 import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
+import 'package:the_road_of_art_flutter/core/constants/app_assets.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/state/campus_entry.dart';
 import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
-import 'package:the_road_of_art_flutter/features/ebooks/state/home_ebook_shelf.dart';
 import 'package:the_road_of_art_flutter/features/home/data/home_repository.dart';
 import 'package:the_road_of_art_flutter/features/home/state/home_dashboard_controller.dart';
 import 'package:the_road_of_art_flutter/features/home/state/home_dashboard_state.dart';
-import 'package:the_road_of_art_flutter/features/home/state/home_student_cards.dart';
 import 'package:the_road_of_art_flutter/features/home/ui/home_page.dart';
 import 'package:the_road_of_art_flutter/features/home/ui/widgets/home_course_notice_card.dart';
-import 'package:the_road_of_art_flutter/features/home/ui/widgets/home_study_snapshot.dart';
 
 String _date(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -182,62 +181,62 @@ void main() {
     expect(homeRoleHasTimetable('principal'), isFalse);
   });
 
-  test('student and staff home entries follow the nine-button order', () {
-    const names = ['资讯', '校圈', '群聊', '工具', '作业', '集市'];
-    final student = buildQuickActions();
-    expect(student.map((a) => a.name), ['学情', ...names]);
-    expect(
-      student.firstWhere((a) => a.name == '学情').route,
-      RoutePaths.studyCenter,
-    );
-    expect(student.map((a) => a.name), isNot(contains('素材库')));
-    expect(student.map((a) => a.name), isNot(contains('小课件')));
-    expect(student.map((a) => a.name), isNot(contains('作品库')));
-    final homework = student.firstWhere((a) => a.name == '作业');
-    expect(homework.route, RoutePaths.artworks);
-    expect(homework.campus, isNull);
-    expect(student.firstWhere((a) => a.name == '集市').comingSoon, isFalse);
-    final staff = buildQuickActions(isStaff: true, role: 'teacher');
-    expect(staff.map((a) => a.name), names);
-    expect(
-      staff.firstWhere((a) => a.name == '作业').route,
-      RoutePaths.artworks,
-    );
+  test('every role gets the same nine entries in the same order', () {
+    const names = ['学情', '工具', '作业', '题库', '作品墙', '集市', '群聊', '资讯', '校圈'];
+    for (final role in ['', 'student', 'teacher', 'headTeacher', 'admin', 'principal']) {
+      final actions = buildQuickActions(role: role);
+      expect(actions.map((a) => a.name), names, reason: role);
+      expect(actions.every((a) => a.iconAsset != null), isTrue, reason: role);
+      expect(actions.every((a) => !a.comingSoon), isTrue, reason: role);
+    }
+    final student = buildQuickActions(role: 'student');
+    expect(student.first.route, RoutePaths.studyCenter);
+    expect(student[2].route, RoutePaths.artworks);
+    expect(student[2].campus, isNull);
+    expect(student[3].route, RoutePaths.camp);
+    expect(student[4].route, RoutePaths.excellentArtworks);
+    expect(student[5].route, RoutePaths.marketplace);
+    expect(student[6].campus, CampusEntry.groupChat);
+    expect(student[7].route, RoutePaths.consultation);
+    expect(student[8].route, RoutePaths.circle);
+    // 同一套玻璃质感图标，每行粉、紫、青各一个。
+    expect(student.map((a) => a.iconAsset), [
+      AppAssets.homeQuickStudy,
+      AppAssets.homeQuickTools,
+      AppAssets.homeQuickHomework,
+      AppAssets.homeQuickQuestionBank,
+      AppAssets.homeQuickWall,
+      AppAssets.homeQuickMarket,
+      AppAssets.homeQuickGroupChat,
+      AppAssets.homeQuickNews,
+      AppAssets.homeQuickSchoolCircle,
+    ]);
   });
 
-  test('dorm managers and admins get their own work entries', () {
-    final dorm = buildQuickActions(isStaff: true, role: 'dormManager');
-    expect(
-      dorm.map((a) => a.name),
-      containsAll(['按宿舍查寝', '查寝动态', '查寝历史', '到岗打卡', '宿管请假']),
-    );
-    expect(dorm.map((a) => a.name), isNot(contains('班级学情')));
-    expect(
-      dorm.every(
-        (a) =>
-            a.campus != null || a.route == RoutePaths.marketplace,
-      ),
-      isTrue,
-    );
-
-    final admin = buildQuickActions(isStaff: true, role: 'admin');
-    expect(
-      admin.map((a) => a.name),
-      containsAll(['学生管理', '教师管理', '排课与课表', '人脸库', '通知管理', '班级学情']),
-    );
+  test('dorm managers swap the two entries they cannot use', () {
+    final dorm = buildQuickActions(role: 'dormManager');
+    expect(dorm.map((a) => a.name), [
+      '校长信箱',
+      '工具',
+      '查寝',
+      '题库',
+      '作品墙',
+      '集市',
+      '群聊',
+      '资讯',
+      '校圈',
+    ]);
+    expect(dorm.first.campus, CampusEntry.principalMailbox);
+    expect(dorm[2].campus, CampusEntry.dormCheckByRoom);
+    expect(dorm.map((a) => a.route), isNot(contains(RoutePaths.studyCenter)));
+    expect(dorm.map((a) => a.route), isNot(contains(RoutePaths.artworks)));
   });
 
-  test('the principal gets the management entries with 全校学情', () {
-    final principal = buildQuickActions(isStaff: true, role: 'principal');
-    expect(
-      principal.map((a) => a.name),
-      containsAll(['学生管理', '教师管理', '通知管理', '全校学情']),
-    );
-    expect(principal.map((a) => a.name), isNot(contains('班级学情')));
-    expect(
-      principal.firstWhere((a) => a.name == '全校学情').route,
-      RoutePaths.studyCenter,
-    );
+  test('admins and principals see the school timetable on the home page', () {
+    expect(homeRoleSeesSchoolTimetable('admin'), isTrue);
+    expect(homeRoleSeesSchoolTimetable('principal'), isTrue);
+    expect(homeRoleSeesSchoolTimetable('teacher'), isFalse);
+    expect(homeRoleSeesSchoolTimetable('dormManager'), isFalse);
   });
 
   test('news time keeps a space between numbers and units', () {
@@ -256,17 +255,6 @@ void main() {
     );
     expect(formatHomeNewsTime(DateTime(2026, 8, 1), now), '2026-08-01');
     expect(formatHomeNewsTime(null, now), '');
-  });
-
-  test('staff snapshot title states its real scope', () {
-    const snapshot = HomeStudySnapshot(
-      staff: true,
-      examName: '2026 年 9 月月考',
-      examDate: '2026-09-20',
-      participants: 38,
-    );
-    expect(snapshot.title, '画室学情速览');
-    expect(snapshot.subtitle, '2026 年 9 月月考 · 2026-09-20 · 全画室 38 人');
   });
 
   test('first launch permission copy has no music wording', () {
@@ -293,30 +281,6 @@ void main() {
         overrides: [
           appStorageProvider.overrideWithValue(storage),
           homeRepositoryProvider.overrideWithValue(_FakeHomeRepository(now)),
-          homeStudySnapshotProvider.overrideWith(
-            (ref) async => const HomeStudySnapshot(
-              staff: false,
-              examName: '2026 年 9 月月考',
-              examDate: '2026-09-20',
-              totalScore: 265.5,
-              maxScore: 300,
-              ranking: 7,
-              participants: 38,
-              scoreChange: 9,
-              subjects: [
-                (name: '素描', score: 92.5, grade: 'A'),
-                (name: '色彩', score: 85, grade: 'B'),
-                (name: '速写', score: 88, grade: 'B'),
-              ],
-            ),
-          ),
-          homePracticeProvider.overrideWith(
-            (ref) async => buildHomePractices(),
-          ),
-          homeLatestReviewProvider.overrideWith((ref) async => null),
-          homeEbookShelfProvider.overrideWith(
-            (ref) async => const HomeEbookShelfData(picks: [], reading: []),
-          ),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -343,9 +307,13 @@ void main() {
     expect(find.text('资讯'), findsOneWidget);
     expect(find.text('集市'), findsOneWidget);
     expect(find.text('学情'), findsOneWidget);
-    expect(find.text('速写计时练习'), findsNothing);
-    expect(find.textContaining('学情速览'), findsOneWidget);
-    expect(find.text('↑9 分'), findsOneWidget);
+    expect(find.text('题库'), findsOneWidget);
+    expect(find.text('作品墙'), findsOneWidget);
+    // 首页只有轮播、九宫格、三科入口、课表和资讯；当天的事在「今日」页。
+    for (final moved in ['今日任务', '今日待办', '最近点评', '我的短板', '精选书刊']) {
+      expect(find.text(moved), findsNothing, reason: moved);
+    }
+    expect(find.textContaining('学情速览'), findsNothing);
 
     await tester.scrollUntilVisible(
       find.text('最新'),

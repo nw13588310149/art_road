@@ -6,7 +6,6 @@ import '../../../core/network/api_response.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/dashboard_course_notice_card.dart';
 import '../../shell/state/shell_controller.dart';
-import '../../shell/state/shell_state.dart';
 import '../data/home_repository.dart';
 import 'home_dashboard_state.dart';
 
@@ -44,6 +43,10 @@ List<HomeWeekDayItem> alignWeekWithCourses(
 bool homeRoleHasTimetable(String role) =>
     role == 'student' || role == 'teacher' || role == 'headTeacher';
 
+/// 没有个人课表、首页右栏显示全校课表的角色：管理员与校长。
+bool homeRoleSeesSchoolTimetable(String role) =>
+    role == 'admin' || role == 'principal';
+
 class HomeDashboardController extends StateNotifier<HomeDashboardState> {
   HomeDashboardController({
     required HomeRepository repository,
@@ -52,10 +55,7 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
        super(
          HomeDashboardState(
            role: initialRole,
-           quickActions: buildQuickActions(
-             isStaff: isStaffRole(initialRole),
-             role: initialRole,
-           ),
+           quickActions: buildQuickActions(role: initialRole),
          ),
        ) {
     unawaited(refresh());
@@ -88,21 +88,31 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
 
       final role = _extractUser(myInfoResponse.data)['role']?.toString() ?? '';
       final now = DateTime.now();
-      final weekItems = await _buildWeekItems(role, now);
-      if (!mounted) return;
-
       final banners = _parseBanners(bannerResponse.data);
       final newsItems = _parseNews(latestResponse.data);
-      // 宿管首页显示值班与查寝，不显示班级课程。
-      final notices = role == 'dormManager'
-          ? const <HomeCourseNotice>[]
-          : _parseCourseNotices(nextCourseResponse.data, now);
+
+      // 学生与带课老师看本人课表；管理员与校长看全校课表；宿管没有课表，
+      // 右栏显示值班时间。
+      final List<HomeWeekDayItem> weekItems;
+      final List<HomeCourseNotice> notices;
+      if (homeRoleSeesSchoolTimetable(role)) {
+        final school = await _loadSchoolTimetable(now);
+        if (!mounted) return;
+        weekItems = school.week;
+        notices = school.courses;
+      } else {
+        weekItems = await _buildWeekItems(role, now);
+        if (!mounted) return;
+        notices = homeRoleHasTimetable(role)
+            ? _parseCourseNotices(nextCourseResponse.data, now)
+            : const <HomeCourseNotice>[];
+      }
 
       final next = HomeDashboardState(
         loading: false,
         role: role,
         bannerItems: banners,
-        quickActions: buildQuickActions(isStaff: isStaffRole(role), role: role),
+        quickActions: buildQuickActions(role: role),
         newsItems: newsItems,
         weekItems: alignWeekWithCourses(weekItems, notices),
         courseNotices: notices,
@@ -125,9 +135,37 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
   }
 
   Future<ApiResponse> _safeRequest(Future<ApiResponse> Function() request) {
-    return request()
+    return Future<ApiResponse>.sync(request)
         .timeout(const Duration(seconds: 8))
         .catchError((_) => const ApiResponse(code: -1, msg: '', data: null));
+  }
+
+  /// 全校课表：本周七天各有几节课，以及今天的课程；今天没有课时取本周之后
+  /// 最近一个有课的日子（课程列表标题会写明日期）。
+  Future<({List<HomeWeekDayItem> week, List<HomeCourseNotice> courses})>
+  _loadSchoolTimetable(DateTime now) async {
+    final today = DateTime(now.year, now.month, now.day);
+    final monday = today.subtract(Duration(days: now.weekday - 1));
+    final response = await _safeRequest(
+      () => _repository.getSchoolCourseList(
+        beginDate: _formatDate(monday),
+        endDate: _formatDate(monday.add(const Duration(days: 6))),
+      ),
+    );
+    final data = response.code == 0 ? response.data : null;
+    final counts = _courseCountsByDate(data);
+    final week = [
+      for (var i = 0; i < 7; i++)
+        _weekDay(monday.add(Duration(days: i)), today, counts),
+    ];
+    var courses = const <HomeCourseNotice>[];
+    if (data is Map) {
+      for (var i = today.weekday - 1; i < 7 && courses.isEmpty; i++) {
+        final rows = data[_formatDate(monday.add(Duration(days: i)))];
+        courses = _parseCourseNotices(rows, now);
+      }
+    }
+    return (week: week, courses: courses);
   }
 
   List<HomeBannerItem> _parseBanners(dynamic data) {
@@ -230,18 +268,30 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
       final rawEnd = item['timeEnd']?.toString() ?? '';
       final beginTime = _toTimeText(rawBegin);
       final endTime = _toTimeText(rawEnd);
-      final subjectName = subject['name']?.toString().trim() ?? '';
-      final realname = teacher['realname']?.toString().trim() ?? '';
-      final teacherName = realname.isNotEmpty
-          ? realname
-          : teacher['nickname']?.toString().trim() ?? '';
+      // 课表接口的行是扁平字段（subjectName / teacherRealname / className /
+      // classroomName），nextSchoolCourse 另带嵌套对象，两种都读。
+      String text(List<Object?> candidates) {
+        for (final candidate in candidates) {
+          final value = candidate?.toString().trim() ?? '';
+          if (value.isNotEmpty) return value;
+        }
+        return '';
+      }
+
+      final subjectName = text([subject['name'], item['subjectName']]);
+      final teacherName = text([
+        teacher['realname'],
+        teacher['nickname'],
+        item['teacherRealname'],
+        item['teacherName'],
+      ]);
       if (subjectName.isEmpty || teacherName.isEmpty) {
         continue;
       }
 
       final durationMinutes = _calcDurationMinutes(rawBegin, rawEnd);
-      final className = schoolClass['name']?.toString().trim() ?? '';
-      final room = item['room']?.toString().trim() ?? '';
+      final className = text([schoolClass['name'], item['className']]);
+      final room = text([item['room'], item['classroomName']]);
       final description = [
         if (durationMinutes > 0) '$durationMinutes 分钟',
         if (className.isNotEmpty) className,
@@ -264,7 +314,7 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
           teacherName: teacherName,
           // 没有教师头像时留空，由课程卡显示姓氏头像，不用班级 / 学校 logo 顶替。
           teacherAvatar: MediaUrl.resolve(
-            teacher['headUrl']?.toString().trim() ?? '',
+            text([teacher['headUrl'], item['teacherHeadUrl']]),
           ),
           description: description,
           status: _resolveCourseStatus(now, date, beginTime, endTime),
@@ -306,7 +356,7 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
   }
 
   /// 本周七天的课程数。学生取学生课表，任课老师与班主任取本人授课课表；
-  /// 宿管、管理员没有个人课表，返回空列表（首页不显示周条）。
+  /// 其余身份没有个人课表，返回空列表（管理员与校长另取全校课表）。
   Future<List<HomeWeekDayItem>> _buildWeekItems(
     String role,
     DateTime now,

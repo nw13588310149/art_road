@@ -10,6 +10,7 @@ import '../../../core/network/network_page_refresh.dart';
 import '../../../core/ui/ui.dart';
 import '../../help_guide/ui/role_guide_dialog.dart';
 import '../../home/state/home_dashboard_controller.dart';
+import '../../today/state/today_controller.dart';
 import '../navigation/shell_notice_routes.dart';
 import '../state/school_binding_controller.dart';
 import '../state/school_binding_state.dart';
@@ -23,6 +24,7 @@ import 'widgets/shell_top_bar.dart';
 
 const _routesWithOwnSurface = {
   RoutePaths.home,
+  RoutePaths.today,
   RoutePaths.school,
   RoutePaths.smartCampus,
   RoutePaths.circle,
@@ -151,7 +153,19 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(shellControllerProvider);
+    final shell = ref.watch(shellControllerProvider);
+    // 「今日」入口的角标：需要本人处理的事项数，由今日看板给出。
+    final todayPending = ref.watch(todayPendingCountProvider);
+    final state = todayPending == 0
+        ? shell
+        : shell.copyWith(
+            navItems: [
+              for (final item in shell.navItems)
+                item.route == RoutePaths.today
+                    ? item.copyWith(badge: todayPending)
+                    : item,
+            ],
+          );
     final controller = ref.read(shellControllerProvider.notifier);
     // 观察「绑定学校」遮罩状态：未绑定时 DashboardScaffold 渲染 overlayChild
     // 强制盖在所有内容之上。read notifier 只是为了在 ShellScaffold 挂载

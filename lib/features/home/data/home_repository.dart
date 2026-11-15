@@ -46,6 +46,21 @@ class HomeRepository {
     );
   }
 
+  /// 管理员、校长首页的全校课表：`/app/school/v2/manager/courseList`，
+  /// 按日期返回 `{ 'yyyy-MM-dd': [课程...] }`。
+  Future<ApiResponse> getSchoolCourseList({
+    required String beginDate,
+    required String endDate,
+  }) {
+    return client.post(
+      '/app/school/v2/manager/courseList',
+      data: <String, dynamic>{
+        'beginDate': beginDate,
+        'endDate': endDate,
+      },
+    );
+  }
+
   Future<ApiResponse> getBannerList() {
     return client.post(
       '/app/user/bannerList',
@@ -69,10 +84,5 @@ class HomeRepository {
 
   Future<ApiResponse> getNextSchoolCourse() {
     return client.post('/app/user/nextSchoolCourse');
-  }
-
-  /// 管理员首页的待办数（与智慧校园管理员首页同一接口 `indexSum`）。
-  Future<ApiResponse> getAdminIndexSum() {
-    return client.post('/app/school/v2/manager/indexSum');
   }
 }

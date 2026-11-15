@@ -70,6 +70,9 @@ class _PersonalCenterPageState extends ConsumerState<PersonalCenterPage> {
           Expanded(
             child: _ActionListCard(
               checkStatusEnabled: state.checkStatusEnabled,
+              onNotes: () => Navigator.pushNamed(context, RoutePaths.myNotes),
+              onCollection: () =>
+                  Navigator.pushNamed(context, RoutePaths.myCollection),
               onQr: () => _onMyQr(context, controller, state),
               onRecommend: () => _onRecommend(context),
               onFeedback: () => _onFeedback(context, ref),
@@ -787,6 +790,8 @@ class _WalletColumn extends StatelessWidget {
 class _ActionListCard extends StatelessWidget {
   const _ActionListCard({
     required this.checkStatusEnabled,
+    required this.onNotes,
+    required this.onCollection,
     required this.onQr,
     required this.onRecommend,
     required this.onFeedback,
@@ -795,6 +800,10 @@ class _ActionListCard extends StatelessWidget {
   });
 
   final bool checkStatusEnabled;
+
+  /// 我的笔记、我的收藏不占侧栏，从这里进入。
+  final VoidCallback onNotes;
+  final VoidCallback onCollection;
   final VoidCallback onQr;
   final VoidCallback onRecommend;
   final VoidCallback onFeedback;
@@ -813,6 +822,20 @@ class _ActionListCard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _ActionTile(
+                iconAsset: AppAssets.leftNavBiji,
+                iconColor: _actionIconColor,
+                label: '我的笔记',
+                onTap: onNotes,
+                showDivider: true,
+              ),
+              _ActionTile(
+                iconAsset: AppAssets.leftNavShoucang,
+                iconColor: _actionIconColor,
+                label: '我的收藏',
+                onTap: onCollection,
+                showDivider: true,
+              ),
               _ActionTile(
                 iconAsset: AppAssets.profileQr,
                 label: '我的二维码',
@@ -853,15 +876,22 @@ class _ActionListCard extends StatelessWidget {
   }
 }
 
+/// 个人中心入口图标的主色；侧栏线性图标按它着色后与本页图标一致。
+const _actionIconColor = Color(0xFF1C274C);
+
 class _ActionTile extends StatelessWidget {
   const _ActionTile({
     required this.iconAsset,
     required this.label,
     required this.onTap,
     required this.showDivider,
+    this.iconColor,
   });
 
   final String iconAsset;
+
+  /// 单色线性图标的着色；为空时按图片原色显示。
+  final Color? iconColor;
   final String label;
   final VoidCallback onTap;
   final bool showDivider;
@@ -884,6 +914,7 @@ class _ActionTile extends StatelessWidget {
                     width: 18,
                     height: 18,
                     fit: BoxFit.contain,
+                    color: iconColor,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

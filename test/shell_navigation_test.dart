@@ -38,6 +38,7 @@ void main() {
 
     test('nav roots highlight themselves', () {
       expect(shellActiveNavIndex(routes, RoutePaths.home), 0);
+      expect(shellActiveNavIndex(routes, RoutePaths.today), 1);
       expect(
         shellActiveNavIndex(routes, RoutePaths.videoTutorial),
         indexOf(RoutePaths.videoTutorial),
@@ -73,6 +74,18 @@ void main() {
         shellActiveNavIndex(routes, RoutePaths.qrcode),
         indexOf(RoutePaths.personalCenter),
       );
+      // 我的笔记、我的收藏从个人中心进入。
+      for (final route in [
+        RoutePaths.myNotes,
+        RoutePaths.myCollection,
+        RoutePaths.noteDetail,
+      ]) {
+        expect(
+          shellActiveNavIndex(routes, route),
+          indexOf(RoutePaths.personalCenter),
+          reason: route,
+        );
+      }
       expect(
         shellActiveNavIndex(routes, RoutePaths.schoolWebsite),
         indexOf(RoutePaths.school),
@@ -139,6 +152,7 @@ void main() {
       ).map((item) => item.label),
       [
         '首页',
+        '今日',
         '小美同学',
         '电子书刊',
         '校园资料',
@@ -147,11 +161,26 @@ void main() {
         '我的云盘',
         '视频中心',
         '智慧校园',
-        '我的笔记',
-        '我的收藏',
         '个人中心',
       ],
     );
+    // 「今日」紧跟首页，按身份命名；教职 12 项，1180×820 与 1024×768 都不用滚动。
+    expect(teacher[1], '今日工作');
+    expect(teacher, hasLength(12));
+    expect(principal[1], '今日工作');
+    expect(
+      buildDefaultNavItems(
+        schoolCoursewareEnabled: true,
+        role: 'student',
+      ).map((item) => item.label).elementAt(1),
+      '今日学习',
+    );
+    expect(todayNavLabel(''), '今日');
+    final today = buildDefaultNavItems(
+      schoolCoursewareEnabled: true,
+    ).firstWhere((item) => item.route == RoutePaths.today);
+    expect(today.icon, AppAssets.leftNavJinri);
+    expect(today.badge, 0);
     final books = buildDefaultNavItems(
       schoolCoursewareEnabled: true,
     ).firstWhere((item) => item.label == '电子书刊');

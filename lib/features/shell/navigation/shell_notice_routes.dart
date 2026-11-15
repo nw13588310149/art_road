@@ -7,7 +7,6 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/ui/ui.dart';
 import '../state/shell_controller.dart';
 import '../state/shell_state.dart';
-import '../ui/widgets/shell_notice_drawer.dart';
 
 /// 消息的 `targetType`：后端按业务类型下发，客户端据此决定点开后去哪一页。
 abstract final class ShellNoticeTargetType {
@@ -88,17 +87,4 @@ void openShellNotice(
   Navigator.of(
     context,
   ).pushNamed(destination.route, arguments: destination.arguments);
-}
-
-/// 打开通知抽屉（顶栏铃铛与首页「未读消息」共用），点开消息会跳到对应页面。
-Future<void> showShellNotices(BuildContext context, WidgetRef ref) {
-  final state = ref.read(shellControllerProvider);
-  final controller = ref.read(shellControllerProvider.notifier);
-  return showShellNoticeDrawer(
-    context,
-    items: state.noticeItems,
-    unreadCount: state.unreadCount,
-    onMarkAllRead: controller.markAllNoticeRead,
-    onOpen: (item) => openShellNotice(context, ref, item),
-  );
 }

@@ -34,6 +34,7 @@ abstract final class AppAssets {
   static const brandMark = 'assets/images/brand/meiyuji_mark.png';
 
   static const leftNavHome = 'assets/images/shell/leftNav/home.png';
+  static const leftNavJinri = 'assets/images/shell/leftNav/jinri.png';
   static const leftNavAi = 'assets/images/shell/leftNav/AI.png';
   static const leftNavSchool = 'assets/images/shell/leftNav/school.png';
   static const leftNavYunpan = 'assets/images/shell/leftNav/yunpan.png';
@@ -85,8 +86,16 @@ abstract final class AppAssets {
   // 首页九宫格通用图标
   static const homeQuickNews = 'assets/images/home/home4.png';
   static const homeQuickQuestionBank = 'assets/images/home/home5.png';
+  static const homeQuickHomework = 'assets/images/home/home6.png';
   static const homeQuickGroupChat = 'assets/images/home/home7.png';
+  static const homeQuickMarket = 'assets/images/home/home8.png';
   static const homeQuickSchoolCircle = 'assets/images/home/home9.png';
+  // 同一套玻璃质感图标，由 tool/icons/make_glass_icons.py 生成。
+  static const homeQuickStudy = 'assets/images/home/quick_study.png';
+  static const homeQuickTools = 'assets/images/home/quick_tools.png';
+  static const homeQuickWall = 'assets/images/home/quick_wall.png';
+  static const homeQuickMailbox = 'assets/images/home/quick_mailbox.png';
+  static const homeQuickDorm = 'assets/images/home/quick_dorm.png';
   static const schoolQuickVideo = 'assets/images/home/schoolVideo.png';
   static const campusHomeActions = 'assets/images/smartCampus/home_actions';
 

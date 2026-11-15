@@ -14,8 +14,9 @@ import 'package:the_road_of_art_flutter/features/circle/state/circle_state.dart'
 import 'package:the_road_of_art_flutter/features/help_guide/data/role_guides.dart';
 import 'package:the_road_of_art_flutter/features/home/state/home_dashboard_controller.dart';
 import 'package:the_road_of_art_flutter/features/home/state/home_dashboard_state.dart';
-import 'package:the_road_of_art_flutter/features/home/state/home_sections.dart';
-import 'package:the_road_of_art_flutter/features/home/state/home_staff_cards.dart';
+import 'package:the_road_of_art_flutter/features/today/data/today_models.dart';
+import 'package:the_road_of_art_flutter/features/today/state/today_board.dart';
+import 'package:the_road_of_art_flutter/features/smart_campus/data/admin_home_data.dart';
 import 'package:the_road_of_art_flutter/features/shell/state/shell_state.dart';
 import 'package:the_road_of_art_flutter/features/smart_campus/state/smart_campus_state.dart';
 
@@ -182,31 +183,37 @@ void main() {
       );
     });
 
-    test('home page', () {
-      // 组长的 role 是 teacher：与任课老师同一套区块、入口和课表。
-      final leader = homeSectionsFor(DemoAccounts.groupLeader.roleKey);
-      expect(
-        leader.studySnapshot && leader.reviewQueue && leader.courses,
-        isTrue,
-      );
+    test('home page and today board', () {
+      // 组长的 role 是 teacher：首页与任课老师同一套入口和课表。
       expect(homeRoleHasTimetable(DemoAccounts.groupLeader.roleKey), isTrue);
-
-      final principal = homeSectionsFor('principal');
-      expect(principal.principalOverview, isTrue);
-      expect(principal.courses, isFalse);
-      expect(homeRoleHasTimetable('principal'), isFalse);
-
-      final todos = buildHomeTodos(
-        'principal',
-        const HomeTodoInput(leaveApprovals: 2, signConfirmations: 1),
+      expect(
+        buildQuickActions(role: DemoAccounts.groupLeader.roleKey).map(
+          (a) => a.name,
+        ),
+        buildQuickActions(role: 'teacher').map((a) => a.name),
       );
-      expect(todos.map((t) => t.title), contains('教师请假审批'));
 
-      final names = buildQuickActions(
-        isStaff: true,
-        role: 'principal',
-      ).map((a) => a.name);
-      expect(names, contains('全校学情'));
+      // 校长没有个人课表，首页右栏看全校课表；入口与其他身份相同。
+      expect(homeRoleHasTimetable('principal'), isFalse);
+      expect(homeRoleSeesSchoolTimetable('principal'), isTrue);
+      expect(
+        buildQuickActions(role: 'principal').map((a) => a.name),
+        contains('学情'),
+      );
+
+      // 校长的审批在「今日工作」里。
+      final board = buildTodayBoard(
+        TodaySnapshot(
+          role: 'principal',
+          now: DateTime(2026, 11, 16, 10),
+          admin: const AdminHomeSummary(
+            leaveStatus0Count: 2,
+            smallCourseSignStatus5Count: 1,
+          ),
+        ),
+      );
+      expect(board.tasks.map((t) => t.title), contains('教职工请假待审批'));
+      expect(board.pendingCount, 2);
     });
 
     test('left navigation', () {

@@ -276,14 +276,24 @@ bool isStaffRole(String role) {
   return value.isNotEmpty && value != 'student';
 }
 
-/// 侧栏导航项（按显示顺序）。只保留首页、小美同学、学情、电子书刊、校园资料、
-/// 优秀课件、素材中心、我的云盘、视频中心、智慧校园、我的笔记、我的收藏、个人中心。
+/// 「今日」入口的名称：学生「今日学习」，教职「今日工作」，身份未知时「今日」。
+String todayNavLabel(String role) {
+  final value = role.trim();
+  if (value.isEmpty) return '今日';
+  return value == 'student' ? '今日学习' : '今日工作';
+}
+
+/// 侧栏导航项（按显示顺序）。只保留首页、今日、小美同学、学情、电子书刊、校园资料、
+/// 优秀课件、素材中心、我的云盘、视频中心、智慧校园、个人中心。
 /// 底部「意见反馈」由 [buildFeedbackFooterNavItem] 单独固定，不在此列表中。
+/// 「今日」紧跟首页：学生显示「今日学习」，教职显示「今日工作」，身份未知时显示
+/// 「今日」；待处理事项数的角标由外壳按今日看板写入（见 `ShellScaffold`）。
 /// 学生的「学情」在首页快捷入口，不出现在侧栏。
 /// 教职显示「班级学情」，校长显示「全校学情」；宿管不查看学生成绩，不显示学情。
 /// 校园资料随学校开关显示。电子书刊始终显示，位于校园资料上方，进入精选书刊页。
 /// 优秀课件始终显示，位于校园资料下方，进入知识点专题。
 /// 素材中心始终显示，位于优秀课件下方，进入范画库。
+/// 我的笔记、我的收藏从个人中心进入，不占侧栏。
 List<ShellNavItem> buildDefaultNavItems({
   required bool schoolCoursewareEnabled,
   bool isStaff = false,
@@ -297,6 +307,12 @@ List<ShellNavItem> buildDefaultNavItems({
       route: RoutePaths.home,
       icon: AppAssets.leftNavHome,
       activeIcon: AppAssets.leftNavHome,
+    ),
+    ShellNavItem(
+      label: todayNavLabel(role),
+      route: RoutePaths.today,
+      icon: AppAssets.leftNavJinri,
+      activeIcon: AppAssets.leftNavJinri,
     ),
     const ShellNavItem(
       label: '小美同学',
@@ -353,18 +369,6 @@ List<ShellNavItem> buildDefaultNavItems({
       route: RoutePaths.smartCampus,
       icon: AppAssets.leftNavXiaoyuan,
       activeIcon: AppAssets.leftNavXiaoyuan,
-    ),
-    const ShellNavItem(
-      label: '我的笔记',
-      route: RoutePaths.myNotes,
-      icon: AppAssets.leftNavBiji,
-      activeIcon: AppAssets.leftNavBiji,
-    ),
-    const ShellNavItem(
-      label: '我的收藏',
-      route: RoutePaths.myCollection,
-      icon: AppAssets.leftNavShoucang,
-      activeIcon: AppAssets.leftNavShoucang,
     ),
     const ShellNavItem(
       label: '个人中心',
