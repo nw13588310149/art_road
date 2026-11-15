@@ -65,6 +65,7 @@ class ToolboxCompanion extends StatefulWidget {
     this.greet = false,
     this.paint = 0,
     this.onPaintChanged,
+    this.semanticLabel,
     super.key,
   });
 
@@ -85,6 +86,7 @@ class ToolboxCompanion extends StatefulWidget {
   /// 笔尖颜料序号；提供 [onPaintChanged] 时由外部保存，蘸色后回调新序号。
   final int paint;
   final ValueChanged<int>? onPaintChanged;
+  final String? semanticLabel;
 
   @override
   State<ToolboxCompanion> createState() => _ToolboxCompanionState();
@@ -552,7 +554,9 @@ class _ToolboxCompanionState extends State<ToolboxCompanion>
           animation: _motion,
           builder: (context, _) {
             final hitExtent = math.max(44.0, size * (1 - conceal));
-            final label = widget.expanded ? '收起画具 · 小画' : '打开画具 · 小画';
+            final label =
+                widget.semanticLabel ??
+                (widget.expanded ? '收起画具 · 小画' : '打开画具 · 小画');
             return SizedBox.square(
               dimension: size,
               child: Stack(
@@ -608,6 +612,7 @@ class _ToolboxCompanionState extends State<ToolboxCompanion>
                                 behavior: HitTestBehavior.opaque,
                                 dragStartBehavior: DragStartBehavior.down,
                                 onPanDown: (_) => _focusNode.unfocus(),
+                                onTapDown: (_) => _play(_Act.tap),
                                 onTap: _handleTap,
                                 onPanStart: widget.onDragStart,
                                 onPanUpdate: _handleDragUpdate,

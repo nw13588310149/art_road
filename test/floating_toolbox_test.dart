@@ -9,6 +9,7 @@ import 'package:the_road_of_art_flutter/features/art_toolbox/state/page_tools_co
 import 'package:the_road_of_art_flutter/features/art_toolbox/data/toolbox_catalog.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/ui/floating_toolbox_host.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/ui/toolbox_route_observer.dart';
+import 'package:the_road_of_art_flutter/features/art_toolbox/ui/widgets/toolbox_companion.dart';
 
 const _handleKey = ValueKey('floating-toolbox-handle');
 
@@ -21,6 +22,7 @@ Future<GlobalKey<NavigatorState>> _pumpHost(
   addTearDown(tester.view.reset);
   final observer = ToolboxRouteObserver();
   addTearDown(observer.dispose);
+  addTearDown(() => tester.pumpWidget(const SizedBox()));
   final navigator = GlobalKey<NavigatorState>();
   await tester.pumpWidget(
     ProviderScope(
@@ -38,10 +40,7 @@ Future<GlobalKey<NavigatorState>> _pumpHost(
     ),
   );
   await tester.pumpAndSettle();
-  expect(
-    tester.getSize(find.byKey(const ValueKey('professional-tool-rail'))).height,
-    52,
-  );
+  expect(tester.getSize(find.byType(ToolboxCompanion)).height, 64);
   await tester.tap(find.byKey(_handleKey));
   await tester.pumpAndSettle();
   return navigator;
@@ -152,12 +151,8 @@ void main() {
     await tester.tap(find.bySemanticsLabel('在当前页面使用取色与色卡'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('page-color-sampler')), findsOneWidget);
-    expect(
-      tester
-          .getSize(find.byKey(const ValueKey('professional-tool-rail')))
-          .height,
-      52,
-    );
+    expect(find.byKey(const ValueKey('professional-tool-rail')), findsNothing);
+    expect(find.byType(ToolboxCompanion), findsOneWidget);
     expect(find.byKey(const ValueKey('page-tool-options')), findsNothing);
     await tester.tap(find.text('调整'));
     await tester.pumpAndSettle();
@@ -189,6 +184,30 @@ void main() {
     expect(find.bySemanticsLabel('恢复页面操作'), findsNothing);
     expect(find.byKey(_handleKey), findsOneWidget);
   });
+
+  testWidgets(
+    'mascot drag stays collapsed and expansion preserves dock anchor',
+    (tester) async {
+      await _pumpHost(tester, const Size(1024, 768));
+      await tester.tap(find.byKey(_handleKey));
+      await tester.pumpAndSettle();
+      final mascot = find.byType(ToolboxCompanion);
+      await tester.drag(find.byKey(_handleKey), const Offset(-850, -200));
+      await tester.pumpAndSettle();
+      expect(mascot, findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('professional-tool-rail')),
+        findsNothing,
+      );
+      final anchor = tester.getTopLeft(mascot);
+      await tester.tap(find.byKey(_handleKey));
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(mascot), anchor);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('dialogs, direct toolbox and logout hide global rail', (
     tester,

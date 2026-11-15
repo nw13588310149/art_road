@@ -30,6 +30,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     flutterViewController.view.backgroundColor = .white
 
     GeneratedPluginRegistrant.register(with: flutterViewController)
+    if let registrar = flutterViewController.registrar(forPlugin: "ArtToolGlass") {
+      registrar.register(
+        ArtToolGlassFactory(messenger: flutterViewController.binaryMessenger),
+        withId: "com.meiyuji.art/tool_glass"
+      )
+    }
     AppAudioSessionCoordinator.shared.register(
       messenger: flutterViewController.binaryMessenger
     )

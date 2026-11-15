@@ -15,6 +15,7 @@
 		7884E86C2EC3E10000C636F2 /* ScreenCaptureGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E86B2EC3E10000C636F2 /* ScreenCaptureGuard.swift */; };
 		7884E8742EC3E30000C636F2 /* AppAudioSessionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8732EC3E30000C636F2 /* AppAudioSessionCoordinator.swift */; };
 		7884E87C2EC3E60000C636F2 /* NoteCanvasZoomCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E87B2EC3E60000C636F2 /* NoteCanvasZoomCoordinator.swift */; };
+		7884E8842EC3E80000C636F2 /* ArtToolGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8832EC3E80000C636F2 /* ArtToolGlass.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
@@ -55,6 +56,7 @@
 		7884E86B2EC3E10000C636F2 /* ScreenCaptureGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureGuard.swift; sourceTree = "<group>"; };
 		7884E8732EC3E30000C636F2 /* AppAudioSessionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAudioSessionCoordinator.swift; sourceTree = "<group>"; };
 		7884E87B2EC3E60000C636F2 /* NoteCanvasZoomCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteCanvasZoomCoordinator.swift; sourceTree = "<group>"; };
+		7884E8832EC3E80000C636F2 /* ArtToolGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtToolGlass.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
@@ -128,6 +130,7 @@
 				7884E86B2EC3E10000C636F2 /* ScreenCaptureGuard.swift */,
 				7884E8732EC3E30000C636F2 /* AppAudioSessionCoordinator.swift */,
 				7884E87B2EC3E60000C636F2 /* NoteCanvasZoomCoordinator.swift */,
+				7884E8832EC3E80000C636F2 /* ArtToolGlass.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
@@ -287,6 +290,7 @@
 				7884E86C2EC3E10000C636F2 /* ScreenCaptureGuard.swift in Sources */,
 				7884E8742EC3E30000C636F2 /* AppAudioSessionCoordinator.swift in Sources */,
 				7884E87C2EC3E60000C636F2 /* NoteCanvasZoomCoordinator.swift in Sources */,
+				7884E8842EC3E80000C636F2 /* ArtToolGlass.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

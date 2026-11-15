@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/ui.dart';
 import '../../data/toolbox_catalog.dart';
 import 'page_tools_drawer.dart';
+import 'tool_glass_surface.dart';
 
 /// 44 点触控热区；长按显示名称，拖动握柄移动整列工具。
 class ProfessionalToolRail extends StatelessWidget {
@@ -26,17 +27,10 @@ class ProfessionalToolRail extends StatelessWidget {
   final GestureDragUpdateCallback onDragUpdate;
   final GestureDragEndCallback onDragEnd;
   @override
-  Widget build(BuildContext context) => Material(
+  Widget build(BuildContext context) => ToolGlassSurface(
     key: const ValueKey('professional-tool-rail'),
-    color: AppColors.surface,
-    elevation: 3,
-    borderRadius: AppRadius.br12,
-    clipBehavior: Clip.antiAlias,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.line),
-        borderRadius: AppRadius.br12,
-      ),
+    child: Material(
+      color: Colors.transparent,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(4),
         child: Column(
@@ -97,24 +91,28 @@ class RailButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool selected, enabled;
   @override
-  Widget build(BuildContext context) => AppPressable(
-    semanticLabel: label,
-    selected: selected,
-    enabled: enabled,
-    onTap: onTap,
-    onLongPress: () => AppToast.show(context, label),
-    child: Container(
-      width: 44,
-      height: 44,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: selected ? AppColors.brandWash : Colors.transparent,
-        borderRadius: AppRadius.br8,
-      ),
-      child: Icon(
-        icon,
-        size: 22,
-        color: selected ? AppColors.brand : AppColors.ink,
+  Widget build(BuildContext context) => Tooltip(
+    message: label,
+    excludeFromSemantics: true,
+    waitDuration: const Duration(milliseconds: 500),
+    child: AppPressable(
+      semanticLabel: label,
+      selected: selected,
+      enabled: enabled,
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.brandWash : Colors.transparent,
+          borderRadius: AppRadius.br8,
+        ),
+        child: Icon(
+          icon,
+          size: 22,
+          color: selected ? AppColors.brand : AppColors.ink,
+        ),
       ),
     ),
   );
