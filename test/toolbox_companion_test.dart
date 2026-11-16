@@ -15,6 +15,7 @@ Future<void> pumpCompanion(
   bool motion = true,
   bool reduced = false,
   bool ticker = true,
+  double edgeInset = 0,
   VoidCallback? onTap,
 }) async {
   await tester.pumpWidget(
@@ -31,6 +32,7 @@ Future<void> pumpCompanion(
                 expanded: false,
                 dragging: false,
                 motionEnabled: motion,
+                edgeInset: edgeInset,
                 onTap: onTap ?? () {},
                 onDragStart: (_) {},
                 onDragUpdate: (_) {},
@@ -53,6 +55,55 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   for (final edge in ToolboxDockEdge.values) {
+    testWidgets('$edge shows the owl picture', (tester) async {
+      await pumpCompanion(tester, edge: edge);
+      final image = tester.widget<Image>(
+        find.descendant(
+          of: find.byType(ArtCompanionPortrait),
+          matching: find.byType(Image),
+        ),
+      );
+      expect(image.image, const AssetImage(companionAsset));
+      expect(
+        tester.getSize(find.byType(ArtCompanionPortrait)),
+        const Size(64, 64),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('$edge rests against the real screen edge and stays tappable', (
+      tester,
+    ) async {
+      var taps = 0;
+      await pumpCompanion(
+        tester,
+        edge: edge,
+        edgeInset: 8,
+        onTap: () => taps++,
+      );
+      final side =
+          edge == ToolboxDockEdge.left || edge == ToolboxDockEdge.right;
+      // 停靠的那一侧多占 8 点，一直到屏幕边缘。
+      expect(
+        tester.getSize(find.byType(ToolboxCompanion)),
+        side ? const Size(72, 64) : const Size(64, 72),
+      );
+      expect(portrait(tester).edgeInset, 8);
+      await tester.pump(const Duration(seconds: 13));
+      await tester.pumpAndSettle();
+      expect(portrait(tester).pose.conceal, closeTo(2 / 3, 0.001));
+      final box = tester.getRect(find.byType(ToolboxCompanion));
+      await tester.tapAt(switch (edge) {
+        ToolboxDockEdge.left => Offset(box.left + 2, box.center.dy),
+        ToolboxDockEdge.right => Offset(box.right - 2, box.center.dy),
+        ToolboxDockEdge.top => Offset(box.center.dx, box.top + 2),
+        ToolboxDockEdge.bottom => Offset(box.center.dx, box.bottom - 2),
+      });
+      expect(taps, 1);
+      await tester.pumpWidget(const SizedBox());
+    });
+
     testWidgets(
       '$edge reveals half then one third and preserves a 44px target',
       (tester) async {
@@ -77,7 +128,7 @@ void main() {
   }
 
   testWidgets(
-    'hover wakes the face and departure restores its edge resting state',
+    'hover wakes the owl and departure restores its edge resting state',
     (tester) async {
       await pumpCompanion(tester);
       await tester.pump(const Duration(seconds: 13));
@@ -87,9 +138,12 @@ void main() {
       await mouse.moveTo(
         tester.getCenter(find.byKey(const ValueKey('floating-toolbox-handle'))),
       );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(portrait(tester).pose.sway, isNot(0));
       await tester.pumpAndSettle();
       expect(portrait(tester).pose.conceal, 0);
-      expect(portrait(tester).pose.mood, CompanionMood.happy);
+      expect(portrait(tester).pose.sway, 0);
       await mouse.moveTo(Offset.zero);
       await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
@@ -112,7 +166,7 @@ void main() {
           Offset(bounds.right - distanceFromEdge, bounds.center.dy),
         );
         await tester.pumpAndSettle();
-        expect(portrait(tester).pose.mood, CompanionMood.happy);
+        expect(portrait(tester).pose.conceal, 0);
         await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
         expect(portrait(tester).pose.conceal, 0.5);
@@ -170,10 +224,10 @@ void main() {
         await pumpCompanion(tester, motion: reduced, reduced: reduced);
         await tester.pump(const Duration(seconds: 7));
         await tester.pump(const Duration(milliseconds: 300));
-        expect(portrait(tester).pose.blink, 0);
+        expect(portrait(tester).pose.nod, 0);
         expect(portrait(tester).pose.peek, 0);
-        expect(portrait(tester).pose.wave, 0);
-        expect(portrait(tester).pose.dip, 0);
+        expect(portrait(tester).pose.sway, 0);
+        expect(portrait(tester).pose.lift, 0);
         expect(tester.binding.hasScheduledFrame, isFalse);
         await tester.pumpWidget(const SizedBox());
       },
@@ -181,12 +235,12 @@ void main() {
   }
 
   testWidgets(
-    'idle gestures blink, briefly peek, then release their frame clock',
+    'idle gestures nod, briefly peek, then release their frame clock',
     (tester) async {
       await pumpCompanion(tester);
       await tester.pump(const Duration(seconds: 7));
       await tester.pump(const Duration(milliseconds: 350));
-      expect(portrait(tester).pose.blink, greaterThan(0.2));
+      expect(portrait(tester).pose.nod, greaterThan(0.2));
       await tester.pumpAndSettle();
       expect(tester.binding.hasScheduledFrame, isFalse);
       // 第三次短动作会探头，之后恢复少露状态。
@@ -207,13 +261,15 @@ void main() {
     await pumpCompanion(tester, ticker: false);
     await tester.pump(const Duration(seconds: 30));
     expect(portrait(tester).pose.conceal, 0);
-    expect(portrait(tester).pose.look, Offset.zero);
+    expect(portrait(tester).pose, const CompanionPose());
     await pumpCompanion(tester);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump(const Duration(seconds: 30));
-    expect(portrait(tester).pose.look, Offset.zero);
+    expect(portrait(tester).pose.nod, 0);
+    expect(portrait(tester).pose.sway, 0);
+    expect(portrait(tester).pose.peek, 0);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);

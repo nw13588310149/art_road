@@ -42,7 +42,7 @@ class ProfessionalToolRail extends StatelessWidget {
               onPanCancel: onDragCancel,
               child: RailButton(
                 key: const ValueKey('floating-toolbox-handle'),
-                icon: expanded ? Icons.drag_indicator : Icons.handyman_outlined,
+                icon: expanded ? Icons.close_rounded : Icons.handyman_outlined,
                 label: expanded ? '收起工具栏，拖动可移动' : '展开工具栏，拖动可移动',
                 onTap: onToggle,
               ),

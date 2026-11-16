@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-/// 拖动小画时身后留下的一笔颜料：笔头跟着小画，笔尾在半秒内收细消失。
+/// 拖动小画时身后留下的一笔紫色：笔头跟着小画，笔尾在半秒内收细消失。
 /// 只有存在笔迹时才计帧，最后一点消失后立即释放。
 class CompanionPaintTrail extends StatefulWidget {
   const CompanionPaintTrail({super.key});
@@ -20,7 +20,7 @@ class CompanionPaintTrailState extends State<CompanionPaintTrail>
   final _frame = ValueNotifier<int>(0);
   final _points = <_TrailPoint>[];
   Duration _now = Duration.zero;
-  Color _color = const Color(0xFFFF6B5E);
+  Color _color = const Color(0xFF7A5CF0);
 
   void add(Offset point, Color color) {
     final ticker = _ticker ??= createTicker(_tick);

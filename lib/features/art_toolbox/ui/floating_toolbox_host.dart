@@ -9,6 +9,7 @@ import '../../../app/router/route_paths.dart';
 import '../../my_notes/state/my_notes_controller.dart';
 import '../../my_notes/state/my_notes_state.dart';
 import '../data/toolbox_catalog.dart';
+import '../data/toolbox_dock_preferences.dart';
 import '../state/toolbox_dock_controller.dart';
 import '../state/page_tools_controller.dart';
 import '../state/toolbox_image_controller.dart';
@@ -42,7 +43,6 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost>
   final _toolFocus = FocusNode(debugLabel: 'Page tools');
   final _trail = GlobalKey<CompanionPaintTrailState>();
   bool _greeted = false;
-  int _paint = 0;
   int _sampleVersion = 0;
   final _workspaceNavigator = GlobalKey<NavigatorState>();
   final _selection = ValueNotifier<ArtTool?>(null);
@@ -51,12 +51,22 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost>
   bool _workspaceOpen = false, _workspaceCreated = false;
   Offset? _dragPosition;
   ModalRoute<dynamic>? _lastPage;
+  bool _portraitWarmed = false;
 
   @override
   void initState() {
     super.initState();
     widget.observer.changes.addListener(_routeChanged);
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 提前解码小画的形象图，第一次出场打招呼时不会先空一下。
+    if (_portraitWarmed) return;
+    _portraitWarmed = true;
+    precacheImage(const AssetImage(companionAsset), context);
   }
 
   @override
@@ -322,11 +332,24 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost>
                 ArtTool.color => 460.0,
                 _ => 400.0,
               }, constraints.maxHeight - media.padding.top - safeBottom - 24);
+              // 小画停靠时，方框到屏幕真实边缘还有一小段；把这一段也交给它，
+              // 休息时才能一直退到屏幕边上。拖动中和工具栏不需要。
+              final docked = !_railExpanded && _dragPosition == null;
+              final edgeInset = !docked
+                  ? 0.0
+                  : switch (dock.edge) {
+                      ToolboxDockEdge.left => point.dx,
+                      ToolboxDockEdge.top => point.dy,
+                      ToolboxDockEdge.right =>
+                        constraints.maxWidth - point.dx - railWidth,
+                      ToolboxDockEdge.bottom =>
+                        constraints.maxHeight - point.dy - railHeight,
+                    }.clamp(0.0, 40.0);
               void trace(Offset p) {
                 if (motion && !media.disableAnimations && !_railExpanded) {
                   _trail.currentState?.add(
                     p + const Offset(32, 32),
-                    companionPaints[_paint % companionPaints.length],
+                    companionTrailColor,
                   );
                 }
               }
@@ -648,10 +671,24 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost>
                     Positioned.fill(child: CompanionPaintTrail(key: _trail)),
                   if (visible)
                     Positioned(
-                      left: point.dx,
-                      top: point.dy,
-                      width: railWidth,
-                      height: railHeight,
+                      left:
+                          point.dx -
+                          (dock.edge == ToolboxDockEdge.left ? edgeInset : 0),
+                      top:
+                          point.dy -
+                          (dock.edge == ToolboxDockEdge.top ? edgeInset : 0),
+                      width:
+                          railWidth +
+                          (dock.edge == ToolboxDockEdge.left ||
+                                  dock.edge == ToolboxDockEdge.right
+                              ? edgeInset
+                              : 0),
+                      height:
+                          railHeight +
+                          (dock.edge == ToolboxDockEdge.top ||
+                                  dock.edge == ToolboxDockEdge.bottom
+                              ? edgeInset
+                              : 0),
                       child: !_railExpanded
                           ? ToolboxCompanion(
                               key: const ValueKey('floating-toolbox-companion'),
@@ -661,9 +698,7 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost>
                               motionEnabled: motion,
                               semanticLabel: '展开工具栏，拖动可移动',
                               greet: greet,
-                              paint: _paint,
-                              onPaintChanged: (paint) =>
-                                  setState(() => _paint = paint),
+                              edgeInset: edgeInset,
                               onTap: () {
                                 _close();
                                 setState(() => _railExpanded = true);

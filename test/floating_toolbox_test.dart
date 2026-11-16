@@ -41,6 +41,9 @@ Future<GlobalKey<NavigatorState>> _pumpHost(
   );
   await tester.pumpAndSettle();
   expect(tester.getSize(find.byType(ToolboxCompanion)).height, 64);
+  // 默认停在右边：入口一直占到屏幕右缘，休息时小画贴着真正的屏幕边。
+  expect(tester.getRect(find.byType(ToolboxCompanion)).right, size.width);
+  expect(tester.getSize(find.byType(ToolboxCompanion)).width, 72);
   await tester.tap(find.byKey(_handleKey));
   await tester.pumpAndSettle();
   return navigator;
@@ -179,10 +182,21 @@ void main() {
       8,
     );
     expect(find.byKey(const ValueKey('page-tool-options')), findsNothing);
+    // 工具栏顶部是关闭图标，点它收回小画。
+    expect(
+      find.descendant(
+        of: find.byKey(_handleKey),
+        matching: find.byIcon(Icons.close_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel('收起工具栏，拖动可移动'), findsOneWidget);
     await tester.tap(find.byKey(_handleKey));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('恢复页面操作'), findsNothing);
     expect(find.byKey(_handleKey), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
+    expect(find.byType(ToolboxCompanion), findsOneWidget);
   });
 
   testWidgets(
