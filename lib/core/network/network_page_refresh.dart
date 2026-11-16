@@ -24,8 +24,8 @@ Future<void> refreshAfterNetworkRestore(WidgetRef ref, String route) async {
     ref.read(schoolBindingControllerProvider.notifier).refresh();
   }
   // 今日看板同时给侧栏角标用，在哪一页恢复网络都重新取。
-  if (ref.exists(todaySnapshotProvider)) {
-    ref.invalidate(todaySnapshotProvider);
+  if (ref.exists(todayControllerProvider)) {
+    unawaited(ref.read(todayControllerProvider.notifier).refresh());
   }
 
   switch (route) {

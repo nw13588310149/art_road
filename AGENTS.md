@@ -23,7 +23,11 @@
   - 首页 (`/`) is the same portal for every role, laid out like the music reference: banner, nine quick actions, three subject cards, the timetable column and 最新. No role cards here.
     - `buildQuickActions(role)` returns the same nine entries in the same order (学情、工具、作业、题库、作品墙、集市、群聊、资讯、校圈). Only dorm managers swap 学情 / 作业 for 校长信箱 / 查寝.
     - The right column shows the personal timetable for students and teaching staff, the school-wide timetable for admins and principals (`homeRoleSeesSchoolTimetable`), and the duty times for dorm managers.
-  - 今日 (`/today`) lists what this person has to handle today. Every role shares one skeleton: 待处理 (sorted by urgency, one number and one action per row), 今日日程 on the right, 值得关注 (at most three tiles, no charts) and 常用 shortcuts.
+  - 今日 (`/today`) is the guided daily board: what to do today, what is next and what is left. Every role shares one layout and only the content changes:
+    - a brand-gradient hero with the greeting, a progress ring and one 「下一步」 card;
+    - four highlight tiles;
+    - a morning-to-night timeline checklist (优先处理 / 上午 / 下午 / 晚上 / 今天内完成) with a 「现在」 marker, tick, snooze, skip and personal steps, and a how-to drawer per step;
+    - chart cards on the right, people to follow up and shortcut tiles.
   - Analytics and reports stay in 学情. The principal's 全校学情 opens `PrincipalOverview` (metrics, trend, report entries).
 - Shared shell areas such as the left navigation and top bar stay reusable and stable.
 - Left nav keeps 首页、今日、小美同学、学情（教职）、电子书刊、校园资料（学校开启时）、优秀课件、素材中心、我的云盘、视频中心、智慧校园、个人中心, plus a fixed footer 「意见反馈」.
@@ -52,10 +56,15 @@
 - Art kit: `lib/core/art/` (`ArtSubject`, `ArtColors`, `ArtText`, `formatScore`), `lib/core/widgets/art_widgets.dart`, `art_subject_card.dart`.
 - Art modules: `study_center`, `artworks`, `gallery`, `ebooks`, `art_toolbox`, `today`. Toolbox tools work fully offline and run image processing through `compute`.
 - Today (`lib/features/today`):
-  - `TodayRepository.load(role)` only reads APIs that other modules already use and returns a `TodaySnapshot`. Each source fails on its own, so one failed request does not blank the page. Do not add an endpoint just for this page.
-  - `buildTodayBoard(snapshot)` in `state/today_board.dart` is a pure function with one builder per role. Rows that need the person to act set `pending: true` and count toward the nav badge; finished rows and plain entries do not.
-  - Show a number only when an API provides it. 到岗打卡 has no status API, so it is an entry without a count.
-  - Rows open their destination through `TodayTarget`. Smart-campus views go through `CampusEntry` (`smart_campus/state/campus_entry.dart`), which the home quick actions share.
+  - The page renders one payload, `POST /app/today/board`, and does not assemble data itself. Every write (`/app/today/step/complete|reopen|skip|restore|snooze|save|delete`, `/practice/log`, `/people/follow`, `/tip/dismiss`) returns the updated board, which `TodayController` swaps in. The contract for the backend is in `docs/后端缺口清单.md`.
+  - The demo board lives in `lib/core/demo/fixtures/today/` with one builder per role. Add a step or chart there, not in the client.
+    - Live numbers come from other modules' demo routes through `TodayContext.platform()` / `.marking()`, so they match those pages (timetable, artwork tasks and reviews, approvals, dorm checks, principal overview). Do not hard-code a number another module already serves.
+    - History series (last seven days) are seeded per account and day with `TodayContext.seeded`, so they stay the same within a day.
+    - Writable state (ticks, skips, snoozes, personal steps, practice minutes, follow-ups, the tip flag) sits in `DemoStore` under `today_board`, one entry per account, and resets when the date changes.
+    - Count steps use `todayCountStep`: the first count seen that day is the total, what has been cleared since is the progress, and a cleared step stays as done.
+  - A step is `manual` (the person ticks it) or automatic (its status follows module data). Only manual steps can be ticked; only optional steps can be skipped or snoozed; lessons and dorm checks keep their time.
+  - Actions are typed strings (`route`, `campus`, `report`, `upload`, `schedule`, `tool`, `gallery`, `practiceLog`) resolved in `ui/today_actions.dart`; `campus` and `report` carry `CampusEntry` / `TeachingReport` names. An unknown type does nothing, so the API can add one before the client knows it.
+  - Charts: forms and colors follow `ui/today_style.dart` (`TodayPalette`). One brand hue per series, green / amber / red only for status with a label beside it, no pie or donut, no second axis, and the three subject colors are not used to tell series apart. Columns and lines offer a data-table view; every chart exposes `table` text for screen readers. FL Chart runs with `duration: Duration.zero`.
 - Generic modules kept from the original platform and art-ified: `ai_chat`, `courseware` (incl. cloud drive), `video_tutorial`, `my_notes`, `my_collection`, `quiz_practice`, `circle`, `school`, `smart_campus`, `personal_center`, `help_guide`, `feedback`, `consultation`.
 
 ## Demo Mode

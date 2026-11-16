@@ -59,7 +59,9 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   /// 从首页进入别的页面处理了事情，回来后「今日」入口的角标跟着更新。
   Future<void> _push(String route, {Object? arguments}) async {
     await Navigator.pushNamed(context, route, arguments: arguments);
-    if (mounted) ref.invalidate(todaySnapshotProvider);
+    if (mounted && ref.exists(todayControllerProvider)) {
+      ref.read(todayControllerProvider.notifier).refresh();
+    }
   }
 
   /// 跳转到智慧校园课表：学生与带课老师进入本人的课表，管理员与校长进入

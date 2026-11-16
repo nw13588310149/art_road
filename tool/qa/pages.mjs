@@ -17,11 +17,15 @@ const homeStep = {
   ],
   settle: 1800,
 };
-// 「今日」页：从侧栏进入，必须看到这个身份的看板内容。
+// 「今日」页：从侧栏进入，必须看到进度、清单和这个身份的内容。
 const todayStep = (label, checks) => ({
   id: 'today',
   route: '/',
-  actions: [skipGuide, nav(label), { check: /^待处理/ }, ...checks, { check: /^常用$/ }],
+  actions: [
+    skipGuide, nav(label),
+    { check: /今日进度/ }, { check: /^今日清单$/ }, { check: /近 7 天完成/ },
+    ...checks,
+  ],
   settle: 1200,
 });
 // 首页周历会滚到「今天」，后半周时周一在可视区外、点不到，所以点今天这一格。
@@ -382,14 +386,29 @@ export const ROLES = [
       { id: 'account-menu', route: '/', actions: [skipGuide, { click: /^账户菜单/, after: 500 }, { check: '资料修改', role: 'menuitem' }] },
       { id: 'study', route: '/study' },
       todayStep('今日学习', [
-        { check: /^今日练习/ }, { check: /今日课程/ }, { check: /最近点评/ },
+        { check: /^下一步$|^先做这件$/ }, { check: /练习时长/ }, { check: /三科成绩/ },
+        { check: /最近作品得分/ },
       ]),
-      { id: 'today-practice', route: '/today', actions: [
-        { click: /去练习/, nth: 0, after: 1700 }, { check: /^待处理/, absent: true },
+      { id: 'today-tick', route: '/today', actions: [
+        { click: /^打勾：练习/, nth: 0, after: 900 },
+        { check: /^取消打勾：练习/, role: 'button' }, { check: /今天已练 20 分钟/ },
       ] },
-      { id: 'today-growth', route: '/today', actions: [
-        { click: /^需要加强的科目/, after: 1800 },
-        { check: /^作品成长$/ }, { check: '问题解决率' },
+      { id: 'today-sheet', route: '/today', actions: [
+        { click: /^未开始.*练习：/, nth: 0, after: 900 },
+        { check: /^怎么做$/ }, { check: /推迟到晚上再做/ }, { check: /今天不做/ },
+      ] },
+      { id: 'today-add', route: '/today', actions: [
+        { click: /^添加安排$/, after: 600 }, { check: '什么时候做' },
+        { type: '临摹一张速写', into: '例如：临摹一张速写' },
+        { click: /^晚上$/, after: 200 }, { click: /^添加$/, after: 900 },
+        { check: /临摹一张速写/ },
+      ] },
+      { id: 'today-table', route: '/today', actions: [
+        { click: /^近 7 天完成：看数据表$/, after: 500 },
+        { check: /^近 7 天完成：看图表$/, role: 'button' },
+      ] },
+      { id: 'today-practice', route: '/today', actions: [
+        { click: /^去练习$/, nth: 0, after: 1700 }, { check: /^今日清单$/, absent: true },
       ] },
       // 短板与练习闭环在学情的「作品成长」里。
       { id: 'focus-overview', route: '/study', actions: [
@@ -516,14 +535,18 @@ export const ROLES = [
     steps: [
       homeStep,
       todayStep('今日工作', [
-        { check: /^待点评作品/ }, { check: /^今日课程/ }, { check: /^需要关注的学生$/ },
+        { check: /点评学生作品/ }, { check: /点评进度/ }, { check: /作品提交情况/ },
+        { check: /^需要关注的学生$/ },
       ]),
       { id: 'today-review-workspace', route: '/today', actions: [
-        { click: /^开始点评$/, after: 1700 },
+        { click: /^开始点评$/, nth: 0, after: 1700 },
         { check: '保存并下一份', role: 'button' },
       ] },
+      { id: 'today-follow', route: '/today', actions: [
+        { click: /^标记已跟进$/, nth: 0, after: 900 }, { check: /^已跟进$/, role: 'button' },
+      ] },
       { id: 'today-my-students', route: '/today', actions: [
-        { click: /^我的学生$/, after: 1700 },
+        { scroll: 1800, after: 600 }, { click: /^我的学生$/, after: 1700 },
         { check: /最近提交/ }, { check: /查看学情与作品/ },
       ] },
       guideStep,
@@ -610,7 +633,7 @@ export const ROLES = [
         ],
       },
       todayStep('今日工作', [
-        { check: /^待复核作品/ }, { check: /^本组老师$/ }, { check: /^本组学情$/ },
+        { check: /复核本组点评/ }, { check: /本组点评及时率/ },
       ]),
       { id: 'today-lead-pool', route: '/today', actions: [
         { click: /^去复核$/, after: 1600 }, { check: '复核池' },
@@ -626,10 +649,11 @@ export const ROLES = [
     steps: [
       homeStep,
       todayStep('今日工作', [
-        { check: /今日课程/ }, { check: /^需要关注的学生$/ }, { check: /^班级工作台$/ },
+        { check: /审批学生请假/ }, { check: /班级到校/ }, { check: /班级查寝/ },
+        { check: /^需要关注的学生$/ },
       ]),
-      { id: 'today-workbench', route: '/today', actions: [
-        { click: /^班级工作台$/, after: 2000 }, { check: /发布通知/, role: 'button' },
+      { id: 'today-leave', route: '/today', actions: [
+        { click: /^去审批$/, nth: 0, after: 2000 }, { check: /^待家长确认$/, role: 'button' },
       ] },
       guideStep,
       { id: 'campus', route: '/smart-campus', settle: 1800 },
@@ -689,10 +713,13 @@ export const ROLES = [
         { check: /^学情$/, absent: true }, { check: /^今日待办$/, absent: true },
       ] },
       todayStep('今日工作', [
-        { check: /今日值班/ }, { check: /^到岗打卡/ }, { check: /查寝情况/ },
+        { check: /到岗打卡/ }, { check: /宿舍状态/ }, { check: /晚归与缺勤/ },
       ]),
+      { id: 'today-patrol', route: '/today', actions: [
+        { click: /^打勾：午间巡查$/, after: 900 }, { check: /^取消打勾：午间巡查$/, role: 'button' },
+      ] },
       { id: 'today-dorm-check', route: '/today', actions: [
-        { click: /^按宿舍查寝$|^查看$/, nth: 0, after: 2000 }, { check: /^待处理/, absent: true },
+        { click: /^按宿舍查寝$/, nth: 0, after: 2000 }, { check: /^今日清单$/, absent: true },
       ] },
       guideStep,
       { id: 'campus', route: '/smart-campus', settle: 1800 },
@@ -723,10 +750,10 @@ export const ROLES = [
     steps: [
       { ...homeStep, actions: [...homeStep.actions, { check: /^课表$/ }, { check: /^课程$/ }] },
       todayStep('今日工作', [
-        { check: /全校今日课程/ }, { check: /^画室概况$/ }, { check: /^学生管理$/ },
+        { check: /审批教职工请假/ }, { check: /全校今日课程/ }, { check: /审批处理量/ },
       ]),
-      { id: 'today-students', route: '/today', actions: [
-        { click: /^学生管理$/, after: 2000 }, { check: /^待处理/, absent: true },
+      { id: 'today-approve', route: '/today', actions: [
+        { click: /^去审批$/, nth: 0, after: 2000 }, { check: /^今日清单$/, absent: true },
       ] },
       guideStep,
       { id: 'campus', route: '/smart-campus', settle: 1800 },
@@ -750,7 +777,8 @@ export const ROLES = [
     steps: [
       { ...homeStep, actions: [...homeStep.actions, { check: /^课表$/ }, { check: '校长驾驶舱', absent: true }] },
       todayStep('今日工作', [
-        { check: /全校今日课程/ }, { check: /^在校情况$/ }, { check: /^教学跟进$/ },
+        { check: /督办老师点评超时/ }, { check: /作品点评链/ }, { check: /校区对比/ },
+        { check: /^教学跟进$/ },
       ]),
       { id: 'today-principal-overdue', route: '/today', actions: [
         { click: /^去查看$/, nth: 0, after: 1600 }, { check: '点评链概览' },
@@ -818,8 +846,8 @@ for (const role of ROLES) {
 }
 
 ROLES.find((role) => role.id === 'principal').steps.push({
-  id: 'v31-campus-chart', route: '/', actions: [skipGuide,
-    { click: /^全校学情$/ }, { check: '校区学情对比' }, { check: '最近一次模考均分' },
+  id: 'v31-campus-chart', route: '/study', actions: [
+    { click: /^班级学情/, after: 1500 }, { check: '校区学情对比' }, { check: '最近一次模考均分' },
   ],
 });
 
@@ -918,8 +946,8 @@ ROLES.find((r) => r.id === 'student').steps.push(
 );
 
 ROLES.find((r) => r.id === 'teacher').steps.push(
- {id:'v32-teaching-followup',route:'/',actions:[skipGuide,{scroll:720},{click:/^我的学生$/},{check:'关注事项优先'},{click:'记录跟进'},{type:'已沟通明暗关系练习，安排下周复查局部改画。',into:'沟通结果、练习安排与下次复查要点'},{click:'保存跟进记录'},{check:'已沟通明暗关系练习'},{click:'查看学情与作品'},{check:'已提交作品'}]},
- {id:'v32-student-dimensions',route:'/',actions:[skipGuide,{scroll:720},{click:/^我的学生$/},{click:'查看学情与作品'},{check:'已提交作品'},{scroll:650,at:[950,550]},{check:'5 级评价'},{check:'同一作品多位老师取均值'}]},
+ {id:'v32-teaching-followup',route:'/today',actions:[{scroll:1800,after:600},{click:/^我的学生$/},{check:'关注事项优先'},{click:'记录跟进'},{type:'已沟通明暗关系练习，安排下周复查局部改画。',into:'沟通结果、练习安排与下次复查要点'},{click:'保存跟进记录'},{check:'已沟通明暗关系练习'},{click:'查看学情与作品'},{check:'已提交作品'}]},
+ {id:'v32-student-dimensions',route:'/today',actions:[{scroll:1800,after:600},{click:/^我的学生$/},{click:'查看学情与作品'},{check:'已提交作品'},{scroll:650,at:[950,550]},{check:'5 级评价'},{check:'同一作品多位老师取均值'}]},
 );
 ROLES.find((r) => r.id === 'groupLeader').steps.push(
  {id:'v32-next-course',route:'/',fixedTime:'2026-11-15T10:00:00+08:00',actions:[skipGuide,{check:'今日暂无排课'},{check:'下一次课程 · 11月16日'}]},

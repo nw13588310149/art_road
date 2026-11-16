@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../app/router/route_paths.dart';
 import '../../../core/ui/ui.dart';
-import '../../artworks/ui/artwork_upload_dialog.dart';
 import '../../shell/state/shell_controller.dart';
-import '../../shell/state/shell_state.dart';
-import '../../smart_campus/state/campus_entry.dart';
-import '../../smart_campus/state/smart_campus_controller.dart';
-import '../../teaching_overview/ui/teaching_overview_page.dart';
 import '../data/today_models.dart';
-import '../state/today_board.dart';
 import '../state/today_controller.dart';
-import 'widgets/today_agenda_card.dart';
-import 'widgets/today_insight_cards.dart';
-import 'widgets/today_student_cards.dart';
-import 'widgets/today_task_card.dart';
+import 'today_actions.dart';
+import 'today_style.dart';
+import 'widgets/today_charts.dart';
+import 'widgets/today_checklist.dart';
+import 'widgets/today_hero.dart';
+import 'widgets/today_highlights.dart';
+import 'widgets/today_step_sheet.dart';
 
 /// 今日（`/today`）：学生「今日学习」，教职「今日工作」。
 ///
-/// 所有身份同一个骨架：页头一句小结；左栏是待处理和值得关注，右栏是今日日程，
-/// 底部是常用入口。只放当天要做的事，分析报表在学情里。
+/// 一屏回答三个问题：今天做到哪了、下一步做什么、还有哪些没做。
+/// - 头图：问候、进度环与下一步；
+/// - 数字卡：这个身份今天最该知道的四个数；
+/// - 左栏：从早到晚的时间线清单（可打勾、推迟、今天不做、添加自己的安排），
+///   以及需要跟进的人；
+/// - 右栏：这个身份当天要看的图表；底部是快捷入口。
+///
+/// 内容全部来自 `/app/today/board`，页面不自己拼数据。
 class TodayPage extends ConsumerStatefulWidget {
   const TodayPage({super.key});
 
@@ -29,349 +31,370 @@ class TodayPage extends ConsumerStatefulWidget {
 }
 
 class _TodayPageState extends ConsumerState<TodayPage> {
-  static const double _sideWidth = 307;
   static const double _gap = AppSpace.s16;
 
-  /// 看板由外壳一直持有（导航角标要用），进入页面时超过这个时间就重新取一次。
-  static const _staleAfter = Duration(seconds: 20);
+  TodayController get _controller => ref.read(todayControllerProvider.notifier);
 
   @override
   void initState() {
     super.initState();
+    // 看板由外壳一直持有（侧栏角标要用），进入页面时隔得久了就重新取一次。
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final snapshot = ref.read(todaySnapshotProvider).valueOrNull;
-      if (snapshot != null &&
-          !snapshot.isEmpty &&
-          DateTime.now().difference(snapshot.now) > _staleAfter) {
-        ref.invalidate(todaySnapshotProvider);
-      }
+      if (mounted) _controller.refreshIfStale();
     });
   }
 
-  void _refresh() => ref.invalidate(todaySnapshotProvider);
-
-  /// 打开一行对应的地方；回来后重新取数，处理完的事从列表里消失。
-  Future<void> _open(TodayTarget target) async {
-    final navigator = Navigator.of(context);
-    switch (target) {
-      case TodayRouteTarget(:final route, :final arguments):
-        await navigator.pushNamed(route, arguments: arguments);
-      case TodayCampusTarget(:final entry):
-        ref.read(smartCampusControllerProvider.notifier).openEntry(entry);
-        await navigator.pushNamed(RoutePaths.smartCampus);
-      case TodayReportTarget(:final report, :final parameter, :final campus):
-        await openTeachingReport(
-          context,
-          report,
-          campus: campus,
-          parameter: parameter,
-        );
-      case TodayUploadTarget(
-        :final taskId,
-        :final parentId,
-        :final title,
-        :final subject,
-      ):
-        final saved = await showArtworkUploadDialog(
-          context,
-          taskId: taskId,
-          parentId: parentId,
-          title: title,
-          subject: subject,
-        );
-        if (mounted && saved == true) {
-          AppToast.showSuccess(context, parentId.isEmpty ? '作品已提交' : '改画已提交');
-        }
-      case TodayScheduleTarget():
-        final user = ref.read(shellControllerProvider).user;
-        final campus = ref.read(smartCampusControllerProvider.notifier);
-        final role = ref.read(todayRoleProvider);
-        if (role == 'admin' || role == 'principal') {
-          campus.openEntry(CampusEntry.scheduleManagement);
-        } else {
-          campus.openMyScheduleForUser(role: role, identity: user.identity);
-        }
-        await navigator.pushNamed(RoutePaths.smartCampus);
+  void _toast(String message, {bool error = false}) {
+    if (!mounted || message.isEmpty) return;
+    if (error) {
+      AppToast.showError(context, message);
+    } else {
+      AppToast.showSuccess(context, message);
     }
-    if (mounted) _refresh();
+  }
+
+  /// 打勾或取消。跟着业务数据自动完成的事不能手动打勾。
+  Future<void> _toggle(TodayStep step) async {
+    if (!step.manual) {
+      _toast('完成对应的操作后会自动打勾', error: true);
+      return;
+    }
+    final wasDone = step.done;
+    final message = await _controller.toggle(step);
+    if (message.isNotEmpty) {
+      _toast(message, error: true);
+      return;
+    }
+    final summary = ref.read(todayControllerProvider).board?.summary;
+    if (!wasDone && summary != null) {
+      _toast(
+        summary.allDone
+            ? '今天的安排都完成了'
+            : '已打勾，今天完成 ${summary.done} / ${summary.total} 件',
+      );
+    }
+  }
+
+  /// 去做一件事；没有对应页面的事直接打勾。回来后重新取数。
+  Future<void> _act(TodayStep step) async {
+    final action = step.action;
+    if (action == null) {
+      await _toggle(step);
+      return;
+    }
+    final saved = await openTodayAction(context, ref, action);
+    if (!mounted) return;
+    if (saved) {
+      _toast(action.parentId.isEmpty ? '作品已提交' : '改画已提交');
+      // 改画重交这类要本人确认的事，提交成功就替他打勾。
+      if (step.manual && !step.done) {
+        await _controller.complete(step);
+        return;
+      }
+    }
+    await _controller.refresh();
+  }
+
+  Future<void> _show(TodayStep step) async {
+    final choice = await showTodayStepSheet(context, step);
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case TodayStepChoice.act:
+        await _act(step);
+      case TodayStepChoice.toggle:
+        await _toggle(step);
+      case TodayStepChoice.snooze:
+        final message = await _controller.snooze(step);
+        _toast(
+          message.isNotEmpty ? message : (step.snoozed ? '已取消推迟' : '已推迟到晚上'),
+          error: message.isNotEmpty,
+        );
+      case TodayStepChoice.skip:
+        final restoring = step.status == TodayStepStatus.skipped;
+        final message = await _controller.skip(step);
+        _toast(
+          message.isNotEmpty ? message : (restoring ? '已恢复到清单' : '今天不做这件事'),
+          error: message.isNotEmpty,
+        );
+      case TodayStepChoice.delete:
+        final confirmed = await showAppConfirm(
+          context: context,
+          title: '删除这件安排？',
+          message: step.title,
+          confirmLabel: '删除',
+          danger: true,
+        );
+        if (!confirmed) return;
+        final message = await _controller.deleteStep(step);
+        _toast(message.isNotEmpty ? message : '已删除', error: message.isNotEmpty);
+    }
+  }
+
+  Future<void> _add() async {
+    final input = await showTodayAddStepDialog(context);
+    if (input == null) return;
+    final message = await _controller.addStep(
+      title: input.title,
+      slot: input.slot,
+      detail: input.detail,
+    );
+    _toast(
+      message.isNotEmpty ? message : '已添加到今天的清单',
+      error: message.isNotEmpty,
+    );
+  }
+
+  /// 图表、常用入口和跟进列表里的动作。
+  Future<void> _open(TodayAction action) async {
+    if (action.type == 'practiceLog') {
+      final minutes = await showTodayPracticeDialog(context);
+      if (minutes == null) return;
+      final message = await _controller.logPractice(minutes);
+      _toast(
+        message.isNotEmpty ? message : '已记录 $minutes 分钟',
+        error: message.isNotEmpty,
+      );
+      return;
+    }
+    await openTodayAction(context, ref, action);
+    if (mounted) await _controller.refresh();
+  }
+
+  Future<void> _follow(TodayPerson person) async {
+    final message = await _controller.follow(person);
+    if (message.isNotEmpty) _toast(message, error: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final role = ref.watch(todayRoleProvider);
-    final snapshot = ref.watch(todaySnapshotProvider);
-    final data = snapshot.valueOrNull;
+    final state = ref.watch(todayControllerProvider);
     final name = ref.watch(
       shellControllerProvider.select((s) => s.user.displayName),
     );
+    final board = state.board;
+    final now = DateTime.now();
 
-    final board = data == null || data.isEmpty || data.allFailed
-        ? null
-        : buildTodayBoard(data);
-    final Widget body;
-    if (board != null) {
-      body = _board(board, data!);
-    } else if (snapshot.hasError || (data != null && data.allFailed)) {
-      body = _failed();
-    } else {
-      body = const _TodaySkeleton(sideWidth: _sideWidth, gap: _gap);
+    if (board == null) {
+      return SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: state.errorMessage.isNotEmpty
+            ? AppCard(
+                child: SizedBox(
+                  height: 320,
+                  child: AppErrorState(
+                    title: '今日内容加载失败',
+                    description: state.errorMessage,
+                    onRetry: _controller.refresh,
+                  ),
+                ),
+              )
+            : const _TodaySkeleton(),
+      );
     }
+
+    final people = board.people;
 
     return SingleChildScrollView(
       physics: const ClampingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _TodayHeader(
-            title: todayNavLabel(role),
-            greeting: '${todayGreeting(DateTime.now())}，$name',
+          TodayHero(
             board: board,
-            refreshing: snapshot.isLoading,
-            onRefresh: _refresh,
+            greeting: '${todayGreeting(now)}，$name',
+            dateLabel: todayDateLabel(now),
+            refreshing: state.loading,
+            onRefresh: _controller.refresh,
+            onAct: _act,
+            onShow: _show,
           ),
-          const SizedBox(height: _gap),
-          body,
-          const SizedBox(height: _gap),
-        ],
-      ),
-    );
-  }
-
-  Widget _failed() => AppCard(
-    child: SizedBox(
-      height: 320,
-      child: AppErrorState(
-        title: '今日内容加载失败',
-        description: '请检查网络后重试',
-        onRetry: _refresh,
-      ),
-    ),
-  );
-
-  Widget _board(TodayBoard board, TodaySnapshot data) {
-    final student = board.isStudent;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (data.failedSources > 0) ...[
-          AppNotice(
-            message: '有 ${data.failedSources} 项内容暂时没有取到，其余内容照常显示。',
-            tone: AppTone.warning,
-            action: AppButton(
-              label: '重试',
-              variant: AppButtonVariant.text,
-              size: AppButtonSize.sm,
-              onTap: _refresh,
-            ),
-          ),
-          const SizedBox(height: _gap),
-        ],
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TodayTaskCard(board: board, onOpen: _open),
-                  if (student && board.practices.isNotEmpty) ...[
-                    const SizedBox(height: _gap),
-                    TodayPracticeCard(
-                      practices: board.practices,
-                      onOpen: _open,
-                    ),
-                  ],
-                  if (board.signals.isNotEmpty) ...[
-                    const SizedBox(height: _gap),
-                    TodaySignalCard(board: board, onOpen: _open),
-                  ],
-                  if (board.notesTitle.isNotEmpty) ...[
-                    const SizedBox(height: _gap),
-                    TodayNoteCard(board: board, onOpen: _open),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: _gap),
-            SizedBox(
-              width: _sideWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TodayAgendaCard(
-                    board: board,
-                    onOpen: _open,
-                    scheduleLabel: switch (board.role) {
-                      'dormManager' => null,
-                      'admin' || 'principal' => '排课',
-                      _ => '课表',
-                    },
-                  ),
-                  if (student) ...[
-                    const SizedBox(height: _gap),
-                    TodayLatestReviewCard(
-                      review: board.latestReview,
-                      onOpen: _open,
-                    ),
-                  ],
-                ],
+          if (state.errorMessage.isNotEmpty) ...[
+            const SizedBox(height: _gap),
+            AppNotice(
+              message: '刷新没有成功，下面是上一次的内容。',
+              tone: AppTone.warning,
+              action: AppButton(
+                label: '重试',
+                variant: AppButtonVariant.text,
+                size: AppButtonSize.sm,
+                onTap: _controller.refresh,
               ),
             ),
           ],
-        ),
-        if (board.shortcuts.isNotEmpty) ...[
+          if (board.highlights.isNotEmpty) ...[
+            const SizedBox(height: _gap),
+            TodayHighlights(items: board.highlights, onOpen: _open),
+          ],
           const SizedBox(height: _gap),
-          TodayShortcutCard(shortcuts: board.shortcuts, onOpen: _open),
-        ],
-      ],
-    );
-  }
-}
-
-/// 页头：问候、一句小结、日期与刷新。
-class _TodayHeader extends StatelessWidget {
-  const _TodayHeader({
-    required this.title,
-    required this.greeting,
-    required this.board,
-    required this.refreshing,
-    required this.onRefresh,
-  });
-
-  final String title;
-  final String greeting;
-  final TodayBoard? board;
-  final bool refreshing;
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final current = board;
-    final pending = current?.pendingCount ?? 0;
-    return Semantics(
-      container: true,
-      label: title,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  greeting,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.title24,
-                ),
-                const SizedBox(height: 2),
-                if (current == null)
-                  Text(
-                    '正在整理今天的安排',
-                    style: AppText.body14.copyWith(
-                      color: AppColors.textSecondary,
+          LayoutBuilder(
+            builder: (context, box) {
+              final sideWidth = box.maxWidth >= 900 ? 340.0 : 300.0;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TodayChecklist(
+                          board: board,
+                          filter: state.filter,
+                          busy: state.busy,
+                          now: now,
+                          onFilter: _controller.setFilter,
+                          onAdd: _add,
+                          onToggle: _toggle,
+                          onAct: _act,
+                          onShow: _show,
+                          onDismissTip: _controller.dismissTip,
+                        ),
+                        if (people != null) ...[
+                          const SizedBox(height: _gap),
+                          TodayPeopleCard(
+                            people: people,
+                            busy: state.busy,
+                            onOpen: _open,
+                            onFollow: _follow,
+                          ),
+                        ],
+                        if (board.shortcuts.isNotEmpty) ...[
+                          const SizedBox(height: _gap),
+                          _Shortcuts(shortcuts: board.shortcuts, onOpen: _open),
+                        ],
+                      ],
                     ),
-                  )
-                else
-                  _Summary(summary: current.summary, pending: pending),
-              ],
-            ),
+                  ),
+                  const SizedBox(width: _gap),
+                  SizedBox(
+                    width: sideWidth,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < board.charts.length; i++) ...[
+                          if (i > 0) const SizedBox(height: _gap),
+                          TodayChartCard(chart: board.charts[i], onOpen: _open),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-          const SizedBox(width: AppSpace.s16),
-          Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.br12,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.calendar_today_outlined,
-                  size: 16,
-                  color: AppColors.textSecondary,
+          const SizedBox(height: _gap),
+        ],
+      ),
+    );
+  }
+}
+
+/// 页头问候语：按时间段。
+String todayGreeting(DateTime now) {
+  final hour = now.hour;
+  if (hour < 5) return '夜深了';
+  if (hour < 11) return '早上好';
+  if (hour < 13) return '中午好';
+  if (hour < 18) return '下午好';
+  return '晚上好';
+}
+
+const _weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+/// 页头日期：11月16日 周一。
+String todayDateLabel(DateTime now) =>
+    '${now.month}月${now.day}日 ${_weekdays[now.weekday - 1]}';
+
+/// 快捷入口：这个身份常去的几个地方，一排带颜色的图标。
+class _Shortcuts extends StatelessWidget {
+  const _Shortcuts({required this.shortcuts, required this.onOpen});
+
+  final List<TodayShortcut> shortcuts;
+  final ValueChanged<TodayAction> onOpen;
+
+  static const _tints = [
+    TodayTint.purple,
+    TodayTint.teal,
+    TodayTint.pink,
+    TodayTint.blue,
+    TodayTint.amber,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      title: '快捷入口',
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // 一行三个，窄的时候两个；每个入口占满自己那一格。
+          final columns = box.maxWidth >= 480 ? 3 : 2;
+          const gap = AppSpace.s8;
+          final width = (box.maxWidth - gap * (columns - 1)) / columns;
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: [
+              for (var i = 0; i < shortcuts.length; i++)
+                SizedBox(
+                  width: width,
+                  child: AppPressable(
+                    onTap: () => onOpen(shortcuts[i].action),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpace.s8),
+                      decoration: const BoxDecoration(
+                        color: AppColors.surfaceSubtle,
+                        borderRadius: AppRadius.br12,
+                      ),
+                      child: Row(
+                        children: [
+                          TodayIconChip(
+                            icon: todayIcon(shortcuts[i].icon),
+                            tint: _tints[i % _tints.length],
+                            size: 36,
+                          ),
+                          const SizedBox(width: AppSpace.s8),
+                          Expanded(
+                            child: Text(
+                              shortcuts[i].label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.body14Strong,
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            size: 16,
+                            color: AppColors.textPlaceholder,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: AppSpace.s8),
-                Text(todayDateLabel(DateTime.now()), style: AppText.body14),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpace.s8),
-          AppIconButton(
-            icon: Icons.refresh_rounded,
-            semanticLabel: '刷新今日内容',
-            background: AppColors.surface,
-            enabled: !refreshing,
-            onTap: onRefresh,
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-/// 小结里的待处理数用品牌色，其余是说明文字。
-class _Summary extends StatelessWidget {
-  const _Summary({required this.summary, required this.pending});
-
-  final String summary;
-  final int pending;
-
-  @override
-  Widget build(BuildContext context) {
-    final base = AppText.body14.copyWith(color: AppColors.textSecondary);
-    final number = '$pending';
-    final index = pending > 0 ? summary.indexOf(number) : -1;
-    if (index < 0) {
-      return Text(
-        summary,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: base,
-      );
-    }
-    return Text.rich(
-      TextSpan(
-        style: base,
-        children: [
-          TextSpan(text: summary.substring(0, index)),
-          TextSpan(
-            text: number,
-            style: AppText.number(size: 14, color: AppColors.brand),
-          ),
-          TextSpan(text: summary.substring(index + number.length)),
-        ],
-      ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-}
-
-/// 首次加载的占位：和正式版式同样的两栏。
+/// 首次加载的占位：和正式版式同样的结构。
 class _TodaySkeleton extends StatelessWidget {
-  const _TodaySkeleton({required this.sideWidth, required this.gap});
-
-  final double sideWidth;
-  final double gap;
+  const _TodaySkeleton();
 
   @override
   Widget build(BuildContext context) {
-    Widget rows(int count) => AppCard(
+    Widget card(int rows) => AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const AppSkeleton(width: 72, height: 20),
-          for (var i = 0; i < count; i++) ...[
+          const AppSkeleton(width: 96, height: 20),
+          for (var i = 0; i < rows; i++) ...[
             const SizedBox(height: AppSpace.s16),
             const Row(
               children: [
-                AppSkeleton(width: 40, height: 40, radius: 12),
+                AppSkeleton(width: 28, height: 28, radius: 14),
                 SizedBox(width: AppSpace.s12),
                 Expanded(child: AppSkeletonText(lines: 2)),
               ],
@@ -380,21 +403,31 @@ class _TodaySkeleton extends StatelessWidget {
         ],
       ),
     );
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              rows(3),
-              SizedBox(height: gap),
-              rows(2),
-            ],
-          ),
+        const AppSkeleton(height: 168, radius: AppRadius.card),
+        const SizedBox(height: AppSpace.s16),
+        const Row(
+          children: [
+            Expanded(child: AppSkeleton(height: 104, radius: AppRadius.card)),
+            SizedBox(width: AppSpace.s12),
+            Expanded(child: AppSkeleton(height: 104, radius: AppRadius.card)),
+            SizedBox(width: AppSpace.s12),
+            Expanded(child: AppSkeleton(height: 104, radius: AppRadius.card)),
+            SizedBox(width: AppSpace.s12),
+            Expanded(child: AppSkeleton(height: 104, radius: AppRadius.card)),
+          ],
         ),
-        SizedBox(width: gap),
-        SizedBox(width: sideWidth, child: rows(3)),
+        const SizedBox(height: AppSpace.s16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: card(5)),
+            const SizedBox(width: AppSpace.s16),
+            SizedBox(width: 340, child: card(3)),
+          ],
+        ),
       ],
     );
   }

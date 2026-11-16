@@ -9,6 +9,7 @@ import 'marking_artwork_fixtures.dart';
 import 'marking_gallery_fixtures.dart';
 import 'marking_study_fixtures.dart';
 import 'platform_core_fixtures.dart';
+import 'today/today_fixtures.dart';
 
 /// 登记全部演示接口；在 main() 中、runApp 之前调用一次。
 void registerDemoFixtures() {
@@ -24,6 +25,7 @@ void registerDemoFixtures() {
   registerInteractionFixtures(platform);
   registerCampusFixturesPartA(platform);
   registerCampusFixturesPartB(platform);
+  registerTodayFixtures(platform);
 
   registerMarkingStudyFixtures(marking);
   registerMarkingArtworkFixtures(marking);

@@ -581,14 +581,14 @@ class _BadgeDot extends StatelessWidget {
   }
 }
 
-/// 展开态：圆角胶囊，宽度按数字内容自适应（"9"/"10+"/"99+" 各不相同）
-/// 设计稿"10+"≈22×15：文字 17w + 左右各 2.5px padding 自然撑出
+/// 展开态：圆角胶囊，宽度按数字内容自适应（"9" / "12" / "99+" 各不相同）。
+/// 99 以内显示准确的数：「今日」的角标就是还没做完的件数。
 class _NavUnreadCapsule extends StatelessWidget {
   const _NavUnreadCapsule({required this.count});
 
   final int count;
 
-  String get _label => count > 99 ? '99+' : (count > 9 ? '$count+' : '$count');
+  String get _label => count > 99 ? '99+' : '$count';
 
   @override
   Widget build(BuildContext context) {
