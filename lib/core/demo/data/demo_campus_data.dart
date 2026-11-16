@@ -286,7 +286,7 @@ abstract final class DemoCampusData {
   /// 各班周课表：只用上午 08:30–11:30、下午 14:00–17:00、晚上 19:00–21:00
   /// 三个固定时段（与 `DemoClock.daySlots` 一致），每周循环，不随打开演示的时刻
   /// 变化。三个班错开科目，同一位老师不会同时出现在两个班；周二、周四、周六
-  /// 晚上不排大课，留给小课和晚自习；周日休息（小班课除外）。
+  /// 晚上不排课，留给晚自习；周日休息。
   static const classTimetables = <String, List<DemoTimetableSlot>>{
     '501': _timetable501,
     '502': _timetable502,
@@ -348,13 +348,6 @@ abstract final class DemoCampusData {
     DemoTimetableSlot.eve(5, '文化课', 't-8', '多媒体教室'),
     DemoTimetableSlot.am(6, '模拟考试', 't-6', '考试大厅'),
     DemoTimetableSlot.pm(6, '创作构图', 't-6', '速写教室 C'),
-  ];
-
-  /// 演示学生林小雨（联考冲刺1班）的个人改画小课：周二、周四、周六晚上。
-  static const demoStudentSmallCourses = <DemoTimetableSlot>[
-    DemoTimetableSlot.eve(2, '素描改画小课', 't-1', '小课教室 2'),
-    DemoTimetableSlot.eve(4, '色彩改画小课', 't-3', '小课教室 2'),
-    DemoTimetableSlot.eve(6, '速写改画小课', 't-4', '小课教室 2'),
   ];
 
   static DemoCampusClass classOfPerson(int personIndex) {

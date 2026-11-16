@@ -16,12 +16,10 @@ class TeacherTodayCourseCard extends StatelessWidget {
     required this.runState,
     required this.displayName,
     required this.courseName,
-    required this.isSmallCourse,
     required this.subtitle,
     required this.avatar,
     this.isActive = false,
     this.onTap,
-    this.tagDotColor,
   });
 
   final String startTime;
@@ -29,12 +27,10 @@ class TeacherTodayCourseCard extends StatelessWidget {
   final TeacherTodayCourseRunState runState;
   final String displayName;
   final String courseName;
-  final bool isSmallCourse;
   final String subtitle;
   final Widget avatar;
   final bool isActive;
   final VoidCallback? onTap;
-  final Color? tagDotColor;
 
   DashboardCourseRunState get _dashboardRunState => switch (runState) {
     TeacherTodayCourseRunState.ended => DashboardCourseRunState.ended,
@@ -48,13 +44,11 @@ class TeacherTodayCourseCard extends StatelessWidget {
       startTime: startTime,
       endTime: endTime,
       subjectName: courseName,
-      isSmallCourse: isSmallCourse,
       displayName: displayName,
       subtitle: subtitle,
       avatar: avatar,
       runState: _dashboardRunState,
       isSelected: isActive,
-      tagDotColor: tagDotColor,
       onTap: onTap,
     );
   }

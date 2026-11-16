@@ -10,7 +10,7 @@ class AdminHomeSummary {
     this.classCount = 0,
     this.toDoTodayCount = 0,
     this.leaveStatus0Count = 0,
-    this.smallCourseSignStatus5Count = 0,
+    this.courseSignMakeupStatus0Count = 0,
     this.userFaceNotRecordedCount = 0,
     this.postStatus0Count = 0,
   });
@@ -20,7 +20,9 @@ class AdminHomeSummary {
   final int classCount;
   final int toDoTodayCount;
   final int leaveStatus0Count;
-  final int smallCourseSignStatus5Count;
+
+  /// 课堂补签待审核的条数。
+  final int courseSignMakeupStatus0Count;
   final int userFaceNotRecordedCount;
   final int postStatus0Count;
 
@@ -32,8 +34,8 @@ class AdminHomeSummary {
       classCount: _readInt(json['classCount']),
       toDoTodayCount: _readInt(json['toDoTodayCount']),
       leaveStatus0Count: _readInt(json['leaveStatus0Count']),
-      smallCourseSignStatus5Count: _readInt(
-        json['smallCourseSignStatus5Count'],
+      courseSignMakeupStatus0Count: _readInt(
+        json['courseSignMakeupStatus0Count'],
       ),
       userFaceNotRecordedCount: _readInt(json['userFaceNotRecordedCount']),
       postStatus0Count: _readInt(json['postStatus0Count']),
@@ -44,7 +46,6 @@ class AdminHomeSummary {
 /// 管理员首页快捷入口角标数量（与顶部统计 / 分页 total 对齐）。
 class AdminHomeActionBadgeCounts {
   const AdminHomeActionBadgeCounts({
-    this.scheduleApply = 0,
     this.teacherLeave = 0,
     this.signReview = 0,
     this.faceAudit = 0,
@@ -52,13 +53,10 @@ class AdminHomeActionBadgeCounts {
     this.principalMailboxPending = 0,
   });
 
-  /// 排课与课表：`schoolSmallCourseApplyList` status=0 total。
-  final int scheduleApply;
-
   /// 教师请假审批：`indexSum.leaveStatus0Count`（教职工待审批请假）。
   final int teacherLeave;
 
-  /// 签课管理：`indexSum.smallCourseSignStatus5Count`（小课待审核）。
+  /// 签课管理：`indexSum.courseSignMakeupStatus0Count`（课堂补签待审核）。
   final int signReview;
 
   /// 人脸库：`schoolUserFaceSum.status0Count`（待审核）。
@@ -72,14 +70,12 @@ class AdminHomeActionBadgeCounts {
 
   factory AdminHomeActionBadgeCounts.fromSummary({
     required AdminHomeSummary summary,
-    required int scheduleApply,
     required int faceAudit,
     int principalMailboxPending = 0,
   }) {
     return AdminHomeActionBadgeCounts(
-      scheduleApply: scheduleApply,
       teacherLeave: summary.leaveStatus0Count,
-      signReview: summary.smallCourseSignStatus5Count,
+      signReview: summary.courseSignMakeupStatus0Count,
       faceAudit: faceAudit,
       postReview: summary.postStatus0Count,
       principalMailboxPending: principalMailboxPending,
@@ -88,8 +84,6 @@ class AdminHomeActionBadgeCounts {
 
   String? badgeLabelFor(String actionLabel) {
     switch (actionLabel) {
-      case '排课与课表':
-        return smartCampusCountBadgeLabel(scheduleApply);
       case '教师请假审批':
         return smartCampusCountBadgeLabel(teacherLeave);
       case '签课管理':
@@ -126,7 +120,7 @@ bool _looksLikeIndexSumRes(Map<String, dynamic> json) {
     'studentCount',
     'leaveStatus0Count',
     'postStatus0Count',
-    'smallCourseSignStatus5Count',
+    'courseSignMakeupStatus0Count',
     'toDoTodayCount',
   ];
   return keys.any(json.containsKey);
@@ -400,26 +394,6 @@ int _readInt(dynamic raw) {
   return int.tryParse(raw?.toString() ?? '') ?? 0;
 }
 
-/// 分页接口 `total` / `totalCount` 等字段（小课申请待审核角标等）。
-int? parseAdminPageTotal(dynamic raw) {
-  var current = raw;
-  for (var depth = 0; depth < 4; depth++) {
-    if (current is! Map) return null;
-    final map = Map<String, dynamic>.from(current);
-    for (final key in ['total', 'totalCount', 'recordsTotal', 'count']) {
-      final value = map[key];
-      if (value == null) continue;
-      if (value is int) return value;
-      final parsed = int.tryParse(value.toString());
-      if (parsed != null) return parsed;
-    }
-    final nested = map['data'];
-    if (nested is! Map) return null;
-    current = nested;
-  }
-  return null;
-}
-
 /// 人脸库统计 `schoolUserFaceSum` → 待审核数量（`status0Count`）。
 int parseAdminFaceSumPendingCount(dynamic raw) {
   var current = raw;
@@ -431,26 +405,6 @@ int parseAdminFaceSumPendingCount(dynamic raw) {
     }
     final nested = map['data'];
     if (nested is! Map) return 0;
-    current = nested;
-  }
-  return 0;
-}
-
-int parseAdminListPendingTotal(dynamic raw) {
-  final total = parseAdminPageTotal(raw);
-  if (total != null) return total;
-
-  var current = raw;
-  for (var depth = 0; depth < 4; depth++) {
-    if (current is List) return current.length;
-    if (current is! Map) return 0;
-    final map = Map<String, dynamic>.from(current);
-    for (final key in ['records', 'list', 'rows', 'items']) {
-      final rows = map[key];
-      if (rows is List) return rows.length;
-    }
-    final nested = map['data'];
-    if (nested is! Map && nested is! List) return 0;
     current = nested;
   }
   return 0;

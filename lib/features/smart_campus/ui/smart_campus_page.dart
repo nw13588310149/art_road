@@ -54,8 +54,7 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 ///   - `mainView == principalMailbox` → [PrincipalMailboxView]（校长信箱：写信/编辑
 ///     分段、消息类型、匿名开关、正文、上传、提交）
 ///   - `mainView == mySchedule` → [TeacherLessonScheduleView]（独立"授课课表"页：
-///     居中标题 + 副标题 + 查看/编辑分段；下方控制条带教学周/legend/切周/日期；
-///     编辑模式空格可申请小课，第一行小课卡下追加申请按钮，大课不可编辑）
+///     居中标题 + 副标题；下方控制条带教学周/切周/日期；课表只读）
 ///   - 其他 mainView → [TeacherDashboardLayout]
 ///
 /// - `student`：
@@ -64,8 +63,8 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 ///     班级信息卡 + 班级公告 + 师资三段 + 同班同学 7 列网格）
 ///   - `mainView == mySchedule` → [StudentMyScheduleView]（独立"我的课表"页：
 ///     教学周 banner + 时间冻结列 + 横滚 7 天序 + 4 种课卡）
-///   - `mainView == checkIn` → [StudentCheckInView]（独立"课堂签到"页：
-///     banner + 5 项统计 + 今日课程 + 签到操作 + 最近课堂记录 6 卡）
+///   - `mainView == checkIn` → [StudentCheckInView]（独立"课堂考勤"页：
+///     banner + 统计卡 + 今日课程 + 到课情况 + 最近课堂记录 6 卡）
 ///   - `mainView == myHomework` → [StudentMyHomeworkView]（独立"我的作品"页：
 ///     banner + 学期均分/班级名次/年级名次 3 卡 + 均分柱形/分数段分布
 ///     + 状态 tabs + 作品卡 6 张网格）
@@ -255,12 +254,9 @@ class _SmartCampusPageBody extends ConsumerWidget {
       if (state.mainView == SmartCampusMainView.classManagement) {
         return AdminClassManagementView(onBack: controller.backToDashboard);
       }
-      // 管理员端「排课与课表」独立视图：白卡 banner（左返回 + 居中标题 +
-      // 右 tab 分段：周课表与排课 / 小课申请审核 + 红角标）；tab 1 是
-      // 「全校统一课表」班级 dropdown + 查看 / 编辑 分段 + 控制条 + 7 天 ×
-      // 5 时段网格（4 主题课卡，编辑模式空格 / 第 1 行追加 "申请小课" pill
-      // 打开右侧编辑抽屉）；tab 2 是 "小课排班申请" 双列卡片网格，
-      // 待审核态显示 通过/驳回 按钮，驳回弹 GradientHeaderDialog 填理由。
+      // 管理员端「排课与课表」独立视图：白卡 banner（左返回 + 居中标题）+
+      // 班级 dropdown + 查看 / 编辑 分段 + 控制条 + 7 天 × 3 时段网格
+      // （编辑模式下空格出现「排课」按钮，打开右侧编辑抽屉）。
       if (state.mainView == SmartCampusMainView.scheduleManagement) {
         return AdminScheduleManagementView(onBack: controller.backToDashboard);
       }
@@ -332,13 +328,12 @@ class _SmartCampusPageBody extends ConsumerWidget {
         return buildPrincipalMailboxRoute();
       }
       // 教师/班主任端"授课课表"独立视图：与学生"我的课表"共用 mainView=mySchedule，
-      // 但渲染 [TeacherLessonScheduleView]（多了 查看/编辑 切换 + legend +
-      // 编辑模式空格可申请小课）。
+      // 但渲染 [TeacherLessonScheduleView]（只读，老师看自己每周的课）。
       if (state.mainView == SmartCampusMainView.mySchedule) {
         return TeacherLessonScheduleView(onBack: controller.backToDashboard);
       }
       // 教师/班主任端"签课管理"独立视图：banner + 5 项统计 + 总数据/本学期/
-      // 本月 tabs + 最近签课记录 + 双列(今日课程 + 大课/小课签到操作面板)。
+      // 本月 tabs + 最近签课记录 + 双列(今日课程 + 签到操作面板)。
       if (state.mainView == SmartCampusMainView.classAttendance) {
         return TeacherClassAttendanceView(onBack: controller.backToDashboard);
       }
@@ -442,7 +437,7 @@ class _SmartCampusPageBody extends ConsumerWidget {
       if (state.mainView == SmartCampusMainView.mySchedule) {
         return StudentMyScheduleView(onBack: controller.backToDashboard);
       }
-      // 学生端"课堂签到"独立视图：banner 返回 → controller.backToDashboard。
+      // 学生端"课堂考勤"独立视图：banner 返回 → controller.backToDashboard。
       if (state.mainView == SmartCampusMainView.checkIn) {
         return StudentCheckInView(onBack: controller.backToDashboard);
       }
@@ -675,7 +670,7 @@ class _SmartCampusPlaceholder extends StatelessWidget {
       case SmartCampusMainView.classWorkbench:
         return '班级工作台';
       case SmartCampusMainView.checkIn:
-        return '课堂签到';
+        return '课堂考勤';
       case SmartCampusMainView.myHomework:
         return '我的作品';
       case SmartCampusMainView.myGrades:

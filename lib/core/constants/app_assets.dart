@@ -264,7 +264,7 @@ abstract final class AppAssets {
   static const headTeacherLeaveApprovalStatRejected =
       'assets/images/smartCampus/head_teacher/leave_approval_stat_rejected.png';
 
-  /// 课表 · 编辑/申请小课抽屉 · 字段标题前图标。
+  /// 课表 · 排课抽屉 · 字段标题前图标。
   static const scheduleEditCourseTime =
       'assets/images/smartCampus/schedule_edit/course_time.png';
   static const scheduleEditClass =
@@ -281,9 +281,6 @@ abstract final class AppAssets {
       'assets/images/smartCampus/schedule_edit/color.png';
   static const scheduleEditRepeat =
       'assets/images/smartCampus/schedule_edit/repeat.png';
-
-  /// 管理员 · 排课与课表 · 小课申请审核列表卡片 · 班级图标。
-  static const adminSmallCourseApplyCardClass = 'assets/images/new/01/xk.png';
 
   /// 宿管 · 查寝（按宿舍 / 历史）· 顶部统计卡背景（从左到右）。
   static const dormCheckStatCard1 =

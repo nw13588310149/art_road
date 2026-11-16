@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_font.dart';
-import '../../../../core/widgets/course_class_kind_tag.dart';
 import '../../../../core/widgets/course_subject_tag.dart';
 import '../../../../core/widgets/dashboard_course_notice_card.dart'
     show DashboardCourseRunState;
@@ -12,13 +11,11 @@ class HomeCourseNoticeCard extends StatelessWidget {
     required this.startTime,
     required this.endTime,
     required this.subjectName,
-    required this.isSmallCourse,
     required this.displayName,
     required this.subtitle,
     required this.avatar,
     required this.runState,
     this.isSelected = false,
-    this.tagDotColor,
     this.statusBadgeLabel,
     this.statusBadgeBackground,
     this.statusBadgeTextColor,
@@ -28,13 +25,11 @@ class HomeCourseNoticeCard extends StatelessWidget {
   final String startTime;
   final String endTime;
   final String subjectName;
-  final bool isSmallCourse;
   final String displayName;
   final String subtitle;
   final Widget avatar;
   final DashboardCourseRunState runState;
   final bool isSelected;
-  final Color? tagDotColor;
 
   /// 自定义右上角状态角标（如签到历史「正常 / 缺勤」）；未设置时沿用课程阶段文案。
   final String? statusBadgeLabel;
@@ -51,20 +46,6 @@ class HomeCourseNoticeCard extends StatelessWidget {
   static const Color _kTimeDash = Color(0xFFB6B5BB);
   static const double _kStatusBadgeWidth = 60;
   static const double _kHeaderStatusGap = 4;
-
-  static Color? dotColorFromHex(String? hex, {required bool ended}) {
-    if (ended) return null;
-    final raw = hex?.trim();
-    if (raw == null || raw.isEmpty) return null;
-    final normalized = raw.startsWith('#') ? raw.substring(1) : raw;
-    if (normalized.length != 6 && normalized.length != 8) return null;
-    final value = int.tryParse(normalized, radix: 16);
-    if (value == null) return null;
-    if (normalized.length == 8) {
-      return Color(value);
-    }
-    return Color(0xFF000000 | value);
-  }
 
   bool get _isEnded => runState == DashboardCourseRunState.ended;
 
@@ -89,7 +70,6 @@ class HomeCourseNoticeCard extends StatelessWidget {
     final badgeLabel = statusBadgeLabel ?? _statusLabel;
     final timeTextColor = _isUpcoming ? _kTextDark : _kTextSection;
     final muted = _isEnded;
-    final resolvedDotColor = muted ? null : tagDotColor;
 
     final card = Container(
       width: double.infinity,
@@ -120,10 +100,8 @@ class HomeCourseNoticeCard extends StatelessWidget {
               startTime: startTime,
               endTime: endTime,
               subjectName: subjectName,
-              isSmallCourse: isSmallCourse,
               textColor: timeTextColor,
               muted: muted,
-              tagDotColor: resolvedDotColor,
               ui: ui,
             ),
           ),
@@ -203,27 +181,23 @@ class HomeCourseNoticeCard extends StatelessWidget {
 
 /// 首页、任课老师端和学生端共用课程卡首行。
 ///
-/// 时间始终完整显示；科目与大/小课标签视为一个不可拆分的自然宽度整体，
-/// 剩余空间不足时只在标签区域内横向滑动，不压缩或截断任一标签。
+/// 时间始终完整显示；科目标签保持自然宽度，剩余空间不足时只在标签区域内
+/// 横向滑动，不压缩或截断。
 class _ResponsiveCourseHeader extends StatelessWidget {
   const _ResponsiveCourseHeader({
     required this.startTime,
     required this.endTime,
     required this.subjectName,
-    required this.isSmallCourse,
     required this.textColor,
     required this.muted,
-    required this.tagDotColor,
     required this.ui,
   });
 
   final String startTime;
   final String endTime;
   final String subjectName;
-  final bool isSmallCourse;
   final Color textColor;
   final bool muted;
-  final Color? tagDotColor;
   final double Function(double) ui;
 
   @override
@@ -255,19 +229,7 @@ class _ResponsiveCourseHeader extends StatelessWidget {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 physics: const ClampingScrollPhysics(),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    CourseSubjectTag(name: subjectName, muted: muted),
-                    SizedBox(width: ui(4)),
-                    CourseClassKindTag(
-                      isSmall: isSmallCourse,
-                      muted: muted,
-                      dotColor: tagDotColor,
-                    ),
-                  ],
-                ),
+                child: CourseSubjectTag(name: subjectName, muted: muted),
               ),
             ),
           ),

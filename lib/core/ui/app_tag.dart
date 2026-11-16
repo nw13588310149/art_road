@@ -39,7 +39,7 @@ class AppTag extends StatelessWidget {
   final Color? color;
   final Color? background;
 
-  /// 文字前的 6px 圆点（如大课 / 小课的课程色）。
+  /// 文字前的 6px 圆点（如课程色、状态色）。
   final Color? dotColor;
   final IconData? icon;
 

@@ -14,24 +14,19 @@
 //      正常签到 / 学生迟到 / 缺勤人次 / 出勤率（紫色）。
 //      第一张右上加紫色渐变装饰圈，与 Figma 一致。
 //   4. "最近签课记录" section + 右侧"查看全部 ›"链接 → 一行 3 张
-//      312 宽白卡：时间 18/600 + 日期 12/400；课名 + 大/小课 tag；
+//      312 宽白卡：时间 18/600 + 日期 12/400；课名；
 //      第N节 副标；右侧 40 头像；底部 50 高灰底统计（应到/实到/签到方式）。
 //   5. 双列：
 //      · 左 340 宽 "今日课程" 面板（白底 16 圆角 12 padding）：日期 16/500
 //        + 多张 316×104 时间段卡（基础样式与首页课程卡完全共用，仅选中态
 //        追加阴影）。点卡片切换右侧 active class。
-//      · 右 614 宽 "签到操作" 面板：根据 active class 类型渲染：
-//          - 大课：614×465 白底 16 圆角，顶部"第N节·HH:MM-HH:MM"（时间紫
-//            色）+ 教师 + 课名 + 课时·教室；中部 #F5F6FA 灰底"班级学生"
-//            块（4 状态 chip：出勤/缺勤/迟到/请假 + 8 列 × 2 行学生网格，点击头像弹窗选择状态）；
-//            下方 #F0E8FC
-//            提示带（"待完成大班一键签到" + 说明文案）；最底紫色渐变
-//            "一键完成全班签到" CTA 按钮。
-//          - 小课：参考学生端 [StudentCheckInView] 的 _CheckInActionPanel
-//            视觉（614×280 白底，灰底内面板，单学生信息 + 教师上课/下课
-//            签时间轴 + 两枚 "教师上课签 / 教师下课签" 时间 pill）。
+//      · 右 614 宽 "签到操作" 面板：614×465 白底 16 圆角，顶部
+//        "第N节·HH:MM-HH:MM" + 班级 + 课名 + 课时·教室；中部 #F5F6FA 灰底
+//        "班级学生"块（4 状态 chip：出勤/缺勤/迟到/请假 + 学生网格，点击头像
+//        弹窗选择状态）；下方提示带（"待完成全班签课" + 说明文案）；最底紫色
+//        渐变"一键完成全班签到"按钮。
 //
-// 颜色：白卡 / #F5F6FA 灰底 / #F3F2F3 边 / #715EFE 主紫 / #8E7FFF 大课紫 /
+// 颜色：白卡 / #F5F6FA 灰底 / #F3F2F3 边 / #715EFE 主紫 /
 //      #0CAC40 出勤绿 / #FF323C 缺勤红 / #325BFF 请假蓝 / #B6B5BB 提示
 // 字体：PingFang SC（标题 16/18 / 正文 12/14）+ Barlow（时间 18 / 数值 32）
 // =============================================================================
@@ -65,21 +60,14 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 const Color _kCardBg = Colors.white;
 const Color _kInnerGray = Color(0xFFF5F6FA);
 const Color _kBorderSoft = Color(0xFFF3F2F3);
-const Color _kBorderHair = Color(0xFFE6E9F1);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSection = Color(0xFF1A1A1A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
 const Color _kTextHint = Color(0xFFB6B5BB);
 const Color _kPurple = AppColors.brand;
-const Color _kPurpleSoftHint = AppColors.brandWash; // 大班签到提示带 bg
+const Color _kPurpleSoftHint = AppColors.brandWash; // 待签课提示带 bg
 const Color _kEndedTagBg = Color(0xFFE6E9F1);
-const Color _kStatusGreen = Color(0xFF0CAC40);
 const Color _kStatusPresent = Color(0xFF0CAC40); // 实到
-const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kStatusLate = Color(0xFFFF323C); // 缺课 / 未到
-const Color _kStatusLeave = Color(0xFF325BFF); // 请假
-const Color _kBigClassDot = AppColors.brandSoft; // 大课 tag dot
-const Color _kSmallClassDot = Color(0xFF0CAC40); // 小课 tag dot
 
 // 各区块最低高度（Figma 设计值），避免数据加载前后页面高度跳动。
 const double _kRecentRecordSectionMinHeight = 178;
@@ -87,9 +75,6 @@ const double _kSignActionPanelMinHeight = 465;
 const double _kHistoryListMinHeight = 320;
 
 // ---- 数据模型 ---------------------------------------------------------------
-
-/// 课程类型：大课走班级名单网格 + 一键签到；小课走单学生 + 教师上下课签时间轴。
-enum _ClassKind { big, small }
 
 /// 课程进行状态：影响今日课程卡的底色（已结束=灰，进行中=淡紫）以及
 /// 角标文本（已结束 / 进行中 / 待开始）。
@@ -126,14 +111,11 @@ class _AttendClass {
     required this.courseName,
     required this.duration,
     required this.location,
-    required this.kind,
     required this.runState,
     required this.signStatus,
     required this.signStatusLabel,
     required this.students,
     this.teacherCheckInTime,
-    this.teacherCheckOutTime,
-    this.singleStudent,
     this.logoUrl = '',
     this.teacherHeadUrl = '',
     this.colorHex = '',
@@ -148,39 +130,17 @@ class _AttendClass {
   final String courseName;
   final String duration;
   final String location;
-  final _ClassKind kind;
   final _ClassRunState runState;
   final int signStatus;
   final String signStatusLabel;
   final String? teacherCheckInTime;
-  final String? teacherCheckOutTime;
   final String logoUrl;
   final String teacherHeadUrl;
   final String colorHex;
   final String className;
 
-  /// 班级学生名单（大课用）。小课时通常仅 1 项，但保持同字段方便共享。
+  /// 班级学生名单。
   final List<_StudentAttend> students;
-
-  /// 小课模式下右侧面板展示的"主学生"（教师 1 对 1 课表）；当 [kind] = big
-  /// 时为 null。Figma 中小课卡片的展示主体是这位学生的头像 + 信息。
-  final String? singleStudent;
-
-  _StudentAttend? get primaryStudent =>
-      students.isNotEmpty ? students.first : null;
-
-  bool get teacherSignedIn =>
-      signStatus >= CourseSignFlowStatus.teacherStart.code;
-
-  bool get teacherSignedOut =>
-      signStatus >= CourseSignFlowStatus.teacherEnd.code;
-
-  bool get canTeacherSignIn =>
-      signStatus < CourseSignFlowStatus.teacherStart.code;
-
-  bool get canTeacherSignOut =>
-      signStatus >= CourseSignFlowStatus.studentStart.code &&
-      signStatus < CourseSignFlowStatus.teacherEnd.code;
 
   /// 课程卡片头像：任课老师头像，缺失时由头像组件显示老师姓氏。
   String get cardAvatarUrl => teacherHeadUrl;
@@ -206,7 +166,6 @@ class _RecentRecord {
     required this.time,
     required this.date,
     required this.courseName,
-    required this.kind,
     required this.periodLabel,
     required this.subtitle,
     required this.logoUrl,
@@ -215,7 +174,6 @@ class _RecentRecord {
     required this.present,
     required this.method,
     required this.signInClock,
-    required this.signOutClock,
     required this.signStatusLabel,
     required this.hasAttendanceCounts,
   });
@@ -223,7 +181,6 @@ class _RecentRecord {
   final String time;
   final String date;
   final String courseName;
-  final _ClassKind kind;
   final String periodLabel;
   final String subtitle;
   final String logoUrl;
@@ -232,7 +189,6 @@ class _RecentRecord {
   final int present;
   final String method;
   final String signInClock;
-  final String signOutClock;
   final String signStatusLabel;
   final bool hasAttendanceCounts;
 }
@@ -256,9 +212,6 @@ _RecentRecord _recentRecordFromHistory(TeacherSignHistoryItem item) {
     time: item.time.isEmpty ? '--:--' : item.time,
     date: _dateOnly(item.date),
     courseName: item.courseName,
-    kind: isSmallCourseType(item.courseType)
-        ? _ClassKind.small
-        : _ClassKind.big,
     periodLabel: item.lineNum > 0 ? '第${item.lineNum}节' : '签课记录',
     subtitle: item.subtitle,
     logoUrl: item.logoUrl,
@@ -267,7 +220,6 @@ _RecentRecord _recentRecordFromHistory(TeacherSignHistoryItem item) {
     present: item.presentCount,
     method: item.method,
     signInClock: item.signInClock,
-    signOutClock: item.signOutClock,
     signStatusLabel: item.signStatusLabel,
     hasAttendanceCounts: item.hasAttendanceCounts,
   );
@@ -303,9 +255,6 @@ class _TeacherClassAttendanceViewState
   /// 是否切到「历史记录」子页面（banner 右上"历史记录"按钮 / "查看全部"
   /// 链接触发）。子页面 banner 的返回按钮把它置回 false，回到本主页。
   bool _showHistory = false;
-
-  /// 历史记录子页面的过滤模式：0=全部 / 1=大课 / 2=小课。
-  int _historyFilterIdx = 0;
 
   /// 历史记录子页面的搜索文本（课程、节次、教室）。
   String _historyQuery = '';
@@ -440,8 +389,6 @@ class _TeacherClassAttendanceViewState
     if (_showHistory) {
       return _HistoryView(
         onBack: _closeHistory,
-        filterIdx: _historyFilterIdx,
-        onFilter: (i) => setState(() => _historyFilterIdx = i),
         query: _historyQuery,
         onQueryChanged: (v) => setState(() => _historyQuery = v),
         records: attendance.historyRecords,
@@ -883,7 +830,6 @@ class _RecentRecordCard extends StatelessWidget {
       time: record.time,
       headerTrailing: record.date,
       courseName: record.courseName,
-      kind: record.kind,
       subtitle: record.subtitle,
       avatarSeed: record.avatarSeed,
       logoUrl: record.logoUrl,
@@ -891,7 +837,6 @@ class _RecentRecordCard extends StatelessWidget {
       present: record.present,
       method: record.method,
       signInClock: record.signInClock,
-      signOutClock: record.signOutClock,
       signStatusLabel: record.signStatusLabel,
       hasAttendanceCounts: record.hasAttendanceCounts,
     );
@@ -903,7 +848,6 @@ class _TeacherSignRecordCard extends StatelessWidget {
     required this.time,
     required this.headerTrailing,
     required this.courseName,
-    required this.kind,
     required this.subtitle,
     required this.avatarSeed,
     this.logoUrl = '',
@@ -911,7 +855,6 @@ class _TeacherSignRecordCard extends StatelessWidget {
     required this.present,
     required this.method,
     this.signInClock = '',
-    this.signOutClock = '',
     this.signStatusLabel = '',
     this.hasAttendanceCounts = false,
   });
@@ -919,7 +862,6 @@ class _TeacherSignRecordCard extends StatelessWidget {
   final String time;
   final String headerTrailing;
   final String courseName;
-  final _ClassKind kind;
   final String subtitle;
   final String avatarSeed;
   final String logoUrl;
@@ -927,7 +869,6 @@ class _TeacherSignRecordCard extends StatelessWidget {
   final int present;
   final String method;
   final String signInClock;
-  final String signOutClock;
   final String signStatusLabel;
   final bool hasAttendanceCounts;
 
@@ -970,7 +911,7 @@ class _TeacherSignRecordCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: ui(12)),
-          // 头像与课名/节次同行：头像在左，课名+标签/节次在右。
+          // 头像与课名/节次同行：头像在左，课名/节次在右。
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -981,26 +922,16 @@ class _TeacherSignRecordCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            courseName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: ui(14),
-                              color: _kTextDark,
-                              fontWeight: AppFont.w600,
-                              height: 1,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: ui(4)),
-                        _AttendanceInlineTag.classKind(kind: kind),
-                      ],
+                    Text(
+                      courseName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: ui(14),
+                        color: _kTextDark,
+                        fontWeight: AppFont.w600,
+                        height: 1,
+                      ),
                     ),
                     SizedBox(height: ui(4)),
                     Text(
@@ -1029,7 +960,6 @@ class _TeacherSignRecordCard extends StatelessWidget {
           else
             _TeacherSignHistoryStatsPanel(
               signInClock: signInClock,
-              signOutClock: signOutClock,
               signStatusLabel: signStatusLabel,
             ),
         ],
@@ -1041,12 +971,10 @@ class _TeacherSignRecordCard extends StatelessWidget {
 class _TeacherSignHistoryStatsPanel extends StatelessWidget {
   const _TeacherSignHistoryStatsPanel({
     required this.signInClock,
-    required this.signOutClock,
     required this.signStatusLabel,
   });
 
   final String signInClock;
-  final String signOutClock;
   final String signStatusLabel;
 
   @override
@@ -1065,15 +993,8 @@ class _TeacherSignHistoryStatsPanel extends StatelessWidget {
         children: [
           Expanded(
             child: _RecordStatCol(
-              '上课签到',
+              '签课时间',
               signInClock.isEmpty ? '--:--' : signInClock,
-            ),
-          ),
-          SizedBox(width: ui(12)),
-          Expanded(
-            child: _RecordStatCol(
-              '下课签到',
-              signOutClock.isEmpty ? '--:--' : signOutClock,
             ),
           ),
           SizedBox(width: ui(12)),
@@ -1166,127 +1087,6 @@ class _RecordStatCol extends StatelessWidget {
             height: 1,
           ),
         ),
-      ],
-    );
-  }
-}
-
-// =============================================================================
-// 签课页 inline 标签：大/小课，18 高 × 11 字 × 1 边框盒模型
-// 科目标签统一使用 [CourseSubjectTag]（与首页课程卡一致）。
-// =============================================================================
-const double _kAttendanceTagDesignHeight = 18;
-const double _kAttendanceTagDesignHPad = 4;
-const double _kAttendanceTagDesignRadius = 4;
-const double _kAttendanceTagDesignFontSize = 11;
-
-class _AttendanceInlineTag extends StatelessWidget {
-  const _AttendanceInlineTag({
-    required this.label,
-    required this.backgroundColor,
-    required this.borderColor,
-    required this.labelColor,
-    this.leading,
-  });
-
-  final String label;
-  final Color backgroundColor;
-  final Color borderColor;
-  final Color labelColor;
-  final Widget? leading;
-
-  factory _AttendanceInlineTag.classKind({required _ClassKind kind}) {
-    final isSmall = kind == _ClassKind.small;
-    return _AttendanceInlineTag(
-      label: isSmall ? '小课' : '大课',
-      backgroundColor: Colors.white,
-      // 边框用更可见的 #E6E9F1：在灰底今日课程卡 / 白底面板上都能读出完整
-      // 外框，避免与紫色科目标签产生“看起来更矮”的视觉差。
-      borderColor: _kBorderHair,
-      labelColor: _kTextDark,
-      leading: _ClassKindDot(isSmall: isSmall),
-    );
-  }
-
-  TextStyle _textStyle(double Function(double) ui) {
-    return TextStyle(
-      fontSize: ui(_kAttendanceTagDesignFontSize),
-      color: labelColor,
-      fontWeight: AppFont.w400,
-      // 均匀分配行内 leading，让文字在标签内上下居中。
-      leadingDistribution: TextLeadingDistribution.even,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final tagHeight = ui(_kAttendanceTagDesignHeight);
-    return Container(
-      height: tagHeight,
-      padding: EdgeInsets.symmetric(horizontal: ui(_kAttendanceTagDesignHPad)),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(ui(_kAttendanceTagDesignRadius)),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      alignment: Alignment.center,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (leading != null) ...[leading!, SizedBox(width: ui(4))],
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: _textStyle(ui),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ClassKindDot extends StatelessWidget {
-  const _ClassKindDot({required this.isSmall});
-
-  final bool isSmall;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: ui(6),
-      height: ui(6),
-      decoration: BoxDecoration(
-        color: isSmall ? _kStatusPresent : _kBigClassDot,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-class _AttendanceInlineTagPair extends StatelessWidget {
-  const _AttendanceInlineTagPair({
-    required this.courseName,
-    required this.kind,
-  });
-
-  final String courseName;
-  final _ClassKind kind;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        CourseSubjectTag(name: courseName),
-        SizedBox(width: ui(4)),
-        _AttendanceInlineTag.classKind(kind: kind),
       ],
     );
   }
@@ -1408,12 +1208,9 @@ class _TodayClassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final mainStudent =
-        data.singleStudent ??
-        (data.students.isNotEmpty ? data.students.first.name : '');
     final displayName = data.className.isNotEmpty
         ? data.className
-        : (mainStudent.isNotEmpty ? mainStudent : data.courseName);
+        : data.courseName;
     // 原版 104 高课程卡。核心的 DashboardCourseNoticeCard 现在渲染组件库课程卡，
     // 这里直接用首页已移植回来的同一份原版卡片。
     return AppPressable(
@@ -1425,7 +1222,6 @@ class _TodayClassCard extends StatelessWidget {
         runState: _runState(),
         displayName: displayName,
         subjectName: data.courseName,
-        isSmallCourse: data.kind == _ClassKind.small,
         subtitle: '${data.signStatusLabel}·${data.location}',
         isSelected: isActive,
         avatar: _Avatar(
@@ -1439,7 +1235,7 @@ class _TodayClassCard extends StatelessWidget {
 }
 
 // =============================================================================
-// 签到操作 — 大/小课分发
+// 签到操作
 // =============================================================================
 
 class _ActionPanelSwitcher extends StatelessWidget {
@@ -1455,18 +1251,13 @@ class _ActionPanelSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSmall = data.kind == _ClassKind.small;
-    final panel = isSmall
-        ? _SmallClassActionPanel(
-            data: data,
-            onPickStudentStatus: onPickStudentStatus,
-          )
-        : _BigClassActionPanel(
-            data: data,
-            onPickStudentStatus: onPickStudentStatus,
-            onBulkSign: onBulkSign,
-          );
-    return _SignInActionShell(child: panel);
+    return _SignInActionShell(
+      child: _ClassSignPanel(
+        data: data,
+        onPickStudentStatus: onPickStudentStatus,
+        onBulkSign: onBulkSign,
+      ),
+    );
   }
 }
 
@@ -1523,11 +1314,11 @@ class _SignActionEmptyPanel extends StatelessWidget {
 }
 
 // =============================================================================
-// 大课签到面板（614 宽 × 465 高）
+// 签课面板（614 宽 × 465 高）：班级名单 + 一键签课
 // =============================================================================
 
-class _BigClassActionPanel extends StatelessWidget {
-  const _BigClassActionPanel({
+class _ClassSignPanel extends StatelessWidget {
+  const _ClassSignPanel({
     required this.data,
     required this.onPickStudentStatus,
     required this.onBulkSign,
@@ -1543,7 +1334,7 @@ class _BigClassActionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final bulkSignCompleted = _isBigClassBulkSignCompleted(data);
+    final bulkSignCompleted = _isSignCompleted(data);
     return Padding(
       padding: EdgeInsets.all(ui(12)),
       child: Column(
@@ -1575,7 +1366,7 @@ class _BigClassActionPanel extends StatelessWidget {
             ],
           ),
           SizedBox(height: ui(10)),
-          // 教师信息行：头像 + 姓名（后接科目/大小课标签）+ 时长·教室
+          // 班级信息行：头像 + 班级名（后接科目标签）+ 时长·教室
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -1610,10 +1401,7 @@ class _BigClassActionPanel extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: ui(4)),
-                        _AttendanceInlineTagPair(
-                          courseName: data.courseName,
-                          kind: data.kind,
-                        ),
+                        CourseSubjectTag(name: data.courseName),
                       ],
                     ),
                     SizedBox(height: ui(4)),
@@ -1722,7 +1510,7 @@ class _BigClassActionPanel extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '待完成大班一键签到',
+                    '待完成全班签课',
                     style: TextStyle(
                       fontSize: ui(13),
                       color: _kTextDark,
@@ -2031,381 +1819,6 @@ class _StudentAttendCell extends StatelessWidget {
 }
 
 // =============================================================================
-// 小课签到面板：布局对齐大课（班级信息 + 学生名单），底部为上课/下课签到
-// =============================================================================
-
-class _SmallClassActionPanel extends ConsumerWidget {
-  const _SmallClassActionPanel({
-    required this.data,
-    required this.onPickStudentStatus,
-  });
-
-  final _AttendClass data;
-  final ValueChanged<int> onPickStudentStatus;
-
-  int _countOf(_AttendStatus s) =>
-      data.students.where((e) => e.status == s).length;
-
-  Future<void> _onSignIn(BuildContext context, WidgetRef ref) async {
-    if (data.courseId.isEmpty) {
-      AppToast.show(context, '当前课程缺少课表记录，无法签到', type: AppToastType.error);
-      return;
-    }
-    final response = await ref
-        .read(teacherAttendanceControllerProvider.notifier)
-        .teacherSignIn(data.courseId);
-    if (!context.mounted) return;
-    AppToast.show(
-      context,
-      response.isSuccess ? '上课签到成功' : response.displayMsg,
-      type: response.isSuccess ? AppToastType.success : AppToastType.error,
-    );
-  }
-
-  Future<void> _onSignOut(BuildContext context, WidgetRef ref) async {
-    if (data.courseId.isEmpty) {
-      AppToast.show(context, '当前课程缺少课表记录，无法签到', type: AppToastType.error);
-      return;
-    }
-    final response = await ref
-        .read(teacherAttendanceControllerProvider.notifier)
-        .teacherSignOut(data.courseId);
-    if (!context.mounted) return;
-    AppToast.show(
-      context,
-      response.isSuccess ? '下课签到成功' : response.displayMsg,
-      type: response.isSuccess ? AppToastType.success : AppToastType.error,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final attendance = ref.watch(teacherAttendanceControllerProvider);
-    final submitting = attendance.submittingCourseIds.contains(data.courseId);
-    final classLabel = data.className.isNotEmpty
-        ? data.className
-        : data.teacherName;
-
-    return Padding(
-      padding: EdgeInsets.all(ui(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  '第${data.periodIndex}节·${data.startTime}-${data.endTime}',
-                  style: TextStyle(
-                    fontSize: ui(16),
-                    color: _kTextSection,
-                    fontWeight: AppFont.w500,
-                    height: 1,
-                  ),
-                ),
-              ),
-              if (data.runState == _ClassRunState.ended)
-                const _SignActionEndedBadge()
-              else
-                CourseSignCountdownBadge(
-                  startTime: data.startTime,
-                  endTime: data.endTime,
-                ),
-            ],
-          ),
-          SizedBox(height: ui(10)),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _Avatar(
-                seed: data.cardAvatarSeed,
-                size: ui(40),
-                imageUrl: data.cardAvatarUrl,
-              ),
-              SizedBox(width: ui(6)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            classLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: ui(14),
-                              color: _kTextDark,
-                              fontWeight: AppFont.w600,
-                              height: 1,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: ui(4)),
-                        _AttendanceInlineTagPair(
-                          courseName: data.courseName,
-                          kind: data.kind,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: ui(4)),
-                    Text(
-                      '${data.duration}·${data.location}',
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        color: _kTextHint,
-                        fontWeight: AppFont.w400,
-                        height: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: ui(16)),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.fromLTRB(ui(12), ui(12), ui(12), ui(16)),
-            decoration: BoxDecoration(
-              color: _kInnerGray,
-              borderRadius: BorderRadius.circular(ui(12)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '班级学生',
-                        style: TextStyle(
-                          fontSize: ui(16),
-                          color: Colors.black,
-                          fontFamily: 'PingFang SC',
-                          fontWeight: AppFont.w500,
-                          height: 20 / 16,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '点击头像可更改状态',
-                      style: TextStyle(
-                        fontSize: ui(12),
-                        color: _kTextHint,
-                        fontWeight: AppFont.w400,
-                        height: 1,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: ui(8)),
-                Wrap(
-                  spacing: ui(8),
-                  runSpacing: ui(8),
-                  children: [
-                    // 原版「应到」的圆点是 #F5F6FA，在白底上看不见；用提示灰。
-                    _StatusChip(
-                      label: '应到',
-                      count: data.students.length,
-                      dotColor: _kTextHint,
-                    ),
-                    _StatusChip(
-                      label: '实到',
-                      count: _countOf(_AttendStatus.present),
-                      dotColor: _kStatusPresent,
-                    ),
-                    // 迟到与大课面板、状态选择器同色（原版小课面板这里是缺课红）。
-                    _StatusChip(
-                      label: '迟到',
-                      count: _countOf(_AttendStatus.late),
-                      dotColor: courseSignStatusFg(CourseSignStatus.late),
-                    ),
-                    _StatusChip(
-                      label: '请假',
-                      count: _countOf(_AttendStatus.leave),
-                      dotColor: _kStatusLeave,
-                    ),
-                    _StatusChip(
-                      label: '缺课',
-                      count: _countOf(_AttendStatus.absent),
-                      dotColor: _kStatusLate,
-                    ),
-                    _StatusChip(
-                      label: '未到',
-                      count: _countOf(_AttendStatus.missing),
-                      dotColor: _kStatusLate,
-                    ),
-                  ],
-                ),
-                SizedBox(height: ui(12)),
-                _StudentAttendGrid(
-                  students: data.students,
-                  onTapStudent: onPickStudentStatus,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: ui(12)),
-          _TeacherCheckInButtons(
-            data: data,
-            submitting: submitting,
-            onSignIn: () => _onSignIn(context, ref),
-            onSignOut: () => _onSignOut(context, ref),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-enum _SignButtonState { actionable, done, disabled }
-
-class _TeacherCheckInButtons extends StatelessWidget {
-  const _TeacherCheckInButtons({
-    required this.data,
-    required this.submitting,
-    required this.onSignIn,
-    required this.onSignOut,
-  });
-
-  final _AttendClass data;
-  final bool submitting;
-  final VoidCallback onSignIn;
-  final VoidCallback onSignOut;
-
-  _SignButtonState _signInState() {
-    if (data.teacherSignedIn) return _SignButtonState.done;
-    if (data.canTeacherSignIn && !submitting) {
-      return _SignButtonState.actionable;
-    }
-    return _SignButtonState.disabled;
-  }
-
-  _SignButtonState _signOutState() {
-    if (data.teacherSignedOut) return _SignButtonState.done;
-    if (data.canTeacherSignOut && !submitting) {
-      return _SignButtonState.actionable;
-    }
-    return _SignButtonState.disabled;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final signInState = _signInState();
-    final signOutState = _signOutState();
-    return Row(
-      children: [
-        Expanded(
-          child: _TeacherSignActionButton(
-            label: signInState == _SignButtonState.done ? '已上课签' : '上课签到',
-            state: signInState,
-            onTap: signInState == _SignButtonState.actionable ? onSignIn : null,
-          ),
-        ),
-        SizedBox(width: ui(16)),
-        Expanded(
-          child: _TeacherSignActionButton(
-            label: signOutState == _SignButtonState.done ? '已下课签' : '下课签到',
-            state: signOutState,
-            onTap: signOutState == _SignButtonState.actionable
-                ? onSignOut
-                : null,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TeacherSignActionButton extends StatelessWidget {
-  const _TeacherSignActionButton({
-    required this.label,
-    required this.state,
-    this.onTap,
-  });
-
-  final String label;
-  final _SignButtonState state;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final isActionable = state == _SignButtonState.actionable;
-    final isDone = state == _SignButtonState.done;
-    final foreground = isActionable
-        ? Colors.white
-        : (isDone ? _kStatusGreen : _kTextDivider);
-    return InkWell(
-      onTap: isActionable ? onTap : null,
-      borderRadius: BorderRadius.circular(ui(12)),
-      child: Container(
-        height: ui(44),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(ui(12)),
-          gradient: isActionable
-              ? const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [AppColors.brandSoft, AppColors.brand],
-                )
-              : null,
-          color: isActionable
-              ? null
-              : (isDone
-                    ? _kStatusGreen.withValues(alpha: 0.10)
-                    : const Color(0xFFE6E9F1)),
-          border: isActionable
-              ? null
-              : Border.all(
-                  color: isDone
-                      ? _kStatusGreen.withValues(alpha: 0.35)
-                      : _kBorderSoft,
-                ),
-        ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isDone ? Icons.check_circle_rounded : Icons.fingerprint_rounded,
-              size: ui(20),
-              color: foreground,
-            ),
-            SizedBox(width: ui(8)),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: ui(16),
-                  color: foreground,
-                  fontWeight: AppFont.w500,
-                  height: 1.2,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
 // 简易头像（颜色 hash + 首字母占位，避免 Figma `placehold.co` 出网图）
 // =============================================================================
 
@@ -2504,22 +1917,15 @@ _AttendClass _attendClassFromSession(CourseSignSession session) {
     courseName: session.courseName,
     duration: _durationLabel(startMinutes, endMinutes),
     location: session.classroom,
-    kind: isSmallCourseType(session.courseType)
-        ? _ClassKind.small
-        : _ClassKind.big,
     runState: runState,
     signStatus: session.signStatus,
     signStatusLabel: CourseSignFlowStatus.labelFor(session.signStatus),
     teacherCheckInTime: session.teacherCheckInTime,
-    teacherCheckOutTime: session.teacherCheckOutTime,
     logoUrl: session.logoUrl,
     teacherHeadUrl: session.teacherHeadUrl,
     colorHex: session.colorHex,
     className: session.className,
     students: students,
-    singleStudent: isSmallCourseType(session.courseType) && students.isNotEmpty
-        ? students.first.name
-        : null,
   );
 }
 
@@ -2565,8 +1971,8 @@ CourseSignStatus? _courseSignStatusOf(_AttendStatus status) {
   };
 }
 
-bool _isBigClassBulkSignCompleted(_AttendClass data) {
-  if (data.signStatus >= CourseSignFlowStatus.studentStart.code) {
+bool _isSignCompleted(_AttendClass data) {
+  if (data.signStatus >= CourseSignFlowStatus.signed.code) {
     return true;
   }
   if (data.students.isNotEmpty &&
@@ -2606,11 +2012,10 @@ String _durationLabel(int? start, int? end) {
 // =============================================================================
 // 历史记录 子页面
 //   - 顶部 banner（白→#F9EDFF 渐变 16 圆角，左 32 返回 + 居中 "历史记录"）
-//   - 控制条（44 高）：左侧 全部 / 大课 / 小课 三段 pill 切换；右侧 324×44
-//     白底搜索框（占位 "课程、节次、教室"）
-//   - 汇总条：「共 N 条 · 大课 X · 小课 Y」
+//   - 控制条（44 高）：左侧「共 N 条」，右侧 324×44 白底搜索框
+//     （占位 "课程、班级、节次"）
 //   - 多个日期 section：日期 16/500 + 一行最多 3 张 312 宽签课卡
-//     （时间 + 节次 / 大小课 tag / 课名 + 教室 / 头像 / 灰底应到-实到-签到方式）
+//     （时间 + 节次 / 课名 + 班级 / 头像 / 灰底应到-实到-签到方式）
 // =============================================================================
 
 class _HistoryRecord {
@@ -2618,7 +2023,6 @@ class _HistoryRecord {
     required this.time,
     required this.periodLabel,
     required this.courseName,
-    required this.kind,
     required this.subtitle,
     required this.logoUrl,
     required this.avatarSeed,
@@ -2627,7 +2031,6 @@ class _HistoryRecord {
     required this.present,
     required this.method,
     required this.signInClock,
-    required this.signOutClock,
     required this.signStatusLabel,
     required this.hasAttendanceCounts,
   });
@@ -2635,7 +2038,6 @@ class _HistoryRecord {
   final String time;
   final String periodLabel;
   final String courseName;
-  final _ClassKind kind;
   final String subtitle;
   final String logoUrl;
   final String avatarSeed;
@@ -2644,7 +2046,6 @@ class _HistoryRecord {
   final int present;
   final String method;
   final String signInClock;
-  final String signOutClock;
   final String signStatusLabel;
   final bool hasAttendanceCounts;
 }
@@ -2658,8 +2059,6 @@ class _HistoryDay {
 class _HistoryView extends StatelessWidget {
   const _HistoryView({
     required this.onBack,
-    required this.filterIdx,
-    required this.onFilter,
     required this.query,
     required this.onQueryChanged,
     required this.records,
@@ -2668,25 +2067,11 @@ class _HistoryView extends StatelessWidget {
   });
 
   final VoidCallback onBack;
-  final int filterIdx;
-  final ValueChanged<int> onFilter;
   final String query;
   final ValueChanged<String> onQueryChanged;
   final List<TeacherSignHistoryItem> records;
   final bool loading;
   final String error;
-
-  bool _matchKind(_ClassKind k) {
-    switch (filterIdx) {
-      case 1:
-        return k == _ClassKind.big;
-      case 2:
-        return k == _ClassKind.small;
-      case 0:
-      default:
-        return true;
-    }
-  }
 
   bool _matchQuery(_HistoryRecord r) {
     if (query.trim().isEmpty) return true;
@@ -2704,17 +2089,11 @@ class _HistoryView extends StatelessWidget {
     final ui = DashboardScaleScope.of(context).ui;
     final filteredDays = <_HistoryDay>[];
     var totalCount = 0;
-    var bigCount = 0;
-    var smallCount = 0;
     for (final day in _historyDaysFromRecords(records)) {
-      final keep = day.records
-          .where((r) => _matchKind(r.kind) && _matchQuery(r))
-          .toList();
+      final keep = day.records.where(_matchQuery).toList();
       if (keep.isNotEmpty) {
         filteredDays.add(_HistoryDay(date: day.date, records: keep));
         totalCount += keep.length;
-        bigCount += keep.where((r) => r.kind == _ClassKind.big).length;
-        smallCount += keep.where((r) => r.kind == _ClassKind.small).length;
       }
     }
     return SmartCampusSecondaryPageShell(
@@ -2723,16 +2102,9 @@ class _HistoryView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _HistoryFilterRow(
-            filterIdx: filterIdx,
-            onFilter: onFilter,
+            total: totalCount,
             query: query,
             onQueryChanged: onQueryChanged,
-          ),
-          SizedBox(height: ui(12)),
-          _HistorySummaryBar(
-            total: totalCount,
-            bigCount: bigCount,
-            smallCount: smallCount,
           ),
           SizedBox(height: ui(12)),
           if (loading && filteredDays.isEmpty)
@@ -2779,9 +2151,6 @@ List<_HistoryDay> _historyDaysFromRecords(
             time: item.time.isEmpty ? '--:--' : item.time,
             periodLabel: item.lineNum > 0 ? '第${item.lineNum}节' : '签课记录',
             courseName: item.courseName,
-            kind: isSmallCourseType(item.courseType)
-                ? _ClassKind.small
-                : _ClassKind.big,
             subtitle: item.subtitle,
             logoUrl: item.logoUrl,
             avatarSeed: item.avatarSeed,
@@ -2790,7 +2159,6 @@ List<_HistoryDay> _historyDaysFromRecords(
             present: item.presentCount,
             method: item.method,
             signInClock: item.signInClock,
-            signOutClock: item.signOutClock,
             signStatusLabel: item.signStatusLabel,
             hasAttendanceCounts: item.hasAttendanceCounts,
           ),
@@ -2810,49 +2178,31 @@ String _dateOnly(String value) {
 
 class _HistoryFilterRow extends StatelessWidget {
   const _HistoryFilterRow({
-    required this.filterIdx,
-    required this.onFilter,
+    required this.total,
     required this.query,
     required this.onQueryChanged,
   });
 
-  final int filterIdx;
-  final ValueChanged<int> onFilter;
+  final int total;
   final String query;
   final ValueChanged<String> onQueryChanged;
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['全部', '大课', '小课'];
-    // 原版：左黑底页签（带描边），右 324×44 搜索；放不下时折行（窄横屏）。
-    return SmartCampusFilterRow(
-      useWrap: true,
-      leading: SmartCampusDarkTabs<int>(
-        segments: [
-          for (var i = 0; i < labels.length; i++)
-            AppSegment(value: i, label: labels[i]),
-        ],
-        value: filterIdx,
-        onChanged: onFilter,
-      ),
-      search: _HistorySearchField(
-        initialText: query,
-        onChanged: onQueryChanged,
-      ),
+    // 左边是条数，右边是 324×44 搜索框。
+    return Row(
+      children: [
+        Expanded(child: _HistorySummaryBar(total: total)),
+        _HistorySearchField(initialText: query, onChanged: onQueryChanged),
+      ],
     );
   }
 }
 
 class _HistorySummaryBar extends StatelessWidget {
-  const _HistorySummaryBar({
-    required this.total,
-    required this.bigCount,
-    required this.smallCount,
-  });
+  const _HistorySummaryBar({required this.total});
 
   final int total;
-  final int bigCount;
-  final int smallCount;
 
   @override
   Widget build(BuildContext context) {
@@ -2872,30 +2222,6 @@ class _HistorySummaryBar extends StatelessWidget {
           const TextSpan(
             text: ' 条',
             style: TextStyle(color: _kTextHint),
-          ),
-          const TextSpan(
-            text: '   ·   ',
-            style: TextStyle(color: _kTextDivider),
-          ),
-          const TextSpan(
-            text: '大课 ',
-            style: TextStyle(color: _kTextHint),
-          ),
-          TextSpan(
-            text: '$bigCount',
-            style: const TextStyle(color: _kBigClassDot),
-          ),
-          const TextSpan(
-            text: '   ·   ',
-            style: TextStyle(color: _kTextDivider),
-          ),
-          const TextSpan(
-            text: '小课 ',
-            style: TextStyle(color: _kTextHint),
-          ),
-          TextSpan(
-            text: '$smallCount',
-            style: const TextStyle(color: _kSmallClassDot),
           ),
         ],
       ),
@@ -2989,7 +2315,6 @@ class _HistoryRecordCard extends StatelessWidget {
       time: record.time,
       headerTrailing: record.periodLabel,
       courseName: record.courseName,
-      kind: record.kind,
       subtitle: record.subtitle,
       avatarSeed: record.avatarSeed,
       logoUrl: record.logoUrl,
@@ -2997,7 +2322,6 @@ class _HistoryRecordCard extends StatelessWidget {
       present: record.present,
       method: record.method,
       signInClock: record.signInClock,
-      signOutClock: record.signOutClock,
       signStatusLabel: record.signStatusLabel,
       hasAttendanceCounts: record.hasAttendanceCounts,
     );

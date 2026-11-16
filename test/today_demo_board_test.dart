@@ -337,9 +337,14 @@ void main() {
         final admin = await _board(DemoAccounts.admin, now: _wednesday());
         expect(
           admin.steps.map((s) => s.id),
-          containsAll(['teacherLeave', 'signConfirm', 'scheduleApply']),
+          containsAll(['teacherLeave', 'signMakeup']),
         );
-        for (final id in ['teacherLeave', 'signConfirm', 'scheduleApply']) {
+        // 课程只有一种，没有单独的签课确认和排课申请。
+        expect(
+          admin.steps.map((s) => s.id),
+          isNot(anyOf(contains('signConfirm'), contains('scheduleApply'))),
+        );
+        for (final id in ['teacherLeave', 'signMakeup']) {
           final step = admin.steps.firstWhere((s) => s.id == id);
           expect(step.progress!.total, greaterThan(0), reason: id);
           expect(step.manual, isFalse, reason: id);

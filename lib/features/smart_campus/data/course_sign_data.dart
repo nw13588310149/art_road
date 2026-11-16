@@ -6,48 +6,36 @@ library;
 import '../../../core/network/media_url.dart';
 import '../../../core/network/snowflake_id.dart';
 
-/// 课程 `type` 约定：0 = 大课，1 = 小课（课表、签课、班级等接口统一）。
-bool isSmallCourseType(int type) => type == 1;
-
-bool isBigCourseType(int type) => type == 0;
-
-/// 小课 / 签课流程 `signStatus`：0 未签到 … 7 管理员驳回。
+/// 一节课的签课状态 `signStatus`：0 老师还没签课，2 已签课。课程只有一种，
+/// 都由任课老师一键登记全班到课情况。
 enum CourseSignFlowStatus {
-  notSigned(0, '未签到'),
-  teacherStart(1, '老师上课签到'),
-  studentStart(2, '学生上课签到'),
-  teacherEnd(3, '老师下课签到'),
-  studentEnd(4, '学生下课签到'),
-  studentEval(5, '学生评价'),
-  adminConfirm(6, '教务老师确认'),
-  adminReject(7, '教务老师驳回');
+  notSigned(0, '未签课'),
+  signed(2, '已签课');
 
   const CourseSignFlowStatus(this.code, this.label);
 
   final int code;
   final String label;
 
+  /// 接口值大于 0 都算已签课。
   static CourseSignFlowStatus? fromApi(dynamic raw) {
     if (raw == null) return null;
     final code = int.tryParse(raw.toString());
     if (code == null) return null;
-    for (final status in CourseSignFlowStatus.values) {
-      if (status.code == code) return status;
-    }
-    return null;
+    return code > 0 ? signed : notSigned;
   }
 
-  static String labelFor(dynamic raw, {String fallback = '未签到'}) {
+  static String labelFor(dynamic raw, {String fallback = '未签课'}) {
     return fromApi(raw)?.label ?? fallback;
   }
 }
 
-/// 大课是否已完成一键全班签到。
-bool isBigClassBulkSignCompleted({
+/// 这节课是否已经完成全班签课。
+bool isCourseSignCompleted({
   required int courseSignStatus,
   required List<CourseSignStudent> students,
 }) {
-  if (courseSignStatus >= CourseSignFlowStatus.studentStart.code) {
+  if (courseSignStatus >= CourseSignFlowStatus.signed.code) {
     return true;
   }
   if (students.isNotEmpty &&
@@ -125,17 +113,10 @@ enum CourseSignStatus {
 
 /// 班级筛选项（`classList` / 签课查询共用）。
 class CourseSignClassOption {
-  const CourseSignClassOption({
-    required this.id,
-    required this.name,
-    required this.type,
-  });
+  const CourseSignClassOption({required this.id, required this.name});
 
   final String id;
   final String name;
-
-  /// 0=大班 1=小班
-  final int type;
 
   factory CourseSignClassOption.fromJson(Map<String, dynamic> json) {
     final id = _pickString(json, ['id', 'classId', 'cId'], '');
@@ -145,13 +126,11 @@ class CourseSignClassOption {
       'class',
       'fullName',
     ], '未命名班级');
-    final typeRaw = json['type'];
-    final type = int.tryParse(typeRaw?.toString() ?? '') ?? 0;
-    return CourseSignClassOption(id: id, name: name, type: type);
+    return CourseSignClassOption(id: id, name: name);
   }
 }
 
-/// `courseSignSum0` / `courseSignSum1` 统计卡片数据（字段名做多 key 兜底）。
+/// `courseSignSum0` 统计卡片数据（字段名做多 key 兜底）。
 class CourseSignStats {
   const CourseSignStats({
     this.courseCount = 0,
@@ -159,8 +138,6 @@ class CourseSignStats {
     this.studentSignedCount = 0,
     this.studentShouldCount = 0,
     this.pendingMakeupCount = 0,
-    this.inProgressCount = 0,
-    this.pendingAdminCount = 0,
     this.completedCount = 0,
   });
 
@@ -169,8 +146,6 @@ class CourseSignStats {
   final int studentSignedCount;
   final int studentShouldCount;
   final int pendingMakeupCount;
-  final int inProgressCount;
-  final int pendingAdminCount;
   final int completedCount;
 
   factory CourseSignStats.fromJson(dynamic raw) {
@@ -191,8 +166,6 @@ class CourseSignStats {
         'courseNum',
         'totalCourseCount',
         'totalCount',
-        'bigCourseCount',
-        'smallCourseCount',
       ]),
       signedCourseCount: pick([
         'signedCourseCount',
@@ -218,12 +191,6 @@ class CourseSignStats {
         'makeupCount',
         'applyCount',
       ]),
-      inProgressCount: pick(['inProgressCount', 'doingCount', 'progressCount']),
-      pendingAdminCount: pick([
-        'pendingAdminCount',
-        'waitAdminCount',
-        'adminConfirmCount',
-      ]),
       completedCount: pick(['completedCount', 'finishCount', 'doneCount']),
     );
   }
@@ -237,10 +204,6 @@ class CourseSignStudent {
     this.headUrl = '',
     this.status,
     this.checkInTime,
-    this.checkOutTime,
-    this.evaluationRating,
-    this.evaluationMastery,
-    this.evaluationNote,
     this.remark = '',
   });
 
@@ -250,10 +213,6 @@ class CourseSignStudent {
   final String headUrl;
   CourseSignStatus? status;
   String? checkInTime;
-  String? checkOutTime;
-  double? evaluationRating;
-  String? evaluationMastery;
-  String? evaluationNote;
   final String remark;
 
   CourseSignStudent copyWith({
@@ -268,10 +227,6 @@ class CourseSignStudent {
       headUrl: headUrl,
       status: clearStatus ? null : status ?? this.status,
       checkInTime: checkInTime,
-      checkOutTime: checkOutTime,
-      evaluationRating: evaluationRating,
-      evaluationMastery: evaluationMastery,
-      evaluationNote: evaluationNote,
       remark: remark ?? this.remark,
     );
   }
@@ -293,10 +248,6 @@ class CourseSignStudent {
     final headUrl = MediaUrl.resolve(
       _pickString(json, ['headUrl', 'avatar', 'avatarUrl', 'headImg'], ''),
     );
-    final ratingRaw = json['score'] ?? json['rating'] ?? json['star'];
-    final rating = ratingRaw == null
-        ? null
-        : double.tryParse(ratingRaw.toString());
     return CourseSignStudent(
       studentId: studentId,
       name: name,
@@ -311,31 +262,12 @@ class CourseSignStudent {
         'beginSignTime',
         'classBeginTime',
       ]),
-      checkOutTime: _pickStringNullable(json, [
-        'checkOutTime',
-        'signOutTime',
-        'endSignTime',
-        'classEndTime',
-      ]),
-      evaluationRating: rating,
-      evaluationMastery: _pickStringNullable(json, [
-        'mastery',
-        'masterLevel',
-        'level',
-      ]),
-      evaluationNote: _pickStringNullable(json, [
-        'evaluation',
-        'evaluate',
-        'comment',
-        'remark',
-        'note',
-      ]),
       remark: _pickString(json, ['remark', 'teacherRemark'], ''),
     );
   }
 }
 
-/// 单节课程签到（大课 / 小课列表项）。
+/// 一节课的签课情况（列表项）。
 class CourseSignSession {
   CourseSignSession({
     required this.courseId,
@@ -347,13 +279,9 @@ class CourseSignSession {
     this.logoUrl = '',
     this.teacherHeadUrl = '',
     this.teacherCheckInTime,
-    this.teacherCheckOutTime,
-    this.adminConfirmed = false,
-    this.signStep,
     this.signStatus = 0,
     this.courseStartTime = '',
     this.courseEndTime = '',
-    this.courseType = 0,
     this.lineNum = 0,
     this.colorHex = '',
     this.className = '',
@@ -370,17 +298,11 @@ class CourseSignSession {
   final String colorHex;
   final String className;
   final String? teacherCheckInTime;
-  final String? teacherCheckOutTime;
-  final bool adminConfirmed;
 
-  /// 小课流程步骤（0–5），后端若下发 `signStep` / `step` 则直接使用。
-  final int? signStep;
-
-  /// 签课流程状态：0 未签到 … 7 管理员驳回。
+  /// 签课状态：0 未签课，2 已签课（见 [CourseSignFlowStatus]）。
   final int signStatus;
   final String courseStartTime;
   final String courseEndTime;
-  final int courseType;
   final int lineNum;
 
   factory CourseSignSession.fromJson(Map<String, dynamic> json) {
@@ -447,7 +369,6 @@ class CourseSignSession {
         json['step'] ??
         json['flowStep'];
     final signStatus = int.tryParse(signStatusRaw?.toString() ?? '') ?? 0;
-    final step = int.tryParse(signStatusRaw?.toString() ?? '');
 
     final courseStartTime = _pickString(json, [
       'courseStartTime',
@@ -480,14 +401,6 @@ class CourseSignSession {
       }
     }
 
-    final adminConfirmedRaw =
-        json['adminConfirm'] ?? json['adminConfirmed'] ?? json['confirmStatus'];
-    final adminConfirmed =
-        adminConfirmedRaw == true ||
-        adminConfirmedRaw == 1 ||
-        adminConfirmedRaw?.toString() == '1' ||
-        signStatus == CourseSignFlowStatus.adminConfirm.code;
-
     return CourseSignSession(
       courseId: courseId,
       courseName: courseName,
@@ -503,18 +416,9 @@ class CourseSignSession {
         'teacherCheckInTime',
         'teacherSignInTime',
       ]),
-      teacherCheckOutTime: _pickStringNullable(json, [
-        'teacherCheckOutTime',
-        'teacherSignOutTime',
-      ]),
-      adminConfirmed: adminConfirmed,
-      signStep: step,
       signStatus: signStatus,
       courseStartTime: courseStartTime,
       courseEndTime: courseEndTime,
-      courseType:
-          int.tryParse((json['type'] ?? json['classType'] ?? 0).toString()) ??
-          0,
       lineNum:
           int.tryParse(
             (json['lineNum'] ?? json['periodIndex'] ?? json['sectionNum'] ?? 0)
@@ -526,9 +430,7 @@ class CourseSignSession {
 
   CourseSignSession copyWith({
     List<CourseSignStudent>? students,
-    int? signStep,
     int? signStatus,
-    bool? adminConfirmed,
     String? courseStartTime,
     String? courseEndTime,
     String? timeRange,
@@ -537,7 +439,6 @@ class CourseSignSession {
     String? colorHex,
     String? className,
     String? teacherCheckInTime,
-    String? teacherCheckOutTime,
   }) {
     return CourseSignSession(
       courseId: courseId,
@@ -551,35 +452,12 @@ class CourseSignSession {
       colorHex: colorHex ?? this.colorHex,
       className: className ?? this.className,
       teacherCheckInTime: teacherCheckInTime ?? this.teacherCheckInTime,
-      teacherCheckOutTime: teacherCheckOutTime ?? this.teacherCheckOutTime,
-      adminConfirmed: adminConfirmed ?? this.adminConfirmed,
-      signStep: signStep ?? this.signStep,
       signStatus: signStatus ?? this.signStatus,
       courseStartTime: courseStartTime ?? this.courseStartTime,
       courseEndTime: courseEndTime ?? this.courseEndTime,
-      courseType: courseType,
       lineNum: lineNum,
     );
   }
-}
-
-List<CourseSignStudent> parseCourseCommentList(dynamic raw) {
-  if (raw == null) return const [];
-  final rows = _unwrapRows(raw);
-  return rows
-      .map((row) {
-        final user = _asMap(
-          row['student'] ?? row['user'] ?? row['schoolStudent'],
-        );
-        final merged = <String, dynamic>{
-          ...?user,
-          ...row,
-          'evaluation': row['comment'] ?? row['evaluation'] ?? row['remark'],
-          'score': row['score'] ?? row['rating'] ?? row['star'],
-        };
-        return CourseSignStudent.fromJson(merged);
-      })
-      .toList(growable: false);
 }
 
 List<CourseSignSession> parseCourseSignSessionList(dynamic raw) {

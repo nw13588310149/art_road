@@ -113,7 +113,7 @@ class TeacherDashboardLayout extends ConsumerStatefulWidget {
   final VoidCallback onOpenClassWorkbench;
   final void Function({TeacherScheduleFocusTarget? focus}) onOpenMySchedule;
 
-  /// 学生端「课堂签到」入口；老师端没这个按钮，传 null 即可，
+  /// 学生端「课堂考勤」入口；老师端没这个按钮，传 null 即可，
   /// `_TeacherActionPanel` 会在 label 命中但回调为空时走兜底 SnackBar。
   final VoidCallback? onOpenCheckIn;
 
@@ -138,7 +138,7 @@ class TeacherDashboardLayout extends ConsumerStatefulWidget {
   final VoidCallback? onOpenDormCheck;
 
   /// 任课老师 / 班主任「签课管理」入口：进入签到总览页（5 项统计 +
-  /// 最近签课记录 + 今日课程 + 大课/小课签到操作面板）。
+  /// 最近签课记录 + 今日课程 + 签到操作面板）。
   final VoidCallback? onOpenClassAttendance;
 
   /// 任课老师 / 班主任「学生名册」入口：进入名册总览页（班级 dropdown +
@@ -957,9 +957,9 @@ class _TeacherActionPanel extends StatelessWidget {
       case '授课课表':
       case '我的课表':
         return () => onOpenMySchedule();
-      // 学生端独有：课堂签到。老师端没这个按钮，回调可能为 null，由
+      // 学生端独有：课堂考勤。老师端没这个按钮，回调可能为 null，由
       // 未配置路由的按钮由 [SmartCampusQuickActionsCard] 兜底弹"页面迁移中"SnackBar。
-      case '课堂签到':
+      case '课堂考勤':
         return onOpenCheckIn;
       // 学生端独有：我的作品。老师端的 "作品批改" 是另一条入口，单独处理。
       case '我的作品':
@@ -981,7 +981,7 @@ class _TeacherActionPanel extends StatelessWidget {
       case '我的查寝':
         return onOpenDormCheck;
       // 任课老师/班主任专属：「签课管理」→ 进入授课签到总览页（5 项统计 +
-      // 最近签课记录 + 今日课程 + 大课/小课双模签到操作面板）。
+      // 最近签课记录 + 今日课程 + 签到操作面板）。
       case '签课管理':
         return onOpenClassAttendance;
       // 任课老师/班主任专属：「学生名册」→ 进入名册总览页（班级 dropdown +
@@ -1685,7 +1685,7 @@ class _TeacherNoticeCard extends StatelessWidget {
 //   - 数据来自 `/app/school/v2/teacher/courseList`（当日）+ `schoolTimeConfigList`（节次时间）
 //   - 白卡 padding 12 / radius 16 / 浅阴影
 //   - 白卡内部子卡与首页课程卡一致：复用 [DashboardCourseNoticeCard]（即 AppCourseCard，高度随内容；已结束标签灰度）
-//   - 时间 Barlow 18 + 状态；科目标签 + 大小课标签；任课老师头像 + 名称 + 副行提示文案
+//   - 时间 Barlow 18 + 状态；科目标签；任课老师头像 + 名称 + 副行提示文案
 //   - 数据为空时白卡保留，并展示占位文案
 // =============================================================================
 
@@ -1694,12 +1694,7 @@ class _LessonRowData {
     required this.avatarSeed,
     required this.teacherName,
     required this.courseName,
-    required this.courseColor,
-    required this.courseBg,
-    required this.tag,
-    required this.tagDotColor,
     required this.hint,
-    required this.isSmallCourse,
     this.avatarUrl = '',
     this.logoUrl = '',
   });
@@ -1714,12 +1709,7 @@ class _LessonRowData {
   final String logoUrl;
   final String teacherName;
   final String courseName;
-  final Color courseColor;
-  final Color courseBg;
-  final String tag;
-  final Color tagDotColor;
   final String hint;
-  final bool isSmallCourse;
 }
 
 class _LessonScheduleData {
@@ -1900,7 +1890,7 @@ class _TeacherScheduleSectionState
   }
 }
 
-/// 首页「今日课表」：当天全部课程，进行中的一节高亮；与首页课程卡、课堂签到
+/// 首页「今日课表」：当天全部课程，进行中的一节高亮；与首页课程卡、课堂考勤
 /// 用同一组件（[AppCourseCard]）和同一份课表数据。
 class _TodayLessonsBoard extends StatelessWidget {
   const _TodayLessonsBoard({
@@ -2214,12 +2204,6 @@ _LessonRowData _lessonRowFromCourse(
   String start,
   String end,
 ) {
-  final typeRaw = row['type'];
-  final type = typeRaw is int
-      ? typeRaw
-      : (int.tryParse(typeRaw?.toString() ?? '') ?? 0);
-  final isSmall = type == 1;
-
   final className = _schedulePickString(row, ['className', 'class'], '');
   final teacher = _schedulePickString(row, [
     'teacherRealname',
@@ -2246,18 +2230,6 @@ _LessonRowData _lessonRowFromCourse(
       : (teacher.isNotEmpty ? teacher : '—');
   final avatarSeed = teacher.isNotEmpty ? teacher : displayName;
 
-  var courseColor = isSmall ? AppColors.success : AppColors.brand;
-  var courseBg = isSmall ? AppColors.successSoft : AppColors.brandTint;
-  var tagDotColor = courseColor;
-
-  final hex = _schedulePickString(row, ['color'], '');
-  final parsed = _parseDashboardHexColor(hex);
-  if (parsed != null) {
-    courseColor = parsed;
-    courseBg = parsed.withValues(alpha: 0.14);
-    tagDotColor = parsed;
-  }
-
   final mins = _minutesBetweenHm(start, end);
   final hintParts = <String>[];
   if (mins > 0) hintParts.add('$mins分钟');
@@ -2270,12 +2242,7 @@ _LessonRowData _lessonRowFromCourse(
     avatarUrl: resolveScheduleTeacherHeadUrl(row),
     teacherName: displayName,
     courseName: subjectName,
-    courseColor: courseColor,
-    courseBg: courseBg,
-    tag: isSmall ? '小课' : '大课',
-    tagDotColor: tagDotColor,
     hint: hint,
-    isSmallCourse: isSmall,
   );
 }
 
@@ -2382,17 +2349,6 @@ _LessonSlotPhase _slotPhase(DateTime now, String startHm, String endHm) {
   };
 }
 
-Color? _parseDashboardHexColor(String hex) {
-  var s = hex.trim();
-  if (s.isEmpty) return null;
-  if (s.startsWith('#')) s = s.substring(1);
-  if (s.length == 6) s = 'FF$s';
-  if (s.length != 8) return null;
-  final v = int.tryParse(s, radix: 16);
-  if (v == null) return null;
-  return Color(v);
-}
-
 /// 与 [_LessonScheduleCard] 单节课时的自然高度一致，空态与有课时白卡高度不跳。
 
 class _LessonScheduleCard extends StatelessWidget {
@@ -2413,7 +2369,6 @@ class _LessonScheduleCard extends StatelessWidget {
       startTime: data.startTime,
       endTime: data.endTime,
       subject: row.courseName,
-      isSmallCourse: row.isSmallCourse,
       teacherName: row.teacherName,
       subtitle: row.hint,
       status: switch (data.phase) {
@@ -2421,7 +2376,6 @@ class _LessonScheduleCard extends StatelessWidget {
         _LessonSlotPhase.inProgress => AppCourseStatus.inProgress,
         _LessonSlotPhase.upcoming => AppCourseStatus.upcoming,
       },
-      classKindDotColor: data.isPast ? null : row.tagDotColor,
       avatar: AppAvatar(
         name: row.avatarSeed,
         url: row.avatarUrl,

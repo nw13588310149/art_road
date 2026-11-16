@@ -453,14 +453,7 @@ _ParsedMySchoolClass _parseMySchoolClass(dynamic raw, String currentUserId) {
     'name',
     'groupName',
   ], '我的班级');
-  final typeRaw = schoolClass?['type'];
-  final type = typeRaw is int
-      ? typeRaw
-      : (int.tryParse(typeRaw?.toString() ?? '') ?? 0);
-  final typeLabel = type == 1 ? '小班' : '大班';
   final description = _pickString(schoolClass ?? {}, ['description'], '');
-  final subtitleParts = <String>[typeLabel];
-  if (description.isNotEmpty) subtitleParts.add(description);
   final classroom = _pickString(schoolClassroom ?? {}, ['name'], '—');
   final announcement = _pickString(schoolClass ?? {}, ['announcement'], '');
   final footer = announcement.isNotEmpty
@@ -469,7 +462,7 @@ _ParsedMySchoolClass _parseMySchoolClass(dynamic raw, String currentUserId) {
 
   final classInfo = _ClassInfoData(
     name: className,
-    subtitle: subtitleParts.join(' · '),
+    subtitle: description,
     headTeacher: _userDisplayName(headTeacher),
     counselor: _joinDormitoryTeacherNames(dormitoryTeachers, headTeacher),
     classroom: classroom,

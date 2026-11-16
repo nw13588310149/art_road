@@ -12,7 +12,6 @@ import '../../../core/network/api_response.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/network/snowflake_id.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
-import '../../../core/widgets/course_class_kind_tag.dart';
 import '../../../core/widgets/popup_selector_field.dart';
 import '../../../core/widgets/scaled_dialog.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -44,32 +43,6 @@ const Color _kCancelBg = AppColors.line;
 // ============================================================================
 // 数据模型
 // ============================================================================
-
-enum _ClassKind { largeClass, smallClass }
-
-extension on _ClassKind {
-  /// 与后端 `ClassSaveReq.type` 字段的双向映射：0 = 大班，1 = 小班。
-  /// 之前误写为 1 / 2 会让后端把"大班"识别为未知，导致 classSave / classList
-  /// 行为对不上号。
-  int get apiCode => this == _ClassKind.largeClass ? 0 : 1;
-}
-
-/// 解析后端 `type` 字段为 [_ClassKind]。后端字段语义：
-///   - 0 / "0" / 含「大」/ "large" → 大班
-///   - 1 / "1" / 含「小」/ "small" → 小班
-/// 任何无法识别的输入默认按「大班」处理（与未填写时的语义一致）。
-_ClassKind _parseKind(dynamic raw) {
-  if (raw == null) return _ClassKind.largeClass;
-  if (raw is int) {
-    return raw == 1 ? _ClassKind.smallClass : _ClassKind.largeClass;
-  }
-  final s = raw.toString().trim().toLowerCase();
-  if (s.isEmpty) return _ClassKind.largeClass;
-  if (s == '1' || s.contains('小') || s == 'small') {
-    return _ClassKind.smallClass;
-  }
-  return _ClassKind.largeClass;
-}
 
 class _StudentRecord {
   const _StudentRecord({
@@ -329,7 +302,6 @@ class _ClassEntry {
   const _ClassEntry({
     required this.id,
     required this.name,
-    required this.kind,
     required this.code,
     required this.headTeacher,
     required this.classroom,
@@ -467,7 +439,6 @@ class _ClassEntry {
     return _ClassEntry(
       id: id,
       name: name,
-      kind: _parseKind(json['type'] ?? json['classType'] ?? json['kind']),
       code: code,
       headTeacher: teacher,
       logoUrl: logoUrl,
@@ -492,7 +463,6 @@ class _ClassEntry {
   /// 否则 web 端 JS number 精度截断会改写后几位。
   final String id;
   final String name;
-  final _ClassKind kind;
   final String code;
   final String headTeacher;
   final String logoUrl;
@@ -588,7 +558,6 @@ class _ClassEntry {
     return _ClassEntry(
       id: id,
       name: name ?? this.name,
-      kind: kind,
       code: code,
       headTeacher: headTeacher,
       logoUrl: logoUrl,
@@ -675,18 +644,18 @@ List<Map<String, dynamic>> _extractList(ApiResponse resp) {
 /// 1. **顶部白色 banner**（970×62，白→#F9EDFF 微紫渐变 + 16 圆角）：
 ///    左 32 返回按钮 + 居中标题「班级编组」16/600 + 12 灰副标题；右上
 ///    并排 2 枚胶囊按钮 — 「创建班级」+「人员调班」。
-/// 2. **4 张彩色渐变统计卡**（100 高 + 12 圆角）：行政班数（紫）/ 在籍
+/// 2. **4 张彩色渐变统计卡**（100 高 + 12 圆角）：班级数（紫）/ 在籍
 ///    人数（橙）/ 可调班在籍（绿）/ 调班记录（红）。
-/// 3. **「行政班一览」18/500 标题**。
-/// 4. **行政班卡片堆叠列表**：每张白卡（16 圆角 + 12 padding）含
+/// 3. **「班级一览」18/500 标题**。
+/// 4. **班级卡片堆叠列表**：每张白卡（16 圆角 + 12 padding）含
 ///    - **header**：F5F6FA 圆角条，左 36 紫色图标 + 班级名 14/500 +
-///      白色 大课(紫点)/小课(绿点) pill + 「编码·年级·班主任·教学楼·
+///      「编码·年级·班主任·教学楼·
 ///      教室」灰色 meta + 右侧「共 N 人」+ chevron 折叠按钮；
 ///    - **expanded**：3 列学生迷你卡（40 头像 + 名 + 学号 + 专业），
 ///      右上紫色 #D7D5FF cut-corner「在籍」徽章。
 ///
 /// 顶部按钮：
-///   - 「创建班级」→ 右抽屉 [_CreateClassDrawer]：大班/小班 toggle +
+///   - 「创建班级」→ 右抽屉 [_CreateClassDrawer]：
 ///     班级名称 + 班级编码 + 班主任/固定教室 dropdown + 学生名册穿梭框
 ///     (人员库 ↔ 本班名单)；底部 取消 / 创建 按钮。
 ///   - 「人员调班」→ 右抽屉 [_TransferClassDrawer]：班级名称 dropdown +
@@ -997,7 +966,6 @@ class _AdminClassManagementViewState
       orElse: () => const _ClassEntry(
         id: '',
         name: '',
-        kind: _ClassKind.largeClass,
         code: '',
         headTeacher: '',
         classroom: '',
@@ -1116,9 +1084,7 @@ class _AdminClassManagementViewState
             ensureClassTeachers: _ensureClassTeachers,
             ensureClassStudents: _ensureClassStudents,
             onRename: () => _promptRenameClass(entry),
-            onEditClassroom: entry.kind == _ClassKind.largeClass
-                ? () => _promptEditClassroom(entry)
-                : null,
+            onEditClassroom: () => _promptEditClassroom(entry),
           ),
         ),
       ),
@@ -1274,7 +1240,6 @@ class _AdminClassManagementViewState
   }
 
   Future<bool> _submitCreateClass({
-    required _ClassKind kind,
     required String name,
     required String classCode,
     required int campusId,
@@ -1297,24 +1262,17 @@ class _AdminClassManagementViewState
         .where((id) => id.isNotEmpty)
         .join(',');
     // 严格按 ClassSaveReq spec 填齐字段：headTeacherId / classroomId 没有
-    // 时一律传 0（int）；type = 0 大班 / 1 小班；teacherIds 逗号分隔。
+    // 时一律传 0（int）；teacherIds 逗号分隔。
     // campusId 由抽屉里的 _ensureCampuses → dropdown / 单一校区 / 空校区
     // 决定，空校区一律传 0。
     final body = <String, dynamic>{
       'campusId': campusId,
       'name': name.trim(),
       'classCode': classCode.trim(),
-      'type': kind.apiCode,
-      'headTeacherId':
-          (kind == _ClassKind.largeClass &&
-              headTeacher != null &&
-              headTeacher.id.isNotEmpty)
+      'headTeacherId': (headTeacher != null && headTeacher.id.isNotEmpty)
           ? headTeacher.id
           : 0,
-      'classroomId':
-          (kind == _ClassKind.largeClass &&
-              classroom != null &&
-              classroom.id.isNotEmpty)
+      'classroomId': (classroom != null && classroom.id.isNotEmpty)
           ? classroom.id
           : '0',
       'teacherIds': teacherIds,
@@ -1387,7 +1345,7 @@ class _AdminClassManagementViewState
       header: SmartCampusPageBanner(
         titleHorizontalInset: 212,
         title: '班级管理',
-        subtitle: '管理行政班、小班与学生分班',
+        subtitle: '管理班级、任课老师与学生分班',
         onBack: widget.onBack,
         actions: [
           AppButton(
@@ -1409,8 +1367,8 @@ class _AdminClassManagementViewState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _StatsRow(
-            bigClassCount: _summary.bigClassCount,
-            smallClassCount: _summary.smallClassCount,
+            classCount: _summary.classCount,
+            teacherCount: _summary.teacherCount,
             studentCount: _summary.studentCount,
             unassignedStudentCount: _summary.unassignedStudentCount,
           ),
@@ -1419,7 +1377,7 @@ class _AdminClassManagementViewState
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                '行政班一览',
+                '班级一览',
                 style: TextStyle(
                   fontSize: ui(16),
                   height: 1.2,
@@ -1484,14 +1442,14 @@ class _EmptyState extends StatelessWidget {
 
 class _StatsRow extends StatelessWidget {
   const _StatsRow({
-    required this.bigClassCount,
-    required this.smallClassCount,
+    required this.classCount,
+    required this.teacherCount,
     required this.studentCount,
     required this.unassignedStudentCount,
   });
 
-  final int bigClassCount;
-  final int smallClassCount;
+  final int classCount;
+  final int teacherCount;
   final int studentCount;
   final int unassignedStudentCount;
 
@@ -1503,16 +1461,16 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: SmartCampusStatCard(
             backgroundAsset: AppAssets.adminClassManagementStatCard1,
-            label: '大班数量',
-            value: bigClassCount,
+            label: '班级数量',
+            value: classCount,
           ),
         ),
         SizedBox(width: ui(12)),
         Expanded(
           child: SmartCampusStatCard(
             backgroundAsset: AppAssets.adminClassManagementStatCard2,
-            label: '小班数量',
-            value: smallClassCount,
+            label: '任课老师',
+            value: teacherCount,
           ),
         ),
         SizedBox(width: ui(12)),
@@ -1537,7 +1495,7 @@ class _StatsRow extends StatelessWidget {
 }
 
 // ============================================================================
-// 行政班卡片：header + 折叠 / 展开 学生网格
+// 班级卡片：header + 折叠 / 展开 学生网格
 // ============================================================================
 
 class _ClassCard extends StatelessWidget {
@@ -1680,12 +1638,6 @@ class _ClassHeader extends StatelessWidget {
                             fit: BoxFit.contain,
                           ),
                         ),
-                      ),
-                      SizedBox(width: ui(4)),
-                      AppTag(
-                        label: entry.kind == _ClassKind.smallClass
-                            ? '小班'
-                            : '大班',
                       ),
                     ],
                   ),
@@ -1980,12 +1932,11 @@ class _MiniAvatar extends StatelessWidget {
 }
 
 // ============================================================================
-// 「创建行政班」右抽屉
+// 「创建班级」右抽屉
 // ============================================================================
 
 typedef _CreateClassSubmit =
     Future<bool> Function({
-      required _ClassKind kind,
       required String name,
       required String classCode,
       required int campusId,
@@ -2029,7 +1980,6 @@ class _CreateClassDrawer extends StatefulWidget {
 }
 
 class _CreateClassDrawerState extends State<_CreateClassDrawer> {
-  _ClassKind _kind = _ClassKind.largeClass;
   final _nameCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
   _TeacherOption? _headTeacher;
@@ -2183,7 +2133,6 @@ class _CreateClassDrawerState extends State<_CreateClassDrawer> {
     }
     setState(() => _submitting = true);
     final ok = await widget.onSubmit(
-      kind: _kind,
       name: _nameCtrl.text,
       classCode: _codeCtrl.text,
       campusId: _selectedCampus?.id ?? 0,
@@ -2200,7 +2149,6 @@ class _CreateClassDrawerState extends State<_CreateClassDrawer> {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    final isLarge = _kind == _ClassKind.largeClass;
     return Material(
       color: Colors.transparent,
       child: SizedBox(
@@ -2212,18 +2160,13 @@ class _CreateClassDrawerState extends State<_CreateClassDrawer> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _DrawerTitleBar(title: '创建行政班'),
+                _DrawerTitleBar(title: '创建班级'),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(ui(20), ui(20), ui(20), ui(8)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _ClassKindSelector(
-                          value: _kind,
-                          onChanged: (v) => setState(() => _kind = v),
-                        ),
-                        SizedBox(height: ui(20)),
                         _FormRowDouble(
                           leftLabel: '班级名称',
                           leftField: _PlainInput(controller: _nameCtrl),
@@ -2245,47 +2188,43 @@ class _CreateClassDrawerState extends State<_CreateClassDrawer> {
                             ),
                           ),
                         ],
-                        if (isLarge) ...[
-                          SizedBox(height: ui(20)),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _FormColumn(
-                                  label: '班主任',
-                                  child: PopupSelectorField<_TeacherOption?>(
-                                    value: _headTeacher,
-                                    items: <_TeacherOption?>[
-                                      null,
-                                      ..._allTeachers,
-                                    ],
-                                    itemLabel: (t) =>
-                                        t == null ? '请选择' : t.name,
-                                    onChanged: (t) =>
-                                        setState(() => _headTeacher = t),
-                                  ),
+                        SizedBox(height: ui(20)),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _FormColumn(
+                                label: '班主任',
+                                child: PopupSelectorField<_TeacherOption?>(
+                                  value: _headTeacher,
+                                  items: <_TeacherOption?>[
+                                    null,
+                                    ..._allTeachers,
+                                  ],
+                                  itemLabel: (t) => t == null ? '请选择' : t.name,
+                                  onChanged: (t) =>
+                                      setState(() => _headTeacher = t),
                                 ),
                               ),
-                              SizedBox(width: ui(32)),
-                              Expanded(
-                                child: _FormColumn(
-                                  label: '固定教室',
-                                  child: PopupSelectorField<_ClassroomOption?>(
-                                    value: _classroom,
-                                    items: <_ClassroomOption?>[
-                                      null,
-                                      ..._classrooms,
-                                    ],
-                                    itemLabel: (r) =>
-                                        r == null ? '请选择' : r.name,
-                                    onChanged: (r) =>
-                                        setState(() => _classroom = r),
-                                  ),
+                            ),
+                            SizedBox(width: ui(32)),
+                            Expanded(
+                              child: _FormColumn(
+                                label: '固定教室',
+                                child: PopupSelectorField<_ClassroomOption?>(
+                                  value: _classroom,
+                                  items: <_ClassroomOption?>[
+                                    null,
+                                    ..._classrooms,
+                                  ],
+                                  itemLabel: (r) => r == null ? '请选择' : r.name,
+                                  onChanged: (r) =>
+                                      setState(() => _classroom = r),
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                         SizedBox(height: ui(20)),
                         Text(
                           '任课老师',
@@ -2906,65 +2845,6 @@ class _DrawerFooter extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ClassKindSelector extends StatelessWidget {
-  const _ClassKindSelector({required this.value, required this.onChanged});
-
-  final _ClassKind value;
-  final ValueChanged<_ClassKind> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    Widget cell(_ClassKind kind, String label) {
-      final selected = kind == value;
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onChanged(kind),
-        child: Container(
-          height: ui(64),
-          padding: EdgeInsets.symmetric(horizontal: ui(20)),
-          decoration: BoxDecoration(
-            color: selected ? _kPanelHeaderBg : _kSubBg,
-            borderRadius: BorderRadius.circular(ui(16)),
-            border: Border.all(
-              color: selected ? _kPurple : Colors.transparent,
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              _PurpleCheckbox(checked: selected),
-              SizedBox(width: ui(12)),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.fade,
-                  style: TextStyle(
-                    fontSize: ui(14),
-                    height: 24 / 14,
-                    fontWeight: AppFont.w500,
-                    color: AppColors.ink,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        Expanded(child: cell(_ClassKind.largeClass, '大班（班主任 + 教室）')),
-        SizedBox(width: ui(20)),
-        Expanded(child: cell(_ClassKind.smallClass, '小班（任课老师）')),
-      ],
     );
   }
 }
@@ -3701,7 +3581,7 @@ class _TeacherTransferList extends StatelessWidget {
 // 「班级详情」只读抽屉
 // ============================================================================
 
-/// 行政班右抽屉详情视图。
+/// 班级右抽屉详情视图。
 ///
 /// 数据来源：
 /// - 班级基本信息 / 班主任资料：直接复用列表里同一条 [_ClassEntry]；
@@ -3807,12 +3687,6 @@ class _ClassDetailDrawerState extends State<_ClassDetailDrawer> {
                               _ClassDetailRow(
                                 label: '班级编码：',
                                 value: entry.code.isEmpty ? '—' : entry.code,
-                              ),
-                              _ClassDetailRow(
-                                label: '班级类型：',
-                                value: entry.kind == _ClassKind.largeClass
-                                    ? '大班'
-                                    : '小班',
                               ),
                               _ClassDetailRow(
                                 label: '学生人数：',
@@ -3927,10 +3801,6 @@ class _ClassDetailHero extends StatelessWidget {
                           color: _kTextPrimary,
                         ),
                       ),
-                    ),
-                    SizedBox(width: ui(8)),
-                    CourseClassKindTag(
-                      isSmall: entry.kind == _ClassKind.smallClass,
                     ),
                   ],
                 ),

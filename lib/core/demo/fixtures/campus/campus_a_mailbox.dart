@@ -236,7 +236,7 @@ abstract final class CampusAMailbox {
       <String, dynamic>{
         'id': '4301',
         'content': student
-            ? '课堂签到页能不能显示离下课还有多久？经常不知道什么时候该签退。'
+            ? '课堂考勤页能不能显示离下课还有多久？画长期作品时经常忘了时间。'
             : '查寝记录导出希望能按班级筛选，方便发给班主任。',
         'createTime': CampusA.ago(days: 9, hours: 1, minutes: 42),
         'replyContent': student

@@ -7,7 +7,6 @@ class StudentCheckInState {
   const StudentCheckInState({
     this.loading = true,
     this.submitting = false,
-    this.loadingDetailCourseId = '',
     this.loadingHistory = false,
     this.todayCourses = const <StudentTodayCourse>[],
     this.selectedCourseId,
@@ -24,7 +23,6 @@ class StudentCheckInState {
 
   final bool loading;
   final bool submitting;
-  final String loadingDetailCourseId;
   final bool loadingHistory;
   final List<StudentTodayCourse> todayCourses;
   final String? selectedCourseId;
@@ -50,7 +48,6 @@ class StudentCheckInState {
   StudentCheckInState copyWith({
     bool? loading,
     bool? submitting,
-    String? loadingDetailCourseId,
     bool? loadingHistory,
     List<StudentTodayCourse>? todayCourses,
     String? selectedCourseId,
@@ -63,18 +60,13 @@ class StudentCheckInState {
     String? historyError,
     String? makeupError,
     bool? loadingMakeup,
-    bool clearSelectedCourseId = false,
   }) {
     return StudentCheckInState(
       loading: loading ?? this.loading,
       submitting: submitting ?? this.submitting,
-      loadingDetailCourseId:
-          loadingDetailCourseId ?? this.loadingDetailCourseId,
       loadingHistory: loadingHistory ?? this.loadingHistory,
       todayCourses: todayCourses ?? this.todayCourses,
-      selectedCourseId: clearSelectedCourseId
-          ? null
-          : (selectedCourseId ?? this.selectedCourseId),
+      selectedCourseId: selectedCourseId ?? this.selectedCourseId,
       todayTitle: todayTitle ?? this.todayTitle,
       stats: stats ?? this.stats,
       recentRecords: recentRecords ?? this.recentRecords,

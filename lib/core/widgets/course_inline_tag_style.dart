@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 
-/// 课程卡时间行内联标签（[CourseSubjectTag] / [CourseClassKindTag]）共用盒模型。
+/// 课程卡时间行内联标签（[CourseSubjectTag]）的盒模型。
 abstract final class CourseInlineTagStyle {
   CourseInlineTagStyle._();
 
@@ -26,7 +26,7 @@ abstract final class CourseInlineTagStyle {
     );
   }
 
-  /// 与 [CourseClassKindTag] 默认 `outlined: true` 时完全一致的标签外壳。
+  /// 标签外壳：圆角 4，`outlined` 时带 1px 描边。
   static Widget build({
     required double Function(double) ui,
     required Color backgroundColor,

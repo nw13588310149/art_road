@@ -21,29 +21,8 @@ const List<Color> scheduleColorPalette = <Color>[
   Color(0xFFC5EBAA),
 ];
 
-/// 颜色选择器默认色（色板首色 #8C63FF）。
+/// 颜色选择器默认色（色板首色 #8C63FF）；接口没有给课程色时课卡也用它。
 const Color scheduleDefaultPickerColor = Color(0xFF8C63FF);
-
-enum ScheduleCardThemeKind { smallOrange, smallBlue, bigStandard, bigExtended }
-
-/// 无 API `color` 时，按课卡 kind 取默认背景色。
-Color scheduleDefaultBg(ScheduleCardThemeKind kind) {
-  switch (kind) {
-    case ScheduleCardThemeKind.smallOrange:
-      return scheduleColorPalette[7];
-    case ScheduleCardThemeKind.smallBlue:
-      return scheduleColorPalette[3];
-    case ScheduleCardThemeKind.bigStandard:
-      return scheduleColorPalette[0];
-    case ScheduleCardThemeKind.bigExtended:
-      return scheduleColorPalette[2];
-  }
-}
-
-bool scheduleIsSmallKind(ScheduleCardThemeKind kind) {
-  return kind == ScheduleCardThemeKind.smallOrange ||
-      kind == ScheduleCardThemeKind.smallBlue;
-}
 
 /// 根据背景亮度选择标题文字色，保证对比度。
 Color scheduleTitleColorForBackground(Color bg) {

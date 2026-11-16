@@ -186,7 +186,6 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
     ('taskCount', '作品任务', ' 个'),
     ('taskReviewRate', '批改率', '%'),
     ('scoreChange', '成绩变化', ' 分'),
-    ('studentRating', '学生评价', ' 分'),
     ('adjustRate', '调分率', '%'),
   ];
 
@@ -215,7 +214,7 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
     }
     return AppCard(
       title: '履职概览',
-      subtitle: '及时率与签到为近 7 天；作品、质量与学生评价为近 30 天。成绩变化对比最近两次模考。',
+      subtitle: '及时率与签到为近 7 天；作品与质量为近 30 天。成绩变化对比最近两次模考。',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: AppSpace.s12,

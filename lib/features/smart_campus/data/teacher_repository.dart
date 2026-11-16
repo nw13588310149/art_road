@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -17,15 +16,12 @@ import '../../../core/providers/app_providers.dart';
 ///
 /// 与教师视图相关的几个核心接口：
 ///   - [headTeacherIndex]                班主任班级工作台首页聚合
-///   - [classList]                       我教的班级列表（可按 type 过滤）
+///   - [classList]                       我教的班级列表
 ///   - [classroomList]                   教室下拉列表
 ///   - [courseList]                      我的课表（按 begin/end 日期过滤）
 ///   - [courseTeacherNoticeList]         任课老师首页通知列表
 ///   - [headTeacherNoticeList]           班主任首页通知列表
 ///   - [noticeDetail]                    校级通知详情
-///   - [schoolSmallCourseApplySave]      提交"申请小课"
-///   - [schoolSmallCourseApplyList]      我的小课申请列表
-///   - [schoolSmallCourseApplyDetail]    我的小课申请详情
 final teacherRepositoryProvider = Provider<TeacherRepository>((ref) {
   final client = ref.watch(apiClientProvider);
   return TeacherRepository(client: client);
@@ -270,19 +266,12 @@ class TeacherRepository {
   /// 任课老师"我教的班级"列表。后端基于 token 自动过滤为当前老师任教
   /// 或担任班主任的班级。
   ///
-  /// - `type`: 班级类型过滤，`0 = 大班`，`1 = 小班`；不传 = 全量（大 + 小）。
-  ///   申请小课抽屉拉全量班级；`studentList` 的 `type` 与所选班级类型对齐。
   /// - `isClassTeacher`: 是不是任课老师。任课老师端（授课课表 / 签课 / 学生名册 /
   ///   作品批改 / 考评管理等）调用统一传 `1`，让后端按"我任教的班级"过滤。
   /// - `isHeadTeacher`: 是不是班主任。班主任端调用本接口时传 `1`，让后端按
   ///   "我担任班主任的班级"过滤；不传 = 不按该字段过滤。
-  Future<ApiResponse> classList({
-    int? type,
-    int? isClassTeacher,
-    int? isHeadTeacher,
-  }) {
+  Future<ApiResponse> classList({int? isClassTeacher, int? isHeadTeacher}) {
     final body = <String, dynamic>{};
-    if (type != null) body['type'] = type;
     if (isClassTeacher != null) body['isClassTeacher'] = isClassTeacher;
     if (isHeadTeacher != null) body['isHeadTeacher'] = isHeadTeacher;
     return client.post('$_base/classList', data: body);
@@ -370,7 +359,7 @@ class TeacherRepository {
     );
   }
 
-  /// 大班课签到详情，包含学生名单与当前签到状态。
+  /// 一节课的签课详情，包含学生名单与当前签到状态。
   Future<ApiResponse> courseClassSignDetail({required String courseId}) {
     return client.post(
       '$_base/courseClassSignDetail',
@@ -380,7 +369,7 @@ class TeacherRepository {
     );
   }
 
-  /// 大班课全班一键签到。每名学生可分别指定 0-出勤 / 1-缺勤 / 2-迟到 / 3-请假。
+  /// 全班一键签课。每名学生可分别指定 0-出勤 / 1-缺勤 / 2-迟到 / 3-请假。
   Future<ApiResponse> courseClassSignAll({
     required String courseId,
     required List<Map<String, dynamic>> students,
@@ -394,7 +383,7 @@ class TeacherRepository {
     );
   }
 
-  /// 修改单个学生的大班课签到状态。
+  /// 修改单个学生的签到状态。
   Future<ApiResponse> courseClassStudentSignUpdate({
     required String courseId,
     required String studentId,
@@ -430,89 +419,9 @@ class TeacherRepository {
     );
   }
 
-  /// 教师小课上课签到。App 端请求体仅包含 `courseId`。
-  Future<ApiResponse> courseTeacherSignIn({required String courseId}) {
-    return client.post(
-      '$_base/courseTeacherSignIn',
-      data: <String, dynamic>{
-        'courseId': readSnowflakeId(courseId) ?? courseId,
-      },
-    );
-  }
-
-  /// 教师小课下课签到。App 端请求体仅包含 `courseId`。
-  Future<ApiResponse> courseTeacherSignOut({required String courseId}) {
-    return client.post(
-      '$_base/courseTeacherSignOut',
-      data: <String, dynamic>{
-        'courseId': readSnowflakeId(courseId) ?? courseId,
-      },
-    );
-  }
-
   /// 班主任编辑班级群资料。当前用于更新群聊名称与头像。
   Future<ApiResponse> classUpdate(Map<String, dynamic> body) {
     return client.post('$_base/classUpdate', data: body);
-  }
-
-  // ============== 小班课申请 ==============
-
-  /// 提交"申请小课"。
-  ///
-  /// 期望字段（与后端 swagger 对齐，调用方需自行组装）：
-  /// ```json
-  /// {
-  ///   "classId": "1788178798952914945",
-  ///   "classroomId": 1,
-  ///   "color": "#ff0000",
-  ///   "courseList": [
-  ///     {
-  ///       "classId": "1798658711795392514",
-  ///       "classroomId": 1,
-  ///       "color": "#ff0000",
-  ///       "date": "2026-05-30",
-  ///       "lineNum": 1,
-  ///       "subjectId": 1,
-  ///       "teacherId": "1788178798952914945",
-  ///       "studentIds": ["1795667363756507137"]
-  ///     }
-  ///   ],
-  ///   "endDate": "2026-05-08",
-  ///   "lineNum": 1,
-  ///   "startDate": "2026-05-08",
-  ///   "subjectId": 1,
-  ///   "forceSubmit": false
-  /// }
-  /// ```
-  ///
-  /// `courseList[].studentIds` 为参与学生雪花 id 列表；不传或空表示全班。
-  /// 雪花 long（`classId` / `teacherId` / `studentIds`）必须以字符串形式提交，
-  /// 避免在 web 端因 JS Number 53bit 精度丢失。日期字段统一使用 `yyyy-MM-dd`。
-  Future<ApiResponse> schoolSmallCourseApplySave(Map<String, dynamic> body) {
-    final encoded = _encodeSmallCourseApplySaveBody(body);
-    if (encoded == null) {
-      return Future.value(ApiResponse.failure('小课申请参数格式错误'));
-    }
-    return client.post('$_base/schoolSmallCourseApplySave', data: encoded);
-  }
-
-  /// 我的小班课申请列表。`current` / `size` 默认 1 / 10，与 swagger 一致。
-  Future<ApiResponse> schoolSmallCourseApplyList({
-    int current = 1,
-    int size = 10,
-  }) {
-    return client.post(
-      '$_base/schoolSmallCourseApplyList',
-      data: <String, dynamic>{'current': current, 'size': size},
-    );
-  }
-
-  /// 我的小班课申请详情。`id` 直接用后端原始字符串，兼容雪花 long。
-  Future<ApiResponse> schoolSmallCourseApplyDetail(String id) {
-    return client.post(
-      '$_base/schoolSmallCourseApplyDetail',
-      data: <String, dynamic>{'id': id},
-    );
   }
 
   // ============== 班级通知（班主任端） ==============
@@ -1092,48 +1001,4 @@ class TeacherRepository {
       data: <String, dynamic>{'id': readSnowflakeId(id) ?? id},
     );
   }
-}
-
-/// 小课申请请求体编码：`courseList[].studentIds` 按 Swagger int64 数组写入，
-/// 避免 Web 端 JSON number 精度截断。
-String? _encodeSmallCourseApplySaveBody(Map<String, dynamic> body) {
-  final courseList = body['courseList'];
-  if (courseList is! List || courseList.isEmpty) return null;
-
-  final courseEntries = <String>[];
-  for (final rawItem in courseList) {
-    if (rawItem is! Map) return null;
-    final item = Map<String, dynamic>.from(rawItem);
-    final parts = <String>[];
-    for (final entry in item.entries) {
-      final value = entry.value;
-      if (value == null) continue;
-      final key = jsonEncode(entry.key);
-      if (entry.key == 'studentIds') {
-        if (value is! Iterable) return null;
-        final literals = <String>[];
-        for (final id in value) {
-          final sid = readSnowflakeId(id);
-          if (sid == null || !RegExp(r'^\d+$').hasMatch(sid)) return null;
-          literals.add(sid);
-        }
-        parts.add('$key:[${literals.join(',')}]');
-        continue;
-      }
-      parts.add('$key:${jsonEncode(value)}');
-    }
-    courseEntries.add('{${parts.join(',')}}');
-  }
-
-  final topParts = <String>[];
-  for (final entry in body.entries) {
-    if (entry.key == 'courseList') {
-      topParts.add('${jsonEncode(entry.key)}:[${courseEntries.join(',')}]');
-      continue;
-    }
-    final value = entry.value;
-    if (value == null) continue;
-    topParts.add('${jsonEncode(entry.key)}:${jsonEncode(value)}');
-  }
-  return '{${topParts.join(',')}}';
 }

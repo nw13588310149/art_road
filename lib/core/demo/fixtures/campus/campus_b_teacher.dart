@@ -1,9 +1,7 @@
 /// 智慧校园 · 任课老师端演示接口（`/app/school/v2/teacher/*` 中与授课相关的
-/// 部分）：身份、班级与课表、签课、小课申请、校级通知、学生名册、考评与作品、
+/// 部分）：身份、班级与课表、签课、校级通知、学生名册、考评与作品、
 /// 我的请假。班主任端的接口见 campus_b_head_teacher.dart。
 library;
-
-import 'dart:convert';
 
 import '../../data/demo_marking_data.dart';
 import '../../demo_accounts.dart';
@@ -31,12 +29,6 @@ void registerCampusBTeacher(DemoRouter r) {
   r.post('$_base/courseClassSignAll', _signAll);
   r.post('$_base/courseClassStudentSignUpdate', _signStudentUpdate);
   r.post('$_base/courseTeacherSignHistory', _signHistory);
-  r.post('$_base/courseTeacherSignIn', _teacherSignIn);
-  r.post('$_base/courseTeacherSignOut', _teacherSignOut);
-
-  r.post('$_base/schoolSmallCourseApplySave', _applySave);
-  r.post('$_base/schoolSmallCourseApplyList', _applyList);
-  r.post('$_base/schoolSmallCourseApplyDetail', _applyDetail);
 
   r.post(
     '$_base/courseTeacherNoticeList',
@@ -97,15 +89,12 @@ Object? _teacherRole(DemoRequest req) {
 
 Object? _classList(DemoRequest req) {
   final scope = cbScope(req);
-  final type = cbStr(req.value('type')).isEmpty ? null : req.intOf('type');
   final ids = req.intOf('isHeadTeacher') == 1
       ? scope.headClassIds
       : scope.teachingClassIds;
   return [
     for (final id in ids)
-      if (cbClass(id) case final c?
-          when type == null || cbInt(c['type']) == type)
-        cbClassJson(c),
+      if (cbClass(id) case final c?) cbClassJson(c),
   ];
 }
 
@@ -267,13 +256,12 @@ Map<String, dynamic> _historyRow(CbCourse c, CbScope scope) {
     ...cbCourseRow(c, sign: sign),
     'teacherId': scope.account.userId,
     'signInTime': sign['teacherSignInTime'],
-    'signOutTime': sign['teacherSignOutTime'],
     'shouldCount': shouldCount,
     'presentCount': counts.present + counts.late,
     'lateCount': counts.late,
     'absentCount': counts.absent,
     'leaveCount': counts.leave,
-    'method': c.isSmall ? '教师上下课签' : '教师一键签到',
+    'method': '教师一键签课',
   };
 }
 
@@ -379,117 +367,6 @@ Object? _signStudentUpdate(DemoRequest req) {
     remark: req.str('remark'),
   );
   return true;
-}
-
-Object? _teacherSignIn(DemoRequest req) {
-  final course = _courseOf(req);
-  final sign = cbSignOf(course);
-  if (cbInt(sign['signStatus']) >= 1) {
-    throw const DemoApiException('已完成上课签到');
-  }
-  sign['signStatus'] = 1;
-  sign['teacherSignInTime'] = cbDateTime(DateTime.now());
-  cbSaveSign(course, sign);
-  return true;
-}
-
-Object? _teacherSignOut(DemoRequest req) {
-  final course = _courseOf(req);
-  final sign = cbSignOf(course);
-  final status = cbInt(sign['signStatus']);
-  if (status < 2) {
-    throw const DemoApiException('请等待学生完成上课签到');
-  }
-  if (status >= 3) {
-    throw const DemoApiException('已完成下课签到');
-  }
-  sign['signStatus'] = 3;
-  sign['teacherSignOutTime'] = cbDateTime(DateTime.now());
-  cbSaveSign(course, sign);
-  return true;
-}
-
-// ── 小课申请 ──────────────────────────────────────────────────────────
-
-Object? _applySave(DemoRequest req) {
-  final scope = cbScope(req);
-  final children = <Map<String, dynamic>>[];
-  for (final item in req.listOf('courseList')) {
-    if (item is! Map) {
-      continue;
-    }
-    final date = cbStr(item['date']);
-    if (cbParseDay(date) == null) {
-      continue;
-    }
-    children.add(<String, dynamic>{
-      'classId': cbStr(item['classId'], req.str('classId')),
-      'classroomId': cbInt(item['classroomId'], req.intOf('classroomId')),
-      'color': cbStr(item['color'], req.str('color', '#ACFBBA')),
-      'date': date,
-      'lineNum': cbInt(item['lineNum'], req.intOf('lineNum', 1)),
-      'subjectId': cbInt(item['subjectId'], req.intOf('subjectId', 38)),
-      'teacherId': cbStr(item['teacherId'], scope.userId),
-      'studentIds': cbStrList(item['studentIds']),
-    });
-  }
-  if (children.isEmpty) {
-    throw const DemoApiException('请至少选择一个上课日期');
-  }
-  if (cbStrList(children.first['studentIds']).isEmpty) {
-    throw const DemoApiException('请至少勾选一名参与学生');
-  }
-  final classId = req.str('classId', cbStr(children.first['classId']));
-  if (cbClass(classId) == null) {
-    throw const DemoApiException('班级不存在');
-  }
-  final subjectId = req.intOf(
-    'subjectId',
-    cbInt(children.first['subjectId'], 38),
-  );
-  cbApplies().add(<String, dynamic>{
-    'id': DemoStore.nextId(),
-    'schoolId': '1',
-    'classId': classId,
-    'teacherId': scope.userId,
-    'subjectId': subjectId,
-    'subjectName': cbSubjectNameOf(subjectId) ?? scope.staff?.subject ?? '素描',
-    'lineNum': req.intOf('lineNum', cbInt(children.first['lineNum'], 1)),
-    'color': req.str('color', cbStr(children.first['color'], '#ACFBBA')),
-    'classroomId': req.intOf(
-      'classroomId',
-      cbInt(children.first['classroomId']),
-    ),
-    'status': 0,
-    'reason': '',
-    'createTime': cbDateTime(DateTime.now()),
-    'auditTime': null,
-    'auditTeacherId': null,
-    'startDate': req.str('startDate', cbStr(children.first['date'])),
-    'endDate': req.str('endDate', cbStr(children.last['date'])),
-    'courseData': jsonEncode(children),
-  });
-  cbSaveApplies();
-  return true;
-}
-
-Object? _applyList(DemoRequest req) {
-  final scope = cbScope(req);
-  final rows = [
-    for (final apply in cbApplies())
-      if (scope.ownsTeacher(apply['teacherId'])) apply,
-  ]..sort((a, b) => cbStr(b['createTime']).compareTo(cbStr(a['createTime'])));
-  return demoPage([for (final a in rows) cbApplyJson(a)], req);
-}
-
-Object? _applyDetail(DemoRequest req) {
-  final id = req.str('id');
-  for (final apply in cbApplies()) {
-    if (cbStr(apply['id']) == id) {
-      return cbApplyJson(apply);
-    }
-  }
-  throw const DemoApiException('申请记录不存在');
 }
 
 // ── 校级通知 ──────────────────────────────────────────────────────────
@@ -598,7 +475,7 @@ Object? _examList(DemoRequest req) {
   final classIds = filter.isEmpty
       ? [
           for (final id in scope.teachingClassIds)
-            if (cbClass(id) case final c? when !cbIsSmallClass(c)) id,
+            if (cbClass(id) != null) id,
         ]
       : [if (scope.all || scope.teachingClassIds.contains(filter)) filter];
   final data = DemoMarkingData.instance;

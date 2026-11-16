@@ -11,6 +11,11 @@
 - After every change run `dart analyze lib test` (must report no issues) and `flutter test --no-pub`. `flutter analyze` crashes on this machine.
 - Dependencies resolve offline only (`flutter pub get --offline`). Do not add packages without the user's approval.
 - No music wording or imagery anywhere: strings, comments, asset names and pictures. Subjects are 素描 / 色彩 / 速写 (plus 美术常识 / 文化课); use `ArtSubject` for subject labels and colors.
+- A studio has one kind of lesson. Never bring back 大课 / 小课 or 大班 / 小班, lesson or class `type` fields, lesson applications, teacher or student sign-in / sign-out, lesson ratings or admin confirmation:
+  - a lesson belongs to a class and is on the timetable the admin arranges in 排课与课表;
+  - the teacher signs the whole class in once (签课: `courseClassSignAll`, `signStatus` 0 or 2) and adjusts single students;
+  - students do not sign in; their 课堂考勤 page is read-only and shows how the teacher marked them;
+  - `test/single_lesson_type_test.dart` and the word scan in `test/smart_campus_views_test.dart` guard this.
 - Every API the app calls must have a demo fixture with art-themed data, and demo data must stay consistent across modules (same students, teachers, exams, timetable, counts and scores). Demo times go through `DemoClock` so they land in daytime.
 - Existing reusable pages must preserve the read-only music reference implementation: page-specific font sizes, weights, dimensions, assets and interactions take priority over the generic token restrictions below. Keep art branding, art content, current routes and working state contracts. New art pages reuse these established controls.
 - UI is built from the component library `lib/core/ui` (import `ui.dart`) and follows `docs/设计规范.md`: brand #715EFE only for primary actions, selected states and key numbers; font sizes 12/13/14/16/20/24/32 only; no tap or press animations (selection switches instantly, only overlays fade, ≤200 ms); confirmations via `showAppConfirm` (`danger: true` for destructive actions); icon-only buttons need a `semanticLabel`.

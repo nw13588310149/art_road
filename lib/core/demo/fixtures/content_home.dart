@@ -55,7 +55,7 @@ Map<String, dynamic> _progress({required bool school}) {
 }
 
 /// 首页「课程」：与智慧校园共用同一份当天课表（[demoTodayCoursesFor]），
-/// 首页周条、课程列表、我的课表、课堂签到看到的是同一批课。
+/// 首页周条、课程列表、我的课表、课堂考勤看到的是同一批课。
 /// 今天没有课时顺延到一周内下一个有课的日子；宿管、管理员没有个人课表，返回空列表。
 List<Map<String, dynamic>> _upcomingCourses(DemoAccount account) {
   final now = DateTime.now();

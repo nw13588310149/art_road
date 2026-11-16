@@ -49,7 +49,7 @@ DashboardCourseRunState resolveDashboardCourseRunStateFromIsoDate(
   return resolveDashboardCourseRunState(now, startHm, endHm, day: day);
 }
 
-/// 首页右侧课程、课堂签到、任课老师今日课表共用的课程卡，渲染 [AppCourseCard]，
+/// 首页右侧课程、课堂考勤、任课老师今日课表共用的课程卡，渲染 [AppCourseCard]，
 /// 高度随内容。
 class DashboardCourseNoticeCard extends StatelessWidget {
   const DashboardCourseNoticeCard({
@@ -57,13 +57,11 @@ class DashboardCourseNoticeCard extends StatelessWidget {
     required this.startTime,
     required this.endTime,
     required this.subjectName,
-    required this.isSmallCourse,
     required this.displayName,
     required this.subtitle,
     required this.avatar,
     required this.runState,
     this.isSelected = false,
-    this.tagDotColor,
     this.statusBadgeLabel,
     this.statusBadgeBackground,
     this.statusBadgeTextColor,
@@ -73,33 +71,17 @@ class DashboardCourseNoticeCard extends StatelessWidget {
   final String startTime;
   final String endTime;
   final String subjectName;
-  final bool isSmallCourse;
   final String displayName;
   final String subtitle;
   final Widget avatar;
   final DashboardCourseRunState runState;
   final bool isSelected;
-  final Color? tagDotColor;
 
   /// 自定义右上角状态（如签到历史「正常 / 缺勤」）；未设置时显示课程阶段。
   final String? statusBadgeLabel;
   final Color? statusBadgeBackground;
   final Color? statusBadgeTextColor;
   final VoidCallback? onTap;
-
-  static Color? dotColorFromHex(String? hex, {required bool ended}) {
-    if (ended) return null;
-    final raw = hex?.trim();
-    if (raw == null || raw.isEmpty) return null;
-    final normalized = raw.startsWith('#') ? raw.substring(1) : raw;
-    if (normalized.length != 6 && normalized.length != 8) return null;
-    final value = int.tryParse(normalized, radix: 16);
-    if (value == null) return null;
-    if (normalized.length == 8) {
-      return Color(value);
-    }
-    return Color(0xFF000000 | value);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +92,6 @@ class DashboardCourseNoticeCard extends StatelessWidget {
       subject: subjectName,
       teacherName: displayName,
       subtitle: subtitle,
-      isSmallCourse: isSmallCourse,
       status: switch (runState) {
         DashboardCourseRunState.ended => AppCourseStatus.ended,
         DashboardCourseRunState.inProgress => AppCourseStatus.inProgress,
@@ -124,7 +105,6 @@ class DashboardCourseNoticeCard extends StatelessWidget {
               background: statusBadgeBackground,
             ),
       avatar: avatar,
-      classKindDotColor: tagDotColor,
       selected: isSelected,
       onTap: onTap,
     );

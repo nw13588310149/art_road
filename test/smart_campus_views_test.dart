@@ -34,6 +34,23 @@ Future<void> _settle(WidgetTester tester, {int steps = 20}) async {
 
 typedef _Open = void Function(SmartCampusController controller);
 
+/// 画室的课只有一种。页面上不应该再出现课型、班型的说法。
+final _lessonKindWords = RegExp('大课|小课(?!件|堂)|大班|小班');
+
+List<String> _lessonKindTexts(WidgetTester tester) {
+  final found = <String>{};
+  for (final widget in tester.allWidgets) {
+    final text = switch (widget) {
+      Text(:final data?) => data,
+      Text(:final textSpan?) => textSpan.toPlainText(),
+      RichText(:final text) => text.toPlainText(),
+      _ => '',
+    };
+    if (_lessonKindWords.hasMatch(text)) found.add(text);
+  }
+  return found.toList();
+}
+
 Future<void> _visitAll(
   WidgetTester tester,
   DemoAccount account,
@@ -84,6 +101,9 @@ Future<void> _visitAll(
       ),
     );
     await _settle(tester, steps: 30);
+    for (final text in _lessonKindTexts(tester)) {
+      errors.add('仍出现课型字样：$text');
+    }
     final dashboardErrors = errors.length;
     if (dashboardErrors > 0) {
       errors.insert(0, '[${account.role.name} 工作台]');
@@ -93,6 +113,9 @@ Future<void> _visitAll(
       final before = errors.length;
       entry.value(controller);
       await _settle(tester);
+      for (final text in _lessonKindTexts(tester)) {
+        errors.add('仍出现课型字样：$text');
+      }
       await interactions[entry.key]?.call(tester);
       if (errors.length > before) {
         errors.insert(before, '[${account.role.name} ${entry.key}]');
@@ -150,6 +173,48 @@ Future<void> _checkExamContentCard(WidgetTester tester) async {
   );
 }
 
+/// 授课课表只读：没有申请入口，也没有查看 / 编辑切换。
+Future<void> _checkTeacherScheduleReadOnly(WidgetTester tester) async {
+  expect(find.textContaining('教学周第'), findsOneWidget);
+  expect(find.text('申请记录'), findsNothing);
+  expect(find.text('编辑'), findsNothing);
+}
+
+/// 签课管理只有一种签课面板：班级名单 + 一键签课。
+Future<void> _checkTeacherAttendance(WidgetTester tester) async {
+  expect(find.text('今日课程'), findsOneWidget);
+  expect(find.text('签到操作'), findsOneWidget);
+  expect(find.text('上课签到'), findsNothing);
+  expect(find.text('下课签到'), findsNothing);
+}
+
+/// 学生的课堂考勤只读：看到课情况，没有签到、签退和评价按钮。
+Future<void> _checkStudentAttendance(WidgetTester tester) async {
+  expect(find.text('课堂考勤'), findsWidgets);
+  expect(find.text('今日课程'), findsOneWidget);
+  expect(find.text('到课情况'), findsWidgets);
+  expect(find.text('最近课堂记录'), findsOneWidget);
+  expect(find.text('上课签到'), findsNothing);
+  expect(find.text('下课签到'), findsNothing);
+  expect(find.textContaining('评价'), findsNothing);
+}
+
+/// 排课与课表只有课表一页，可以切到编辑。
+Future<void> _checkAdminSchedule(WidgetTester tester) async {
+  expect(find.text('查看'), findsOneWidget);
+  expect(find.text('编辑'), findsOneWidget);
+  expect(find.textContaining('审核'), findsNothing);
+  await tester.tap(find.text('编辑'));
+  await _settle(tester, steps: 4);
+  expect(find.text('排课'), findsWidgets);
+}
+
+/// 签课管理只有一张列表，补签审核入口还在。
+Future<void> _checkAdminSign(WidgetTester tester) async {
+  expect(find.text('当日课程节数'), findsOneWidget);
+  expect(find.text('补签审核'), findsOneWidget);
+}
+
 Future<void> _checkMailboxPrivacy(WidgetTester tester) async {
   final anonymous = find.byType(AppSwitch);
   expect(tester.widget<AppSwitch>(anonymous).value, isFalse);
@@ -185,6 +250,8 @@ void main() {
           },
           viewport: viewport,
           interactions: {
+            '授课课表': _checkTeacherScheduleReadOnly,
+            '签课管理': _checkTeacherAttendance,
             '学生名册': _checkRosterMenu,
             '考评管理': _checkExamContentCard,
           },
@@ -213,7 +280,7 @@ void main() {
           {
             '我的课表': (c) => c.openMySchedule(),
             '我的班级': (c) => c.openMyClass(),
-            '课堂签到': (c) => c.openCheckIn(),
+            '课堂考勤': (c) => c.openCheckIn(),
             '我的作品': (c) => c.openMyHomework(),
             '我的考试': (c) => c.openMyGrades(),
             '我的请假': (c) => c.openLeaveManagement(),
@@ -224,6 +291,7 @@ void main() {
           viewport: viewport,
           interactions: {
             '我的班级': _checkClassNotices,
+            '课堂考勤': _checkStudentAttendance,
             '校长信箱': _checkMailboxPrivacy,
           },
         );
@@ -246,16 +314,22 @@ void main() {
     testWidgets(
       'admin campus pages render without overflow at ${viewport.width}',
       (tester) async {
-        await _visitAll(tester, DemoAccounts.admin, {
-          '学生管理': (c) => c.openStudentManagement(),
-          '教师管理': (c) => c.openTeacherManagement(),
-          '班级管理': (c) => c.openClassManagement(),
-          '排课与课表': (c) => c.openScheduleManagement(),
-          '签课管理': (c) => c.openSignManagement(),
-          '教职工请假审批': (c) => c.openDormLeaveApproval(),
-          '人脸库': (c) => c.openFaceLibrary(),
-          '通知管理': (c) => c.openNotificationManagement(),
-        }, viewport: viewport);
+        await _visitAll(
+          tester,
+          DemoAccounts.admin,
+          {
+            '学生管理': (c) => c.openStudentManagement(),
+            '教师管理': (c) => c.openTeacherManagement(),
+            '班级管理': (c) => c.openClassManagement(),
+            '排课与课表': (c) => c.openScheduleManagement(),
+            '签课管理': (c) => c.openSignManagement(),
+            '教职工请假审批': (c) => c.openDormLeaveApproval(),
+            '人脸库': (c) => c.openFaceLibrary(),
+            '通知管理': (c) => c.openNotificationManagement(),
+          },
+          viewport: viewport,
+          interactions: {'排课与课表': _checkAdminSchedule, '签课管理': _checkAdminSign},
+        );
       },
     );
   }

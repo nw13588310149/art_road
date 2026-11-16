@@ -30,16 +30,14 @@ void main() {
 
   test('schedule card carries logo and keeps empty fallback', () {
     final withLogo = buildScheduleCourseCard({
-      'type': 0,
       'className': '联考冲刺1班',
       'subjectName': '素描',
       'logo': 'https://img.example.com/class.jpg',
-    }, 0);
+    });
     final withoutLogo = buildScheduleCourseCard({
-      'type': 0,
       'className': '联考冲刺2班',
       'subjectName': '色彩',
-    }, 0);
+    });
 
     expect(withLogo.logoUrl, 'https://img.example.com/class.jpg');
     expect(withoutLogo.logoUrl, isEmpty);

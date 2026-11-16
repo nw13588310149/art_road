@@ -38,9 +38,6 @@ void registerCampusBAdmin(DemoRouter r) {
   r.post('$_base/courseList', _courseList);
   r.post('$_base/courseBatchSave', _courseBatchSave);
   r.post('$_base/courseDelete', _courseDelete);
-  r.post('$_base/schoolSmallCourseApplyList', _applyList);
-  r.post('$_base/schoolSmallCourseApplyDetail', _applyDetail);
-  r.post('$_base/schoolSmallCourseApplyAudit', _applyAudit);
 
   r.post('$_base/schoolUserFaceList', _faceList);
   r.post('$_base/schoolUserFaceSum', _faceSum);
@@ -49,11 +46,8 @@ void registerCampusBAdmin(DemoRouter r) {
   r.post('$_base/schoolUserFaceSubmit', _faceSubmit);
 
   r.post('$_base/courseSignManager', _signManager);
-  r.post('$_base/courseSignSum0', (req) => _signSum(req, 0));
-  r.post('$_base/courseSignSum1', (req) => _signSum(req, 1));
+  r.post('$_base/courseSignSum0', _signSum);
   r.post('$_base/courseSignUpdateSignStatus', _signUpdate);
-  r.post('$_base/courseCommentList', _commentList);
-  r.post('$_base/courseSignConfirm', _signConfirm);
   r.post('$_base/courseSignMakeupList', _makeupList);
   r.post('$_base/courseSignMakeupDetail', _makeupDetail);
   r.post('$_base/courseSignMakeupAudit', _makeupAudit);
@@ -70,9 +64,6 @@ void registerCampusBAdmin(DemoRouter r) {
 
 // ── 首页 ──────────────────────────────────────────────────────────────
 
-int _pendingApplies() =>
-    cbApplies().where((a) => cbInt(a['status']) == 0).length;
-
 int _pendingTeacherLeaves() =>
     cbTeacherLeaves().where((m) => cbInt(m['status']) == 0).length;
 
@@ -81,30 +72,22 @@ int _pendingFaces() => cbFaces().where((f) => cbInt(f['status']) == 0).length;
 int _pendingSignMakeups() =>
     cbSignMakeups().where((m) => cbInt(m['status']) == 0).length;
 
-/// 近一周等待教务确认的小课（学生已评价）。
-List<CbCourse> _smallCoursesAwaitingConfirm() => [
-  for (final c in cbCoursesBetween(cbAddDays(cbToday(), -6), cbToday()))
-    if (c.isSmall && cbSignStatus(c) == 5) c,
-];
-
 int get _teacherCount =>
     DemoCampusData.staff.where((s) => s.subject.isNotEmpty).length;
 
 Object? _indexSum(DemoRequest req) {
-  final awaiting = _smallCoursesAwaitingConfirm().length;
   final leaves = _pendingTeacherLeaves();
-  final applies = _pendingApplies();
   final faces = _pendingFaces();
   final makeups = _pendingSignMakeups();
   return <String, dynamic>{
     'studentCount': cbPersons.where(cbIsActive).length,
     'teacherCount': _teacherCount,
-    'classCount': cbClasses().where((c) => !cbIsSmallClass(c)).length,
+    'classCount': cbClasses().length,
     'leaveStatus0Count': leaves,
     'postStatus0Count': circlePendingReportCount(),
-    'smallCourseSignStatus5Count': awaiting,
+    'courseSignMakeupStatus0Count': makeups,
     'userFaceNotRecordedCount': cbFaceMissingCount(),
-    'toDoTodayCount': leaves + applies + faces + makeups + awaiting,
+    'toDoTodayCount': leaves + faces + makeups,
   };
 }
 
@@ -150,9 +133,6 @@ Object? _workReminders(DemoRequest req) {
   }
   final yesterday = cbAddDays(cbToday(), -1);
   for (final c in cbClasses()) {
-    if (cbIsSmallClass(c)) {
-      continue;
-    }
     final absent = <String>[];
     for (final sid in cbActiveStudents(c['id'])) {
       final p = cbPerson(sid);
@@ -169,20 +149,12 @@ Object? _workReminders(DemoRequest req) {
       });
     }
   }
-  final applies = _pendingApplies();
-  if (applies > 0) {
-    reminders.add(<String, dynamic>{
-      'tag': '排课',
-      'title': '$applies 条小课申请待审核',
-      'subtitle': '请在「排课与课表 · 小课申请审核」中处理，通过后自动写入课表。',
-    });
-  }
-  final awaiting = _smallCoursesAwaitingConfirm();
-  if (awaiting.isNotEmpty) {
+  final makeups = _pendingSignMakeups();
+  if (makeups > 0) {
     reminders.add(<String, dynamic>{
       'tag': '签课',
-      'title': '${awaiting.length} 节小课待教务确认',
-      'subtitle': '学生已完成课后评价，确认后计入老师课时。',
+      'title': '$makeups 条课堂补签待审核',
+      'subtitle': '请在「签课管理 · 补签审核」中处理，通过后学生当节课记为出勤。',
     });
   }
   final faces = _pendingFaces();
@@ -225,26 +197,21 @@ Object? _campusList(DemoRequest req) => [
 ];
 
 Object? _classList(DemoRequest req) {
-  final type = cbStr(req.value('type')).isEmpty ? null : req.intOf('type');
   final onlyHead = req.intOf('isHeadTeacher') == 1;
   return [
     for (final c in cbClasses())
-      if ((type == null || cbInt(c['type']) == type) &&
-          (!onlyHead || cbStr(c['headTeacherId'], '0') != '0'))
-        cbClassJson(c),
+      if (!onlyHead || cbStr(c['headTeacherId'], '0') != '0') cbClassJson(c),
   ];
 }
 
 Object? _classSum(DemoRequest req) {
   final classes = cbClasses();
   final assigned = <String>{
-    for (final c in classes)
-      if (!cbIsSmallClass(c)) ...cbStrList(c['studentIds']),
+    for (final c in classes) ...cbStrList(c['studentIds']),
   };
   final active = cbPersons.where(cbIsActive).toList();
   return <String, dynamic>{
-    'bigClassCount': classes.where((c) => !cbIsSmallClass(c)).length,
-    'smallClassCount': classes.where(cbIsSmallClass).length,
+    'classCount': classes.length,
     'studentCount': active.length,
     'teacherCount': _teacherCount,
     'unassignedStudentCount': active
@@ -276,12 +243,12 @@ Object? _classDetail(DemoRequest req) {
   };
 }
 
-/// 调入行政班的学生从原行政班移出，并记录调班信息。
-void _moveIntoBigClass(String classId, List<String> studentIds) {
+/// 调入班级的学生从原班级移出，并记录调班信息。
+void _moveIntoClass(String classId, List<String> studentIds) {
   final targetName = cbClassName(classId);
   final today = cbDate(DateTime.now());
   for (final c in cbClasses()) {
-    if (cbIsSmallClass(c) || cbStr(c['id']) == classId) {
+    if (cbStr(c['id']) == classId) {
       continue;
     }
     final members = cbStrList(c['studentIds']);
@@ -319,13 +286,10 @@ Object? _classSave(DemoRequest req) {
   if (cbClasses().any((c) => cbStr(c['name']) == name)) {
     throw const DemoApiException('班级名称已存在');
   }
-  final type = req.intOf('type') == 1 ? 1 : 0;
   final campusId = req.intOf('campusId', 1).clamp(1, cbCampusNames.length);
   final id = DemoStore.nextId();
   final studentIds = _studentIdsOf(req);
-  if (type == 0) {
-    _moveIntoBigClass(id, studentIds);
-  }
+  _moveIntoClass(id, studentIds);
   final teacherIds = [
     for (final uid in cbCsv(req.value('teacherIds')))
       if (cbStaff(uid) case final s?) s.userId,
@@ -334,18 +298,15 @@ Object? _classSave(DemoRequest req) {
     'id': id,
     'name': name,
     'groupName': name,
-    'type': type,
     'classCode': req.str('classCode'),
     'grade': '2027 届',
     'campusId': campusId,
     'campusName': cbCampusNameOf(campusId),
-    'headTeacherId': type == 0 ? _staffUserId(req.value('headTeacherId')) : '0',
+    'headTeacherId': _staffUserId(req.value('headTeacherId')),
     'classroomId': req.intOf('classroomId'),
     'teacherIds': teacherIds.join(','),
     'studentIds': studentIds,
-    'logo': type == 0
-        ? 'asset:assets/demo/art/sketch-still-2.jpg'
-        : 'asset:assets/demo/art/color-flower-1.jpg',
+    'logo': 'asset:assets/demo/art/sketch-still-2.jpg',
     'announcement': '',
     'mute': 0,
     'createTime': cbDateTime(DateTime.now()),
@@ -376,7 +337,7 @@ Object? _classUpdate(DemoRequest req) {
     cls['campusId'] = req.intOf('campusId');
     cls['campusName'] = cbCampusNameOf(req.intOf('campusId'));
   }
-  if (body.containsKey('headTeacherId') && !cbIsSmallClass(cls)) {
+  if (body.containsKey('headTeacherId')) {
     cls['headTeacherId'] = _staffUserId(req.value('headTeacherId'));
   }
   if (body.containsKey('classroomId')) {
@@ -390,9 +351,7 @@ Object? _classUpdate(DemoRequest req) {
   }
   if (body.containsKey('studentIds')) {
     final studentIds = _studentIdsOf(req);
-    if (!cbIsSmallClass(cls)) {
-      _moveIntoBigClass(cbStr(cls['id']), studentIds);
-    }
+    _moveIntoClass(cbStr(cls['id']), studentIds);
     cls['studentIds'] = studentIds;
   }
   cbSaveClasses();
@@ -591,8 +550,7 @@ Object? _teacherSum(DemoRequest req) {
   final staff = DemoCampusData.staff;
   final heads = <String>{
     for (final c in cbClasses())
-      if (!cbIsSmallClass(c) && cbStr(c['headTeacherId'], '0') != '0')
-        cbStr(c['headTeacherId']),
+      if (cbStr(c['headTeacherId'], '0') != '0') cbStr(c['headTeacherId']),
   };
   final onLeave = staff.where((s) => cbStaffOnLeave(s.userId)).length;
   return <String, dynamic>{
@@ -603,7 +561,7 @@ Object? _teacherSum(DemoRequest req) {
   };
 }
 
-// ── 课表与小课申请 ────────────────────────────────────────────────────
+// ── 课表 ────────────────────────────────────────────────────
 
 Object? _courseList(DemoRequest req) {
   final today = cbToday();
@@ -618,12 +576,10 @@ Object? _courseList(DemoRequest req) {
     for (final id in req.listOf('classIdList')) cbStr(id),
   }..remove('');
   final teacherId = req.str('teacherId');
-  final type = cbStr(req.value('type')).isEmpty ? null : req.intOf('type');
   return cbCourseRowsByDate([
     for (final c in cbCoursesBetween(from, to))
       if ((classIds.isEmpty || classIds.contains(c.classId)) &&
-          (teacherId.isEmpty || c.teacherUserId == teacherId) &&
-          (type == null || c.type == type))
+          (teacherId.isEmpty || c.teacherUserId == teacherId))
         c,
   ]);
 }
@@ -652,7 +608,6 @@ Object? _courseBatchSave(DemoRequest req) {
       'subjectId': subjectId,
       'subjectName': subjectName,
       'teacherId': cbStaff(row['teacherId'])?.userId ?? cbStr(row['teacherId']),
-      'type': cbIsSmallClass(cls) ? 1 : 0,
     });
   }
   DemoStore.save(cbExtraCoursesKey);
@@ -668,52 +623,6 @@ Object? _courseDelete(DemoRequest req) {
     throw const DemoApiException('缺少有效的课程 id');
   }
   cbDeleteCourses(ids);
-  return true;
-}
-
-Object? _applyList(DemoRequest req) {
-  final status = cbStr(req.value('status'));
-  final classId = req.str('classId');
-  final teacherId = req.str('teacherId');
-  final rows = [
-    for (final a in cbApplies())
-      if ((status.isEmpty || cbInt(a['status']) == cbInt(status)) &&
-          (classId.isEmpty || cbStr(a['classId']) == classId) &&
-          (teacherId.isEmpty || cbStr(a['teacherId']) == teacherId))
-        a,
-  ]..sort((a, b) => cbStr(b['createTime']).compareTo(cbStr(a['createTime'])));
-  return demoPage([for (final a in rows) cbApplyJson(a)], req);
-}
-
-Map<String, dynamic> _applyOf(DemoRequest req) {
-  final id = req.str('id');
-  for (final a in cbApplies()) {
-    if (cbStr(a['id']) == id) {
-      return a;
-    }
-  }
-  throw const DemoApiException('申请记录不存在');
-}
-
-Object? _applyDetail(DemoRequest req) => cbApplyJson(_applyOf(req));
-
-Object? _applyAudit(DemoRequest req) {
-  final apply = _applyOf(req);
-  if (cbInt(apply['status']) != 0) {
-    throw const DemoApiException('该申请已审核');
-  }
-  final status = req.intOf('status');
-  final reason = req.str('reason');
-  if (status == 2 && reason.isEmpty) {
-    throw const DemoApiException('请填写驳回理由');
-  }
-  apply['status'] = status == 1 ? 1 : 2;
-  apply['reason'] = status == 1
-      ? (reason.isEmpty ? '审核通过，已写入课表' : reason)
-      : reason;
-  apply['auditTime'] = cbDateTime(DateTime.now());
-  apply['auditTeacherId'] = cbScope(req).userId;
-  cbSaveApplies();
   return true;
 }
 
@@ -816,27 +725,24 @@ Object? _faceSubmit(DemoRequest req) {
 
 // ── 签课管理 ──────────────────────────────────────────────────────────
 
-List<CbCourse> _signCourses(DemoRequest req, int type) {
+List<CbCourse> _signCourses(DemoRequest req) {
   final day = cbParseDay(req.str('date')) ?? cbToday();
   final classId = req.str('classId');
   return [
     for (final c in cbCoursesOn(day))
-      if (c.type == type && (classId.isEmpty || c.classId == classId)) c,
+      if (classId.isEmpty || c.classId == classId) c,
   ];
 }
 
 Object? _signManager(DemoRequest req) => [
-  for (final c in _signCourses(req, req.intOf('type'))) cbSessionJson(c),
+  for (final c in _signCourses(req)) cbSessionJson(c),
 ];
 
-Object? _signSum(DemoRequest req, int type) {
-  final courses = _signCourses(req, type);
+Object? _signSum(DemoRequest req) {
+  final courses = _signCourses(req);
   var signed = 0;
   var studentSigned = 0;
   var studentShould = 0;
-  var completed = 0;
-  var pendingAdmin = 0;
-  var inProgress = 0;
   for (final c in courses) {
     final sign = cbSignOf(c);
     final status = cbInt(sign['signStatus']);
@@ -846,13 +752,6 @@ Object? _signSum(DemoRequest req, int type) {
     if (status >= 2) {
       signed++;
     }
-    if (status == 6) {
-      completed++;
-    } else if (status == 5) {
-      pendingAdmin++;
-    } else if (status >= 1 && status <= 4) {
-      inProgress++;
-    }
   }
   return <String, dynamic>{
     'courseCount': courses.length,
@@ -860,9 +759,7 @@ Object? _signSum(DemoRequest req, int type) {
     'studentSignCount': studentSigned,
     'studentShouldSignCount': studentShould,
     'makeupPendingCount': _pendingSignMakeups(),
-    'inProgressCount': inProgress,
-    'pendingAdminCount': pendingAdmin,
-    'completedCount': type == 0 ? signed : completed,
+    'completedCount': signed,
   };
 }
 
@@ -885,47 +782,6 @@ Object? _signUpdate(DemoRequest req) {
     throw const DemoApiException('签到状态不正确');
   }
   cbSetStudentSign(course, studentId, status, remark: '教务老师调整');
-  return true;
-}
-
-Object? _commentList(DemoRequest req) {
-  final course = _courseOf(req);
-  final rows = <Map<String, dynamic>>[];
-  for (final row in cbSignStudentRows(course, cbSignOf(course))) {
-    if (row['score'] == null && cbStr(row['comment']).isEmpty) {
-      continue;
-    }
-    rows.add(<String, dynamic>{
-      'studentId': row['studentId'],
-      'student': <String, dynamic>{
-        'realname': row['realname'],
-        'nickname': row['nickname'],
-        'headUrl': row['headUrl'],
-        'no': row['no'],
-      },
-      'score': row['score'],
-      'comment': row['comment'],
-      'createTime': row['signOutTime'],
-    });
-  }
-  return rows;
-}
-
-Object? _signConfirm(DemoRequest req) {
-  final course = _courseOf(req);
-  final sign = cbSignOf(course);
-  final current = cbInt(sign['signStatus']);
-  if (current == 6) {
-    throw const DemoApiException('该课程已确认完成');
-  }
-  if (current < 5) {
-    throw const DemoApiException('学生尚未完成课后评价，暂不能确认');
-  }
-  final status = req.intOf('signStatus', 6) == 7 ? 7 : 6;
-  sign['signStatus'] = status;
-  sign['confirmRemark'] = req.str('remark');
-  sign['confirmTime'] = cbDateTime(DateTime.now());
-  cbSaveSign(course, sign);
   return true;
 }
 

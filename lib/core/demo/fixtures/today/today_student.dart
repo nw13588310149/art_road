@@ -236,7 +236,7 @@ Future<Json> buildStudentToday(TodayContext ctx) async {
   );
 }
 
-/// 今天的课：大课到点上课，小课要自己签到、签退和评价。
+/// 今天的课：到点上课，由任课老师签课，下课后自动完成。
 List<Json> _lessons(TodayContext ctx) {
   final steps = <Json>[];
   for (final row in demoTodayCoursesFor(ctx.account, now: ctx.now)) {
@@ -245,15 +245,6 @@ List<Json> _lessons(TodayContext ctx) {
     final begin = todayMinutes(start);
     final finish = todayMinutes(end);
     if (begin == null) continue;
-    final small = todayText(row['type']) == '1';
-    final sign = small
-        ? switch (todayInt(row['signStatus'])) {
-            1 => '上课签到',
-            3 => '下课签退',
-            4 => '课后评价',
-            _ => '',
-          }
-        : '';
     final ended = finish != null && ctx.nowMinutes >= finish;
     final started = ctx.nowMinutes >= begin;
     final subject = todayText(row['subjectName']);
@@ -268,23 +259,15 @@ List<Json> _lessons(TodayContext ctx) {
         ].where((t) => t.isNotEmpty).join(' · '),
         time: start,
         endTime: end,
-        status: sign.isNotEmpty
-            ? 'doing'
-            : (ended ? 'done' : (started ? 'doing' : 'todo')),
-        tag: sign.isNotEmpty ? '待${sign.substring(2)}' : (small ? '小课' : ''),
-        tagTone: sign.isNotEmpty ? 'warning' : 'neutral',
+        status: ended ? 'done' : (started ? 'doing' : 'todo'),
         subject: subject,
         source: '今天的课表',
-        guide: small
-            ? const [
-                '老师点名后，点「去签到」完成上课签到。',
-                '下课时老师先签退，再点一次完成下课签退。',
-                '最后给这节课打分、写一句评价。',
-              ]
-            : const ['提前 5 分钟到教室，带好画具。', '下课后把课堂作品拍照上传，方便老师点评。'],
-        action: sign.isNotEmpty
-            ? actionCampus('去${sign.substring(2)}', 'checkIn')
-            : actionSchedule('看课表'),
+        guide: const [
+          '提前 5 分钟到教室，带好画具。',
+          '上课由任课老师签课，不用自己签到。',
+          '下课后把课堂作品拍照上传，方便老师点评。',
+        ],
+        action: actionSchedule('看课表'),
       ),
     );
   }

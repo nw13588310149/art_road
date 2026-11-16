@@ -64,7 +64,6 @@ abstract final class CampusAStudent {
         'id': c.id,
         'name': c.name,
         'groupName': c.name,
-        'type': 0,
         'grade': c.grade,
         'description':
             '${c.grade} · ${c.organizationName} · ${c.id == '503' ? '校考提高方向' : '联考冲刺方向'}',

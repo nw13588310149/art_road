@@ -71,7 +71,6 @@ void main() {
     final router = DemoRouter('schedule-regression')
       ..post('$prefix/classList', (_) => classes.future)
       ..post('$prefix/classroomList', (_) => [])
-      ..post('$prefix/schoolSmallCourseApplyList', (_) => [])
       ..post('$prefix/courseList', (request) {
         requestedDates.add(request.str('beginDate'));
         return [];
@@ -179,16 +178,14 @@ void main() {
     });
   }
 
-  testWidgets('标准课卡与扩展课卡沿用原版尺寸', (tester) async {
-    const standard = ScheduleCourseCardData(
-      kind: ScheduleCourseCardKind.bigStandard,
+  testWidgets('课卡只有一种样式，沿用原版 176×96 尺寸', (tester) async {
+    const first = ScheduleCourseCardData(
       location: '素描教室 A',
       name: '素描',
       subline: '李静',
       bgColor: Color(0xFFE7DFFF),
     );
-    const extended = ScheduleCourseCardData(
-      kind: ScheduleCourseCardKind.bigExtended,
+    const second = ScheduleCourseCardData(
       location: '素描教室 B',
       name: '素描',
       subline: '张老师',
@@ -198,8 +195,8 @@ void main() {
         home: Scaffold(
           body: Column(
             children: [
-              ScheduleCourseCard(data: standard),
-              ScheduleCourseCard(data: extended),
+              ScheduleCourseCard(data: first),
+              ScheduleCourseCard(data: second),
             ],
           ),
         ),
@@ -207,8 +204,11 @@ void main() {
     );
     final cards = find.byType(ScheduleCourseCard);
     expect(tester.getSize(cards.first), const Size(176, 96));
-    expect(tester.getSize(cards.last), const Size(176, 120));
-    expect(scheduleCourseCellHeight([standard, extended]), 246);
+    expect(tester.getSize(cards.last), const Size(176, 96));
+    // 12 上下留白 + 两张 96 高的卡 + 6 间距。
+    expect(scheduleCourseCellHeight([first, second]), 222);
+    expect(find.text('大课'), findsNothing);
+    expect(find.text('小课'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

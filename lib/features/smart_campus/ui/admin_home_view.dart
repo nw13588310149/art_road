@@ -181,7 +181,7 @@ class _AdminHomeViewState extends ConsumerState<AdminHomeView> {
   List<_StatItem> _statsRow1(AdminHomeSummary summary) => [
     _StatItem('${summary.studentCount}', '在籍学生'),
     _StatItem('${summary.teacherCount}', '任课老师'),
-    _StatItem('${summary.classCount}', '行政班'),
+    _StatItem('${summary.classCount}', '班级'),
     _StatItem(
       '${summary.toDoTodayCount}',
       '今日待办',
@@ -191,7 +191,7 @@ class _AdminHomeViewState extends ConsumerState<AdminHomeView> {
 
   List<_StatItem> _statsRow2(AdminHomeSummary summary) => [
     _StatItem('${summary.leaveStatus0Count}', '待审请假'),
-    _StatItem('${summary.smallCourseSignStatus5Count}', '小课待审'),
+    _StatItem('${summary.courseSignMakeupStatus0Count}', '补签待审'),
     _StatItem('${summary.userFaceNotRecordedCount}', '人脸待补录'),
     _StatItem('${summary.postStatus0Count}', '校圈待处理'),
   ];
@@ -449,8 +449,8 @@ const _overviewTwinCardHeight = 243.0;
 const _fourEndsTabs = <String>['学生端', '任课老师', '班主任', '宿管端'];
 
 const _fourEndsContent = <String, ({String title, String body})>{
-  '学生端': (title: '核心场景', body: '课表、作品、成绩、课堂签到、请假与补课、查寝管理、校圈、我的班级、群聊'),
-  '任课老师': (title: '核心场景', body: '授课课表、签课管理、学生名册、作品批改、考评管理、课堂签到、班级公告、群聊'),
+  '学生端': (title: '核心场景', body: '课表、作品、成绩、课堂考勤、请假与补课、查寝管理、校圈、我的班级、群聊'),
+  '任课老师': (title: '核心场景', body: '授课课表、签课管理、学生名册、作品批改、考评管理、课堂考勤、班级公告、群聊'),
   '班主任': (title: '核心场景', body: '班级工作台、请假审批、查寝历史、学生档案、家校沟通、班级通知、群聊'),
   '宿管端': (title: '核心场景', body: '查寝排班、晨晚查寝、查寝动态、补卡审核、请假审批、宿舍异常处理、宿舍人脸库、通知发布'),
 };

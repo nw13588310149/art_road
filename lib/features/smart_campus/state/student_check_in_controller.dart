@@ -21,6 +21,10 @@ final studentCheckInControllerProvider =
       return controller;
     });
 
+/// 学生「课堂考勤」：今天的课和本人的到课情况、考勤统计、最近记录、历史与补签。
+///
+/// 上课由任课老师签课，学生端只读；页面可见时定时刷新今天的课，老师签完课
+/// 这里就能看到结果。
 class StudentCheckInController extends StateNotifier<StudentCheckInState> {
   StudentCheckInController({
     required StudentRepository studentRepository,
@@ -35,21 +39,17 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
   Timer? _liveSyncTimer;
   bool _liveSyncActive = false;
   bool _syncingCourses = false;
-  String? _silentDetailCourseId;
   List<StudentTimeConfig> _timeConfigs = kDefaultStudentTimeConfigs;
-  final Map<String, String> _signRecordIdCache = <String, String>{};
-  final Set<String> _signRecordHistoryLookupAttempted = <String>{};
 
-  static const _liveSyncInterval = Duration(seconds: 5);
+  static const _liveSyncInterval = Duration(seconds: 30);
 
-  /// 页面可见时启动：周期性刷新今日课程的流程状态（`courseList.signStatus`），
-  /// 从而感知老师上/下课签到等对方操作，并据此放开学生签到按钮。
+  /// 页面可见时启动：定时刷新今天的课，老师签课后到课情况跟着更新。
   void startLiveSync() {
     if (_liveSyncActive) return;
     _liveSyncActive = true;
     _liveSyncTimer?.cancel();
     _liveSyncTimer = Timer.periodic(_liveSyncInterval, (_) {
-      unawaited(pollActiveCourseDetail());
+      unawaited(_syncTodayCourses());
     });
   }
 
@@ -60,31 +60,11 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
   }
 
   /// App 回到前台时立即同步一次。
-  Future<void> resumeSync() async {
-    await pollActiveCourseDetail(force: true);
-  }
+  Future<void> resumeSync() => _syncTodayCourses();
 
-  /// 轮询：先用 `courseList` 刷新流程状态（老师是否已签到决定按钮可用），
-  /// 再用 `courseSignDetail` 回填本人签到时间/评分。
-  ///
-  /// 关键：学生端 `courseSignDetail` 只回本人考勤记录，**不含流程状态**，
-  /// 所以流程同步必须依赖 `courseList`，否则老师操作后学生端不会更新。
-  Future<void> pollActiveCourseDetail({bool force = false}) async {
-    if (!_liveSyncActive && !force) return;
-    if (state.submitting || state.loading) return;
-    if (!_shouldKeepLiveSync(state.selectedCourse)) return;
-
-    await _syncTodayCourses();
-
-    final courseId = state.selectedCourseId;
-    if (courseId == null || courseId.isEmpty) return;
-    await loadCourseDetail(courseId, silent: true);
-  }
-
-  /// 拉取今日 `courseList` + 最近签到记录，刷新 `todayCourses` 的流程状态，
-  /// 并尽量保持当前选中项。本人签到时间/评分随后由 [loadCourseDetail] 回填。
+  /// 重新拉今天的 `courseList` 和最近记录，尽量保持当前选中的课。
   Future<void> _syncTodayCourses() async {
-    if (_syncingCourses) return;
+    if (_syncingCourses || state.submitting || state.loading) return;
     _syncingCourses = true;
     try {
       final today = DateTime.now();
@@ -95,45 +75,29 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
       ]);
       final courseResp = responses[0];
       final recentResp = responses[1];
-      if (!courseResp.isSuccess) return;
+      if (!mounted || !courseResp.isSuccess) return;
 
-      final recent = recentResp.isSuccess
-          ? parseStudentSignRecordList(recentResp.data)
-          : state.recentRecords;
-      final courses = attachSignRecordIdsToCourses(
-        parseStudentTodaySmallCourses(
-          raw: courseResp.data,
-          timeConfigs: _timeConfigs,
-          now: today,
-          todayIso: todayIso,
-        ),
-        recent,
+      final courses = parseStudentTodayCourses(
+        raw: courseResp.data,
+        timeConfigs: _timeConfigs,
+        now: today,
+        todayIso: todayIso,
       );
-
       final hasSelected =
           state.selectedCourseId != null &&
           courses.any((c) => c.courseId == state.selectedCourseId);
-      final selectedId = hasSelected
-          ? state.selectedCourseId
-          : pickActiveStudentCourse(courses)?.courseId;
-
       state = state.copyWith(
         todayCourses: courses,
-        recentRecords: recentResp.isSuccess ? recent : state.recentRecords,
-        selectedCourseId: selectedId,
+        recentRecords: recentResp.isSuccess
+            ? parseStudentSignRecordList(recentResp.data)
+            : state.recentRecords,
+        selectedCourseId: hasSelected
+            ? state.selectedCourseId
+            : pickActiveStudentCourse(courses)?.courseId,
       );
     } finally {
       _syncingCourses = false;
     }
-  }
-
-  bool _shouldKeepLiveSync(StudentTodayCourse? course) {
-    if (course == null) return true;
-    if (course.phase == StudentCourseSlotPhase.ended &&
-        course.courseSignStatus >= CourseSignFlowStatus.studentEval.code) {
-      return false;
-    }
-    return true;
   }
 
   Future<void> initialize() async {
@@ -175,7 +139,7 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
         if (parsed.isNotEmpty) timeConfigs = parsed;
       }
     }
-    // 缓存节次时间表，供轮询 [_syncTodayCourses] 复用，避免每 5s 重复拉取。
+    // 缓存节次时间表，定时刷新时不用重复拉。
     _timeConfigs = timeConfigs;
 
     final responses = await Future.wait([
@@ -186,32 +150,26 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
       ),
       _studentRepository.courseSignRecentList(size: 6),
     ]);
+    if (!mounted) return;
 
     final courseResp = responses[0];
     final statResp = responses[1];
     final recentResp = responses[2];
 
     final courses = courseResp.isSuccess
-        ? attachSignRecordIdsToCourses(
-            parseStudentTodaySmallCourses(
-              raw: courseResp.data,
-              timeConfigs: timeConfigs,
-              now: today,
-              todayIso: todayIso,
-            ),
-            recentResp.isSuccess
-                ? parseStudentSignRecordList(recentResp.data)
-                : const <StudentSignRecordItem>[],
+        ? parseStudentTodayCourses(
+            raw: courseResp.data,
+            timeConfigs: timeConfigs,
+            now: today,
+            todayIso: todayIso,
           )
         : state.todayCourses;
-
-    final active = pickActiveStudentCourse(courses);
-    final selectedId = state.selectedCourseId ?? active?.courseId;
 
     state = state.copyWith(
       loading: false,
       todayCourses: courses,
-      selectedCourseId: selectedId,
+      selectedCourseId:
+          state.selectedCourseId ?? pickActiveStudentCourse(courses)?.courseId,
       todayTitle: formatChineseDateTitle(today),
       stats: statResp.isSuccess
           ? StudentCheckInStat.fromJson(statResp.data)
@@ -221,135 +179,11 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
           : state.recentRecords,
       error: courseResp.isSuccess ? '' : courseResp.displayMsg,
     );
-
-    if (selectedId != null && selectedId.isNotEmpty) {
-      await loadCourseDetail(selectedId);
-    }
   }
 
-  Future<void> selectCourse(String courseId) async {
+  void selectCourse(String courseId) {
     if (state.selectedCourseId == courseId) return;
     state = state.copyWith(selectedCourseId: courseId);
-    await loadCourseDetail(courseId);
-  }
-
-  Future<void> loadCourseDetail(String courseId, {bool silent = false}) async {
-    if (courseId.isEmpty) return;
-    if (silent) {
-      if (_silentDetailCourseId == courseId) return;
-      _silentDetailCourseId = courseId;
-    } else if (state.loadingDetailCourseId == courseId) {
-      return;
-    } else {
-      state = state.copyWith(loadingDetailCourseId: courseId);
-    }
-
-    try {
-      var signRecordId = findSignRecordIdForCourse(
-        courseId,
-        courses: state.todayCourses,
-        recentRecords: state.recentRecords,
-        historyRecords: state.historyRecords,
-      );
-      signRecordId ??= _signRecordIdCache[courseId];
-      if ((signRecordId == null || signRecordId.isEmpty) &&
-          !_signRecordHistoryLookupAttempted.contains(courseId)) {
-        _signRecordHistoryLookupAttempted.add(courseId);
-        final todayIso = todayIsoDate();
-        final historyResp = await _studentRepository.courseSignHistory(
-          beginDate: todayIso,
-          endDate: todayIso,
-          current: 1,
-          size: 200,
-        );
-        if (historyResp.isSuccess) {
-          final todayRecords = parseStudentSignRecordList(historyResp.data);
-          signRecordId = findSignRecordIdForCourse(
-            courseId,
-            courses: state.todayCourses,
-            recentRecords: state.recentRecords,
-            historyRecords: todayRecords,
-          );
-        }
-      }
-      if (signRecordId == null || signRecordId.isEmpty) return;
-      _signRecordIdCache[courseId] = signRecordId;
-
-      final response = await _studentRepository.courseSignDetail(
-        id: signRecordId,
-      );
-      if (!response.isSuccess) return;
-
-      final detail = StudentCourseSignDetail.fromJson(response.data);
-      if (detail.signRecordId.isNotEmpty) {
-        _signRecordIdCache[courseId] = detail.signRecordId;
-      }
-      state = state.copyWith(
-        todayCourses: [
-          for (final course in state.todayCourses)
-            if (course.courseId == courseId) detail.applyTo(course) else course,
-        ],
-      );
-    } finally {
-      if (silent) {
-        if (_silentDetailCourseId == courseId) {
-          _silentDetailCourseId = null;
-        }
-      } else {
-        state = state.copyWith(loadingDetailCourseId: '');
-      }
-    }
-  }
-
-  Future<ApiResponse> signIn(String courseId) async {
-    if (state.submitting) {
-      return ApiResponse.failure('正在提交，请稍候');
-    }
-    state = state.copyWith(submitting: true);
-    final response = await _studentRepository.courseStudentSignIn(
-      courseId: courseId,
-    );
-    if (response.isSuccess) {
-      await refresh(silent: true);
-    }
-    state = state.copyWith(submitting: false);
-    return response;
-  }
-
-  Future<ApiResponse> signOut(String courseId) async {
-    if (state.submitting) {
-      return ApiResponse.failure('正在提交，请稍候');
-    }
-    state = state.copyWith(submitting: true);
-    final response = await _studentRepository.courseStudentSignOut(
-      courseId: courseId,
-    );
-    if (response.isSuccess) {
-      await refresh(silent: true);
-    }
-    state = state.copyWith(submitting: false);
-    return response;
-  }
-
-  Future<ApiResponse> submitComment({
-    required String courseId,
-    required String comment,
-    required int score,
-  }) async {
-    if (state.submitting) {
-      return ApiResponse.failure('正在提交，请稍候');
-    }
-    state = state.copyWith(submitting: true);
-    final response = await _studentRepository.courseStudentComment(
-      courseId: courseId,
-      comment: comment,
-      score: score,
-    );
-    if (response.isSuccess) {
-      await refresh();
-    }
-    state = state.copyWith(submitting: false);
-    return response;
   }
 
   Future<void> loadHistory({
@@ -373,6 +207,7 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
       current: 1,
       size: 200,
     );
+    if (!mounted) return;
     state = state.copyWith(
       loadingHistory: false,
       historyRecords: response.isSuccess
@@ -384,7 +219,6 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
 
   Future<ApiResponse> submitMakeup({
     required String courseId,
-    required int signType,
     required String reason,
   }) async {
     if (state.submitting) {
@@ -393,14 +227,13 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
     state = state.copyWith(submitting: true);
     final response = await _studentRepository.courseSignMakeupSave(
       courseId: courseId,
-      signType: signType,
       reason: reason,
     );
     if (response.isSuccess) {
       await refresh();
       await loadMakeupList();
     }
-    state = state.copyWith(submitting: false);
+    if (mounted) state = state.copyWith(submitting: false);
     return response;
   }
 
@@ -412,6 +245,7 @@ class StudentCheckInController extends StateNotifier<StudentCheckInState> {
       current: 1,
       size: 200,
     );
+    if (!mounted) return;
     state = state.copyWith(
       loadingMakeup: false,
       makeupRecords: response.isSuccess

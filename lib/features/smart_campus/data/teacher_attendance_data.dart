@@ -106,13 +106,11 @@ class TeacherSignHistoryItem {
     required this.date,
     required this.time,
     required this.courseName,
-    required this.courseType,
     required this.lineNum,
     required this.className,
     required this.logoUrl,
     required this.signStatus,
     this.signInTime = '',
-    this.signOutTime = '',
     this.canMakeup = false,
     this.makeupStatus,
     this.teacherId = '',
@@ -127,13 +125,11 @@ class TeacherSignHistoryItem {
   final String date;
   final String time;
   final String courseName;
-  final int courseType;
   final int lineNum;
   final String className;
   final String logoUrl;
   final int signStatus;
   final String signInTime;
-  final String signOutTime;
   final bool canMakeup;
   final int? makeupStatus;
 
@@ -148,9 +144,6 @@ class TeacherSignHistoryItem {
   String get signStatusLabel => CourseSignFlowStatus.labelFor(signStatus);
 
   String get signInClock => signInTime.trim().isEmpty ? '' : _clock(signInTime);
-
-  String get signOutClock =>
-      signOutTime.trim().isEmpty ? '' : _clock(signOutTime);
 
   String get avatarSeed {
     if (className.isNotEmpty && className != '--') return className;
@@ -168,24 +161,11 @@ class TeacherSignHistoryItem {
 
   bool get hasAttendanceCounts => shouldCount > 0 || presentCount > 0;
 
-  /// 是否大课 / 小课之一。
-  bool get isBigOrSmallCourse =>
-      isBigCourseType(courseType) || isSmallCourseType(courseType);
-
-  /// 教师是否已完成该课次签到（大课一键入册 / 小课上下课签）。
-  bool get isTeacherTaught {
-    if (signInTime.trim().isNotEmpty || signOutTime.trim().isNotEmpty) {
-      return true;
-    }
-    if (isSmallCourseType(courseType)) {
-      return signStatus >= CourseSignFlowStatus.teacherStart.code;
-    }
-    if (isBigCourseType(courseType)) {
-      return signStatus >= CourseSignFlowStatus.studentStart.code ||
-          presentCount > 0;
-    }
-    return false;
-  }
+  /// 老师是否已经给这节课签过课。
+  bool get isTeacherTaught =>
+      signInTime.trim().isNotEmpty ||
+      signStatus >= CourseSignFlowStatus.signed.code ||
+      presentCount > 0;
 
   /// 是否属于当前登录教师本人授课。
   bool belongsToTeacher(String? currentTeacherId) {
@@ -196,18 +176,11 @@ class TeacherSignHistoryItem {
 
   factory TeacherSignHistoryItem.fromJson(Map<String, dynamic> json) {
     final flat = _flattenHistoryMap(json);
-    final type = _pickInt(flat, ['type', 'courseType', 'classType']);
     final signInRaw = _pickString(flat, [
       'signInTime',
       'teacherSignInTime',
       'timeBegin',
       'beginTime',
-    ]);
-    final signOutRaw = _pickString(flat, [
-      'signOutTime',
-      'teacherSignOutTime',
-      'timeEnd',
-      'endTime',
     ]);
     final makeupRaw = flat['makeupStatus'];
     final makeupStatus = makeupRaw == null
@@ -223,7 +196,6 @@ class TeacherSignHistoryItem {
         'name',
         'title',
       ], fallback: '未命名课程'),
-      courseType: type,
       lineNum: _pickInt(flat, ['lineNum', 'periodIndex', 'sectionNum']),
       className: _pickString(flat, [
         'className',
@@ -234,7 +206,6 @@ class TeacherSignHistoryItem {
       logoUrl: resolveCourseLogoUrl(flat),
       signStatus: _pickInt(flat, ['signStatus', 'courseSignStatus']),
       signInTime: signInRaw,
-      signOutTime: signOutRaw,
       canMakeup: flat['canMakeup'] == true,
       makeupStatus: makeupStatus,
       teacherId:
@@ -271,7 +242,7 @@ class TeacherSignHistoryItem {
         'method',
         'signMethod',
         'signTypeName',
-      ], fallback: type == 0 ? '教师一键签到' : '教师上下课签到'),
+      ], fallback: '教师一键签课'),
     );
   }
 }
@@ -284,7 +255,6 @@ class TeacherClassSignDetail {
     required this.presentCount,
     required this.students,
     this.teacherSignInTime,
-    this.teacherSignOutTime,
     this.colorHex = '',
     this.className = '',
     this.logoUrl = '',
@@ -296,7 +266,6 @@ class TeacherClassSignDetail {
   final int presentCount;
   final List<CourseSignStudent> students;
   final String? teacherSignInTime;
-  final String? teacherSignOutTime;
   final String colorHex;
   final String className;
   final String logoUrl;
@@ -316,9 +285,6 @@ class TeacherClassSignDetail {
       teacherSignInTime: teacherSignIn == null
           ? null
           : _pickString(teacherSignIn, ['signInTime', 'teacherSignInTime']),
-      teacherSignOutTime: teacherSignIn == null
-          ? null
-          : _pickString(teacherSignIn, ['signOutTime', 'teacherSignOutTime']),
       colorHex: _pickString(merged, ['color']),
       className: _pickString(merged, ['className', 'class']),
       logoUrl: resolveCourseLogoUrl(merged),
@@ -344,7 +310,7 @@ List<TeacherSignHistoryItem> parseTeacherSignHistoryList(dynamic raw) {
       .toList(growable: false);
 }
 
-/// 历史 / 最近签课：仅保留当前教师本人已完成签到的大课、小课。
+/// 历史 / 最近签课：仅保留当前教师本人已经签过课的课次。
 List<TeacherSignHistoryItem> filterTeacherTaughtSignHistory(
   List<TeacherSignHistoryItem> records, {
   String? currentTeacherId,
@@ -352,9 +318,7 @@ List<TeacherSignHistoryItem> filterTeacherTaughtSignHistory(
   return records
       .where(
         (item) =>
-            item.isBigOrSmallCourse &&
-            item.belongsToTeacher(currentTeacherId) &&
-            item.isTeacherTaught,
+            item.belongsToTeacher(currentTeacherId) && item.isTeacherTaught,
       )
       .toList(growable: false);
 }
@@ -374,7 +338,6 @@ Map<String, dynamic> _flattenHistoryMap(Map<String, dynamic> source) {
   merge(source['course'], const {
     'id': 'courseId',
     'date': 'courseDate',
-    'type': 'courseType',
     'lineNum': 'lineNum',
     'timeBegin': 'timeBegin',
     'timeEnd': 'timeEnd',

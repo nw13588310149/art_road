@@ -7,7 +7,7 @@ import 'course_inline_tag_style.dart';
 /// 课程科目标签 12px PingFang SC w400，按科目切换配色：
 /// 素描 / 色彩 / 速写 使用科目色，美术常识、文化课等其他课程使用品牌紫。
 ///
-/// 盒模型与 [CourseClassKindTag] 一致；在 [DashboardScaleScope] 下按 ui 缩放。
+/// 盒模型见 [CourseInlineTagStyle]；在 [DashboardScaleScope] 下按 ui 缩放。
 class CourseSubjectTag extends StatelessWidget {
   const CourseSubjectTag({super.key, required this.name, this.muted = false});
 
@@ -39,8 +39,7 @@ class CourseSubjectTag extends StatelessWidget {
     return CourseInlineTagStyle.build(
       ui: ui,
       backgroundColor: bg,
-      // 与后方大课/小课标签使用完全相同的 1px 描边盒模型，避免实色背景
-      // 在视觉上比带描边标签上下各多出 1px。
+      // 带 1px 描边，实色背景的标签和带描边的标签高度一致。
       outlined: true,
       child: Text(
         name,

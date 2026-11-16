@@ -60,7 +60,6 @@ class AdminHomeController extends StateNotifier<AdminHomeState> {
       ),
       _repository.noticeManageList(current: 1, size: 20, status: 1),
       _repository.workReminders(),
-      _repository.schoolSmallCourseApplyList(current: 1, size: 1, status: 0),
       _repository.schoolUserFaceSum(),
     ]);
     final principalMailboxResponse = activeRole == SmartCampusRole.principal
@@ -80,15 +79,11 @@ class AdminHomeController extends StateNotifier<AdminHomeState> {
     final loginChartResponse = responses[1];
     final noticeResponse = responses[2];
     final workRemindersResponse = responses[3];
-    final smallCourseApplyResponse = responses[4];
-    final faceSumResponse = responses[5];
+    final faceSumResponse = responses[4];
 
     final summary = summaryResponse.isSuccess
         ? AdminHomeSummary.fromJson(summaryResponse.data)
         : state.summary;
-    final scheduleApply = smallCourseApplyResponse.isSuccess
-        ? parseAdminListPendingTotal(smallCourseApplyResponse.data)
-        : state.actionBadgeCounts.scheduleApply;
     final faceAudit = faceSumResponse.isSuccess
         ? parseAdminFaceSumPendingCount(faceSumResponse.data)
         : state.actionBadgeCounts.faceAudit;
@@ -116,7 +111,6 @@ class AdminHomeController extends StateNotifier<AdminHomeState> {
           : state.workReminders,
       actionBadgeCounts: AdminHomeActionBadgeCounts.fromSummary(
         summary: summary,
-        scheduleApply: scheduleApply,
         faceAudit: faceAudit,
         principalMailboxPending: principalMailboxPending,
       ),

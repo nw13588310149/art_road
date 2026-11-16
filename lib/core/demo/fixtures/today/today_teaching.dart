@@ -402,7 +402,7 @@ Json _attentionHighlight(List<Json> attention) => todayHighlight(
   action: actionReport('需要关注的学生', 'myAttention'),
 );
 
-/// 今天要上的课：上课后签课，小课下课后签退。
+/// 今天要上的课：上课后签课。
 List<Json> _lessons(TodayContext ctx) {
   final steps = <Json>[];
   for (final row in demoTodayCoursesFor(ctx.account, now: ctx.now)) {
@@ -411,13 +411,10 @@ List<Json> _lessons(TodayContext ctx) {
     final begin = todayMinutes(start);
     final finish = todayMinutes(end);
     if (begin == null) continue;
-    final small = todayText(row['type']) == '1';
     final sign = todayInt(row['signStatus']);
     final started = ctx.nowMinutes >= begin;
     final ended = finish != null && ctx.nowMinutes >= finish;
-    final need = !started
-        ? ''
-        : (sign == 0 ? '上课签到' : (small && sign == 2 && ended ? '下课签退' : ''));
+    final need = started && sign == 0;
     final subject = todayText(row['subjectName']);
     final count = todayInt(row['studentCount']);
     steps.add(
@@ -433,19 +430,18 @@ List<Json> _lessons(TodayContext ctx) {
         time: start,
         endTime: end,
         // 下课了还没签课算超时；签过课、下课后算完成。
-        status: need.isNotEmpty
+        status: need
             ? (ended ? 'overdue' : 'doing')
             : (ended ? 'done' : (started ? 'doing' : 'todo')),
-        tag: need.isNotEmpty
-            ? '待$need'
-            : (sign > 0 && started ? '已签课' : (small ? '小课' : '')),
-        tagTone: need.isNotEmpty ? 'warning' : 'neutral',
+        tag: need ? '待签课' : (sign > 0 && started ? '已签课' : ''),
+        tagTone: need ? 'warning' : 'neutral',
         subject: subject,
         source: '授课课表',
-        guide: small
-            ? const ['上课时点「去签课」完成上课签到，学生随后签到。', '下课时再点一次完成签退，学生评价后由教务确认。']
-            : const ['上课后点「去签课」，一键登记全班到课情况。', '有请假或缺勤的学生单独标出来，班主任会收到提醒。'],
-        action: need.isNotEmpty
+        guide: const [
+          '上课后点「去签课」，一键登记全班到课情况。',
+          '有请假或缺勤的学生单独标出来，班主任会收到提醒。',
+        ],
+        action: need
             ? actionCampus('去签课', 'classAttendance')
             : actionSchedule('看课表'),
       ),

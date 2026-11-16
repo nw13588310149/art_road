@@ -15,7 +15,6 @@ void main() {
   test('every course sits on one of the fixed daytime slots', () {
     final templates = [
       for (final list in DemoCampusData.classTimetables.values) ...list,
-      ...DemoCampusData.demoStudentSmallCourses,
     ];
     for (final s in templates) {
       expect(daySlots, contains('${s.start}-${s.end}'), reason: s.courseName);
@@ -69,7 +68,7 @@ void main() {
     final student = CampusACourses.forStudent(1, saturday, saturday);
     expect(
       [for (final c in student) '${c.start} ${c.subjectName}'],
-      ['08:30 模拟考试', '14:00 色彩写生', '19:00 速写改画小课'],
+      ['08:30 模拟考试', '14:00 色彩写生'],
     );
     final teacherSide = {for (final c in cbCoursesOn(saturday)) c.id};
     for (final c in student) {
@@ -81,10 +80,7 @@ void main() {
     final now = DateTime(2026, 11, 7, 7, 30);
     final today = DateTime(2026, 11, 7);
     final studentRows = demoTodayCoursesFor(DemoAccounts.student, now: now);
-    expect(
-      studentRows.length,
-      CampusACourses.forStudent(1, today, now).length,
-    );
+    expect(studentRows.length, CampusACourses.forStudent(1, today, now).length);
     expect((studentRows.first['subject'] as Map)['name'], '模拟考试');
     expect((studentRows.first['teacher'] as Map)['realname'], '李静');
 

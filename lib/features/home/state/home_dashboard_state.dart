@@ -94,8 +94,6 @@ class HomeCourseNotice {
     required this.description,
     required this.status,
     this.date = '',
-    this.isSmallCourse = false,
-    this.cardColorHex,
   });
 
   final String startTime;
@@ -110,11 +108,6 @@ class HomeCourseNotice {
 
   /// 上课日期 YYYY-MM-DD；接口未给出时为空。
   final String date;
-
-  /// 课程类型：false = 大课（type 0），true = 小课（type 1）。
-  final bool isSmallCourse;
-  // 接口 `color` 字段，如 "#fed7aa"，用于大课 / 小课标签的圆点
-  final String? cardColorHex;
 
   String get statusText => switch (status) {
     HomeCourseStatus.ended => '已结束',

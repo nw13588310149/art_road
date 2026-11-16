@@ -186,7 +186,7 @@ const _admin = RoleGuide(
     RoleGuideStep(
       iconAsset: AppAssets.leftNavJinri,
       title: '今日工作',
-      body: '教职工请假审批、小课签课确认和小课申请集中在这里，常用的管理入口在页面底部。',
+      body: '教职工请假审批、课堂补签审核和人脸照片审核集中在这里，常用的管理入口在页面底部。',
       where: '左侧导航「今日工作」',
     ),
     RoleGuideStep(

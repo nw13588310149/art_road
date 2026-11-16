@@ -5,40 +5,20 @@
 //      controller.openScheduleManagement() → mainView == scheduleManagement +
 //      role == admin → SmartCampusPage 路由到本视图。
 //
-// 视觉（Figma 970 设计宽）：
-//   1. 顶部 banner（68 高）：白→#F9EDFF 渐变；左 32 返回；居中 16/600
-//      "排课与课表"；右上角分段控制（周课表与排课 / 小课申请审核，
-//      激活段 #0B081A 黑底白字 + 红角标（待审核条数，来自
-//      schoolSmallCourseApplyList status=0 的分页 total）。
-//   2. tab1「周课表与排课」：
-//      - 顶部一行：「全校统一课表」班级 dropdown（左）+ 查看 / 编辑 分段
-//        （右，激活 #715EFE 紫底白字）。
-//      - 控制条（64 高 #F5F6FA 灰底 12 圆角）：教学周 + legend +
-//        ◀ 本周 ▶ + YYYY/MM/DD 日历 pill。
-//      - 网格（930×632，1px #F3F2F3 描边，12 圆角）：与学生 / 老师端共用
-//        4 主题课卡 + 时间冻结列 + 横滚日期区。
-//      - 编辑模式下空格 → "申请小课" pill 打开右侧 [_AdminEditCourseDrawer]，
-//        提交触发 `courseBatchSave`。
-//   3. tab2「小课申请审核」：
-//      - "小课排班申请" 18/500 节标题。
-//      - 双列卡片网格（每卡 #F5F6FA 灰底 16 圆角）：avatar + 标题 + 状态
-//        徽章（待审核 / 已通过 / 已驳回）+ 日期 / 节次 灰底两列 + 备注 +
-//        通过 / 驳回（仅待审核态显示）。
-//      - "驳回" 打开 GradientHeaderDialog 形式的「驳回申请」弹窗
-//        （理由 TextField），确认后调 `schoolSmallCourseApplyAudit
-//        (status: 2, reason: ...)`；"通过" 直接调 `(status: 1)` 并刷新列表。
-//
-// 颜色：白 / #F5F6FA 灰 / #F3F2F3 边 / #715EFE 主紫 / #6D6B75 副字 /
-//      #B6B5BB 提示 / #774B09 橙文 / #0D3A6D 蓝文 / #7535BE 紫文 /
-//      #FF6A00 待审核 / #0CAC40·#12CE51 已通过
+// 页面只有一张周课表，按班级查看和调整：
+//   1. 顶部 banner：返回 + 标题「排课与课表」。
+//   2. 班级下拉（左）+ 查看 / 编辑 分段（右）。
+//   3. 控制条（浅灰底）：教学周 + 编辑说明 + ◀ 本周 ▶ + 日期按钮。
+//   4. 网格：与学生 / 老师端共用课卡 + 时间冻结列 + 横滚日期区。
+//      - 编辑模式下空格出现「排课」按钮，打开右侧 [_AdminEditCourseDrawer]，
+//        提交调 `courseBatchSave`；
+//      - 长按课卡可以拖到别的格子（先删后加），左滑课卡可以删除。
 // =============================================================================
 
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
@@ -66,145 +46,11 @@ const Color _kInnerGray = AppColors.surfaceSubtle;
 const Color _kBorderSoft = AppColors.lineSoft;
 const Color _kTextDark = AppColors.ink;
 const Color _kTextSecondary = AppColors.textSecondary;
-const Color _kTextHint = AppColors.textPlaceholder;
 const Color _kPurple = AppColors.brand;
-
-const Color _kStatusGreen = AppColors.success;
-const Color _kStatusPurple = AppColors.brandSoft;
-
-// 申请卡状态色
-const Color _kPendingBg = AppColors.warningSoft;
-const Color _kPendingFg = AppColors.warning;
-const Color _kPassedBg = AppColors.successSoft;
-const Color _kPassedFg = AppColors.success;
-const Color _kRejectedBg = AppColors.dangerSoft;
-const Color _kRejectedFg = AppColors.danger;
 
 // 列与行尺寸 — 网格壳层见 schedule_grid_shell.dart
 
 enum _ScheduleMode { view, edit }
-
-enum _AdminScheduleTab { schedule, applyAudit }
-
-/// 申请审核状态：与后端 `status` 字段双向映射 — 1 通过 / 2 驳回 / 0 / null 待审核。
-enum _ApplyStatus { pending, passed, rejected }
-
-enum _ApplyDateFilter { day, week, month }
-
-DateTime _applyFilterDateOnly(DateTime value) =>
-    DateTime(value.year, value.month, value.day);
-
-DateTime? _parseApplyRecordDate(String? raw) {
-  final text = raw?.trim() ?? '';
-  if (text.isEmpty) return null;
-  var parsed = DateTime.tryParse(text);
-  parsed ??= DateTime.tryParse(text.split('T').first);
-  if (parsed == null) return null;
-  return _applyFilterDateOnly(parsed);
-}
-
-({DateTime start, DateTime end}) _applyDateFilterRange(
-  _ApplyDateFilter filter,
-  DateTime now, {
-  required DateTime selectedDay,
-}) {
-  final today = _applyFilterDateOnly(now);
-  switch (filter) {
-    case _ApplyDateFilter.day:
-      final day = _applyFilterDateOnly(selectedDay);
-      return (start: day, end: day);
-    case _ApplyDateFilter.week:
-      final monday = today.subtract(Duration(days: now.weekday - 1));
-      return (start: monday, end: monday.add(const Duration(days: 6)));
-    case _ApplyDateFilter.month:
-      return (
-        start: DateTime(now.year, now.month, 1),
-        end: DateTime(now.year, now.month + 1, 0),
-      );
-  }
-}
-
-bool _applyDateInRange(DateTime date, DateTime start, DateTime end) {
-  final d = _applyFilterDateOnly(date);
-  return !d.isBefore(start) && !d.isAfter(end);
-}
-
-bool _applyIntervalsOverlap(
-  DateTime aStart,
-  DateTime aEnd,
-  DateTime bStart,
-  DateTime bEnd,
-) {
-  return !aStart.isAfter(bEnd) && !aEnd.isBefore(bStart);
-}
-
-List<DateTime> _parseCourseDataDates(dynamic raw) {
-  List<dynamic>? items;
-  if (raw is List) {
-    items = raw;
-  } else if (raw is String && raw.isNotEmpty) {
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is List) items = decoded;
-    } catch (_) {
-      /* swallow */
-    }
-  }
-  if (items == null || items.isEmpty) return const [];
-
-  final out = <DateTime>[];
-  for (final item in items) {
-    if (item is! Map) continue;
-    final parsed = _parseApplyRecordDate(item['date']?.toString());
-    if (parsed != null) out.add(parsed);
-  }
-  return out;
-}
-
-bool _applyRecordMatchesDateFilter(
-  _ApplyRecord record,
-  _ApplyDateFilter filter,
-  DateTime now, {
-  required DateTime selectedDay,
-}) {
-  final range = _applyDateFilterRange(filter, now, selectedDay: selectedDay);
-  final hasAnyDate =
-      record.applyAt != null ||
-      record.courseStart != null ||
-      record.courseEnd != null ||
-      record.courseDates.isNotEmpty;
-
-  if (!hasAnyDate) return true;
-
-  if (record.applyAt != null &&
-      _applyDateInRange(record.applyAt!, range.start, range.end)) {
-    return true;
-  }
-
-  for (final date in record.courseDates) {
-    if (_applyDateInRange(date, range.start, range.end)) return true;
-  }
-
-  if (record.courseStart != null && record.courseEnd != null) {
-    return _applyIntervalsOverlap(
-      record.courseStart!,
-      record.courseEnd!,
-      range.start,
-      range.end,
-    );
-  }
-
-  if (record.courseStart != null &&
-      _applyDateInRange(record.courseStart!, range.start, range.end)) {
-    return true;
-  }
-  if (record.courseEnd != null &&
-      _applyDateInRange(record.courseEnd!, range.start, range.end)) {
-    return true;
-  }
-
-  return false;
-}
 
 class AdminScheduleManagementView extends ConsumerStatefulWidget {
   const AdminScheduleManagementView({super.key, required this.onBack});
@@ -218,9 +64,6 @@ class AdminScheduleManagementView extends ConsumerStatefulWidget {
 
 class _AdminScheduleManagementViewState
     extends ConsumerState<AdminScheduleManagementView> {
-  _AdminScheduleTab _tab = _AdminScheduleTab.schedule;
-
-  // —— tab 1 状态 ————————————————————————————————————————————————
   /// 当前显示的周一（用于日期范围 / 标签 / API begin/end）。
   late DateTime _weekStart;
 
@@ -234,36 +77,8 @@ class _AdminScheduleManagementViewState
   /// `courseList` 都要求 classId 必填，所以默认进入 = 班级列表第 1 项；
   /// 列表为空前用空字符串占位，加载完成后自动回填。
   List<({String id, String name})> _classes = const [];
-
-  /// 班级 id → 是否小班（后端 `type`: 0 大班 / 1 小班）。
-  Map<String, bool> _classIsSmallById = const {};
   String? _selectedClassId;
-  String _selectedClassName = '加载中…';
   bool _classesLoading = true;
-
-  bool get _selectedClassIsSmall =>
-      _selectedClassId != null &&
-      (_classIsSmallById[_selectedClassId] ?? false);
-
-  void _onScheduleModeChanged(_ScheduleMode next) {
-    if (next == _ScheduleMode.edit && _selectedClassIsSmall) return;
-    setState(() => _mode = next);
-  }
-
-  void _resetModeIfSmallClassSelected() {
-    if (_selectedClassIsSmall && _mode == _ScheduleMode.edit) {
-      _mode = _ScheduleMode.view;
-    }
-  }
-
-  /// 「小课申请审核」用的字典：申请记录里只有 ID（classId / classroomId /
-  /// subjectId / teacherId），需要查字典还原成名称才能在卡片上显示。
-  /// 字典加载与申请列表解耦：失败 / 慢都不会阻断 schedule 主网格渲染；
-  /// 出问题时申请卡上对应字段会回落到「—」。
-  Map<String, String> _classNameById = const {};
-  Map<int, String> _classroomNameById = const {};
-  Map<int, String> _subjectNameById = const {};
-  Map<String, String> _teacherNameById = const {};
 
   /// 课表网格的实际数据（[7 天][N 节] → 多张课卡）。
   late List<List<List<_ScheduleCardData>>> _serverCells;
@@ -350,7 +165,7 @@ class _AdminScheduleManagementViewState
 
   /// 编辑模式下点击空格 → 弹右侧 [_AdminEditCourseDrawer]，提交时调
   /// `courseBatchSave` 写入一条排课，成功后重新拉取本周课表。
-  Future<void> _onApplySmallLesson(int dayIdx, int slotIdx) async {
+  Future<void> _onAddCourse(int dayIdx, int slotIdx) async {
     final scaleData =
         DashboardScaleScope.maybeOf(context) ??
         DashboardScaleScope.fromSize(MediaQuery.sizeOf(context));
@@ -529,7 +344,7 @@ class _AdminScheduleManagementViewState
     return ids;
   }
 
-  /// 编辑模式下，把某节大课从 `(sourceDay, sourceSlot)` 拖到
+  /// 编辑模式下，把某节课从 `(sourceDay, sourceSlot)` 拖到
   /// `(targetDay, targetSlot)`：
   ///   1. 同格直接 no-op；
   ///   2. 乐观更新本地 `_serverCells`；
@@ -589,7 +404,7 @@ class _AdminScheduleManagementViewState
         if (raw['classroomId'] != null) 'classroomId': raw['classroomId'],
         if (raw['subjectId'] != null) 'subjectId': raw['subjectId'],
         if ((raw['color'] ?? '').toString().isNotEmpty) 'color': raw['color'],
-        // courseBatchSave 期望 swagger 里的 ISO+TZ 格式（与 _onApplySmallLesson 一致）。
+        // 日期用 yyyy-MM-dd，和 _onAddCourse 写入的一致。
         'date': newDate,
         'lineNum': newLineNum,
       };
@@ -631,16 +446,6 @@ class _AdminScheduleManagementViewState
     ];
   }
 
-  // —— tab 2 状态 ————————————————————————————————————————————————
-  List<_ApplyRecord> _applies = const [];
-  String? _applyError;
-  _ApplyDateFilter _applyDateFilter = _ApplyDateFilter.month;
-  DateTime _applyFilterDay = _applyFilterDateOnly(DateTime.now());
-
-  /// 全量「待审核」小课申请数量（角标）。来自 `schoolSmallCourseApplyList`
-  /// `status=0` 的分页 total。
-  int _pendingApplyCount = 0;
-
   @override
   void initState() {
     super.initState();
@@ -649,28 +454,17 @@ class _AdminScheduleManagementViewState
     _weekStart = anchor.monday;
     _currentWeek = anchor.week;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      unawaited(_loadPendingApplyCount());
       // 接口要求 classId 必填 → 必须先拉班级列表，拿到第 1 项作为默认班级，
       // 再依次拉左侧时间表（按 classId 维度）+ 课表，保证 lineNum → slotIdx
       // 映射在解析课表前到位。
       await _loadClasses();
       if (!mounted) return;
       if (_classes.isNotEmpty && _selectedClassId == null) {
-        setState(() {
-          _selectedClassId = _classes.first.id;
-          _selectedClassName = _classes.first.name;
-        });
+        setState(() => _selectedClassId = _classes.first.id);
       }
-      // 申请审核字典与时间表 / 课表并行：失败不阻断 schedule 渲染，只是
-      // 申请卡上对应字段会回落到「—」。字典就绪前先开 _loadApplies()
-      // 也无所谓 —— 申请字段会在 _loadApplyDirectories() setState 后随
-      // 下一次 _loadApplies() 自然补齐（实际场景里 _loadApplies 在字典
-      // ready 之后再跑，所以一次到位）。
-      await Future.wait([_loadTimeConfig(), _loadApplyDirectories()]);
+      await _loadTimeConfig();
       if (!mounted) return;
       _loadSchedule();
-      unawaited(_loadPendingApplyCount());
-      _loadApplies();
     });
   }
 
@@ -732,131 +526,26 @@ class _AdminScheduleManagementViewState
     final resp = await repo.classList();
     if (!mounted) return;
     if (!resp.isSuccess) {
-      setState(() {
-        _classesLoading = false;
-        _selectedClassName = '选择班级';
-      });
+      setState(() => _classesLoading = false);
       return;
     }
-    final rows = _extractList(resp);
     final list = <({String id, String name})>[];
-    final nameById = <String, String>{};
-    final isSmallById = <String, bool>{};
-    for (final m in rows) {
+    for (final m in _extractList(resp)) {
       final id = _pickString(m, ['id', 'classId'], '');
       final name = _pickString(m, ['name', 'className', 'fullName'], '');
       if (id.isNotEmpty && name.isNotEmpty) {
         list.add((id: id, name: name));
-        nameById[id] = name;
-        isSmallById[id] = _isSmallClassType(
-          m['type'] ?? m['classType'] ?? m['kind'],
-        );
       }
     }
     if (!mounted) return;
     setState(() {
       _classes = list;
-      _classNameById = nameById;
-      _classIsSmallById = isSmallById;
       _classesLoading = false;
       if (list.isNotEmpty &&
           (_selectedClassId == null ||
               !list.any((c) => c.id == _selectedClassId))) {
         _selectedClassId = list.first.id;
-        _selectedClassName = list.first.name;
-      } else if (_selectedClassId != null) {
-        _selectedClassName = nameById[_selectedClassId] ?? _selectedClassName;
-      } else {
-        _selectedClassName = '选择班级';
       }
-      _resetModeIfSmallClassSelected();
-    });
-  }
-
-  /// 顶部「小课申请审核」角标：全量待审核条数（`status=0` 分页 total）。
-  Future<void> _loadPendingApplyCount() async {
-    final repo = ref.read(adminRepositoryProvider);
-    final resp = await repo.schoolSmallCourseApplyList(
-      current: 1,
-      size: 1,
-      status: 0,
-    );
-    if (!mounted) return;
-
-    var pendingTotal = 0;
-    if (resp.isSuccess) {
-      pendingTotal = _extractPageTotal(resp) ?? 0;
-    }
-    setState(() => _pendingApplyCount = pendingTotal);
-  }
-
-  /// 拉「小课申请审核」要用的字典 —— 教室 / 教师 / 科目（per 班级）。
-  /// 与主流程解耦：失败不会阻断 schedule / apply 列表渲染。
-  ///
-  /// - 教室走 admin `classroomList`（全校公共，一次拉全量）；
-  /// - 教师走 admin `teacherList`（按 schoolId 拉全量，每个雪花长 id →
-  ///   `realname` / `nickname` 兜底）；
-  /// - 科目走 user `subjectList(classId)`，必须按班级查 —— 接口不传 classId
-  ///   实测不返回全量。所以这里按 `_classNameById` 里每个班级并行发 N 个
-  ///   请求，结果合并。`_classes` 通常 < 30 个，单次开页面成本可控。
-  Future<void> _loadApplyDirectories() async {
-    final adminRepo = ref.read(adminRepositoryProvider);
-    final schoolRepo = ref.read(schoolRepositoryProvider);
-
-    final classIds = _classNameById.keys.toList();
-    final classroomFuture = adminRepo.classroomList();
-    final teacherFuture = adminRepo.teacherList();
-    final subjectFutures = <Future<ApiResponse>>[
-      for (final cid in classIds) schoolRepo.subjectList(classId: cid),
-    ];
-
-    final classroomResp = await classroomFuture;
-    final teacherResp = await teacherFuture;
-    final subjectResps = await Future.wait(subjectFutures);
-    if (!mounted) return;
-
-    final classroomMap = <int, String>{};
-    if (classroomResp.isSuccess) {
-      for (final m in _extractList(classroomResp)) {
-        final rawId = m['id'] ?? m['classroomId'] ?? m['roomId'];
-        final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
-        final name = _pickString(m, ['name', 'classroomName', 'roomName'], '');
-        if (id != null && name.isNotEmpty) classroomMap[id] = name;
-      }
-    }
-
-    final teacherMap = <String, String>{};
-    if (teacherResp.isSuccess) {
-      for (final m in _extractList(teacherResp)) {
-        // teacherId 是雪花 long → 必须以 String 承载，外层 JSON 已经引号
-        // 包裹，这里 _pickString 直接拿原文即可。
-        final id = _pickString(m, ['id', 'teacherId'], '');
-        final name = _pickString(m, [
-          'realname',
-          'realName',
-          'nickname',
-          'name',
-        ], '');
-        if (id.isNotEmpty && name.isNotEmpty) teacherMap[id] = name;
-      }
-    }
-
-    final subjectMap = <int, String>{};
-    for (final resp in subjectResps) {
-      if (!resp.isSuccess) continue;
-      for (final m in _extractList(resp)) {
-        final rawId = m['id'] ?? m['subjectId'];
-        final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
-        final name = _pickString(m, ['name', 'subjectName'], '');
-        if (id != null && name.isNotEmpty) subjectMap[id] = name;
-      }
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _classroomNameById = classroomMap;
-      _teacherNameById = teacherMap;
-      _subjectNameById = subjectMap;
     });
   }
 
@@ -897,8 +586,6 @@ class _AdminScheduleManagementViewState
     final cells = _emptyCells();
     final configs = _activeTimeConfigs;
     final rows = _extractCourseRows(resp);
-    // 单元格内 第 N 张小课卡 用于决定 橙 / 蓝 主题轮换。
-    final smallSeq = <int, int>{};
     for (final entry in rows) {
       final m = entry.row;
       // 优先用日期分组的 key（API 新格式 data: {"2026-05-11": [...]}），
@@ -920,10 +607,7 @@ class _AdminScheduleManagementViewState
         slotIdx = (lineNum - 1).clamp(0, configs.length - 1);
       }
 
-      final cellKey = dayIdx * 1000 + slotIdx;
-      final card = _parseCourseCard(m, smallSeq[cellKey] ?? 0);
-      smallSeq[cellKey] = (smallSeq[cellKey] ?? 0) + 1;
-      cells[dayIdx][slotIdx].add(card);
+      cells[dayIdx][slotIdx].add(_parseCourseCard(m));
     }
 
     if (!mounted || generation != _scheduleLoadGeneration) return;
@@ -989,7 +673,7 @@ class _AdminScheduleManagementViewState
     ];
   }
 
-  /// 课卡堆叠决定行高，首行可编辑时给格内按钮留出空间。
+  /// 课卡堆叠决定行高。
   List<_TimeSlotData> _buildSlots(List<List<List<_ScheduleCardData>>> cells) {
     final configs = _activeTimeConfigs;
     return [
@@ -1008,22 +692,13 @@ class _AdminScheduleManagementViewState
     List<List<List<_ScheduleCardData>>> cells,
   ) {
     var maxHeight = ScheduleIdleSlot.designSlotHeight;
-    var hasSmallClass = false;
     for (var d = 0; d < cells.length; d++) {
       if (slotIdx < cells[d].length) {
-        final cards = cells[d][slotIdx];
         final height = scheduleCourseCellHeight(
-          cards.map((card) => card.display),
+          cells[d][slotIdx].map((card) => card.display),
         );
         if (height > maxHeight) maxHeight = height;
-        hasSmallClass |= cards.any((card) => _isSmallKind(card.kind));
       }
-    }
-    if (_mode == _ScheduleMode.edit &&
-        slotIdx == 0 &&
-        hasSmallClass &&
-        maxHeight >= 168) {
-      return maxHeight + AppSpace.s8 + ScheduleCourseCellAction.height;
     }
     return maxHeight;
   }
@@ -1055,25 +730,18 @@ class _AdminScheduleManagementViewState
   ///   "className": "联考冲刺1班",
   ///   "classroomName": "艺术楼101",
   ///   "color": "#D2C4FF",
-  ///   "type": 0,
   ///   ...
   /// }
   /// ```
   ///
-  /// `type == 1` → 小课（同一格里第 0 张橙、第 1 张蓝循环）；`type == 0` → 大课。
   /// `color` 是 hex（含 `#`），存到卡片做背景覆盖；标题色按背景亮度自适应。
-  _ScheduleCardData _parseCourseCard(
-    Map<String, dynamic> json,
-    int smallIdxInCell,
-  ) {
-    final rawCopy = Map<String, dynamic>.from(json);
+  _ScheduleCardData _parseCourseCard(Map<String, dynamic> json) {
     return _ScheduleCardData(
       display: buildScheduleCourseCard(
         json,
-        smallIdxInCell,
         subline: ScheduleCardSubline.teacher,
       ),
-      raw: rawCopy,
+      raw: Map<String, dynamic>.from(json),
     );
   }
 
@@ -1099,216 +767,6 @@ class _AdminScheduleManagementViewState
     ];
   }
 
-  Future<void> _loadApplies() async {
-    final repo = ref.read(adminRepositoryProvider);
-
-    final listResp = await repo.schoolSmallCourseApplyList(
-      current: 1,
-      size: 100,
-    );
-
-    if (!mounted) return;
-
-    if (!listResp.isSuccess) {
-      setState(() {
-        _applyError = listResp.displayMsg;
-        _applies = const [];
-      });
-      return;
-    }
-
-    final rows = _extractList(listResp);
-    final parsed = <_ApplyRecord>[];
-    for (final m in rows) {
-      // 把当前字典快照传进去做 ID → 名称反查；字典还没就绪也 OK，
-      // _ApplyRecord.fromJson 会让对应字段回落到「—」。
-      final r = _ApplyRecord.fromJson(
-        m,
-        classNameById: _classNameById,
-        classroomNameById: _classroomNameById,
-        subjectNameById: _subjectNameById,
-        teacherNameById: _teacherNameById,
-      );
-      if (r.id.isNotEmpty) parsed.add(r);
-    }
-
-    setState(() {
-      _applies = parsed;
-      _applyError = null;
-    });
-  }
-
-  /// 打开详情弹窗：调 `schoolSmallCourseApplyDetail` 后展示。
-  Future<void> _openApplyDetail(_ApplyRecord preview) async {
-    final scaleData =
-        DashboardScaleScope.maybeOf(context) ??
-        DashboardScaleScope.fromSize(MediaQuery.sizeOf(context));
-    final repo = ref.read(adminRepositoryProvider);
-    final resp = await repo.schoolSmallCourseApplyDetail(preview.id);
-    if (!mounted) return;
-    if (!resp.isSuccess) {
-      AppToast.show(context, resp.displayMsg);
-      return;
-    }
-    final raw = resp.data;
-    Map<String, dynamic>? map;
-    if (raw is Map<String, dynamic>) {
-      map = Map<String, dynamic>.from(raw);
-    } else if (raw is Map) {
-      map = raw.cast<String, dynamic>();
-    }
-    if (map != null &&
-        map['data'] is Map &&
-        _pickString(map, ['id'], '').isEmpty) {
-      map = Map<String, dynamic>.from(map['data'] as Map);
-    }
-    final record = map != null
-        ? _ApplyRecord.fromJson(
-            map,
-            classNameById: _classNameById,
-            classroomNameById: _classroomNameById,
-            subjectNameById: _subjectNameById,
-            teacherNameById: _teacherNameById,
-          )
-        : preview;
-
-    await showScaledDialog<void>(
-      context: context,
-      barrierColor: AppColors.ink.withValues(alpha: 0.8),
-      builder: (dialogContext) {
-        return DashboardScaleScope(
-          data: scaleData,
-          child: Builder(
-            builder: (ctx) {
-              final ui = DashboardScaleScope.of(ctx).ui;
-              return GradientHeaderDialog(
-                title: '申请详情',
-                titlePaddingTop: 36,
-                width: 428,
-                contentPadding: EdgeInsets.fromLTRB(
-                  ui(40),
-                  ui(28),
-                  ui(40),
-                  ui(28),
-                ),
-                actionBar: null,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      record.title,
-                      style: TextStyle(
-                        fontSize: ui(16),
-                        color: _kTextDark,
-                        fontWeight: AppFont.w600,
-                        height: 1.25,
-                      ),
-                    ),
-                    SizedBox(height: ui(8)),
-                    Text(
-                      record.subline.isEmpty ? '—' : record.subline,
-                      style: TextStyle(
-                        fontSize: ui(13),
-                        color: _kTextSecondary,
-                        fontWeight: AppFont.w400,
-                        height: 1.3,
-                      ),
-                    ),
-                    SizedBox(height: ui(20)),
-                    _ApplyDetailRow(
-                      label: '日期',
-                      value: record.dateLabel,
-                      ui: ui,
-                    ),
-                    SizedBox(height: ui(12)),
-                    _ApplyDetailRow(
-                      label: '节次',
-                      value: record.lineLabel,
-                      ui: ui,
-                    ),
-                    SizedBox(height: ui(12)),
-                    _ApplyDetailRow(label: '备注', value: record.note, ui: ui),
-                    SizedBox(height: ui(24)),
-                    InkWell(
-                      onTap: () => Navigator.of(ctx).pop(),
-                      borderRadius: BorderRadius.circular(ui(12)),
-                      child: Container(
-                        width: double.infinity,
-                        height: ui(45),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.centerRight,
-                            end: Alignment.centerLeft,
-                            colors: <Color>[
-                              AppColors.brandSoft,
-                              AppColors.brand,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(ui(12)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0x599585FF),
-                              blurRadius: ui(20),
-                              offset: Offset(0, ui(16)),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          '关闭',
-                          style: TextStyle(
-                            color: AppColors.surface,
-                            fontSize: ui(16),
-                            fontWeight: AppFont.w400,
-                            height: 12 / 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _approve(_ApplyRecord record) async {
-    final repo = ref.read(adminRepositoryProvider);
-    final resp = await repo.schoolSmallCourseApplyAudit(
-      id: record.id,
-      pass: true,
-    );
-    if (!mounted) return;
-    if (!resp.isSuccess) {
-      AppToast.show(context, resp.displayMsg);
-      return;
-    }
-    AppToast.show(context, '已通过 ${record.title}');
-    await Future.wait([_loadApplies(), _loadPendingApplyCount()]);
-  }
-
-  Future<void> _reject(_ApplyRecord record) async {
-    final reason = await _showRejectDialog(context, record: record);
-    if (reason == null || reason.trim().isEmpty || !mounted) return;
-    final repo = ref.read(adminRepositoryProvider);
-    final resp = await repo.schoolSmallCourseApplyAudit(
-      id: record.id,
-      pass: false,
-      reason: reason.trim(),
-    );
-    if (!mounted) return;
-    if (!resp.isSuccess) {
-      AppToast.show(context, resp.displayMsg);
-      return;
-    }
-    AppToast.show(context, '已驳回 ${record.title}');
-    await Future.wait([_loadApplies(), _loadPendingApplyCount()]);
-  }
-
   // —— Build ————————————————————————————————————————————————
   @override
   Widget build(BuildContext context) {
@@ -1316,39 +774,15 @@ class _AdminScheduleManagementViewState
     return SmartCampusSchedulePageShell(
       bodyScrollable: false,
       header: SmartCampusPageBanner(
-        titleHorizontalInset: 170,
         title: '排课与课表',
-        subtitle: '按班级查看与调整周课表，审核任课老师的小课申请',
+        subtitle: '按班级查看与调整周课表',
         onBack: widget.onBack,
-        actions: [
-          AppSegmented<_AdminScheduleTab>(
-            segments: [
-              const AppSegment(value: _AdminScheduleTab.schedule, label: '课表'),
-              AppSegment(
-                value: _AdminScheduleTab.applyAudit,
-                label: '小课审核',
-                badge: _pendingApplyCount > 0 ? '$_pendingApplyCount' : null,
-              ),
-            ],
-            value: _tab,
-            selectedColor: AppColors.ink,
-            onChanged: (t) {
-              setState(() => _tab = t);
-              if (t == _AdminScheduleTab.applyAudit) {
-                _loadApplies();
-                unawaited(_loadPendingApplyCount());
-              }
-            },
-          ),
-        ],
       ),
-      body: _tab == _AdminScheduleTab.schedule
-          ? _buildScheduleTab(ui)
-          : SingleChildScrollView(child: _buildApplyTab(ui)),
+      body: _buildSchedule(ui),
     );
   }
 
-  Widget _buildScheduleTab(double Function(num) ui) {
+  Widget _buildSchedule(double Function(num) ui) {
     final cells = _normalizeCells(_serverCells);
     final slots = _buildSlots(cells);
     final days = _buildDayHeaders();
@@ -1365,11 +799,7 @@ class _AdminScheduleManagementViewState
                 loading: _classesLoading,
                 onChanged: (picked) async {
                   if (picked.id == _selectedClassId) return;
-                  setState(() {
-                    _selectedClassId = picked.id;
-                    _selectedClassName = picked.name;
-                    _resetModeIfSmallClassSelected();
-                  });
+                  setState(() => _selectedClassId = picked.id);
                   // 班级一变：先按新班重拉左侧时间表（节次可能不同），
                   // 再按新 configs 拉课表，保证 lineNum 落格正确。
                   await _loadTimeConfig();
@@ -1380,8 +810,7 @@ class _AdminScheduleManagementViewState
               const Spacer(),
               _ViewEditSegment(
                 mode: _mode,
-                editEnabled: !_selectedClassIsSmall,
-                onChanged: _onScheduleModeChanged,
+                onChanged: (next) => setState(() => _mode = next),
               ),
             ],
           ),
@@ -1416,7 +845,7 @@ class _AdminScheduleManagementViewState
                 slots: slots,
                 days: days,
                 cells: cells,
-                onApplySmallLesson: _onApplySmallLesson,
+                onAddCourse: _onAddCourse,
                 onDropCard: _onDropCard,
                 onDeleteCourse: _onDeleteCourse,
               ),
@@ -1426,89 +855,10 @@ class _AdminScheduleManagementViewState
       ],
     );
   }
-
-  Future<void> _pickApplyFilterDay() async {
-    final picked = await showAppDatePicker(
-      context: context,
-      initialDate: _applyFilterDay,
-      firstDate: DateTime(2024),
-      lastDate: DateTime(2030),
-      helpText: '选择日期',
-      cancelText: '取消',
-      confirmText: '确定',
-    );
-    if (!mounted || picked == null) return;
-    setState(() {
-      _applyDateFilter = _ApplyDateFilter.day;
-      _applyFilterDay = _applyFilterDateOnly(picked);
-    });
-  }
-
-  Future<void> _onApplyDateFilterChanged(_ApplyDateFilter filter) async {
-    if (filter == _ApplyDateFilter.day) {
-      await _pickApplyFilterDay();
-      return;
-    }
-    setState(() => _applyDateFilter = filter);
-  }
-
-  String _applyDayFilterLabel() {
-    final d = _applyFilterDay;
-    return campusMonthDay(d);
-  }
-
-  Widget _buildApplyTab(double Function(num) ui) {
-    final list = _applies;
-    final now = DateTime.now();
-    final filtered = list
-        .where(
-          (r) => _applyRecordMatchesDateFilter(
-            r,
-            _applyDateFilter,
-            now,
-            selectedDay: _applyFilterDay,
-          ),
-        )
-        .toList(growable: false);
-    final emptyMessage = list.isEmpty
-        ? (_applyError ?? '暂无小课排班申请')
-        : switch (_applyDateFilter) {
-            _ApplyDateFilter.day => '${_applyDayFilterLabel()} 暂无小课排班申请',
-            _ApplyDateFilter.week => '本周暂无小课排班申请',
-            _ApplyDateFilter.month => '本月暂无小课排班申请',
-          };
-    return Padding(
-      padding: EdgeInsets.fromLTRB(ui(20), 0, ui(20), ui(20)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: ui(12)),
-            child: _ApplyListHeaderRow(
-              filter: _applyDateFilter,
-              dayChipLabel: _applyDayFilterLabel(),
-              onFilterChanged: (filter) {
-                unawaited(_onApplyDateFilterChanged(filter));
-              },
-            ),
-          ),
-          if (filtered.isEmpty)
-            _ApplyEmptyState(message: emptyMessage)
-          else
-            _ApplyGrid(
-              records: filtered,
-              onApprove: _approve,
-              onReject: _reject,
-              onOpenDetail: _openApplyDetail,
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 // =============================================================================
-// 顶部 banner：返回 + 居中标题 + 右上 tab 分段
+// 班级下拉 + 查看 / 编辑
 // =============================================================================
 
 /// 班级下拉（[AppSelect]）。
@@ -1548,27 +898,18 @@ class _ScheduleClassFilterField extends StatelessWidget {
 }
 
 class _ViewEditSegment extends StatelessWidget {
-  const _ViewEditSegment({
-    required this.mode,
-    required this.onChanged,
-    this.editEnabled = true,
-  });
+  const _ViewEditSegment({required this.mode, required this.onChanged});
 
   final _ScheduleMode mode;
   final ValueChanged<_ScheduleMode> onChanged;
-  final bool editEnabled;
 
   @override
   Widget build(BuildContext context) {
     return AppSegmented<_ScheduleMode>(
       size: AppControlSize.sm,
-      segments: [
-        const AppSegment(value: _ScheduleMode.view, label: '查看'),
-        AppSegment(
-          value: _ScheduleMode.edit,
-          label: '编辑',
-          enabled: editEnabled,
-        ),
+      segments: const [
+        AppSegment(value: _ScheduleMode.view, label: '查看'),
+        AppSegment(value: _ScheduleMode.edit, label: '编辑'),
       ],
       value: mode,
       onChanged: onChanged,
@@ -1577,7 +918,7 @@ class _ViewEditSegment extends StatelessWidget {
 }
 
 // =============================================================================
-// 控制条：第 N 周 + 大课 / 小课图例 + 周切换 + 选日期
+// 控制条：第 N 周 + 编辑说明 + 周切换 + 选日期
 // =============================================================================
 
 class _ScheduleControlBar extends StatelessWidget {
@@ -1618,22 +959,12 @@ class _ScheduleControlBar extends StatelessWidget {
                 ),
                 style: AppText.title16,
               ),
-              const SizedBox(height: AppSpace.s8),
-              const Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: AppSpace.s8,
-                children: [
-                  AppTag(label: '大课', dotColor: _kStatusPurple),
-                  AppTag(label: '小课', dotColor: _kStatusGreen),
-                  Tooltip(
-                    message: '编辑模式下可拖动、删除大课；小课由任课老师申请，在「小课审核」中处理',
-                    child: Icon(
-                      Icons.help_outline_rounded,
-                      size: 16,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: AppSpace.s4),
+              Text(
+                '编辑时点空白格排课，长按课卡拖到别的时间，左滑删除',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption12,
               ),
             ],
           ),
@@ -1661,7 +992,7 @@ class _DaysBodyArea extends StatelessWidget {
     required this.slots,
     required this.days,
     required this.cells,
-    required this.onApplySmallLesson,
+    required this.onAddCourse,
     required this.onDropCard,
     required this.onDeleteCourse,
   });
@@ -1670,7 +1001,7 @@ class _DaysBodyArea extends StatelessWidget {
   final List<_TimeSlotData> slots;
   final List<_DayHeaderData> days;
   final List<List<List<_ScheduleCardData>>> cells;
-  final void Function(int dayIdx, int slotIdx) onApplySmallLesson;
+  final void Function(int dayIdx, int slotIdx) onAddCourse;
   final Future<void> Function(
     _DragPayload payload,
     int targetDay,
@@ -1694,7 +1025,7 @@ class _DaysBodyArea extends StatelessWidget {
               for (var dayIdx = 0; dayIdx < days.length; dayIdx++)
                 cells[dayIdx][slotIdx],
             ],
-            onApplySmallLesson: onApplySmallLesson,
+            onAddCourse: onAddCourse,
             onDropCard: onDropCard,
             onDeleteCourse: onDeleteCourse,
           ),
@@ -1711,7 +1042,7 @@ class _DayBodyRow extends StatelessWidget {
     required this.mode,
     required this.days,
     required this.rowCells,
-    required this.onApplySmallLesson,
+    required this.onAddCourse,
     required this.onDropCard,
     required this.onDeleteCourse,
   });
@@ -1722,7 +1053,7 @@ class _DayBodyRow extends StatelessWidget {
   final _ScheduleMode mode;
   final List<_DayHeaderData> days;
   final List<List<_ScheduleCardData>> rowCells;
-  final void Function(int dayIdx, int slotIdx) onApplySmallLesson;
+  final void Function(int dayIdx, int slotIdx) onAddCourse;
   final Future<void> Function(
     _DragPayload payload,
     int targetDay,
@@ -1749,11 +1080,10 @@ class _DayBodyRow extends StatelessWidget {
                       dayIdx: i,
                       slotIdx: slotIdx,
                       slotEnd: slotEnd,
-                      slotHeight: height,
                       mode: mode,
                       slotDate: days[i].date,
                       cards: rowCells[i],
-                      onApplySmallLesson: () => onApplySmallLesson(i, slotIdx),
+                      onAddCourse: () => onAddCourse(i, slotIdx),
                       onDropCard: onDropCard,
                       onDeleteCourse: onDeleteCourse,
                     ),
@@ -1789,11 +1119,10 @@ class _CellContent extends StatelessWidget {
     required this.dayIdx,
     required this.slotIdx,
     required this.slotEnd,
-    required this.slotHeight,
     required this.mode,
     required this.slotDate,
     required this.cards,
-    required this.onApplySmallLesson,
+    required this.onAddCourse,
     required this.onDropCard,
     required this.onDeleteCourse,
   });
@@ -1801,11 +1130,10 @@ class _CellContent extends StatelessWidget {
   final int dayIdx;
   final int slotIdx;
   final String slotEnd;
-  final double slotHeight;
   final _ScheduleMode mode;
   final DateTime slotDate;
   final List<_ScheduleCardData> cards;
-  final VoidCallback onApplySmallLesson;
+  final VoidCallback onAddCourse;
   final Future<void> Function(
     _DragPayload payload,
     int targetDay,
@@ -1813,8 +1141,6 @@ class _CellContent extends StatelessWidget {
   )
   onDropCard;
   final Future<void> Function(_ScheduleCardData card) onDeleteCourse;
-
-  bool get _hasSmallCard => cards.any((c) => _isSmallKind(c.kind));
 
   @override
   Widget build(BuildContext context) {
@@ -1875,16 +1201,14 @@ class _CellContent extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.topCenter,
                   child: ScheduleCourseCellAction(
-                    label: '编辑大课',
-                    onTap: onApplySmallLesson,
+                    label: '排课',
+                    onTap: onAddCourse,
                   ),
                 ),
               )
             : const ScheduleIdleSlot(),
       );
     }
-    final shouldAppendApply =
-        isEditing && slotIdx == 0 && _hasSmallCard && slotHeight >= 168;
     final isPast = isScheduleSlotPast(slotDate: slotDate, endHm: slotEnd);
     return wrapHover(
       Align(
@@ -1906,13 +1230,6 @@ class _CellContent extends StatelessWidget {
                   onDelete: isEditing ? () => onDeleteCourse(cards[i]) : null,
                 ),
               ],
-              if (shouldAppendApply) ...[
-                const SizedBox(height: AppSpace.s8),
-                ScheduleCourseCellAction(
-                  label: '编辑大课',
-                  onTap: onApplySmallLesson,
-                ),
-              ],
             ],
           ),
         ),
@@ -1921,13 +1238,8 @@ class _CellContent extends StatelessWidget {
   }
 }
 
-bool _isSmallKind(ScheduleCourseCardKind k) =>
-    k == ScheduleCourseCardKind.smallOrange ||
-    k == ScheduleCourseCardKind.smallBlue;
-
-/// 编辑模式下，大课卡 = `LongPressDraggable`；小课 / 查看模式 = 静态 [ScheduleCourseCard]。
-///
-/// 小课在 admin 端「待任课老师发起请求」，所以始终不可拖动。
+/// 编辑模式下课卡可以长按拖动（`LongPressDraggable`）；查看模式是静态的
+/// [ScheduleCourseCard]。
 class _DraggableScheduleCard extends StatelessWidget {
   const _DraggableScheduleCard({
     required this.card,
@@ -1947,11 +1259,7 @@ class _DraggableScheduleCard extends StatelessWidget {
   final int indexInSlot;
   final VoidCallback? onDelete;
 
-  bool get _draggable {
-    if (!isEditing) return false;
-    if (card.raw == null) return false;
-    return !_isSmallKind(card.kind);
-  }
+  bool get _draggable => isEditing && card.raw != null;
 
   bool get _deletable {
     if (onDelete == null || card.raw == null) return false;
@@ -1961,14 +1269,10 @@ class _DraggableScheduleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final deleteHandler = _deletable ? onDelete : null;
-    Widget courseCard = ScheduleCourseCard(
-      data: card.display,
-      editable: isEditing || _draggable,
-      isPast: isPast,
-    );
+    Widget courseCard = ScheduleCourseCard(data: card.display, isPast: isPast);
     if (deleteHandler != null) {
       courseCard = ScheduleCourseSwipeDelete(
-        cardHeight: scheduleCourseCardHeight(card.kind),
+        cardHeight: kScheduleCourseCardHeight,
         widthDesign: kScheduleCourseCardWidth,
         onDelete: deleteHandler,
         child: courseCard,
@@ -2030,15 +1334,11 @@ class _DragFeedback extends StatelessWidget {
             ),
           ],
         ),
-        child: ScheduleCourseCard(data: card.display, editable: true),
+        child: ScheduleCourseCard(data: card.display),
       ),
     );
   }
 }
-
-// =============================================================================
-// 课卡（4 主题）
-// =============================================================================
 
 // =============================================================================
 // 数据模型 - 课表
@@ -2050,12 +1350,9 @@ class _ScheduleCardData {
   final ScheduleCourseCardData display;
   final Map<String, dynamic>? raw;
 
-  ScheduleCourseCardKind get kind => display.kind;
   String get location => display.location;
   String get name => display.name;
   String get subline => display.subline;
-  String? get capacity => display.capacity;
-  Color? get bgColor => display.bgColor;
 }
 
 /// 课表拖拽时随手携带的数据。`sourceDay/sourceSlot/indexInSlot` 用于在
@@ -2103,7 +1400,7 @@ const List<_TimeConfig> _kDefaultTimeConfigs = [
 
 // =============================================================================
 // 排课编辑右侧抽屉（管理员）：课程时间只读 + 班级 / 教室 / 复用，
-// 提交时调 `courseBatchSave`（大课颜色固定为色板首色紫色）。
+// 提交时调 `courseBatchSave`（课程色用色板首色紫色）。
 // =============================================================================
 
 class _AdminEditCourseDrawer extends ConsumerStatefulWidget {
@@ -2290,10 +1587,8 @@ class _AdminEditCourseDrawerState
 
   Future<void> _loadOptions() async {
     final repo = ref.read(adminRepositoryProvider);
-    // 编辑大课 → 班级下拉只展示大班（type=0），过滤掉小班，避免管理员误把
-    // 大课排进小班；小班的课表走「小课申请审核」走另一套流程。
     final results = await Future.wait([
-      repo.classList(type: 0),
+      repo.classList(),
       repo.classroomList(),
       repo.teacherList(),
     ]);
@@ -2374,7 +1669,7 @@ class _AdminEditCourseDrawerState
     ];
   }
 
-  String get _defaultBigCourseColorHex =>
+  String get _defaultCourseColorHex =>
       scheduleColorToHex(scheduleDefaultPickerColor);
 
   Future<void> _submit() async {
@@ -2400,7 +1695,7 @@ class _AdminEditCourseDrawerState
         <String, dynamic>{
           'classId': _classId,
           'classroomId': classroomNum ?? _classroomId,
-          'color': _defaultBigCourseColorHex,
+          'color': _defaultCourseColorHex,
           'date': _formatIsoDate(d),
           'lineNum': widget.lineNum,
           'subjectId': subjectNum ?? _subjectId,
@@ -2454,7 +1749,7 @@ class _AdminEditCourseDrawerState
         color: AppColors.surface,
         child: Column(
           children: [
-            _DrawerHeader(title: '编辑大课', onClose: widget.onCancel),
+            _DrawerHeader(title: '排课', onClose: widget.onCancel),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(ui(20)),
@@ -2748,895 +2043,8 @@ class _SubmitGradientButton extends StatelessWidget {
 }
 
 // =============================================================================
-// tab 2 - 小课申请审核：列表卡片 + 通过/驳回 + 驳回弹窗
-// =============================================================================
-
-/// 申请详情弹窗里的一行 label / value。
-class _ApplyDetailRow extends StatelessWidget {
-  const _ApplyDetailRow({
-    required this.label,
-    required this.value,
-    required this.ui,
-  });
-
-  final String label;
-  final String value;
-  final double Function(num) ui;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: ui(52),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextHint,
-              fontWeight: AppFont.w400,
-              height: 20 / 12,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: ui(12),
-              color: _kTextDark,
-              fontWeight: AppFont.w400,
-              height: 20 / 12,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ApplyRecord {
-  const _ApplyRecord({
-    required this.id,
-    required this.title,
-    required this.teacher,
-    required this.location,
-    required this.applyTime,
-    required this.dateLabel,
-    required this.lineLabel,
-    required this.note,
-    required this.status,
-    this.applyAt,
-    this.courseStart,
-    this.courseEnd,
-    this.courseDates = const [],
-  });
-
-  final String id;
-  final String title;
-  final String teacher;
-  final String location;
-  final String applyTime;
-  final String dateLabel;
-  final String lineLabel;
-  final String note;
-  final _ApplyStatus status;
-  final DateTime? applyAt;
-  final DateTime? courseStart;
-  final DateTime? courseEnd;
-  final List<DateTime> courseDates;
-
-  /// 后端响应结构（`schoolSmallCourseApplyList` 实测）：
-  /// ```
-  /// {
-  ///   id, schoolId, classId, teacherId, subjectId, lineNum, color,
-  ///   classroomId, status, reason, createTime, auditTime, auditTeacherId,
-  ///   startDate, endDate,
-  ///   courseData: "[{classId,classroomId,color,date,lineNum,
-  ///                  subjectId,teacherId}, ...]"   // JSON 字符串
-  /// }
-  /// ```
-  /// 卡片上要显示的「班级 / 教室 / 教师 / 科目」全是 ID，需要外部字典反查；
-  /// 字典还没就绪 / 命中不到时回落到「—」，不会让卡片报错。
-  ///
-  /// `dateLabel` 不再依赖 `dateLabel` / `date` 等已废弃 key，统一用顶层
-  /// `startDate ~ endDate` 拼一个区间。`courseData` 解析出来的「次数」额
-  /// 外拼到末尾，方便管理员一眼看到这条申请覆盖了多少节课。
-  factory _ApplyRecord.fromJson(
-    Map<String, dynamic> json, {
-    Map<String, String>? classNameById,
-    Map<int, String>? classroomNameById,
-    Map<int, String>? subjectNameById,
-    Map<String, String>? teacherNameById,
-  }) {
-    final id = _pickString(json, ['id', 'applyId', 'recordId'], '');
-
-    // —— 名称回查（字典 miss 时统一回落到「—」）——
-    final classroomIdRaw = json['classroomId'];
-    final classroomId = classroomIdRaw is int
-        ? classroomIdRaw
-        : int.tryParse(classroomIdRaw?.toString() ?? '');
-    final subjectIdRaw = json['subjectId'];
-    final subjectId = subjectIdRaw is int
-        ? subjectIdRaw
-        : int.tryParse(subjectIdRaw?.toString() ?? '');
-    final classIdStr = _pickString(json, ['classId'], '');
-    final teacherIdStr = _pickString(json, ['teacherId'], '');
-
-    // 标题：优先显示 班级 + 科目，例如「联考冲刺1班 · 素描」；都拿不到时再
-    // 回退到接口可能下发的 subjectName / title 字段，再不行用通用文案。
-    final className = classNameById?[classIdStr] ?? '';
-    final subjectName = subjectId != null
-        ? (subjectNameById?[subjectId] ?? '')
-        : '';
-    final titleParts = <String>[];
-    if (className.isNotEmpty) titleParts.add(className);
-    if (subjectName.isNotEmpty) titleParts.add(subjectName);
-    final title = titleParts.isNotEmpty
-        ? titleParts.join(' · ')
-        : _pickString(json, [
-            'subjectName',
-            'subject',
-            'courseName',
-            'name',
-            'title',
-          ], '考前加练小班课');
-
-    final teacher = teacherIdStr.isNotEmpty
-        ? (teacherNameById?[teacherIdStr] ??
-              _pickString(json, [
-                'teacherRealname',
-                'teacherName',
-                'realname',
-                'realName',
-                'teacherNickname',
-                'teacher',
-                'applicantName',
-              ], ''))
-        : '';
-
-    final classroom = classroomId != null
-        ? (classroomNameById?[classroomId] ??
-              _pickString(json, ['classroomName', 'roomName', 'classroom'], ''))
-        : '';
-
-    // —— 备注：reason 是后端约定字段，待审核时通常为 null，已驳回 / 通过
-    //          才会有内容。空时显示「无」。——
-    final note = _pickString(json, [
-      'reason',
-      'remark',
-      'note',
-      'description',
-    ], '');
-
-    // —— 日期：startDate ~ endDate 区间；若相等只显示一个；若能从
-    //         courseData 解出 N (>1) 个具体日期，末尾拼「· 共 N 次」。——
-    final startDate = _pickString(json, ['startDate'], '');
-    final endDate = _pickString(json, ['endDate'], '');
-    String dateLabel;
-    if (startDate.isEmpty && endDate.isEmpty) {
-      dateLabel = '—';
-    } else if (startDate.isEmpty || endDate.isEmpty || startDate == endDate) {
-      dateLabel = startDate.isNotEmpty ? startDate : endDate;
-    } else {
-      dateLabel = '$startDate ~ $endDate';
-    }
-    final occurrenceCount = _countCourseDataOccurrences(json['courseData']);
-    if (occurrenceCount > 1 && dateLabel != '—') {
-      dateLabel = '$dateLabel · 共 $occurrenceCount 次';
-    }
-
-    // —— 节次：顶层 lineNum 是 int；按 admin 端原有展示规则「第 N 节」。——
-    final lineNumRaw = json['lineNum'];
-    final lineNum = lineNumRaw is int
-        ? lineNumRaw
-        : int.tryParse(lineNumRaw?.toString() ?? '') ?? 0;
-    final lineLabel = lineNum > 0 ? '第 $lineNum 节' : '';
-
-    final applyTime = _pickString(json, [
-      'createTime',
-      'applyTime',
-      'submitTime',
-    ], '');
-
-    final statusRaw = json['status'];
-    _ApplyStatus status;
-    final n = statusRaw is int
-        ? statusRaw
-        : int.tryParse(statusRaw?.toString() ?? '') ?? 0;
-    if (n == 1) {
-      status = _ApplyStatus.passed;
-    } else if (n == 2) {
-      status = _ApplyStatus.rejected;
-    } else {
-      status = _ApplyStatus.pending;
-    }
-
-    return _ApplyRecord(
-      id: id,
-      title: title,
-      teacher: teacher,
-      location: classroom,
-      applyTime: applyTime,
-      dateLabel: dateLabel,
-      lineLabel: lineLabel,
-      note: note.isEmpty ? '无' : note,
-      status: status,
-      applyAt: _parseApplyRecordDate(applyTime),
-      courseStart: _parseApplyRecordDate(startDate),
-      courseEnd: _parseApplyRecordDate(endDate),
-      courseDates: _parseCourseDataDates(json['courseData']),
-    );
-  }
-
-  /// 解析 `courseData` JSON 字符串里的子项数量。字段缺失 / 不是字符串 /
-  /// 解析失败时统一返回 0。
-  static int _countCourseDataOccurrences(dynamic raw) {
-    if (raw is List) return raw.length;
-    if (raw is! String || raw.isEmpty) return 0;
-    try {
-      // 雪花长 ID 这里仅需要数 List 长度，不读取具体 id，所以即便 Web
-      // 上数值精度被截也不影响计数；不必再做 _preserveLongIds 预处理。
-      final decoded = jsonDecode(raw);
-      if (decoded is List) return decoded.length;
-    } catch (_) {
-      /* swallow */
-    }
-    return 0;
-  }
-
-  String get subline {
-    final parts = <String>[];
-    if (teacher.isNotEmpty) parts.add(teacher);
-    if (location.isNotEmpty) parts.add(location);
-    return parts.join(' · ');
-  }
-}
-
-class _ApplyListHeaderRow extends StatelessWidget {
-  const _ApplyListHeaderRow({
-    required this.filter,
-    required this.dayChipLabel,
-    required this.onFilterChanged,
-  });
-
-  final _ApplyDateFilter filter;
-  final String dayChipLabel;
-  final ValueChanged<_ApplyDateFilter> onFilterChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            '小课排班申请',
-            style: TextStyle(
-              fontSize: ui(16),
-              color: AppColors.ink,
-              fontWeight: AppFont.w500,
-              height: 1.2,
-            ),
-          ),
-        ),
-        _ApplyDateFilterToggle(
-          filter: filter,
-          dayChipLabel: dayChipLabel,
-          onChanged: onFilterChanged,
-        ),
-      ],
-    );
-  }
-}
-
-class _ApplyDateFilterToggle extends StatelessWidget {
-  const _ApplyDateFilterToggle({
-    required this.filter,
-    required this.dayChipLabel,
-    required this.onChanged,
-  });
-
-  final _ApplyDateFilter filter;
-  final String dayChipLabel;
-  final ValueChanged<_ApplyDateFilter> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    const labels = ['天', '周', '月'];
-    const filters = [
-      _ApplyDateFilter.day,
-      _ApplyDateFilter.week,
-      _ApplyDateFilter.month,
-    ];
-    return Container(
-      height: ui(44),
-      padding: EdgeInsets.all(ui(4)),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(ui(8)),
-        border: Border.all(color: _kBorderSoft),
-      ),
-      child: Row(
-        children: [
-          for (var i = 0; i < labels.length; i++) ...[
-            if (i > 0) SizedBox(width: ui(4)),
-            _ApplyDateFilterChip(
-              label:
-                  filters[i] == _ApplyDateFilter.day &&
-                      filter == _ApplyDateFilter.day
-                  ? dayChipLabel
-                  : labels[i],
-              selected: filter == filters[i],
-              onTap: () => onChanged(filters[i]),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ApplyDateFilterChip extends StatelessWidget {
-  const _ApplyDateFilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(6)),
-      child: Container(
-        height: ui(36),
-        padding: EdgeInsets.symmetric(horizontal: ui(16)),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.ink : Colors.transparent,
-          borderRadius: BorderRadius.circular(ui(6)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(14),
-            color: selected ? AppColors.surface : _kTextSecondary,
-            fontWeight: AppFont.w500,
-            height: 1,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ApplyGrid extends StatelessWidget {
-  const _ApplyGrid({
-    required this.records,
-    required this.onApprove,
-    required this.onReject,
-    required this.onOpenDetail,
-  });
-
-  final List<_ApplyRecord> records;
-  final ValueChanged<_ApplyRecord> onApprove;
-  final ValueChanged<_ApplyRecord> onReject;
-  final ValueChanged<_ApplyRecord> onOpenDetail;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final pairs = <List<_ApplyRecord>>[];
-    for (var i = 0; i < records.length; i += 2) {
-      pairs.add(records.sublist(i, (i + 2).clamp(0, records.length)));
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var rowIdx = 0; rowIdx < pairs.length; rowIdx++) ...[
-          if (rowIdx > 0) SizedBox(height: ui(16)),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _ApplyCard(
-                  record: pairs[rowIdx][0],
-                  onApprove: onApprove,
-                  onReject: onReject,
-                  onOpenDetail: onOpenDetail,
-                ),
-              ),
-              SizedBox(width: ui(16)),
-              Expanded(
-                child: pairs[rowIdx].length > 1
-                    ? _ApplyCard(
-                        record: pairs[rowIdx][1],
-                        onApprove: onApprove,
-                        onReject: onReject,
-                        onOpenDetail: onOpenDetail,
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _ApplyCard extends StatelessWidget {
-  const _ApplyCard({
-    required this.record,
-    required this.onApprove,
-    required this.onReject,
-    required this.onOpenDetail,
-  });
-
-  final _ApplyRecord record;
-  final ValueChanged<_ApplyRecord> onApprove;
-  final ValueChanged<_ApplyRecord> onReject;
-  final ValueChanged<_ApplyRecord> onOpenDetail;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      padding: EdgeInsets.all(ui(12)),
-      decoration: BoxDecoration(
-        color: _kInnerGray,
-        borderRadius: BorderRadius.circular(ui(16)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InkWell(
-            onTap: () => onOpenDetail(record),
-            borderRadius: BorderRadius.circular(ui(12)),
-            child: Padding(
-              padding: EdgeInsets.only(bottom: ui(2)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: ui(40),
-                        height: ui(40),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(ui(8)),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Image.asset(
-                          AppAssets.adminSmallCourseApplyCardClass,
-                          width: ui(40),
-                          height: ui(40),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      SizedBox(width: ui(8)),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    record.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: ui(14),
-                                      color: _kTextDark,
-                                      fontWeight: AppFont.w500,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: ui(8)),
-                                _ApplyStatusBadge(status: record.status),
-                              ],
-                            ),
-                            SizedBox(height: ui(3)),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    record.subline.isEmpty
-                                        ? '—'
-                                        : record.subline,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: ui(12),
-                                      color: _kTextDark,
-                                      fontWeight: AppFont.w400,
-                                      height: 1,
-                                    ),
-                                  ),
-                                ),
-                                if (record.applyTime.isNotEmpty) ...[
-                                  SizedBox(width: ui(8)),
-                                  Text(
-                                    record.applyTime,
-                                    style: TextStyle(
-                                      fontSize: ui(12),
-                                      color: _kTextHint,
-                                      fontWeight: AppFont.w400,
-                                      height: 1,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: ui(12)),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: ui(12),
-                      vertical: ui(8),
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(ui(8)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                '日期',
-                                style: TextStyle(
-                                  fontSize: ui(12),
-                                  color: _kTextHint,
-                                  fontWeight: AppFont.w400,
-                                  height: 20 / 12,
-                                ),
-                              ),
-                              Text(
-                                record.dateLabel,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: ui(12),
-                                  color: _kTextDark,
-                                  fontWeight: AppFont.w400,
-                                  height: 20 / 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                '节次',
-                                style: TextStyle(
-                                  fontSize: ui(12),
-                                  color: _kTextHint,
-                                  fontWeight: AppFont.w400,
-                                  height: 20 / 12,
-                                ),
-                              ),
-                              Text(
-                                record.lineLabel.isEmpty
-                                    ? '—'
-                                    : record.lineLabel,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: ui(12),
-                                  color: _kTextDark,
-                                  fontWeight: AppFont.w400,
-                                  height: 20 / 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: ui(10)),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '备注：',
-                        style: TextStyle(
-                          fontSize: ui(12),
-                          color: _kTextHint,
-                          fontWeight: AppFont.w400,
-                          height: 20 / 12,
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          record.note,
-                          style: TextStyle(
-                            fontSize: ui(12),
-                            color: _kTextDark,
-                            fontWeight: AppFont.w400,
-                            height: 20 / 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (record.status == _ApplyStatus.pending) ...[
-            SizedBox(height: ui(12)),
-            Row(
-              children: [
-                Expanded(
-                  child: _CardActionButton(
-                    label: '通过',
-                    primary: true,
-                    onTap: () => onApprove(record),
-                  ),
-                ),
-                SizedBox(width: ui(12)),
-                Expanded(
-                  child: _CardActionButton(
-                    label: '驳回',
-                    primary: false,
-                    onTap: () => onReject(record),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ApplyStatusBadge extends StatelessWidget {
-  const _ApplyStatusBadge({required this.status});
-
-  final _ApplyStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final (label, bg, fg) = switch (status) {
-      _ApplyStatus.pending => ('待审核', _kPendingBg, _kPendingFg),
-      _ApplyStatus.passed => ('已通过', _kPassedBg, _kPassedFg),
-      _ApplyStatus.rejected => ('已驳回', _kRejectedBg, _kRejectedFg),
-    };
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(6), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(ui(4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: ui(12),
-          color: fg,
-          fontWeight: AppFont.w400,
-          height: 15.24 / 12,
-        ),
-      ),
-    );
-  }
-}
-
-class _CardActionButton extends StatelessWidget {
-  const _CardActionButton({
-    required this.label,
-    required this.primary,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool primary;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(ui(8)),
-      child: Container(
-        height: ui(40),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: primary
-              ? const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [AppColors.brandSoft, AppColors.brand],
-                )
-              : null,
-          color: primary ? null : AppColors.surface,
-          borderRadius: BorderRadius.circular(ui(8)),
-          border: primary ? null : Border.all(color: _kBorderSoft),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: ui(14),
-            color: primary ? AppColors.surface : _kTextDark,
-            fontWeight: AppFont.w400,
-            height: 24 / 14,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ApplyEmptyState extends StatelessWidget {
-  const _ApplyEmptyState({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: ui(60)),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: _kInnerGray,
-        borderRadius: BorderRadius.circular(ui(16)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.inbox_outlined, size: ui(36), color: _kTextHint),
-          SizedBox(height: ui(8)),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: ui(13),
-              color: _kTextHint,
-              fontWeight: AppFont.w400,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// 驳回申请弹窗（与 teacher_leave_approval_view 同款 GradientHeaderDialog）
-// =============================================================================
-
-Future<String?> _showRejectDialog(
-  BuildContext context, {
-  required _ApplyRecord record,
-}) {
-  final controller = TextEditingController();
-  return showScaledDialog<String>(
-    context: context,
-    barrierColor: AppColors.ink.withValues(alpha: 0.80),
-    builder: (dialogContext) {
-      final ui = DashboardScaleScope.of(dialogContext).ui;
-      return GradientHeaderDialog(
-        title: '驳回申请',
-        titlePaddingTop: 40,
-        width: 428,
-        contentPadding: EdgeInsets.fromLTRB(ui(40), ui(40), ui(40), ui(30)),
-        actionBar: AppDialogActionBar(
-          confirmLabel: '确认',
-          cancelLabel: '取消',
-          onCancel: () => Navigator.of(dialogContext).pop(),
-          onConfirm: () => Navigator.of(dialogContext).pop(controller.text),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${record.title} · ${record.subline.isEmpty ? '—' : record.subline}',
-              style: TextStyle(
-                fontSize: ui(16),
-                color: _kTextDark,
-                fontWeight: AppFont.w500,
-                height: 20 / 16,
-              ),
-            ),
-            SizedBox(height: ui(15)),
-            Text(
-              '驳回说明',
-              style: TextStyle(
-                fontSize: ui(14),
-                color: _kTextDark,
-                fontWeight: AppFont.w500,
-                height: 20 / 14,
-              ),
-            ),
-            SizedBox(height: ui(15)),
-            Container(
-              height: ui(80),
-              padding: EdgeInsets.symmetric(
-                horizontal: ui(16),
-                vertical: ui(12),
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(ui(8)),
-                border: Border.all(color: _kBorderSoft, width: 1),
-              ),
-              child: AppTextField(
-                controller: controller,
-                autofocus: true,
-                maxLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                cursorColor: _kPurple,
-                cursorWidth: 1.5,
-                cursorHeight: ui(16),
-                style: TextStyle(
-                  fontSize: ui(14),
-                  color: _kTextDark,
-                  fontWeight: AppFont.w400,
-                  height: 20 / 14,
-                ),
-                decoration: InputDecoration(
-                  hintText: '请输入',
-                  hintStyle: TextStyle(
-                    fontSize: ui(14),
-                    color: _kTextHint,
-                    fontWeight: AppFont.w400,
-                    height: 20 / 14,
-                  ),
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
-// =============================================================================
 // 通用 helpers
 // =============================================================================
-
-/// 后端 `type`: 0 / 含「大」= 大班；1 / 含「小」= 小班。
-bool _isSmallClassType(dynamic raw) {
-  if (raw == null) return false;
-  if (raw is int) return raw == 1;
-  final s = raw.toString().trim().toLowerCase();
-  if (s.isEmpty) return false;
-  return s == '1' || s.contains('小') || s == 'small';
-}
 
 String _pickString(
   Map<String, dynamic> json,
@@ -3674,22 +2082,4 @@ List<Map<String, dynamic>> _extractList(ApiResponse resp) {
     for (final item in list)
       if (item is Map) item.cast<String, dynamic>(),
   ];
-}
-
-/// 分页接口里 total / totalCount 等字段（用于待审核角标）。
-int? _extractPageTotal(ApiResponse resp) {
-  dynamic raw = resp.data;
-  if (raw is Map && raw['data'] is Map) {
-    raw = raw['data'];
-  }
-  if (raw is! Map) return null;
-  final m = raw.cast<String, dynamic>();
-  for (final key in ['total', 'totalCount', 'recordsTotal', 'count']) {
-    final v = m[key];
-    if (v == null) continue;
-    if (v is int) return v;
-    final n = int.tryParse(v.toString());
-    if (n != null) return n;
-  }
-  return null;
 }

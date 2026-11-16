@@ -1208,7 +1208,7 @@ class _Avatar extends StatelessWidget {
 //   6. "联系家长" 紫色 #9585FF→#715EFE 渐变 CTA（48 高，圆角 12，phone icon）
 //
 // 接口：barrierDismissible = true，从右侧滑入；底层用 showGeneralDialog +
-//      Align(centerRight) + SlideTransition，与"申请小课"右抽屉同一套模式。
+//      Align(centerRight) + SlideTransition，与排课右抽屉同一套模式。
 // =============================================================================
 
 void _openStudentDetailDrawer(BuildContext context, _Student data) {

@@ -681,12 +681,6 @@ _LessonRowData _lessonRowFromStudentCourse(
   String end,
 ) {
   final flat = _flattenStudentCourseRow(row);
-  final typeRaw = flat['type'];
-  final type = typeRaw is int
-      ? typeRaw
-      : (int.tryParse(typeRaw?.toString() ?? '') ?? 0);
-  final isSmall = type == 1;
-
   final className = _schedulePickString(flat, ['className', 'class'], '');
   final teacher = _schedulePickString(flat, [
     'teacherRealname',
@@ -713,18 +707,6 @@ _LessonRowData _lessonRowFromStudentCourse(
       : (className.isNotEmpty ? className : '—');
   final avatarSeed = displayName.isEmpty ? '?' : displayName;
 
-  var courseColor = isSmall ? AppColors.success : AppColors.brand;
-  var courseBg = isSmall ? AppColors.successSoft : AppColors.brandTint;
-  var tagDotColor = courseColor;
-
-  final hex = _schedulePickString(flat, ['color'], '');
-  final parsed = _parseDashboardHexColor(hex);
-  if (parsed != null) {
-    courseColor = parsed;
-    courseBg = parsed.withValues(alpha: 0.14);
-    tagDotColor = parsed;
-  }
-
   final mins = _minutesBetweenHm(start, end);
   final hintParts = <String>[];
   if (mins > 0) hintParts.add('$mins分钟');
@@ -737,11 +719,6 @@ _LessonRowData _lessonRowFromStudentCourse(
     logoUrl: resolveScheduleLogoUrl(flat),
     teacherName: displayName,
     courseName: subjectName,
-    courseColor: courseColor,
-    courseBg: courseBg,
-    tag: isSmall ? '小课' : '大课',
-    tagDotColor: tagDotColor,
     hint: hint,
-    isSmallCourse: isSmall,
   );
 }

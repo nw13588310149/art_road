@@ -176,30 +176,31 @@ void main() {
   });
 
   group('legacy wrappers', () {
-    testWidgets('SegmentToggle switches instantly without DashboardScaleScope', (
-      tester,
-    ) async {
-      var index = 0;
-      await tester.pumpWidget(
-        _host(
-          StatefulBuilder(
-            builder: (context, setState) => SegmentToggle(
-              selectedIndex: index,
-              options: const [
-                SegmentToggleOption(label: '查看'),
-                SegmentToggleOption(label: '编辑'),
-              ],
-              onChanged: (next) => setState(() => index = next),
+    testWidgets(
+      'SegmentToggle switches instantly without DashboardScaleScope',
+      (tester) async {
+        var index = 0;
+        await tester.pumpWidget(
+          _host(
+            StatefulBuilder(
+              builder: (context, setState) => SegmentToggle(
+                selectedIndex: index,
+                options: const [
+                  SegmentToggleOption(label: '查看'),
+                  SegmentToggleOption(label: '编辑'),
+                ],
+                onChanged: (next) => setState(() => index = next),
+              ),
             ),
           ),
-        ),
-      );
-      await tester.tap(find.text('编辑'));
-      await tester.pump();
-      expect(index, 1);
-      expect(_weightOf(tester, '编辑'), AppFont.w500);
-      expect(tester.hasRunningAnimations, isFalse);
-    });
+        );
+        await tester.tap(find.text('编辑'));
+        await tester.pump();
+        expect(index, 1);
+        expect(_weightOf(tester, '编辑'), AppFont.w500);
+        expect(tester.hasRunningAnimations, isFalse);
+      },
+    );
 
     testWidgets('ArtSegmentTabs no longer animates a pill', (tester) async {
       var value = 'a';
@@ -264,13 +265,17 @@ void main() {
   });
 
   group('AppCourseCard', () {
-    Future<Rect> pumpCard(WidgetTester tester, double width, Widget card) async {
+    Future<Rect> pumpCard(
+      WidgetTester tester,
+      double width,
+      Widget card,
+    ) async {
       await tester.pumpWidget(_host(SizedBox(width: width, child: card)));
       expect(tester.takeException(), isNull);
       return tester.getRect(find.byType(AppCourseCard));
     }
 
-    testWidgets('lays out both tags without overflow in a 300px box', (
+    testWidgets('lays out the subject tag and status in a 300px box', (
       tester,
     ) async {
       final bounds = await pumpCard(
@@ -287,32 +292,27 @@ void main() {
       );
       expect(bounds.width, 300);
       _expectFullyLaidOut(tester, '模拟考试', bounds);
-      _expectFullyLaidOut(tester, '大课', bounds);
       _expectFullyLaidOut(tester, '进行中', bounds);
       expect(find.text('王'), findsOneWidget);
+      // 课程只有一种，卡片上不再有课型标签。
+      expect(find.text('大课'), findsNothing);
+      expect(find.text('小课'), findsNothing);
     });
 
-    testWidgets('wraps long tags instead of clipping in a narrow box', (
-      tester,
-    ) async {
+    testWidgets('keeps a long subject inside a narrow box', (tester) async {
       final bounds = await pumpCard(
         tester,
         220,
         const AppCourseCard(
-          startTime: '21:10',
-          endTime: '22:00',
-          subject: '素描头像精讲（一对一）',
+          startTime: '19:00',
+          endTime: '21:00',
+          subject: '素描头像长期作品讲评',
           teacherName: '周敏',
-          isSmallCourse: true,
           status: AppCourseStatus.ended,
         ),
       );
-      _expectFullyLaidOut(tester, '素描头像精讲（一对一）', bounds);
-      _expectFullyLaidOut(tester, '小课', bounds);
-      expect(
-        tester.getTopLeft(find.text('小课')).dy,
-        greaterThan(tester.getTopLeft(find.text('素描头像精讲（一对一）')).dy),
-      );
+      _expectFullyLaidOut(tester, '素描头像长期作品讲评', bounds);
+      _expectFullyLaidOut(tester, '已结束', bounds);
     });
 
     testWidgets('DashboardCourseNoticeCard renders it with a custom status', (
@@ -327,7 +327,6 @@ void main() {
               startTime: '08:00',
               endTime: '11:30',
               subjectName: '素描',
-              isSmallCourse: false,
               displayName: '王建国',
               subtitle: '210分钟 · 301教室',
               avatar: const AppAvatar(name: '王建国', size: 36),

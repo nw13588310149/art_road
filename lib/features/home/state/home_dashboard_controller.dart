@@ -298,12 +298,6 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
         if (room.isNotEmpty) room,
       ].join(' · ');
 
-      // 接口 color 字段作为课程色（如 "#fed7aa"），白色视为未设置。
-      final colorHex = item['color']?.toString() ?? '';
-      final typeRaw = item['type'] ?? item['courseType'] ?? item['classType'];
-      final type = typeRaw is int
-          ? typeRaw
-          : (int.tryParse(typeRaw?.toString() ?? '') ?? 0);
       final date = item['date']?.toString() ?? '';
 
       result.add(
@@ -319,10 +313,6 @@ class HomeDashboardController extends StateNotifier<HomeDashboardState> {
           description: description,
           status: _resolveCourseStatus(now, date, beginTime, endTime),
           date: date.length >= 10 ? date.substring(0, 10) : date,
-          isSmallCourse: type == 1,
-          cardColorHex: colorHex.isEmpty || colorHex.toLowerCase() == '#ffffff'
-              ? null
-              : colorHex,
         ),
       );
     }

@@ -5,8 +5,8 @@ import 'today_support.dart';
 
 // ───────────────────────── 管理端共用 ─────────────────────────
 
-/// 教职工请假、小课签课确认、小课申请、校圈举报：管理员与校长都要处理。
-List<Json> _approvalSteps(TodayContext ctx, Json summary, int applies) => [
+/// 教职工请假、课堂补签、校圈举报：管理员与校长都要处理。
+List<Json> _approvalSteps(TodayContext ctx, Json summary) => [
   ?todayCountStep(
     ctx,
     id: 'teacherLeave',
@@ -26,33 +26,20 @@ List<Json> _approvalSteps(TodayContext ctx, Json summary, int applies) => [
   ),
   ?todayCountStep(
     ctx,
-    id: 'signConfirm',
+    id: 'signMakeup',
     kind: 'approval',
-    title: '确认小课签课',
-    detail: '学生已评价，等待教务确认课时',
-    doneDetail: '小课签课都确认完了',
-    unit: '节',
-    current: todayInt(summary['smallCourseSignStatus5Count']),
+    title: '审核课堂补签',
+    detail: '学生对缺勤记录提交的补签申请',
+    doneDetail: '课堂补签都审核完了',
+    unit: '条',
+    current: todayInt(summary['courseSignMakeupStatus0Count']),
     source: '智慧校园 · 签课管理',
     guide: const [
-      '点「去确认」核对老师和学生的签到、签退时间。',
-      '没有问题点确认，这节课计入课时。',
-      '时间对不上的可以驳回，让老师补充说明。',
+      '点「去审核」打开签课管理，再点右上角的补签审核。',
+      '向任课老师核实情况，属实就通过，这节课改记为出勤。',
+      '不属实的驳回并写明原因，学生会收到通知。',
     ],
-    action: actionCampus('去确认', 'signManagement'),
-  ),
-  ?todayCountStep(
-    ctx,
-    id: 'scheduleApply',
-    kind: 'approval',
-    title: '审核小课申请',
-    detail: '老师提交的小课排课申请',
-    doneDetail: '小课申请都审核完了',
-    unit: '条',
-    current: applies,
-    source: '智慧校园 · 排课与课表',
-    guide: const ['点「去审核」查看申请的时间、教室和学生。', '确认教室和老师的时间没有冲突后通过。'],
-    action: actionCampus('去审核', 'scheduleManagement'),
+    action: actionCampus('去审核', 'signManagement'),
   ),
   ?todayCountStep(
     ctx,
@@ -163,11 +150,6 @@ List<Json> _patrolSteps(
 Future<Json> buildAdminToday(TodayContext ctx) async {
   final results = await Future.wait<Object?>([
     ctx.platform('/app/school/v2/manager/indexSum'),
-    ctx.platform('/app/school/v2/manager/schoolSmallCourseApplyList', {
-      'current': 1,
-      'size': 1,
-      'status': 0,
-    }),
     ctx.platform('/app/school/v2/manager/courseList', {
       'beginDate': ctx.date,
       'endDate': ctx.date,
@@ -176,16 +158,15 @@ Future<Json> buildAdminToday(TodayContext ctx) async {
     ctx.platform('/app/school/v2/manager/schoolUserFaceSum'),
   ]);
   final summary = todayMap(results[0]);
-  final applies = todayInt(todayMap(results[1])['total']);
-  final courses = _courses(ctx, results[2]);
-  final classes = todayRows(results[3]);
-  final face = todayMap(results[4]);
+  final courses = _courses(ctx, results[1]);
+  final classes = todayRows(results[2]);
+  final face = todayMap(results[3]);
   final faceAudit = todayInt(face['status0Count']);
   final recorded = todayInt(face['status1Count']);
   final missing = todayInt(face['userFaceNotRecordedCount']);
 
   final steps = <Json>[
-    ..._approvalSteps(ctx, summary, applies),
+    ..._approvalSteps(ctx, summary),
     ?todayCountStep(
       ctx,
       id: 'faceAudit',
@@ -295,9 +276,9 @@ Future<Json> buildAdminToday(TodayContext ctx) async {
       todayHighlight(
         'approvals',
         '待审批',
-        '${todayInt(summary['leaveStatus0Count']) + todayInt(summary['smallCourseSignStatus5Count']) + applies + faceAudit}',
+        '${todayInt(summary['leaveStatus0Count']) + todayInt(summary['courseSignMakeupStatus0Count']) + faceAudit}',
         unit: '条',
-        caption: '请假、签课、小课申请与人脸照片',
+        caption: '教职工请假、课堂补签与人脸照片',
         icon: 'approval',
         tone: 'pink',
         action: actionCampus('教师请假审批', 'teacherLeaveApproval'),
@@ -368,11 +349,6 @@ List<Json> _managementShortcuts({required bool includeFace}) => [
 Future<Json> buildPrincipalToday(TodayContext ctx) async {
   final results = await Future.wait<Object?>([
     ctx.platform('/app/school/v2/manager/indexSum'),
-    ctx.platform('/app/school/v2/manager/schoolSmallCourseApplyList', {
-      'current': 1,
-      'size': 1,
-      'status': 0,
-    }),
     ctx.platform('/app/school/v2/manager/courseList', {
       'beginDate': ctx.date,
       'endDate': ctx.date,
@@ -388,13 +364,12 @@ Future<Json> buildPrincipalToday(TodayContext ctx) async {
     }),
   ]);
   final summary = todayMap(results[0]);
-  final applies = todayInt(todayMap(results[1])['total']);
-  final courses = _courses(ctx, results[2]);
-  final overview = todayMap(results[3]);
-  final trend = todayRows(results[4]);
-  final classes = todayRows(results[5]);
-  final chain = todayMap(results[6]);
-  final mailbox = todayInt(todayMap(results[7])['total']);
+  final courses = _courses(ctx, results[1]);
+  final overview = todayMap(results[2]);
+  final trend = todayRows(results[3]);
+  final classes = todayRows(results[4]);
+  final chain = todayMap(results[5]);
+  final mailbox = todayInt(todayMap(results[6])['total']);
   final attendance = todayMap(overview['attendance']);
   final alerts = todayRows(overview['alerts']);
   final overdue = todayInt(overview['overdueReviews']);
@@ -450,7 +425,7 @@ Future<Json> buildPrincipalToday(TodayContext ctx) async {
       guide: const ['点「去回复」逐封查看来信。', '能当场答复的直接回复；需要处理的转给对应老师并回复进展。'],
       action: actionCampus('去回复', 'principalMailbox'),
     ),
-    ..._approvalSteps(ctx, summary, applies),
+    ..._approvalSteps(ctx, summary),
     ..._patrolSteps(courses),
     todayStep(
       id: 'attention',

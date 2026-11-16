@@ -63,26 +63,25 @@ void main() {
         'studentCount': 10,
         'leaveStatus0Count': 3,
         'postStatus0Count': 5,
-        'smallCourseSignStatus5Count': 2,
+        'courseSignMakeupStatus0Count': 2,
       },
     });
 
     expect(summary.studentCount, 10);
     expect(summary.leaveStatus0Count, 3);
     expect(summary.postStatus0Count, 5);
-    expect(summary.smallCourseSignStatus5Count, 2);
+    expect(summary.courseSignMakeupStatus0Count, 2);
   });
 
   test('AdminHomeActionBadgeCounts maps labels to badge text', () {
     const counts = AdminHomeActionBadgeCounts(
-      scheduleApply: 4,
       teacherLeave: 3,
       signReview: 2,
       faceAudit: 1,
       postReview: 6,
     );
 
-    expect(counts.badgeLabelFor('排课与课表'), '4');
+    expect(counts.badgeLabelFor('排课与课表'), isNull);
     expect(counts.badgeLabelFor('教师请假审批'), '3');
     expect(counts.badgeLabelFor('签课管理'), '2');
     expect(counts.badgeLabelFor('人脸库'), '1');
@@ -91,24 +90,23 @@ void main() {
   });
 
   test('admin action badges hide zero and cap large counts at 9+', () {
-    const empty = AdminHomeActionBadgeCounts(scheduleApply: 0);
-    const ten = AdminHomeActionBadgeCounts(scheduleApply: 10);
-    const many = AdminHomeActionBadgeCounts(scheduleApply: 11);
+    const empty = AdminHomeActionBadgeCounts(signReview: 0);
+    const ten = AdminHomeActionBadgeCounts(signReview: 10);
+    const many = AdminHomeActionBadgeCounts(signReview: 11);
 
-    expect(empty.badgeLabelFor('排课与课表'), isNull);
-    expect(ten.badgeLabelFor('排课与课表'), '10');
-    expect(many.badgeLabelFor('排课与课表'), '9+');
+    expect(empty.badgeLabelFor('签课管理'), isNull);
+    expect(ten.badgeLabelFor('签课管理'), '10');
+    expect(many.badgeLabelFor('签课管理'), '9+');
   });
 
   test('AdminHomeActionBadgeCounts.fromSummary mirrors top stats fields', () {
     const summary = AdminHomeSummary(
       leaveStatus0Count: 7,
-      smallCourseSignStatus5Count: 8,
+      courseSignMakeupStatus0Count: 8,
       postStatus0Count: 9,
     );
     final counts = AdminHomeActionBadgeCounts.fromSummary(
       summary: summary,
-      scheduleApply: 1,
       faceAudit: 2,
     );
 
@@ -121,33 +119,12 @@ void main() {
 
   test('admin badge parsers support nested API payloads', () {
     expect(
-      parseAdminPageTotal({
-        'data': {
-          'data': {'records': const [], 'total': '12'},
-        },
-      }),
-      12,
-    );
-    expect(
       parseAdminFaceSumPendingCount({
         'data': {
           'data': {'status0Count': '4'},
         },
       }),
       4,
-    );
-  });
-
-  test('pending list count falls back to returned records', () {
-    expect(
-      parseAdminListPendingTotal({
-        'data': {
-          'records': [
-            {'id': '1'},
-          ],
-        },
-      }),
-      1,
     );
   });
 }

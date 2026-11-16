@@ -14,12 +14,9 @@ import '../../../core/providers/app_providers.dart';
 ///   - `classroomList`             教室下拉列表
 ///   - `classSave`                 班级新增
 ///   - `classUpdate`               班级编辑
-///   - `courseBatchSave`           课表-大班课批量保存课表
+///   - `courseBatchSave`           课表-批量保存课表
 ///   - `courseDelete`              课表-批量删除
 ///   - `courseList`                班级课表
-///   - `schoolSmallCourseApplyAudit` 小班课申请审核
-///   - `schoolSmallCourseApplyDetail` 小班课申请详情
-///   - `schoolSmallCourseApplyList`  小班课申请列表
 ///   - `indexSum`                  管理员首页统计汇总
 ///   - `websocketLoginCount`       管理员首页数据看板（近 7 日在线登录）
 ///   - `workReminders`             管理员首页工作提醒
@@ -53,7 +50,7 @@ class AdminRepository {
   ///     "classCount": 0,                      // 班级数量
   ///     "leaveStatus0Count": 0,               // 教职工待审批请假
   ///     "postStatus0Count": 0,                // 校圈待审核数量
-  ///     "smallCourseSignStatus5Count": 0,     // 小班课待审核数量
+  ///     "courseSignMakeupStatus0Count": 0,    // 课堂补签待审核数量
   ///     "userFaceNotRecordedCount": 0,        // 人脸待补录
   ///     "toDoTodayCount": 0                   // 今日待办
   ///   }
@@ -83,10 +80,7 @@ class AdminRepository {
   }) {
     return client.post(
       '$_base/websocketLoginCount',
-      data: <String, dynamic>{
-        'startDate': startDate,
-        'endDate': endDate,
-      },
+      data: <String, dynamic>{'startDate': startDate, 'endDate': endDate},
     );
   }
 
@@ -115,17 +109,14 @@ class AdminRepository {
 
   /// 班级列表（`ClassListReq`）。
   ///
-  /// - `type`: 班级类型，`0 = 大班`，`1 = 小班`；不传 = 全量。
-  ///   主要给「编辑大课」抽屉用，过滤掉小班避免误选。
   /// - `isHeadTeacher`: 是否为班主任；不传 = 不按该字段过滤。
-  Future<ApiResponse> classList({int? isHeadTeacher, int? type}) {
+  Future<ApiResponse> classList({int? isHeadTeacher}) {
     final body = <String, dynamic>{};
     if (isHeadTeacher != null) body['isHeadTeacher'] = isHeadTeacher;
-    if (type != null) body['type'] = type;
     return client.post('$_base/classList', data: body);
   }
 
-  /// 班级总览统计：大班、小班、学生、教师及未分配学生数量。
+  /// 班级总览统计：班级、学生、教师及未分配学生数量。
   Future<ApiResponse> classSum() {
     return client.post('$_base/classSum');
   }
@@ -268,13 +259,12 @@ class AdminRepository {
   ///   "headTeacherId": "1788178798952914945",
   ///   "name": "一班",
   ///   "studentIds": [0],
-  ///   "teacherIds": "1788178798952914945",
-  ///   "type": 0
+  ///   "teacherIds": "1788178798952914945"
   /// }
   /// ```
   ///
   /// 注：`headTeacherId` / `teacherIds` 后端实际接收 string；
-  /// `studentIds` 是 int 数组；`type` 数字标识大班(1) / 小班(2) 等。
+  /// `studentIds` 是 int 数组。
   Future<ApiResponse> classSave(Map<String, dynamic> body) {
     final encoded = encodeClassMutationRequestBody(body);
     if (encoded == null) {
@@ -323,8 +313,7 @@ class AdminRepository {
   ///   "classId": "1798658711795392514",
   ///   "classIdList": ["1798658711795392514"],
   ///   "endDate": "2026-06-01",
-  ///   "teacherId": "1788178798952914945",
-  ///   "type": 0
+  ///   "teacherId": "1788178798952914945"
   /// }
   /// ```
   ///
@@ -336,7 +325,6 @@ class AdminRepository {
     String? classId,
     List<String>? classIdList,
     String? teacherId,
-    int? type,
   }) {
     final body = <String, dynamic>{};
     if (beginDate != null && beginDate.isNotEmpty) {
@@ -350,11 +338,10 @@ class AdminRepository {
     if (teacherId != null && teacherId.isNotEmpty) {
       body['teacherId'] = teacherId;
     }
-    if (type != null) body['type'] = type;
     return client.post('$_base/courseList', data: body);
   }
 
-  /// 大班课批量保存课表。
+  /// 批量保存课表。
   ///
   /// 期望字段（与后端 swagger 对齐，调用方需自行组装）：
   /// ```json
@@ -383,65 +370,6 @@ class AdminRepository {
       return Future.value(ApiResponse.failure('缺少有效的课程 id'));
     }
     return client.post('$_base/courseDelete', data: body);
-  }
-
-  // ============== 小班课申请 ==============
-
-  /// 小班课申请列表。
-  ///
-  /// 对齐后端 BO（`AppSchoolSmallCourseApplyListBO`）：
-  /// ```
-  /// classId    int64   班级 id
-  /// current    int64   当前页, 默认 1
-  /// schoolId   int64   学校 id（由 ApiClient header 注入，不在 body）
-  /// size       int64   每页条数, 默认 10
-  /// status     int32   0-待审核 / 1-通过 / 2-不通过
-  /// teacherId  int64   老师 id
-  /// ```
-  ///
-  /// 调用约定：除 `current` / `size` 外，未传值的字段统一以空串 `""`
-  /// 占位发送（后端把空串当作「不过滤」），保证 body 永远是完整的 6 字
-  /// 段（`schoolId` 走 header 不算）。`classId` / `teacherId` 是雪花 long
-  /// 必须以 String 形式承载，避免 web 端 JS Number 精度截断。
-  Future<ApiResponse> schoolSmallCourseApplyList({
-    int current = 1,
-    int size = 10,
-    int? status,
-    String? classId,
-    String? teacherId,
-  }) {
-    final body = <String, dynamic>{
-      'current': current,
-      'size': size,
-      'classId': (classId == null || classId.isEmpty) ? '' : classId,
-      'teacherId': (teacherId == null || teacherId.isEmpty) ? '' : teacherId,
-      'status': status ?? '',
-    };
-    return client.post('$_base/schoolSmallCourseApplyList', data: body);
-  }
-
-  /// 小班课申请详情。`id` 直接传后端原始字符串，兼容雪花 long。
-  Future<ApiResponse> schoolSmallCourseApplyDetail(String id) {
-    return client.post(
-      '$_base/schoolSmallCourseApplyDetail',
-      data: <String, dynamic>{'id': id},
-    );
-  }
-
-  /// 小班课申请审核：`status` 1=通过 / 2=驳回（驳回必填 reason）。
-  Future<ApiResponse> schoolSmallCourseApplyAudit({
-    required String id,
-    required bool pass,
-    String? reason,
-  }) {
-    return client.post(
-      '$_base/schoolSmallCourseApplyAudit',
-      data: <String, dynamic>{
-        'id': id,
-        'status': pass ? 1 : 2,
-        if (reason != null && reason.isNotEmpty) 'reason': reason,
-      },
-    );
   }
 
   // ============== 人脸库 ==============
@@ -504,39 +432,27 @@ class AdminRepository {
 
   // ============== 签课管理 ==============
 
-  /// 签课列表（大课 type=0 / 小课 type=1）。
+  /// 某天的签课列表。
   ///
   /// `classId` 雪花 long，必须以字符串传输。
   Future<ApiResponse> courseSignManager({
     required String classId,
     required String date,
-    required int type,
   }) {
     return client.post(
       '$_base/courseSignManager',
-      data: <String, dynamic>{'classId': classId, 'date': date, 'type': type},
+      data: <String, dynamic>{'classId': classId, 'date': date},
     );
   }
 
-  /// 大课签到统计（type=0）。
+  /// 某天的签课统计。
   Future<ApiResponse> courseSignSum0({
     required String classId,
     required String date,
   }) {
     return client.post(
       '$_base/courseSignSum0',
-      data: <String, dynamic>{'classId': classId, 'date': date, 'type': 0},
-    );
-  }
-
-  /// 小课签到统计（type=1）。
-  Future<ApiResponse> courseSignSum1({
-    required String classId,
-    required String date,
-  }) {
-    return client.post(
-      '$_base/courseSignSum1',
-      data: <String, dynamic>{'classId': classId, 'date': date, 'type': 1},
+      data: <String, dynamic>{'classId': classId, 'date': date},
     );
   }
 
@@ -558,33 +474,7 @@ class AdminRepository {
     );
   }
 
-  /// 小班课查看学生评价。
-  Future<ApiResponse> courseCommentList({required String courseId}) {
-    return client.post(
-      '$_base/courseCommentList',
-      data: <String, dynamic>{
-        'courseId': readSnowflakeId(courseId) ?? courseId,
-      },
-    );
-  }
-
-  /// 小班课管理员确认完成。`signStatus`: 6-确认 / 7-驳回。
-  Future<ApiResponse> courseSignConfirm({
-    required String courseId,
-    int signStatus = 6,
-    String remark = '',
-  }) {
-    return client.post(
-      '$_base/courseSignConfirm',
-      data: <String, dynamic>{
-        'courseId': readSnowflakeId(courseId) ?? courseId,
-        'signStatus': signStatus,
-        if (remark.isNotEmpty) 'remark': remark,
-      },
-    );
-  }
-
-  // ============== 课堂签到补签审核 ==============
+  // ============== 课堂补签审核 ==============
 
   /// 学生课堂补签申请列表（管理员审核）。
   ///

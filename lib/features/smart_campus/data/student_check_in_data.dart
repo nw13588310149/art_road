@@ -1,11 +1,10 @@
-/// 学生端「课堂签到」：今日小课解析与签到状态推导。
+/// 学生端「课堂考勤」：今天的课、本人的到课情况、考勤统计与记录、补签。
 library;
 
 import 'campus_format.dart';
 import '../../../core/network/snowflake_id.dart';
-import 'course_sign_data.dart';
 
-export 'course_sign_data.dart' show CourseSignFlowStatus, pickCourseClock;
+export 'course_sign_data.dart' show pickCourseClock;
 
 enum StudentCourseSlotPhase { inProgress, upcoming, ended }
 
@@ -41,15 +40,10 @@ class StudentTodayCourse {
     required this.lineNum,
     required this.phase,
     this.signRecordId = '',
-    this.courseSignStatus = 0,
-    this.teacherSignInTime,
-    this.teacherSignOutTime,
-    this.studentSignInTime,
-    this.studentSignOutTime,
-    this.signMethod = '按键打卡',
-    this.fenceLabel,
-    this.evaluationScore,
-    this.evaluationComment,
+    this.signed = false,
+    this.attendStatus,
+    this.signInTime,
+    this.remark = '',
     this.teacherHeadUrl = '',
     this.teacherId = '',
   });
@@ -64,19 +58,20 @@ class StudentTodayCourse {
   final int lineNum;
   final StudentCourseSlotPhase phase;
 
-  /// 签到记录主键（`courseSignDetail` 的 `id`），与 [courseId] 不同。
+  /// 本人这节课的考勤记录主键；老师签课前为空。
   final String signRecordId;
 
-  /// 课程签到流程状态：0 未签到 … 7 管理员驳回。
-  final int courseSignStatus;
-  final String? teacherSignInTime;
-  final String? teacherSignOutTime;
-  final String? studentSignInTime;
-  final String? studentSignOutTime;
-  final String signMethod;
-  final String? fenceLabel;
-  final double? evaluationScore;
-  final String? evaluationComment;
+  /// 任课老师是否已经签课（`courseList` 的 `signStatus` 大于 0）。
+  final bool signed;
+
+  /// 本人这节课的考勤结果：0 正常 / 1 缺勤 / 2 迟到 / 3 请假；老师签课前为 null。
+  final int? attendStatus;
+
+  /// 老师登记本人到课的时间。
+  final String? signInTime;
+
+  /// 考勤备注（如「迟到 6 分钟」「已请假」）。
+  final String remark;
 
   /// 任课老师头像（`teacherHeadUrl`，相对路径，渲染前经 `MediaUrl.resolve`）。
   final String teacherHeadUrl;
@@ -87,84 +82,18 @@ class StudentTodayCourse {
   String get periodLabel => lineNum > 0 ? '第$lineNum节' : '今日课程';
 
   String get timeRange => '$timeStart-$timeEnd';
-
-  // 学生端签到流程门控，统一以课程流程状态 [courseSignStatus] 为准（来源于
-  // `courseList` 的 `signStatus`，老师签到后会随之推进）：
-  //   0 未签到 → 1 老师上课签 → 2 学生上课签 → 3 老师下课签 → 4 学生下课签 → 5 学生评价
-  // 学生端接口（`courseSignDetail`）只回本人考勤记录，不含流程状态与老师时间，
-  // 因此这里不再依赖打卡时间反推，避免轮询时把流程状态覆盖丢失。
-
-  /// 老师是否已上课签到（流程 ≥1）。
-  bool get teacherSignedIn =>
-      courseSignStatus >= CourseSignFlowStatus.teacherStart.code;
-
-  /// 老师是否已下课签到（流程 ≥3）。
-  bool get teacherSignedOut =>
-      courseSignStatus >= CourseSignFlowStatus.teacherEnd.code;
-
-  /// 学生是否已上课签到（流程 ≥2）。
-  bool get studentSignedIn =>
-      courseSignStatus >= CourseSignFlowStatus.studentStart.code;
-
-  /// 学生是否已下课签到（流程 ≥4）。
-  bool get studentSignedOut =>
-      courseSignStatus >= CourseSignFlowStatus.studentEnd.code;
-
-  /// 学生是否已评价（流程 ≥5）。
-  bool get studentEvaluated =>
-      courseSignStatus >= CourseSignFlowStatus.studentEval.code;
-
-  /// 学生上课签到：老师已上课签、学生尚未上课签（流程恰为 1）。
-  bool get canCheckIn =>
-      courseSignStatus == CourseSignFlowStatus.teacherStart.code;
-
-  /// 学生下课签到：老师已下课签、学生尚未下课签（流程恰为 3）。
-  bool get canCheckOut =>
-      courseSignStatus == CourseSignFlowStatus.teacherEnd.code;
-
-  /// 学生评价：学生已下课签、尚未评价（流程恰为 4）。
-  bool get canComment =>
-      courseSignStatus == CourseSignFlowStatus.studentEnd.code;
-
-  StudentTodayCourse copyWith({
-    String? signRecordId,
-    int? courseSignStatus,
-    String? teacherSignInTime,
-    String? teacherSignOutTime,
-    String? studentSignInTime,
-    String? studentSignOutTime,
-    String? signMethod,
-    String? fenceLabel,
-    double? evaluationScore,
-    String? evaluationComment,
-  }) {
-    return StudentTodayCourse(
-      courseId: courseId,
-      subjectName: subjectName,
-      teacherName: teacherName,
-      location: location,
-      timeStart: timeStart,
-      timeEnd: timeEnd,
-      durationLabel: durationLabel,
-      lineNum: lineNum,
-      phase: phase,
-      signRecordId: signRecordId ?? this.signRecordId,
-      courseSignStatus: courseSignStatus ?? this.courseSignStatus,
-      teacherSignInTime: teacherSignInTime ?? this.teacherSignInTime,
-      teacherSignOutTime: teacherSignOutTime ?? this.teacherSignOutTime,
-      studentSignInTime: studentSignInTime ?? this.studentSignInTime,
-      studentSignOutTime: studentSignOutTime ?? this.studentSignOutTime,
-      signMethod: signMethod ?? this.signMethod,
-      fenceLabel: fenceLabel ?? this.fenceLabel,
-      evaluationScore: evaluationScore ?? this.evaluationScore,
-      evaluationComment: evaluationComment ?? this.evaluationComment,
-      teacherHeadUrl: teacherHeadUrl,
-      teacherId: teacherId,
-    );
-  }
 }
 
-List<StudentTodayCourse> parseStudentTodaySmallCourses({
+/// 考勤结果的说法：0 正常 / 1 缺勤 / 2 迟到 / 3 请假。
+String studentAttendStatusLabel(int status) => switch (status) {
+  1 => '缺勤',
+  2 => '迟到',
+  3 => '请假',
+  _ => '正常',
+};
+
+/// 解析今天的课（`courseList`），带上本人的到课情况。
+List<StudentTodayCourse> parseStudentTodayCourses({
   required dynamic raw,
   required List<StudentTimeConfig> timeConfigs,
   required DateTime now,
@@ -178,7 +107,6 @@ List<StudentTodayCourse> parseStudentTodaySmallCourses({
 
   for (final row in rows) {
     final flat = _flattenCourseRow(row);
-    if (!_isSmallCourse(flat)) continue;
 
     final dateStr = _pickString(flat, ['date', 'classDate', 'courseDate'], '');
     if (todayIso.isNotEmpty &&
@@ -216,11 +144,7 @@ List<StudentTodayCourse> parseStudentTodaySmallCourses({
     final mins = _minutesBetweenHm(times.start, times.end);
     final durationLabel = mins > 0 ? '$mins分钟' : '—';
 
-    final scoreRaw =
-        flat['score'] ?? flat['commentScore'] ?? flat['studentScore'];
-    final score = scoreRaw == null
-        ? null
-        : double.tryParse(scoreRaw.toString());
+    final attendRaw = flat['studentSignStatus'] ?? flat['attendStatus'];
 
     courses.add(
       StudentTodayCourse(
@@ -233,50 +157,18 @@ List<StudentTodayCourse> parseStudentTodaySmallCourses({
         durationLabel: durationLabel,
         lineNum: times.lineNum,
         phase: _slotPhase(now, times.start, times.end),
-        courseSignStatus: _pickInt(flat, [
-          'courseSignStatus',
-          'signStatus',
-          'signStep',
-        ]),
-        teacherSignInTime: _pickNullable(flat, [
-          'teacherSignInTime',
-          'teacherCheckInTime',
-          'teacherSignTime',
-        ]),
-        teacherSignOutTime: _pickNullable(flat, [
-          'teacherSignOutTime',
-          'teacherCheckOutTime',
-        ]),
-        studentSignInTime: _pickNullable(flat, [
+        signRecordId: readSnowflakeId(flat['signRecordId']) ?? '',
+        signed: _pickInt(flat, ['signStatus', 'courseSignStatus']) > 0,
+        attendStatus: attendRaw == null
+            ? null
+            : int.tryParse(attendRaw.toString()),
+        signInTime: _pickNullable(flat, [
           'studentSignInTime',
           'studentCheckInTime',
           'signInTime',
           'checkInTime',
         ]),
-        studentSignOutTime: _pickNullable(flat, [
-          'studentSignOutTime',
-          'studentCheckOutTime',
-          'signOutTime',
-          'checkOutTime',
-        ]),
-        signMethod: _pickString(flat, [
-          'signMethod',
-          'signTypeName',
-          'checkMethod',
-          'method',
-        ], '按键打卡'),
-        fenceLabel: _pickNullable(flat, [
-          'fenceLabel',
-          'fenceName',
-          'locationTip',
-        ]),
-        evaluationScore: score,
-        evaluationComment: _pickNullable(flat, [
-          'comment',
-          'studentComment',
-          'evaluation',
-          'evaluate',
-        ]),
+        remark: _pickString(flat, ['signRemark', 'remark'], ''),
         teacherHeadUrl: _pickString(flat, ['teacherHeadUrl', 'headUrl'], ''),
         teacherId: readSnowflakeId(flat['teacherId']) ?? '',
       ),
@@ -374,14 +266,6 @@ _ResolvedRowTimes _resolveRowTimes(
     _pickString(row, ['timeEnd', 'endTime', 'finishTime', 'end'], ''),
   );
   return _ResolvedRowTimes(lineNum: lineNum, start: start, end: end);
-}
-
-bool _isSmallCourse(Map<String, dynamic> json) {
-  final typeRaw = json['type'];
-  final type = typeRaw is int
-      ? typeRaw
-      : (int.tryParse(typeRaw?.toString() ?? '') ?? 0);
-  return type == 1;
 }
 
 StudentCourseSlotPhase _slotPhase(DateTime now, String startHm, String endHm) {
@@ -661,11 +545,10 @@ class StudentSignRecordItem {
     required this.location,
     required this.durationLabel,
     required this.isAbsent,
-    required this.courseType,
+    this.attendStatus = 0,
     this.timeStart = '',
     this.timeEnd = '',
     this.studentSignInTime,
-    this.studentSignOutTime,
     this.method = '',
     this.note = '',
     this.teacherHeadUrl = '',
@@ -682,13 +565,14 @@ class StudentSignRecordItem {
   final String location;
   final String durationLabel;
   final bool isAbsent;
-  final int courseType;
+
+  /// 考勤结果：0 正常 / 1 缺勤 / 2 迟到 / 3 请假。
+  final int attendStatus;
 
   /// 课表起止时间（`timeBegin` / `timeEnd`，`HH:mm`）。
   final String timeStart;
   final String timeEnd;
   final String? studentSignInTime;
-  final String? studentSignOutTime;
   final String method;
   final String note;
 
@@ -704,11 +588,8 @@ class StudentSignRecordItem {
   /// 任课老师 id（`teacherId`），用于跨接口回填教师头像。
   final String teacherId;
 
-  bool get isSmallCourse => courseType == 1;
-
   factory StudentSignRecordItem.fromJson(Map<String, dynamic> json) {
     final flat = _flattenSignRecordRow(json);
-    final type = _pickInt(flat, ['type', 'courseType', 'classType']);
     final status = _pickInt(flat, ['status', 'signStatus', 'attendanceStatus']);
     final absentFlag =
         flat['isAbsent'] == true || flat['absent'] == true || status == 1;
@@ -741,18 +622,13 @@ class StudentSignRecordItem {
       ], '—'),
       durationLabel: mins > 0 ? '$mins分钟' : '—',
       isAbsent: absentFlag,
-      courseType: type,
+      attendStatus: absentFlag ? 1 : status,
       timeStart: begin,
       timeEnd: end,
       studentSignInTime: _pickNullable(flat, [
         'studentSignInTime',
         'signInTime',
         'checkInTime',
-      ]),
-      studentSignOutTime: _pickNullable(flat, [
-        'studentSignOutTime',
-        'signOutTime',
-        'checkOutTime',
       ]),
       method: _pickString(flat, ['signMethod', 'method', 'signTypeName'], ''),
       note: _pickString(flat, ['remark', 'note', 'reason', 'description'], ''),
@@ -764,149 +640,12 @@ class StudentSignRecordItem {
   }
 }
 
-String? _normalizeStudentSignClock(String? raw) {
-  if (raw == null) return null;
-  final trimmed = raw.trim();
-  if (trimmed.isEmpty || trimmed == '-') return null;
-  return pickCourseClock(trimmed) ?? trimmed;
-}
-
-/// 学生端「单条签到记录详情」(`courseSignDetail`)。
-///
-/// 实测返回是**学生本人**的扁平考勤记录，**不含**课程流程状态、老师签到
-/// 时间或学生子对象：
-/// ```json
-/// {"id":"59","courseId":"...","status":1,"signInTime":null,
-///  "signOutTime":null,"comment":null,"score":null}
-/// ```
-/// 因此本类只承载本人签到时间 / 考勤结果 / 评价，流程状态另由 `courseList`
-/// 的 `signStatus` 提供。`status`：0 出勤 / 1 缺勤 / 2 迟到 / 3 请假。
-class StudentCourseSignDetail {
-  const StudentCourseSignDetail({
-    required this.signRecordId,
-    required this.courseId,
-    this.attendanceStatus = 0,
-    this.studentSignInTime,
-    this.studentSignOutTime,
-    this.evaluationScore,
-    this.evaluationComment,
-  });
-
-  final String signRecordId;
-  final String courseId;
-
-  /// 本人考勤结果：0 出勤 / 1 缺勤 / 2 迟到 / 3 请假。
-  final int attendanceStatus;
-  final String? studentSignInTime;
-  final String? studentSignOutTime;
-  final double? evaluationScore;
-  final String? evaluationComment;
-
-  factory StudentCourseSignDetail.fromJson(dynamic raw) {
-    final map = _unwrapMap(raw) ?? const <String, dynamic>{};
-    final scoreRaw = map['score'] ?? map['commentScore'] ?? map['studentScore'];
-    return StudentCourseSignDetail(
-      signRecordId: readSnowflakeId(map['id']) ?? '',
-      courseId: readSnowflakeId(map['courseId']) ?? '',
-      attendanceStatus: _pickInt(map, [
-        'status',
-        'signStatus',
-        'attendanceStatus',
-      ]),
-      studentSignInTime: _normalizeStudentSignClock(
-        _pickNullable(map, [
-          'signInTime',
-          'studentSignInTime',
-          'studentCheckInTime',
-          'checkInTime',
-        ]),
-      ),
-      studentSignOutTime: _normalizeStudentSignClock(
-        _pickNullable(map, [
-          'signOutTime',
-          'studentSignOutTime',
-          'studentCheckOutTime',
-          'checkOutTime',
-        ]),
-      ),
-      evaluationScore: scoreRaw == null
-          ? null
-          : double.tryParse(scoreRaw.toString()),
-      evaluationComment: _pickNullable(map, [
-        'comment',
-        'studentComment',
-        'evaluation',
-        'evaluate',
-      ]),
-    );
-  }
-
-  /// 仅回填本人相关字段；**不触碰** [StudentTodayCourse.courseSignStatus]
-  /// 与老师签到时间（它们来自 `courseList`，否则轮询会把流程状态覆盖丢失）。
-  StudentTodayCourse applyTo(StudentTodayCourse course) {
-    return course.copyWith(
-      signRecordId: signRecordId.isNotEmpty
-          ? signRecordId
-          : course.signRecordId,
-      studentSignInTime: studentSignInTime ?? course.studentSignInTime,
-      studentSignOutTime: studentSignOutTime ?? course.studentSignOutTime,
-      evaluationScore: evaluationScore ?? course.evaluationScore,
-      evaluationComment: evaluationComment ?? course.evaluationComment,
-    );
-  }
-}
-
 List<StudentSignRecordItem> parseStudentSignRecordList(dynamic raw) {
   final rows = _extractSignRecordRows(raw);
   return rows
       .map(StudentSignRecordItem.fromJson)
       .where((item) => item.date.isNotEmpty || item.subjectName != '—')
       .toList(growable: false);
-}
-
-/// 用最近/历史签到记录里的 `id` 回填今日小课的 [StudentTodayCourse.signRecordId]。
-List<StudentTodayCourse> attachSignRecordIdsToCourses(
-  List<StudentTodayCourse> courses,
-  List<StudentSignRecordItem> records,
-) {
-  if (courses.isEmpty || records.isEmpty) return courses;
-  final byCourseId = <String, String>{};
-  for (final record in records) {
-    if (record.signRecordId.isEmpty || record.courseId.isEmpty) continue;
-    byCourseId.putIfAbsent(record.courseId, () => record.signRecordId);
-  }
-  if (byCourseId.isEmpty) return courses;
-  return [
-    for (final course in courses)
-      course.copyWith(
-        signRecordId: byCourseId[course.courseId] ?? course.signRecordId,
-      ),
-  ];
-}
-
-String? findSignRecordIdForCourse(
-  String courseId, {
-  required List<StudentTodayCourse> courses,
-  required List<StudentSignRecordItem> recentRecords,
-  List<StudentSignRecordItem> historyRecords = const [],
-}) {
-  if (courseId.isEmpty) return null;
-  for (final course in courses) {
-    if (course.courseId == courseId && course.signRecordId.isNotEmpty) {
-      return course.signRecordId;
-    }
-  }
-  for (final record in recentRecords) {
-    if (record.courseId == courseId && record.signRecordId.isNotEmpty) {
-      return record.signRecordId;
-    }
-  }
-  for (final record in historyRecords) {
-    if (record.courseId == courseId && record.signRecordId.isNotEmpty) {
-      return record.signRecordId;
-    }
-  }
-  return null;
 }
 
 Map<String, dynamic> _flattenSignRecordRow(Map<String, dynamic> row) {
@@ -925,7 +664,6 @@ Map<String, dynamic> _flattenSignRecordRow(Map<String, dynamic> row) {
   merge('course', const [
     MapEntry('id', 'courseId'),
     MapEntry('date', 'courseDate'),
-    MapEntry('type', 'courseType'),
   ]);
   merge('subject', const [MapEntry('name', 'subjectName')]);
   merge('teacher', const [
@@ -997,7 +735,6 @@ class StudentCourseSignMakeupItem {
     required this.id,
     required this.courseId,
     required this.courseName,
-    required this.signTypeRaw,
     required this.reason,
     required this.status,
     required this.statusText,
@@ -1013,10 +750,6 @@ class StudentCourseSignMakeupItem {
   final String id;
   final String courseId;
   final String courseName;
-
-  /// 补签类型原始值：后端可能下发中文（`上课签`/`下课签`）、数字串（`1`/`2`）
-  /// 或异常值（`????`）。统一经 [signTypeLabel] 归一化展示。
-  final String signTypeRaw;
   final String reason;
   final int status;
   final String statusText;
@@ -1028,7 +761,8 @@ class StudentCourseSignMakeupItem {
   final int lineNum;
   final String teacherHeadUrl;
 
-  String get signTypeLabel => _courseSignMakeupSignTypeLabel(signTypeRaw);
+  /// 补签类型的说法。上课只签一次，补的都是这一次。
+  String get signTypeLabel => '课堂补签';
 
   String get displayStatus =>
       statusText.isNotEmpty ? statusText : _courseSignMakeupStatusLabel(status);
@@ -1043,7 +777,6 @@ class StudentCourseSignMakeupItem {
         'courseName',
         'name',
       ], '未命名课程'),
-      signTypeRaw: _pickString(flat, ['signType'], ''),
       reason: _pickString(flat, ['reason'], ''),
       status: _pickInt(flat, ['status', 'auditStatus']),
       statusText: _pickString(flat, ['statusText', 'auditStatusText']),
@@ -1095,12 +828,7 @@ List<({String label, String value})> parseStudentCourseSignMakeupDetailRows(
       value: _pickString(flat, ['subjectName', 'courseName'], '—'),
     ),
     if (className.isNotEmpty) (label: '所属班级', value: className),
-    (
-      label: '补签类型',
-      value: _courseSignMakeupSignTypeLabel(
-        _pickString(flat, ['signType'], ''),
-      ),
-    ),
+    (label: '补签类型', value: '课堂补签'),
     (label: '上课日期', value: _pickString(flat, ['courseDate', 'date'], '—')),
     if (reason.isNotEmpty) (label: '申请原因', value: reason),
     (
@@ -1123,15 +851,4 @@ List<({String label, String value})> parseStudentCourseSignMakeupDetailRows(
       value: _pickString(flat, ['approveTime', 'auditTime', 'updateTime'], '—'),
     ),
   ];
-}
-
-/// 归一化补签类型标签，兼容中文 / 数字串 / 异常值。
-String _courseSignMakeupSignTypeLabel(String raw) {
-  final t = raw.trim();
-  if (t.isEmpty) return '课堂补签';
-  if (t.contains('上课')) return '上课签';
-  if (t.contains('下课')) return '下课签';
-  if (t == '1') return '上课签';
-  if (t == '2') return '下课签';
-  return '课堂补签';
 }

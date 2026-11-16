@@ -3,37 +3,22 @@ import 'package:flutter/material.dart';
 import '../../../core/network/media_url.dart';
 import 'schedule_color_palette.dart';
 
-/// 课表网格内课程卡片的四种视觉主题（与管理员排课页一致）。
-enum ScheduleCourseCardKind { smallOrange, smallBlue, bigStandard, bigExtended }
-
-/// 课表课程卡展示数据（管理员 / 教师 / 学生共用）。
+/// 课表课程卡展示数据（管理员 / 教师 / 学生共用）。课程只有一种，卡片也只有
+/// 一种样式，底色取课程色。
 class ScheduleCourseCardData {
   const ScheduleCourseCardData({
-    required this.kind,
     required this.location,
     required this.name,
     required this.subline,
     this.logoUrl = '',
-    this.capacity,
     this.bgColor,
   });
 
-  final ScheduleCourseCardKind kind;
   final String location;
   final String name;
   final String subline;
   final String logoUrl;
-  final String? capacity;
   final Color? bgColor;
-}
-
-ScheduleCardThemeKind scheduleCourseCardThemeKind(ScheduleCourseCardKind kind) {
-  return switch (kind) {
-    ScheduleCourseCardKind.smallOrange => ScheduleCardThemeKind.smallOrange,
-    ScheduleCourseCardKind.smallBlue => ScheduleCardThemeKind.smallBlue,
-    ScheduleCourseCardKind.bigStandard => ScheduleCardThemeKind.bigStandard,
-    ScheduleCourseCardKind.bigExtended => ScheduleCardThemeKind.bigExtended,
-  };
 }
 
 /// 课程卡第二行写什么：学生看老师，老师看班级，管理端看老师。
@@ -48,16 +33,9 @@ String scheduleRoomName(String location) {
 /// 从 API `courseList` 单条记录构建课表课程卡展示数据。
 /// 字段映射与管理员排课页 `_parseCourseCard` 保持一致。
 ScheduleCourseCardData buildScheduleCourseCard(
-  Map<String, dynamic> json,
-  int smallIdxInCell, {
+  Map<String, dynamic> json, {
   ScheduleCardSubline subline = ScheduleCardSubline.teacherAndClass,
 }) {
-  final typeRaw = json['type'];
-  final type = typeRaw is int
-      ? typeRaw
-      : (int.tryParse(typeRaw?.toString() ?? '') ?? 0);
-  final isSmall = type == 1;
-
   final location = pickScheduleString(json, [
     'classroomName',
     'roomName',
@@ -84,26 +62,13 @@ ScheduleCourseCardData buildScheduleCourseCard(
   final line = switch (subline) {
     ScheduleCardSubline.teacher => teacher.isEmpty ? className : teacher,
     ScheduleCardSubline.className => className.isEmpty ? teacher : className,
-    ScheduleCardSubline.teacherAndClass =>
-      [teacher, className].where((s) => s.isNotEmpty).join(' · '),
+    ScheduleCardSubline.teacherAndClass => [
+      teacher,
+      className,
+    ].where((s) => s.isNotEmpty).join(' · '),
   };
 
-  if (isSmall) {
-    final kind = smallIdxInCell.isEven
-        ? ScheduleCourseCardKind.smallOrange
-        : ScheduleCourseCardKind.smallBlue;
-    return ScheduleCourseCardData(
-      kind: kind,
-      location: scheduleRoomName(location),
-      name: name,
-      subline: line,
-      logoUrl: resolveScheduleLogoUrl(json),
-      capacity: pickScheduleCapacityLabel(json),
-      bgColor: colorOverride,
-    );
-  }
   return ScheduleCourseCardData(
-    kind: ScheduleCourseCardKind.bigStandard,
     location: scheduleRoomName(location),
     name: name,
     subline: line,
@@ -166,14 +131,4 @@ String pickScheduleString(
     if (s.isNotEmpty) return s;
   }
   return fallback;
-}
-
-String? pickScheduleCapacityLabel(Map<String, dynamic> json) {
-  final attendCount = json['attendCount'] ?? json['signCount'];
-  final totalCount =
-      json['totalCount'] ?? json['capacity'] ?? json['classSize'];
-  if (attendCount != null && totalCount != null) {
-    return '$attendCount/$totalCount 人';
-  }
-  return null;
 }

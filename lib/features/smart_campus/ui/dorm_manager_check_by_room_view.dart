@@ -755,7 +755,7 @@ class _RoomStudentTile extends StatelessWidget {
 
 /// 学生状态触发器（36 高紫边胶囊，匹配 Figma）。点击后弹出**全局通用**的
 /// [PopupSelectorPanel] 样式弹层（白底 12 圆角 + 多层柔和阴影 + 紫色高亮 +
-/// check icon），与请假申请 / 申请小课等表单的下拉视觉保持一致。
+/// check icon），与请假申请 / 排课等表单的下拉视觉保持一致。
 ///
 /// 触发器宽度自适应文案，弹层宽度固定为 120（保证「请假免检」4 字 + check
 /// icon 不被裁切）。

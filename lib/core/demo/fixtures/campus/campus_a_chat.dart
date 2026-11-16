@@ -40,7 +40,7 @@ class CampusChatPerson {
   };
 }
 
-/// 群聊：班级群 + 小课群 + 宿舍群 + 教职工群。
+/// 群聊：班级群 + 兴趣小组群 + 宿舍群 + 教职工群。
 class CampusChatGroup {
   const CampusChatGroup({
     required this.id,
@@ -55,7 +55,7 @@ class CampusChatGroup {
   final String id;
   final String name;
 
-  /// 0 大班 / 1 小班 / 2 教职工 / 3 宿舍。
+  /// 0 班级群 / 1 兴趣小组群 / 2 教职工群 / 3 宿舍群。
   final int type;
   final String headUserId;
   final List<String> staffUserIds;

@@ -197,7 +197,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
             imagePath: 'assets/images/new/智慧校园/学生端/我的课表.png',
           ),
           SmartCampusQuickActionData(
-            label: '课堂签到',
+            label: '课堂考勤',
             icon: Icons.fact_check_rounded,
             background: _purpleSoft,
             foreground: _purple,
@@ -320,7 +320,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               title: '14:00–17:00',
               subtitle: '本节进行石膏头像结构与明暗训练',
               person: '江月月',
-              personHint: '45分钟·素描小课',
+              personHint: '180分钟·素描教室 A',
               trailing: '即将开始',
               avatarSeed: '江',
             ),
@@ -346,14 +346,14 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
               badgeForeground: _green,
               badgeBackground: _greenSoft,
               title: '08:30–11:30',
-              subtitle: '专业教室 A301 · 小课',
+              subtitle: '速写教室 C',
               person: '徐明敏',
-              personHint: '45分钟·素描小课',
+              personHint: '180分钟·速写教室 C',
               trailing: '已结束',
               avatarSeed: '徐',
             ),
             SmartCampusPanelItemData(
-              badge: '大课',
+              badge: '晚自习',
               badgeForeground: _pink,
               badgeBackground: _pinkSoft,
               title: '19:00–21:00',
@@ -1004,7 +1004,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
             tagBackground: _blueSoft,
           ),
           SmartCampusNoticeData(
-            tag: '大课课',
+            tag: '课程',
             title: '统考倒计时提醒已同步至四端，请检查通知推送是否全部生效。',
             time: '周三',
             tagForeground: _purple,
@@ -1022,7 +1022,7 @@ SmartCampusDashboardData smartCampusDashboardDataForRole(SmartCampusRole role) {
         roleScopeSections: const [
           SmartCampusRoleScopeSectionData(
             title: '核心场景',
-            items: ['课表', '作品', '成绩', '课堂签到', '请假与补课', '查寝管理', '校圈', '群聊'],
+            items: ['课表', '作品', '成绩', '课堂考勤', '请假与补课', '查寝管理', '校圈', '群聊'],
           ),
           SmartCampusRoleScopeSectionData(
             title: '管理端',

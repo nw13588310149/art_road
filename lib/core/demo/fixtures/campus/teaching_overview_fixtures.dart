@@ -48,7 +48,6 @@ void registerTeachingOverviewFixtures(DemoRouter router) {
       'taskCount',
       'taskReviewRate',
       'scoreChange',
-      'studentRating',
       'adjustRate',
     }.contains(sort)) {
       rows.sort(
@@ -204,9 +203,7 @@ class _Overview {
   late final courses = cbCoursesBetween(cbAddDays(today, -29), today)
       .where(
         (course) =>
-            !course.startAt.isAfter(now) &&
-            (classIds.contains(course.classId) ||
-                (course.isSmall && cbCourseStudents(course).any(_hasStudent))),
+            !course.startAt.isAfter(now) && classIds.contains(course.classId),
       )
       .toList();
   final _signs = <String, _Row>{};
@@ -385,7 +382,6 @@ class _Overview {
       if (cbStr(_sign(course)['teacherSignInTime']).isNotEmpty) {
         presentTeachers.add(course.teacherUserId);
       }
-      if (course.isSmall) continue;
       for (final id in cbCourseStudents(course)) {
         if (!_hasStudent(id)) continue;
         expected.add(id);
@@ -427,9 +423,7 @@ class _Overview {
       case 'attendance':
         final expected = <String>{};
         final present = <String>{};
-        for (final course in courses.where(
-          (course) => course.day == day && !course.isSmall,
-        )) {
+        for (final course in courses.where((course) => course.day == day)) {
           for (final id in cbCourseStudents(course)) {
             if (!_hasStudent(id)) continue;
             expected.add(id);
@@ -605,14 +599,6 @@ class _Overview {
           ? null
           : (scores.last['mean'] as double) -
                 (scores[scores.length - 2]['mean'] as double),
-      'studentRating': _mean([
-        for (final course in teacherCourses.where((c) => c.isSmall))
-          for (final entry in _studentSigns(course).entries)
-            if (_hasStudent(entry.key) &&
-                entry.value is Map &&
-                (entry.value as Map)['score'] is num)
-              (entry.value as Map)['score'] as num,
-      ]),
       'adjustRate': _rate(
         lead.where((l) => l['action'] == 'ADJUST').length,
         lead.length,

@@ -255,7 +255,7 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
       '【校园】学校发布了新的教学通知，可在「智慧校园」查看。',
     DemoRole.headTeacher => '【校园】班级有新的请假申请与考勤记录，可在「智慧校园」的班级工作台查看。',
     DemoRole.dormManager => '【校园】今晚晚查寝 21:30 开始、$_eveningCheckTime 截止，请按时到岗。',
-    DemoRole.admin => '【校园】有新的请假审批与小课签课待处理，可在「智慧校园」查看。',
+    DemoRole.admin => '【校园】有新的请假审批与课堂补签待处理，可在「智慧校园」查看。',
     DemoRole.principal => '【校园】校长信箱有新的来信，可在「智慧校园」查看并回复。',
   };
   notices.add(

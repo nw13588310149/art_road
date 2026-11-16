@@ -5,7 +5,7 @@ import 'package:the_road_of_art_flutter/core/theme/app_font.dart';
 import 'schedule_course_card.dart';
 
 /// 课表空格占位：白底 + 灰边圆角框 +「空闲」文案，固定显示在顶部标准高度，
-/// 不因同节次有小课叠高整行而纵向拉伸。
+/// 不因同节次别的格子叠了多张课卡而纵向拉伸。
 ///
 /// 边距与 [ScheduleCourseCard] 所在格子的 `12` 四向 padding 一致；日期列
 /// 等分变宽时虚线框保持 176×96 并水平居中。

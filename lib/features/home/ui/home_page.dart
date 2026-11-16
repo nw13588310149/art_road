@@ -670,7 +670,6 @@ class _CoursePanelState extends State<_CoursePanel> {
       subjectName: course.subjectName,
       displayName: course.teacherName,
       subtitle: course.description,
-      isSmallCourse: course.isSmallCourse,
       avatar: SmoothCircleNetworkAvatar(
         url: MediaUrl.resolve(course.teacherAvatar),
         size: 40,
@@ -680,10 +679,6 @@ class _CoursePanelState extends State<_CoursePanel> {
         HomeCourseStatus.inProgress => DashboardCourseRunState.inProgress,
         HomeCourseStatus.upcoming => DashboardCourseRunState.upcoming,
       },
-      tagDotColor: DashboardCourseNoticeCard.dotColorFromHex(
-        course.cardColorHex,
-        ended: course.status == HomeCourseStatus.ended,
-      ),
     ),
   );
 }

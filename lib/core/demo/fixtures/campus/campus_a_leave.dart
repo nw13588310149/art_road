@@ -41,7 +41,7 @@ abstract final class CampusALeaves {
     return list;
   }
 
-  /// 已通过的请假时段（课堂签到记为「请假」）。
+  /// 已通过的请假时段（课堂考勤记为「请假」）。
   static List<({DateTime start, DateTime end, String reason})> approved(
     DemoAccount account,
   ) => [

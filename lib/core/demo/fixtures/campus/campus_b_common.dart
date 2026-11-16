@@ -247,10 +247,7 @@ String? cbSubjectNameOf(int id) {
 }
 
 /// 课程卡底色，与学生端课表同一套配色。
-String cbCourseColor(String courseName, {bool small = false}) {
-  if (small) {
-    return '#A49AF4';
-  }
+String cbCourseColor(String courseName) {
   for (final (key, color) in const [
     ('模拟', '#FE96EB'),
     ('写生', '#C5E53E'),
@@ -289,9 +286,6 @@ const List<String> cbRoomNames = [
   '多媒体教室',
   '考试大厅',
   '室外写生',
-  '小课教室 1',
-  '小课教室 2',
-  '小课教室 3',
 ];
 
 const Map<String, int> _roomCapacity = {
@@ -301,9 +295,6 @@ const Map<String, int> _roomCapacity = {
   '多媒体教室': 60,
   '考试大厅': 120,
   '室外写生': 60,
-  '小课教室 1': 6,
-  '小课教室 2': 6,
-  '小课教室 3': 6,
 };
 
 /// 教室 id = 校区序号 × 10 + 教室序号（11 = 城东校区素描教室 A）。
@@ -443,62 +434,27 @@ String cbStaffNo(DemoCampusStaff s) =>
 
 // ── 班级（可编辑名册） ────────────────────────────────────────────────
 
-const String cbClassesKey = 'campus_b:classes';
+/// 班级名册的存储键。班级不再分班型，换了键名：旧版本存下来的名册（里面有
+/// 已经取消的班）不会再被读出来。
+const String cbClassesKey = 'campus_b:class_roster';
 
 const Map<String, String> _classLogos = {
   '501': 'asset:assets/demo/art/sketch-portrait-1.jpg',
   '502': 'asset:assets/demo/art/color-still-2.jpg',
   '503': 'asset:assets/demo/art/speed-figure-1.jpg',
-  '601': 'asset:assets/demo/art/sketch-bust-1.jpg',
-  '602': 'asset:assets/demo/art/color-landscape-1.jpg',
-  '603': 'asset:assets/demo/art/speed-group-1.jpg',
 };
 
 const Map<String, String> _classCodes = {
   '501': 'LK2701',
   '502': 'LK2702',
   '503': 'XK2701',
-  '601': 'XB2701',
-  '602': 'XB2702',
-  '603': 'XB2703',
 };
 
 const Map<String, String> _classNotices = {
   '501': '本周目标：石膏头像长期作品收尾，周六模拟考试请提前 20 分钟到考试大厅。',
   '502': '色彩静物三张作品周五前交，周六下午写生请自备折叠凳。',
   '503': '校考提高班本周以速写场景组合为主，作品集照片周日前上传。',
-  '601': '素描精进小班：每次课带上一周的长期作品，课上逐张讲评。',
-  '602': '色彩专项小班：本阶段练习灰调静物，调色盘提前清洗。',
-  '603': '速写强化小班：每次课 20 张动态默写，课后拍照上传。',
 };
-
-/// 小班（type = 1）：成员来自大班的重点学生。
-const List<
-  ({String id, String name, String org, String teacher, List<int> members})
->
-_smallClasses = [
-  (
-    id: '601',
-    name: '素描精进小班',
-    org: '城东校区',
-    teacher: 't-1',
-    members: [1, 3, 6, 9, 4, 7],
-  ),
-  (
-    id: '602',
-    name: '色彩专项小班',
-    org: '城西校区',
-    teacher: 't-3',
-    members: [10, 13, 16, 19, 22],
-  ),
-  (
-    id: '603',
-    name: '速写强化小班',
-    org: '城东校区',
-    teacher: 't-4',
-    members: [12, 15, 18, 5, 8],
-  ),
-];
 
 List<Map<String, dynamic>> _seedClasses() {
   final teacherIds = <String, List<String>>{};
@@ -513,7 +469,6 @@ List<Map<String, dynamic>> _seedClasses() {
         'id': c.id,
         'name': c.name,
         'groupName': c.name,
-        'type': 0,
         'classCode': _classCodes[c.id] ?? '',
         'grade': c.grade,
         'campusId': cbCampusIdOf(c.organizationName),
@@ -527,28 +482,6 @@ List<Map<String, dynamic>> _seedClasses() {
         'announcement': _classNotices[c.id] ?? '',
         'mute': 0,
         'createTime': '2026-08-25 09:00:00',
-      },
-    for (final s in _smallClasses)
-      <String, dynamic>{
-        'id': s.id,
-        'name': s.name,
-        'groupName': s.name,
-        'type': 1,
-        'classCode': _classCodes[s.id] ?? '',
-        'grade': '2027 届',
-        'campusId': cbCampusIdOf(s.org),
-        'campusName': s.org,
-        'headTeacherId': '0',
-        'classroomId': cbClassroomId(s.org, cbRoomNames.first),
-        'teacherIds': DemoCampusData.staffById(s.teacher)?.userId ?? '',
-        'studentIds': [
-          for (final index in s.members)
-            DemoMarkingData.instance.person(index).archiveId,
-        ],
-        'logo': _classLogos[s.id] ?? '',
-        'announcement': _classNotices[s.id] ?? '',
-        'mute': 0,
-        'createTime': '2026-09-10 09:00:00',
       },
   ];
 }
@@ -570,8 +503,6 @@ Map<String, dynamic>? cbClass(Object? rawId) {
 
 String cbClassName(Object? rawId) => cbStr(cbClass(rawId)?['name']);
 
-bool cbIsSmallClass(Map<String, dynamic> c) => cbInt(c['type']) == 1;
-
 List<String> cbClassStudentIds(Object? rawId) =>
     cbStrList(cbClass(rawId)?['studentIds']);
 
@@ -581,11 +512,10 @@ List<String> cbActiveStudents(Object? classId) => [
     if (cbPerson(id) case final p? when cbIsActive(p)) id,
 ];
 
-/// 学生所在的行政班（大班）；未分班时返回 null。
+/// 学生所在的班级；未分班时返回 null。
 Map<String, dynamic>? cbHomeClassOf(DemoPerson p) {
   for (final c in cbClasses()) {
-    if (!cbIsSmallClass(c) &&
-        cbStrList(c['studentIds']).contains(p.archiveId)) {
+    if (cbStrList(c['studentIds']).contains(p.archiveId)) {
       return c;
     }
   }
@@ -649,13 +579,12 @@ class CbScope {
     ];
   }
 
-  /// 担任班主任的行政班。
+  /// 担任班主任的班级。
   List<String> get headClassIds {
     final uid = userId;
     return [
       for (final c in cbClasses())
-        if (!cbIsSmallClass(c) && (all || cbStr(c['headTeacherId']) == uid))
-          cbStr(c['id']),
+        if (all || cbStr(c['headTeacherId']) == uid) cbStr(c['id']),
     ];
   }
 
@@ -702,9 +631,7 @@ String cbStaffRoles(DemoCampusStaff s) {
   if (s.roles.contains('admin')) {
     tokens.add('manager');
   }
-  if (cbClasses().any(
-    (c) => !cbIsSmallClass(c) && cbStr(c['headTeacherId']) == s.userId,
-  )) {
+  if (cbClasses().any((c) => cbStr(c['headTeacherId']) == s.userId)) {
     tokens.add('head_teacher');
   }
   if (s.subject.isNotEmpty) {
@@ -729,8 +656,6 @@ Map<String, dynamic> cbClassJson(Map<String, dynamic> c) {
     'name': cbStr(c['name']),
     'className': cbStr(c['name']),
     'groupName': cbStr(c['groupName'], cbStr(c['name'])),
-    'type': cbInt(c['type']),
-    'classType': cbInt(c['type']),
     'classCode': cbStr(c['classCode']),
     'grade': cbStr(c['grade']),
     'campusId': cbInt(c['campusId'], 1),

@@ -421,8 +421,8 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
     state = state.copyWith(mainView: SmartCampusMainView.mySchedule);
   }
 
-  /// 学生端「课堂签到」独立入口：打开课堂签到页（顶部 banner + 5 项统计
-  /// + 今日课程 + 签到操作 + 最近课堂记录）。
+  /// 学生端「课堂考勤」独立入口：打开课堂考勤页（顶部 banner + 统计卡
+  /// + 今日课程 + 到课情况 + 最近课堂记录）。
   void openCheckIn() {
     if (state.mainView == SmartCampusMainView.checkIn) {
       return;
@@ -477,8 +477,7 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
 
   /// 任课老师 / 班主任端「签课管理」独立入口：进入授课签到总览页（顶部
   /// banner + 5 项统计 + 总数据/本学期/本月 tabs + 最近签课记录 +
-  /// 今日课程 + 双列签到操作面板：大课走班级学生网格 + 一键全班签到，
-  /// 小课走单学生 + 教师上下课时间轴）。
+  /// 今日课程 + 签到操作面板：班级学生网格 + 一键全班签到）。
   void openClassAttendance() {
     if (state.mainView == SmartCampusMainView.classAttendance) {
       return;
@@ -627,12 +626,11 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
     state = state.copyWith(mainView: SmartCampusMainView.teacherManagement);
   }
 
-  /// 管理员端「班级编组」入口：进入行政班一览页面（banner + 标题/副标题 +
-  /// 顶部「创建班级 / 人员调班」两枚按钮 + 4 张统计卡（行政班数 / 在籍人数 /
-  /// 可调班在籍 / 调班记录）+ 行政班一览（白色卡片 + F5F6FA 渐变 header +
-  /// 大课/小课 pill + 班级元信息 + 共 N 人 + 折叠按钮；展开后 3 列学生
-  /// 迷你卡 + 「在籍」紫色 cut-corner 徽章）；可打开「创建行政班」/
-  /// 「人员调班」两个右侧抽屉。
+  /// 管理员端「班级管理」入口：进入班级一览页面（banner + 标题/副标题 +
+  /// 顶部「创建班级 / 人员调班」两枚按钮 + 4 张统计卡（班级数量 / 任课老师 /
+  /// 学生数量 / 未分配学生）+ 班级一览（白色卡片 + F5F6FA 渐变 header +
+  /// 班级元信息 + 共 N 人 + 折叠按钮；展开后 3 列学生迷你卡 + 「在籍」紫色
+  /// cut-corner 徽章）；可打开「创建班级」/「人员调班」两个右侧抽屉。
   void openClassManagement() {
     if (state.mainView == SmartCampusMainView.classManagement) {
       return;
@@ -640,15 +638,10 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
     state = state.copyWith(mainView: SmartCampusMainView.classManagement);
   }
 
-  /// 管理员端「排课与课表」入口：进入双 tab 视图。
-  ///   - tab 1「周课表与排课」：banner + 控制条（教学周第 N 周 + legend +
-  ///     ◀本周▶ + 演示基本周 + YYYY/MM/DD 日历 pill）+ 7 天 × 5 时段课表
-  ///     网格（4 主题课卡 + 编辑模式空格 / 第 1 行追加 "申请小课" pill），
-  ///     左下 "全校统一课表" 班级 dropdown，右下 "查看 / 编辑" 分段。
-  ///   - tab 2「小课申请审核」：双列卡片网格，每卡含申请人 + 状态徽章
-  ///     （待审核 / 已通过 / 已驳回）+ 日期 / 节次 双列灰底块 + 备注 +
-  ///     底部 "通过 / 驳回" 按钮（仅待审核态显示，"驳回"打开
-  ///     GradientHeaderDialog 填理由）。
+  /// 管理员端「排课与课表」入口：按班级查看和调整周课表。banner + 班级
+  /// dropdown + "查看 / 编辑" 分段 + 控制条（教学周第 N 周 + ◀本周▶ +
+  /// YYYY/MM/DD 日历 pill）+ 7 天 × 3 时段课表网格；编辑模式下空格可以排课，
+  /// 课卡可以拖动和删除。
   void openScheduleManagement() {
     if (state.mainView == SmartCampusMainView.scheduleManagement) {
       return;
@@ -746,14 +739,11 @@ class SmartCampusController extends StateNotifier<SmartCampusState> {
     state = state.copyWith(mainView: SmartCampusMainView.dormMakeupAudit);
   }
 
-  /// 管理员端「签课管理」入口：查看大课 / 小课的签到状态，处理补签审核。
+  /// 管理员端「签课管理」入口：查看各班的签课情况，处理补签审核。
   ///
-  /// 视图（两个 tab）：
-  ///   - **大课管理**：按班级 + 日期查询课次列表；每节大课可展开查看学生签到
-  ///     情况，支持管理员逐人修改状态（正常 / 迟到 / 早退 / 请假 / 缺勤）。
-  ///   - **小课管理**：查看小课各阶段签到状态（老师上课签→学生上课签→老师
-  ///     下课签→学生下课签→学生评价→管理员确认）；待确认的小课卡底部出现
-  ///     "确认完成"按钮；如有补签申请则弹右侧抽屉审核（通过/驳回）。
+  /// 按班级 + 日期查询课次列表；每节课可展开查看学生签到情况，支持管理员
+  /// 逐人修改状态（出勤 / 迟到 / 请假 / 缺勤）；有补签申请时在右侧抽屉里
+  /// 审核（通过 / 驳回）。
   void openSignManagement() {
     if (state.mainView == SmartCampusMainView.signManagement) {
       return;

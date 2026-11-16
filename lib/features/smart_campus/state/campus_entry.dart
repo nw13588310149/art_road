@@ -10,7 +10,7 @@ enum CampusEntry {
   schoolCircle,
   principalMailbox,
 
-  /// 学生：我的作品、请假、课堂签到、查寝打卡。
+  /// 学生：我的作品、请假、课堂考勤、查寝打卡。
   myHomework,
   studentLeave,
   checkIn,

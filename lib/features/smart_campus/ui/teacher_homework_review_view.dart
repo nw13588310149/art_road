@@ -2476,9 +2476,8 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                 if (i > 0) SizedBox(height: ui(8)),
                 _ClassCheckRow(
                   title: _classList[i]['name']?.toString() ?? '班级$i',
-                  kind: _classList[i]['type']?.toString() == '1' ? '小班' : '行政班',
+                  campus: _classList[i]['campusName']?.toString() ?? '',
                   people: '${_classList[i]['studentCount'] ?? ''}人',
-                  tag: _classList[i]['type']?.toString() == '1' ? '小课' : '大课',
                   checked: _selectedClassIndices.contains(i),
                   onTap: () => setState(() {
                     if (_selectedClassIndices.contains(i)) {
@@ -2528,17 +2527,17 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
 class _ClassCheckRow extends StatelessWidget {
   const _ClassCheckRow({
     required this.title,
-    required this.kind,
+    required this.campus,
     required this.people,
-    required this.tag,
     required this.checked,
     required this.onTap,
   });
 
   final String title;
-  final String kind;
+
+  /// 所在校区；没有时这一段不显示。
+  final String campus;
   final String people;
-  final String tag;
   final bool checked;
   final VoidCallback onTap;
 
@@ -2573,40 +2572,6 @@ class _ClassCheckRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ui(4),
-                    vertical: ui(2),
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(ui(4)),
-                    border: Border.all(color: _kBorderSoft, width: 1.4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: ui(6),
-                        height: ui(6),
-                        decoration: const BoxDecoration(
-                          color: AppColors.brandSoft,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      SizedBox(width: ui(4)),
-                      Text(
-                        tag,
-                        style: TextStyle(
-                          fontSize: ui(12),
-                          color: _kTextDark,
-                          fontWeight: AppFont.w400,
-                          height: 1.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
             SizedBox(height: ui(4)),
@@ -2614,16 +2579,18 @@ class _ClassCheckRow extends StatelessWidget {
               padding: EdgeInsets.only(left: ui(24)),
               child: Row(
                 children: [
-                  Text(
-                    kind,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: _kTextSecondary,
-                      fontWeight: AppFont.w400,
-                      height: 1.2,
+                  if (campus.isNotEmpty) ...[
+                    Text(
+                      campus,
+                      style: TextStyle(
+                        fontSize: ui(12),
+                        color: _kTextSecondary,
+                        fontWeight: AppFont.w400,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: ui(10)),
+                    SizedBox(width: ui(10)),
+                  ],
                   Text(
                     people,
                     style: TextStyle(

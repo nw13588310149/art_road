@@ -7,7 +7,7 @@
 //   右侧上一周 / 本周 / 下一周。
 // - 网格：左侧冻结节次，右侧按原版列宽横向滚动；今天这一列表头用浅紫底标出。
 //   课程卡写课程名、任课老师和教室（校区在页头）。
-// - 课表与首页、课堂签到读同一份 `student/courseList`。
+// - 课表与首页、课堂考勤读同一份 `student/courseList`。
 // =============================================================================
 
 import 'dart:async';
@@ -196,7 +196,6 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
 
     final cells = _emptyCells();
     final configs = _activeTimeConfigs;
-    final smallSeq = <int, int>{};
 
     for (final entry in rows) {
       final flat = _flattenCourseRow(entry.row);
@@ -216,14 +215,9 @@ class _StudentMyScheduleViewState extends ConsumerState<StudentMyScheduleView> {
         slotIdx = (lineNum - 1).clamp(0, configs.length - 1);
       }
 
-      final cellKey = dayIdx * 1000 + slotIdx;
-      final card = buildScheduleCourseCard(
-        flat,
-        smallSeq[cellKey] ?? 0,
-        subline: ScheduleCardSubline.teacher,
+      cells[dayIdx][slotIdx].add(
+        buildScheduleCourseCard(flat, subline: ScheduleCardSubline.teacher),
       );
-      smallSeq[cellKey] = (smallSeq[cellKey] ?? 0) + 1;
-      cells[dayIdx][slotIdx].add(card);
     }
 
     if (!mounted || generation != _scheduleLoadGeneration) return;

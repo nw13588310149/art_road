@@ -6,35 +6,16 @@ import 'campus_a_courses.dart';
 import 'campus_a_leave.dart';
 import 'campus_b_courses.dart';
 
-/// 学生课表与课堂签到：`courseList`、小课签到 / 签退 / 评价、签到统计与记录、补签。
+/// 学生课表与课堂考勤：`courseList`、考勤统计与记录、补签。
 ///
-/// 小课流程 `signStatus`：0 未签到 → 1 老师上课签 → 2 学生上课签 → 3 老师下课签
-/// → 4 学生下课签 → 5 学生评价。学生上课签到约 20 秒后由老师完成下课签到，
-/// 学生端 5 秒轮询即可看到「下课签到」按钮亮起。补签申请约 2 分钟后由教务通过。
+/// 上课由任课老师签课，学生不用自己签到；课程结束后这里生成本人的考勤记录
+/// （`status`：0 正常 / 1 缺勤 / 2 迟到 / 3 请假）。`courseList` 里的
+/// `signStatus`：0 老师还没签课，2 已签课。补签申请约 2 分钟后由教务通过。
 abstract final class CampusASign {
-  static const _teacherSignOutDelay = Duration(seconds: 20);
   static const _makeupAuditDelay = Duration(minutes: 2);
-
-  static const _evaluations = <String>[
-    '老师讲得很细，暗部层次终于理顺了',
-    '一对一改画收获很大，构图问题找到了原因',
-    '示范很清楚，回去按老师说的多练',
-    '节奏有点快，但干货很多',
-  ];
-
-  static String _actionKey(DemoAccount account) =>
-      'campusA:courseSign:${account.userId}';
 
   static String _makeupKey(DemoAccount account) =>
       'campusA:courseMakeup:${account.userId}';
-
-  static Map<String, dynamic> _actions(DemoAccount account) =>
-      DemoStore.map(_actionKey(account), () => <String, dynamic>{});
-
-  static Map<String, dynamic>? _actionOf(DemoAccount account, String id) {
-    final value = _actions(account)[id];
-    return value is Map ? Map<String, dynamic>.from(value) : null;
-  }
 
   // ── 补签 ────────────────────────────────────────────────────────────
 
@@ -89,7 +70,7 @@ abstract final class CampusASign {
       return <String, dynamic>{
         ..._makeupCourseFields(course),
         'id': id,
-        'signType': '上课签',
+        'signType': '课堂补签',
         'reason': reason,
         'status': status,
         'statusText': status == 1 ? '已通过' : '已驳回',
@@ -142,174 +123,83 @@ abstract final class CampusASign {
     return null;
   }
 
-  // ── 课程流程 ────────────────────────────────────────────────────────
-
-  static int flowStatus(
-    CampusCourse course,
-    Map<String, dynamic>? action,
-    DateTime now,
-  ) {
-    if (action != null) {
-      if (action['comment'] != null) return 5;
-      if (action['signOut'] != null) return 4;
-      if (action['signIn'] != null) {
-        final at = (action['signInAt'] as num?)?.toInt() ?? 0;
-        return now.millisecondsSinceEpoch - at >=
-                _teacherSignOutDelay.inMilliseconds
-            ? 3
-            : 2;
-      }
-    }
-    return switch (course.phaseAt(now)) {
-      CampusCoursePhase.ended => 5,
-      CampusCoursePhase.inProgress => 1,
-      CampusCoursePhase.upcoming => 0,
-    };
-  }
-
   static String _clockOf(DateTime time) =>
       '${CampusA.hm(time)}:${CampusA.two(time.second)}';
 
-  /// 今日小课在 `courseList` 中附带的签到流程字段。
-  static Map<String, dynamic> _todaySignFields(
-    DemoAccount account,
-    CampusCourse course,
-    DateTime now,
-  ) {
-    final action = _actionOf(account, course.id);
-    final status = flowStatus(course, action, now);
-    final record = _record(account, course, now);
-    final signInAt = (action?['signInAt'] as num?)?.toInt();
-    String? teacherOut;
-    if (status >= 3) {
-      teacherOut = signInAt != null && action?['signIn'] != null
-          ? _clockOf(
-              DateTime.fromMillisecondsSinceEpoch(
-                signInAt + _teacherSignOutDelay.inMilliseconds,
-              ),
-            )
-          : '${course.end}:00';
-    }
-    return <String, dynamic>{
-      'signStatus': status,
-      'courseSignStatus': status,
-      'teacherSignInTime': status >= 1
-          ? _clockOf(course.startAt.subtract(const Duration(minutes: 2)))
-          : null,
-      'teacherSignOutTime': teacherOut,
-      'studentSignInTime': record?['signInTime'],
-      'studentSignOutTime': record?['signOutTime'],
-      'score': record?['score'],
-      'comment': record?['comment'],
-      'signMethod': '按键打卡',
-      'fenceLabel': '${course.schoolClass.organizationName} · 电子围栏 300 米内可签到',
-    };
-  }
-
-  /// 课程 + 本人签到流程（课表接口）。
+  /// 课程 + 本人的考勤结果（课表接口）。还没上完的课只有课程信息。
   static Map<String, dynamic> courseRow(
     DemoAccount account,
     CampusCourse course,
     DateTime now,
   ) {
     final row = course.row();
-    if (course.isSmall && course.day == CampusA.dayOf(now)) {
-      row.addAll(_todaySignFields(account, course, now));
-    } else if (course.day.isBefore(CampusA.dayOf(now)) ||
-        course.phaseAt(now) == CampusCoursePhase.ended) {
-      row['signStatus'] = 5;
-    } else {
-      row['signStatus'] = 0;
+    final record = _record(account, course, now);
+    row['signStatus'] = record == null ? 0 : 2;
+    if (record != null) {
+      row['signRecordId'] = record['id'];
+      row['studentSignStatus'] = record['status'];
+      row['studentSignInTime'] = record['signInTime'];
+      row['signRemark'] = record['remark'];
     }
     return row;
   }
 
   // ── 签到记录 ────────────────────────────────────────────────────────
 
-  /// 本人某节课的签到记录；尚未开始 / 进行中且未操作的课程返回 null。
+  /// 本人某节课的考勤记录；还没上完的课返回 null。
   static Map<String, dynamic>? _record(
     DemoAccount account,
     CampusCourse course,
     DateTime now,
   ) {
     final index = CampusA.personIndexOf(account);
-    final action = _actionOf(account, course.id);
-    final isToday = course.day == CampusA.dayOf(now);
-    final ended = course.phaseAt(now) == CampusCoursePhase.ended;
-    if (!ended && action == null) {
+    if (course.phaseAt(now) != CampusCoursePhase.ended) {
       return null;
     }
     final h = CampusA.hash('sign|$index|${course.id}');
     var status = 0;
     String? signIn;
-    String? signOut;
-    double? score;
-    String? comment;
     var remark = '';
 
-    if (action != null) {
-      signIn = action['signIn']?.toString();
-      signOut = action['signOut']?.toString();
-      score = (action['score'] as num?)?.toDouble();
-      comment = action['comment']?.toString();
-      final signInAt = (action['signInAt'] as num?)?.toInt();
-      if (signInAt != null &&
-          DateTime.fromMillisecondsSinceEpoch(
-            signInAt,
-          ).isAfter(course.startAt.add(const Duration(minutes: 30)))) {
-        status = 2;
-        remark = '上课签到晚于开课 30 分钟，记为迟到';
-      }
+    final leave = _leaveOverlap(account, course);
+    final forced = _forcedAbsences();
+    final isForced =
+        index == DemoAccounts.student.personIndex &&
+        (course.id == forced.open ||
+            course.id == forced.approved ||
+            course.id == forced.rejected);
+    final makeup = _makeupFor(account, course.id);
+    if (leave != null) {
+      status = 3;
+      remark = '已请假：$leave';
+    } else if (makeup != null && makeup['status'] == 1) {
+      status = 0;
+      remark = '补签已通过：${makeup['reason']}';
+    } else if (isForced) {
+      status = 1;
     } else {
-      final leave = _leaveOverlap(account, course);
-      final forced = _forcedAbsences();
-      final isForced =
-          index == DemoAccounts.student.personIndex &&
-          (course.id == forced.open ||
-              course.id == forced.approved ||
-              course.id == forced.rejected);
-      final makeup = _makeupFor(account, course.id);
-      if (leave != null) {
-        status = 3;
-        remark = '已请假：$leave';
-      } else if (makeup != null && makeup['status'] == 1) {
-        status = 0;
-        remark = '补签已通过：${makeup['reason']}';
-      } else if (isForced) {
-        status = 1;
-      } else if (isToday && course.isSmall) {
-        status = course.autoComplete ? 0 : 1;
-      } else {
-        final roll = h % 100;
-        status = roll < 91 ? 0 : (roll < 97 ? 2 : 1);
+      final roll = h % 100;
+      status = roll < 91 ? 0 : (roll < 97 ? 2 : 1);
+    }
+    if (status == 0 || status == 2) {
+      final inAt = status == 2
+          ? course.startAt.add(Duration(minutes: 3 + h % 10))
+          : course.startAt.subtract(Duration(minutes: 2 + h % 8));
+      signIn = _clockOf(inAt);
+      if (status == 2) {
+        remark = '迟到 ${3 + h % 10} 分钟';
       }
-      if (status == 0 || status == 2) {
-        final inAt = status == 2
-            ? course.startAt.add(Duration(minutes: 3 + h % 10))
-            : course.startAt.subtract(Duration(minutes: 2 + h % 8));
-        signIn = _clockOf(inAt);
-        signOut = _clockOf(course.endAt.add(Duration(minutes: h % 5)));
-        if (status == 2) {
-          remark = '迟到 ${3 + h % 10} 分钟';
-        }
-        if (course.isSmall) {
-          score = 4.0 + (h % 2);
-          comment = _evaluations[h % _evaluations.length];
-        }
-      }
-      if (status == 1) {
-        remark = makeup != null && makeup['status'] == 2
-            ? '补签被驳回：${makeup['approveRemark']}'
-            : '未检测到上下课打卡，记为缺勤';
-      }
+    }
+    if (status == 1) {
+      remark = makeup != null && makeup['status'] == 2
+          ? '补签被驳回：${makeup['approveRemark']}'
+          : '老师签课时没有到，记为缺勤';
     }
     return <String, dynamic>{
       'id': '9${course.id}',
       'courseId': course.id,
       'date': CampusA.date(course.day),
       'courseDate': CampusA.date(course.day),
-      'type': course.type,
-      'courseType': course.type,
       'lineNum': course.lineNum,
       'subjectName': course.subjectName,
       'courseName': course.subjectName,
@@ -322,13 +212,9 @@ abstract final class CampusASign {
       'timeEnd': course.end,
       'status': status,
       'signInTime': signIn,
-      'signOutTime': signOut,
       'studentSignInTime': signIn,
-      'studentSignOutTime': signOut,
-      'signMethod': course.isSmall ? '按键打卡' : '刷脸签到',
+      'signMethod': '老师签课',
       'remark': remark,
-      'score': score,
-      'comment': comment,
     };
   }
 
@@ -417,76 +303,17 @@ abstract final class CampusASign {
       if (to.difference(from).inDays > 62) {
         to = from.add(const Duration(days: 62));
       }
-      final typeFilter = req.value('type') == null ? null : req.intOf('type');
       final index = CampusA.personIndexOf(account);
       final result = <String, dynamic>{};
       var day = from;
       while (!day.isAfter(to)) {
         result[CampusA.date(day)] = [
           for (final course in CampusACourses.forStudent(index, day, now))
-            if (typeFilter == null || course.type == typeFilter)
-              courseRow(account, course, now),
+            courseRow(account, course, now),
         ];
         day = DateTime(day.year, day.month, day.day + 1);
       }
       return result;
-    });
-
-    r.post('$base/courseStudentSignIn', (req) {
-      final account = req.account;
-      final now = DateTime.now();
-      final course = _todaySmallCourse(account, req.str('courseId'), now);
-      final status = flowStatus(course, _actionOf(account, course.id), now);
-      if (status == 0) {
-        throw const DemoApiException('老师尚未上课签到，请稍后再试');
-      }
-      if (status >= 2) {
-        throw const DemoApiException('本节课已完成上课签到');
-      }
-      _actions(account)[course.id] = <String, dynamic>{
-        'signIn': _clockOf(now),
-        'signInAt': now.millisecondsSinceEpoch,
-      };
-      DemoStore.save(_actionKey(account));
-      return true;
-    });
-
-    r.post('$base/courseStudentSignOut', (req) {
-      final account = req.account;
-      final now = DateTime.now();
-      final course = _todaySmallCourse(account, req.str('courseId'), now);
-      final action = _actionOf(account, course.id);
-      final status = flowStatus(course, action, now);
-      if (status < 3 || action == null) {
-        throw const DemoApiException('老师尚未下课签到，暂不能签退');
-      }
-      if (status >= 4) {
-        throw const DemoApiException('本节课已完成下课签到');
-      }
-      _actions(account)[course.id] = <String, dynamic>{
-        ...action,
-        'signOut': _clockOf(now),
-      };
-      DemoStore.save(_actionKey(account));
-      return true;
-    });
-
-    r.post('$base/courseStudentComment', (req) {
-      final account = req.account;
-      final now = DateTime.now();
-      final course = _todaySmallCourse(account, req.str('courseId'), now);
-      final action = _actionOf(account, course.id);
-      if (flowStatus(course, action, now) != 4 || action == null) {
-        throw const DemoApiException('下课签到后才能评价本节课');
-      }
-      final comment = req.str('comment');
-      _actions(account)[course.id] = <String, dynamic>{
-        ...action,
-        'comment': comment.isEmpty ? '老师讲得很清楚，收获很大' : comment,
-        'score': req.intOf('score', 5).clamp(1, 5),
-      };
-      DemoStore.save(_actionKey(account));
-      return true;
     });
 
     r.post('$base/courseSignStat', (req) {
@@ -568,7 +395,7 @@ abstract final class CampusASign {
       list.insert(0, <String, dynamic>{
         ..._makeupCourseFields(course),
         'id': DemoStore.nextId(),
-        'signType': req.str('signType', '上课签'),
+        'signType': '课堂补签',
         'reason': reason,
         'attachment': req.str('attachment'),
         'status': 0,
@@ -599,21 +426,5 @@ abstract final class CampusASign {
       }
       return Map<String, dynamic>.from(item)..remove('submittedAtMs');
     });
-  }
-
-  static CampusCourse _todaySmallCourse(
-    DemoAccount account,
-    String courseId,
-    DateTime now,
-  ) {
-    final course = CampusACourses.findForStudent(
-      courseId,
-      CampusA.personIndexOf(account),
-      now,
-    );
-    if (course == null || !course.isSmall || course.day != CampusA.dayOf(now)) {
-      throw const DemoApiException('只能对今日小课进行签到');
-    }
-    return course;
   }
 }

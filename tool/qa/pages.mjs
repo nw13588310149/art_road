@@ -45,7 +45,14 @@ const campusPageChecks = {
   classes: [{ check: /^创建班级$/, role: 'button' }],
   face: [{ check: /^上传照片$/, role: 'button' }],
   'my-class': [{ check: /^我的班级$/, role: 'heading' }],
-  'check-in': [{ check: /^历史记录$/, role: 'button' }],
+  // 课堂考勤只读：看到课情况，没有签到按钮。
+  'check-in': [
+    { check: /^历史记录$/, role: 'button' }, { check: /^到课情况$/ },
+    { check: /^上课签到$|^下课签到$/, absent: true },
+  ],
+  // 课程只有一种：课表和签课页上没有课型、申请和审核入口。
+  schedule: [{ check: /申请小课|申请记录|小课审核|^大课$|^小课$/, absent: true }],
+  sign: [{ check: /大课管理|小课管理|^大课$|^小课$/, absent: true }],
   grades: [{ check: /^全部考试$/, role: 'button' }],
   'dorm-check': [{ check: /^申请补卡$/, role: 'button' }],
   notice: [{ check: /^发布通知$/, role: 'button' }],
@@ -519,7 +526,7 @@ export const ROLES = [
       campusAction('my-class', '我的班级'),
       campusAction('my-schedule', '我的课表'),
       scheduleNextWeek('我的课表'),
-      campusAction('check-in', '课堂签到'),
+      campusAction('check-in', '课堂考勤'),
       campusAction('homework', '我的作品'),
       campusAction('grades', '我的考试'),
       campusAction('group-chat', '群聊'),

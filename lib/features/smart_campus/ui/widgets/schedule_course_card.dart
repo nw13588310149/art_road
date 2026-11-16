@@ -13,16 +13,12 @@ const double kScheduleCourseCardHeight = 96;
 const double kScheduleCourseCellInset = 12;
 const double kScheduleCourseCardGap = 6;
 
-double scheduleCourseCardHeight(ScheduleCourseCardKind kind) =>
-    kind == ScheduleCourseCardKind.bigExtended
-    ? 120
-    : kScheduleCourseCardHeight;
-
+/// 一个格子里放下 [cards] 需要的高度：卡片依次叠放，至少一张卡片高。
 double scheduleCourseCellHeight(Iterable<ScheduleCourseCardData> cards) {
   var height = 2 * kScheduleCourseCellInset;
-  for (final card in cards) {
+  for (final _ in cards) {
     if (height > 2 * kScheduleCourseCellInset) height += kScheduleCourseCardGap;
-    height += scheduleCourseCardHeight(card.kind);
+    height += kScheduleCourseCardHeight;
   }
   return height.clamp(
     kScheduleCourseCardHeight + 2 * kScheduleCourseCellInset,
@@ -40,13 +36,8 @@ Color scheduleSubjectAccent(String courseName) {
   return AppColors.brand;
 }
 
-
-const Color _kBorderSoft = Color(0xFFF3F2F3);
 const Color _kTextDark = Color(0xFF0B081A);
 const Color _kTextSecondary = Color(0xFF6D6B75);
-const Color _kTextDivider = Color(0xFFCECED1);
-const Color _kStatusGreen = Color(0xFF0CAC40);
-const Color _kStatusPurple = Color(0xFF9585FF);
 const Color _kPastBg = Color(0xFFE6E9F1);
 const Color _kPastText = Color(0xFFB6B5BB);
 const Color _kPastInnerBg = Colors.white;
@@ -55,78 +46,59 @@ class _ResolvedCardTheme {
   const _ResolvedCardTheme({
     required this.bg,
     required this.titleColor,
-    required this.isSmall,
     required this.nameColor,
     required this.sublineColor,
-    required this.capacityColor,
     required this.innerBg,
-    required this.mutedTag,
   });
 
   final Color bg;
   final Color titleColor;
-  final bool isSmall;
   final Color nameColor;
   final Color sublineColor;
-  final Color capacityColor;
   final Color innerBg;
-  final bool mutedTag;
 }
 
-_ResolvedCardTheme _themeFor(ScheduleCourseCardData data, {required bool isPast}) {
+_ResolvedCardTheme _themeFor(
+  ScheduleCourseCardData data, {
+  required bool isPast,
+}) {
   if (isPast) {
-    final isSmall = scheduleIsSmallKind(
-      scheduleCourseCardThemeKind(data.kind),
-    );
-    return _ResolvedCardTheme(
+    return const _ResolvedCardTheme(
       bg: _kPastBg,
       titleColor: _kPastText,
-      isSmall: isSmall,
       nameColor: _kPastText,
       sublineColor: _kPastText,
-      capacityColor: _kPastText,
       innerBg: _kPastInnerBg,
-      mutedTag: true,
     );
   }
-  final themeKind = scheduleCourseCardThemeKind(data.kind);
-  final bg = data.bgColor ?? scheduleDefaultBg(themeKind);
+  final bg = data.bgColor ?? scheduleDefaultPickerColor;
   return _ResolvedCardTheme(
     bg: bg,
     titleColor: scheduleTitleColorForBackground(bg),
-    isSmall: scheduleIsSmallKind(themeKind),
     nameColor: _kTextDark,
     sublineColor: _kTextSecondary,
-    capacityColor: _kTextDivider,
     innerBg: Colors.white,
-    mutedTag: false,
   );
 }
 
-/// 课表网格课程卡（176×96 / 176×120），样式与管理员排课页一致。
+/// 课表网格课程卡（176×96），管理员、老师、学生的课表共用。
 class ScheduleCourseCard extends StatelessWidget {
   const ScheduleCourseCard({
     super.key,
     required this.data,
-    this.editable = false,
     this.isPast = false,
-    this.topRightBadge,
   });
 
   final ScheduleCourseCardData data;
-  final bool editable;
   final bool isPast;
-  final Widget? topRightBadge;
 
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
     final theme = _themeFor(data, isPast: isPast);
-    final cardHeight =
-        data.kind == ScheduleCourseCardKind.bigExtended ? 120.0 : 96.0;
     return SizedBox(
       width: ui(176),
-      height: ui(cardHeight),
+      height: ui(kScheduleCourseCardHeight),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: theme.bg,
@@ -138,7 +110,7 @@ class ScheduleCourseCard extends StatelessWidget {
               left: ui(16),
               top: ui(8),
               child: SizedBox(
-                width: ui(108),
+                width: ui(144),
                 child: Text(
                   data.location,
                   maxLines: 1,
@@ -153,25 +125,12 @@ class ScheduleCourseCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (data.kind != ScheduleCourseCardKind.bigExtended)
-              Positioned(
-                left: ui(126),
-                top: ui(6),
-                child: topRightBadge ??
-                    ScheduleClassKindTag(
-                      isSmall: theme.isSmall,
-                      outlined: false,
-                      muted: theme.mutedTag,
-                    ),
-              ),
             Positioned(
               left: ui(4),
               top: ui(32),
               child: Container(
                 width: ui(168),
-                height: ui(
-                  data.kind == ScheduleCourseCardKind.bigExtended ? 84 : 60,
-                ),
+                height: ui(60),
                 decoration: BoxDecoration(
                   color: theme.innerBg,
                   borderRadius: BorderRadius.circular(ui(6)),
@@ -197,12 +156,15 @@ class ScheduleCourseCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (data.kind == ScheduleCourseCardKind.bigExtended) ...[
-              Positioned(
-                left: ui(16),
-                top: ui(64),
+            Positioned(
+              left: ui(16),
+              top: ui(64),
+              child: SizedBox(
+                width: ui(140),
                 child: Text(
                   data.subline,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: ui(12),
                     color: theme.sublineColor,
@@ -212,51 +174,7 @@ class ScheduleCourseCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
-                left: ui(16),
-                top: ui(86),
-                child: ScheduleClassKindTag(
-                  isSmall: false,
-                  outlined: true,
-                  muted: theme.mutedTag,
-                ),
-              ),
-            ] else ...[
-              Positioned(
-                left: ui(16),
-                top: ui(64),
-                child: SizedBox(
-                  width: ui(theme.isSmall && data.capacity != null ? 100 : 140),
-                  child: Text(
-                    data.subline,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: theme.sublineColor,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 16 / 12,
-                    ),
-                  ),
-                ),
-              ),
-              if (theme.isSmall && data.capacity != null)
-                Positioned(
-                  right: ui(16),
-                  top: ui(64),
-                  child: Text(
-                    data.capacity!,
-                    style: TextStyle(
-                      fontSize: ui(12),
-                      color: theme.capacityColor,
-                      fontFamily: 'PingFang SC',
-                      fontWeight: AppFont.w400,
-                      height: 16 / 12,
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ],
         ),
       ),
@@ -264,7 +182,7 @@ class ScheduleCourseCard extends StatelessWidget {
   }
 }
 
-/// 原版 176×48 的格内编辑入口，申请和排课使用相同图标与行高。
+/// 176×48 的格内编辑入口：管理员排课时在格子里加课。
 class ScheduleCourseCellAction extends StatelessWidget {
   const ScheduleCourseCellAction({
     required this.label,
@@ -407,56 +325,4 @@ class _ScheduleCourseSwipeDeleteState extends State<ScheduleCourseSwipeDelete> {
   }
 
   void _close() => setState(() => _offset = 0);
-}
-
-class ScheduleClassKindTag extends StatelessWidget {
-  const ScheduleClassKindTag({
-    super.key,
-    required this.isSmall,
-    required this.outlined,
-    this.muted = false,
-  });
-
-  final bool isSmall;
-  final bool outlined;
-  final bool muted;
-
-  @override
-  Widget build(BuildContext context) {
-    final ui = DashboardScaleScope.of(context).ui;
-    final dotColor = muted
-        ? _kPastText
-        : (isSmall ? _kStatusGreen : _kStatusPurple);
-    final label = isSmall ? '小课' : '大课';
-    final textColor = muted ? _kPastText : _kTextDark;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: ui(4), vertical: ui(2)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ui(4)),
-        border: outlined ? Border.all(color: _kBorderSoft, width: 1.4) : null,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: ui(6),
-            height: ui(6),
-            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-          ),
-          SizedBox(width: ui(4)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: ui(12),
-              color: textColor,
-              fontFamily: 'PingFang SC',
-              fontWeight: AppFont.w400,
-              height: 15.24 / 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

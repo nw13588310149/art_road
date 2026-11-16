@@ -117,7 +117,7 @@ double _ui(BuildContext context, double value) =>
 /// 弹层：锚定在字段下方 4px 处，同字段宽度，白底 12 圆角 + 1px `#F3F2F3` 边
 /// + 多层柔和阴影；每行 40 高，命中项使用 `#715EFE` 紫色文字 + 紫色 check。
 ///
-/// 与请假申请、授课课表「申请小课」等表单使用同一份实现，保证视觉与交互
+/// 与请假申请、排课抽屉等表单使用同一份实现，保证视觉与交互
 /// 一致。提取自 `student_leave_management_view._PopupSelectorField`。
 ///
 /// 用法：

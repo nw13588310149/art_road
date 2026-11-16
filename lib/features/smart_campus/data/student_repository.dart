@@ -208,39 +208,9 @@ class StudentRepository {
     );
   }
 
-  /// 学生小课上课签到。Swagger 请求体：`{ "courseId": int64 }`。
-  Future<ApiResponse> courseStudentSignIn({required String courseId}) {
-    return _postNumericCourseId('$_base/courseStudentSignIn', courseId);
-  }
+  // ============== 课堂考勤（统计 / 记录 / 详情 / 补签） ==============
 
-  /// 学生小课下课签到。Swagger 请求体：`{ "courseId": int64 }`。
-  Future<ApiResponse> courseStudentSignOut({required String courseId}) {
-    return _postNumericCourseId('$_base/courseStudentSignOut', courseId);
-  }
-
-  /// 小课学生评价。Swagger 请求体：`courseId`(int64)、`comment`、`score`。
-  Future<ApiResponse> courseStudentComment({
-    required String courseId,
-    required String comment,
-    required int score,
-  }) {
-    final body = encodeNumericIdRequestBody(
-      <String, dynamic>{
-        'courseId': courseId,
-        'comment': comment,
-        'score': score,
-      },
-      numericIdKeys: const {'courseId'},
-    );
-    if (body == null) {
-      return Future.value(ApiResponse.failure('课程 id 格式错误'));
-    }
-    return client.post('$_base/courseStudentComment', data: body);
-  }
-
-  // ============== 课堂签到（统计 / 记录 / 详情 / 补签） ==============
-
-  /// 签到统计：小课应签、大课入册、打卡合计、迟到、准时率等。
+  /// 考勤统计：应到课次、正常、迟到、请假、缺勤与出勤率。
   Future<ApiResponse> courseSignStat({String? beginDate, String? endDate}) {
     return client.post(
       '$_base/courseSignStat',
@@ -284,20 +254,15 @@ class StudentRepository {
     return _postNumericId('$_base/courseSignDetail', id);
   }
 
-  /// 缺勤课程申请补签。Swagger：`courseId`(int64)、`signType`(string)、`reason`、`attachment?`。
-  ///
-  /// [signType]：`1` 上课签 / `2` 下课签。后端 `signType` 为字符串枚举
-  /// （`上课签` / `下课签`），此处统一在边界做映射。
+  /// 缺勤课程申请补签。请求体：`courseId`(int64)、`reason`、`attachment?`。
   Future<ApiResponse> courseSignMakeupSave({
     required String courseId,
-    required int signType,
     required String reason,
     String attachment = '',
   }) {
     final body = encodeNumericIdRequestBody(
       <String, dynamic>{
         'courseId': courseId,
-        'signType': signType == 2 ? '下课签' : '上课签',
         'reason': reason,
         if (attachment.isNotEmpty) 'attachment': attachment,
       },
@@ -339,17 +304,6 @@ class StudentRepository {
     );
     if (body == null) {
       return Future.value(ApiResponse.failure('id 格式错误'));
-    }
-    return client.post(path, data: body);
-  }
-
-  Future<ApiResponse> _postNumericCourseId(String path, String courseId) {
-    final body = encodeNumericIdRequestBody(
-      <String, dynamic>{'courseId': courseId},
-      numericIdKeys: const {'courseId'},
-    );
-    if (body == null) {
-      return Future.value(ApiResponse.failure('课程 id 格式错误'));
     }
     return client.post(path, data: body);
   }
