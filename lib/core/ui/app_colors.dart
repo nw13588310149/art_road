@@ -27,6 +27,12 @@ abstract final class AppColors {
   static const surfaceSubtle = Color(0xFFF5F6FA);
   static const segmentTrack = Color(0xFFEFEFEF);
 
+  /// 新页面里作品、范画、原卷背后的底：不带色相的浅灰，不改变人对画面颜色的判断。
+  static const canvas = Color(0xFFF2F2F2);
+
+  /// 沉浸页（阅读器、原卷、全屏看画）用的深色底，同样不带色相。
+  static const canvasDark = Color(0xFF1C1C1C);
+
   /// 输入框、次按钮描边与分隔线。
   static const line = Color(0xFFEAEAEA);
 

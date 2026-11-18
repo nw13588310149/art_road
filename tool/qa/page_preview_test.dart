@@ -8,24 +8,32 @@
 //     "--dart-define=SHOTS=today,ebooks" "--dart-define=ROLES=student,teacher" `
 //     "--dart-define=SIZES=1180x820,1024x768" "--dart-define=LABEL=before"
 //
-//   SHOTS   镜头 id，逗号分隔，按前缀匹配（`ebook` 会选中 ebooks、ebook-detail…）。
-//           省略时渲染下面清单里的全部镜头。
+//   SHOTS   镜头 id，逗号分隔。和某个 id 完全相同时只选它；否则按前缀匹配
+//           （`ebook` 会选中 ebooks、ebooks-shelf、ebook-detail）。省略时渲染全部镜头。
 //   ROUTE   临时看一个不在清单里的路由，例如 `/toolbox?tool=grid`（问号后面是字符串
 //           路由参数）。配合 TAPS 可以先点几下：`"--dart-define=TAPS=我的书架+在读"`，
-//           多个用加号分隔。默认用学生身份，要换身份加 ROLES。
+//           多个用加号分隔，写法同下面的 steps。默认用学生身份，要换身份加 ROLES。
+//           文件名由路由和点击的文字组成，不同状态不会互相覆盖。
+//   BELOW   在目标页下面先垫一个页面（例如 `/`），这样依赖「能返回」才出现的返回
+//           按钮也会画出来。镜头也可以用 `below:` 自己指定。
 //   ROLES   身份：student teacher groupLeader headTeacher dormManager admin principal。
 //           省略时用镜头自己标注的身份。
 //   SIZES   整屏尺寸，默认 1180x820 和 1024x768。想看首屏以下的内容就把高度加大，
-//           例如 1180x2400，左导航会跟着拉长，内容区一次显示更多。
-//   LABEL   输出子目录，默认 current。改版前后各用一个名字，方便并排比较。
-//   SCALE   像素比，默认 2。设成 0.25 得到一张小图，用来只看大关系。
+//           例如 1180x2400，左导航会跟着拉长，内容区一次显示更多。高度超过 1200
+//           时另外按 820 一段切成几张（文件名后加 -p1、-p2…），读图工具看长图会缩得
+//           很小，看切片更清楚。
+//   LABEL   输出子目录，默认 current，可以带斜杠分层（before/sort）。改版前后各用
+//           一个名字，方便并排比较。
+//   SCALE   像素比，默认 2。设成 0.25 得到一张小图，用来只看大关系；不是 2 时文件名
+//           后面会带上倍数（@0.25x），不会覆盖正常的图。
 //   CROP    只导出一个区域，写法是「左,上,宽,高」（逻辑像素，以整屏左上角为原点），
 //           例如 `"--dart-define=CROP=180,430,560,300" "--dart-define=SCALE=4"`。
-//           用来放大看细节：对齐、截断、小字。
+//           用来放大看细节：对齐、截断、小字。读图工具会把宽于一千像素左右的图缩小，
+//           区域宽度 × SCALE 不超过 1000 最清楚。
 //
 // 产物：build/qa/preview/<LABEL>/<宽>x<高>/<身份>-<镜头>.png；带 CROP 时文件名后面
-// 多一段区域。渲染时出现的版式异常（溢出等）不会中断，记在同名的 .warnings.txt 里，
-// 并在结尾汇总；没有这个文件就是没有异常。
+// 多一段区域。渲染时出现的版式异常（溢出等）和步骤上的疑点（一段文字匹配到好几个
+// 控件）不会中断，记在同名的 .warnings.txt 里，并在结尾汇总；没有这个文件就是没有。
 //
 // 新增页面或想固定看某个状态时，在 `_shots` 里加一行。
 //
@@ -81,6 +89,7 @@ class _Shot {
     this.args,
     this.roles = _student,
     this.steps = const [],
+    this.below,
   });
 
   final String id;
@@ -90,10 +99,18 @@ class _Shot {
   final Object? args;
   final List<String> roles;
 
-  /// 依次执行：普通字符串是「点击包含这段文字的第一个控件」；
-  /// `tip:返回` 点击提示文字（图标按钮）；`scroll:400` 把内容区向上滚 400；
-  /// `wait:800` 多等 800 毫秒。
+  /// 依次执行：
+  /// - 普通字符串：点击包含这段文字的第一个控件（匹配到好几个时记一条警告）；
+  /// - `=全部`：点击文字正好是「全部」的控件；
+  /// - `tip:返回`：点击提示文字是「返回」的控件（只有图标的按钮）；
+  /// - `label:收藏`：点击读屏名称是「收藏」的控件；
+  /// - `scroll:400`：从内容区中部向上滚 400，负数向下；`scroll:400@900,300` 指定
+  ///   从哪一点开始拖（整屏坐标），用来滚动侧栏；
+  /// - `wait:800`：多等 800 毫秒。
   final List<String> steps;
+
+  /// 先垫在下面的页面，见 BELOW。
+  final String? below;
 }
 
 TeachingRequest _report(TeachingReport report) =>
@@ -110,12 +127,15 @@ final _shots = <_Shot>[
 
   // 素材中心
   const _Shot('gallery', '/gallery'),
-  const _Shot('gallery-detail', '/gallery', steps: ['大卫石膏像 · 侧转头像']),
+  // 从首页的科目卡进来：带科目，下面垫着首页，所以有返回。
   const _Shot(
-    'gallery-compare',
+    'gallery-from-home',
     '/gallery',
-    steps: ['大卫石膏像 · 侧转头像', '对比我的原卷'],
+    args: {'subject': '素描'},
+    below: '/',
   ),
+  const _Shot('gallery-detail', '/gallery', steps: ['大卫石膏像 · 侧转头像']),
+  const _Shot('gallery-compare', '/gallery', steps: ['大卫石膏像 · 侧转头像', '对比我的原卷']),
 
   // 优秀课件
   const _Shot('topics', '/micro-lessons'),
@@ -264,6 +284,7 @@ const _sizesArg = String.fromEnvironment(
 const _label = String.fromEnvironment('LABEL', defaultValue: 'current');
 const _scaleArg = String.fromEnvironment('SCALE', defaultValue: '2');
 const _cropArg = String.fromEnvironment('CROP');
+const _belowArg = String.fromEnvironment('BELOW');
 
 const _accounts = <String, DemoAccount>{
   'student': DemoAccounts.student,
@@ -283,23 +304,35 @@ List<String> _list(String value, [String separator = ',']) => [
 List<_Shot> _selectedShots() {
   if (_routeArg.isNotEmpty) {
     final uri = Uri.parse(_routeArg);
-    final name = uri.path
-        .replaceAll(RegExp(r'[^A-Za-z0-9]+'), '-')
-        .replaceAll(RegExp(r'^-+|-+$'), '');
+    final steps = _list(_tapsArg, '+');
+    // 文件名：路由、查询参数和点击的文字，去掉文件名里不能用的字符。
+    final name =
+        [uri.path, if (uri.hasQuery) Uri.decodeComponent(uri.query), ...steps]
+            .join('-')
+            .replaceAll(RegExp(r'[\\/:*?"<>|\s·=&%]+'), '-')
+            .replaceAll(RegExp(r'-+'), '-')
+            .replaceAll(RegExp(r'^-+|-+$'), '');
+    final short = name.length > 80 ? name.substring(0, 80) : name;
     return [
       _Shot(
-        'route-${name.isEmpty ? 'home' : name}',
+        'route-${short.isEmpty ? 'home' : short}',
         uri.path,
         args: uri.hasQuery ? uri.queryParameters : null,
-        steps: _list(_tapsArg, '+'),
+        steps: steps,
       ),
     ];
   }
   final wanted = _list(_shotsArg);
   if (wanted.isEmpty) return _shots;
+  bool matches(_Shot shot, String id) {
+    // 和某个镜头 id 完全相同时只选那一个，否则按前缀。
+    if (_shots.any((s) => s.id == id)) return shot.id == id;
+    return shot.id.startsWith(id);
+  }
+
   final unknown = [
     for (final id in wanted)
-      if (!_shots.any((shot) => shot.id.startsWith(id))) id,
+      if (!_shots.any((shot) => matches(shot, id))) id,
   ];
   if (unknown.isNotEmpty) {
     throw ArgumentError(
@@ -309,7 +342,7 @@ List<_Shot> _selectedShots() {
   }
   return [
     for (final shot in _shots)
-      if (wanted.any(shot.id.startsWith)) shot,
+      if (wanted.any((id) => matches(shot, id))) shot,
   ];
 }
 
@@ -450,25 +483,46 @@ Future<void> _loadImages(WidgetTester tester) async {
   }
 }
 
-Future<void> _runStep(WidgetTester tester, String step) async {
+Future<void> _runStep(
+  WidgetTester tester,
+  String step,
+  List<String> warnings,
+) async {
   if (step.startsWith('wait:')) {
     await _settle(tester, minMs: int.parse(step.substring(5)));
     return;
   }
   if (step.startsWith('scroll:')) {
-    // 内容区中部：两种尺寸下都落在左导航右侧。
-    await tester.dragFrom(
-      const Offset(640, 460),
-      Offset(0, -double.parse(step.substring(7))),
-    );
+    // 默认从内容区中部开始拖：两种尺寸下都落在左导航右侧。
+    final spec = step.substring(7).split('@');
+    var from = const Offset(640, 460);
+    if (spec.length == 2) {
+      final xy = spec[1].split(',').map(double.parse).toList();
+      from = Offset(xy[0], xy[1]);
+    }
+    await tester.dragFrom(from, Offset(0, -double.parse(spec[0])));
     await _settle(tester, minMs: 400);
     return;
   }
-  final finder = step.startsWith('tip:')
-      ? find.byTooltip(step.substring(4))
-      : find.textContaining(step);
-  if (finder.evaluate().isEmpty) {
+  final Finder finder;
+  if (step.startsWith('tip:')) {
+    finder = find.byTooltip(step.substring(4));
+  } else if (step.startsWith('label:')) {
+    finder = find.bySemanticsLabel(step.substring(6));
+  } else if (step.startsWith('=')) {
+    finder = find.text(step.substring(1));
+  } else {
+    finder = find.textContaining(step);
+  }
+  final found = finder.evaluate().length;
+  if (found == 0) {
     throw StateError('找不到要点击的「$step」');
+  }
+  if (found > 1) {
+    warnings.add(
+      '步骤「$step」匹配到 $found 个控件，点了第一个。'
+      '要点别的就换一段更具体的文字，或者用 =文字、tip:、label:。',
+    );
   }
   await tester.ensureVisible(finder.first);
   await tester.pump();
@@ -484,14 +538,15 @@ Future<void> _export(
 ) async {
   var image = await boundary.toImage(pixelRatio: scale);
   if (crop != null) {
-    final source = Rect.fromLTWH(
-      crop.left * scale,
-      crop.top * scale,
-      crop.width * scale,
-      crop.height * scale,
-    ).intersect(
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-    );
+    final source =
+        Rect.fromLTWH(
+          crop.left * scale,
+          crop.top * scale,
+          crop.width * scale,
+          crop.height * scale,
+        ).intersect(
+          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        );
     final recorder = ui.PictureRecorder();
     Canvas(recorder).drawImageRect(
       image,
@@ -525,10 +580,11 @@ Future<void> _render(
   final account = _accounts[role]!;
   final dir =
       'build/qa/preview/$_label/${size.width.round()}x${size.height.round()}';
+  final scaleTag = scale == 2 ? '' : '@${_trim(scale)}x';
   final name = crop == null
-      ? '$role-${shot.id}'
+      ? '$role-${shot.id}$scaleTag'
       : '$role-${shot.id}@${crop.left.round()}-${crop.top.round()}'
-            '-${crop.width.round()}x${crop.height.round()}';
+            '-${crop.width.round()}x${crop.height.round()}$scaleTag';
   final warnings = <String>[];
   void collect() {
     for (;;) {
@@ -556,6 +612,9 @@ Future<void> _render(
   final container = ProviderContainer(
     overrides: [appStorageProvider.overrideWithValue(AppStorage(prefs))],
   );
+  final below = _belowArg.isNotEmpty ? _belowArg : (shot.below ?? '');
+  // 打开语义树，`label:` 步骤才能按读屏名称找控件。
+  final semantics = tester.ensureSemantics();
   final boundary = GlobalKey();
   final app = RepaintBoundary(
     key: boundary,
@@ -572,8 +631,10 @@ Future<void> _render(
           GlobalWidgetsLocalizations.delegate,
         ],
         supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
-        // 只生成目标页一条路由；默认做法会先在下面垫一个首页。
+        // 默认只生成目标页一条路由；要求垫页时先放下面那一页。
         onGenerateInitialRoutes: (_) => [
+          if (below.isNotEmpty)
+            AppRouter.onGenerateRoute(RouteSettings(name: below)),
           AppRouter.onGenerateRoute(
             RouteSettings(name: shot.route, arguments: shot.args),
           ),
@@ -608,7 +669,7 @@ Future<void> _render(
         collect();
         for (final step in shot.steps) {
           try {
-            await _runStep(tester, step);
+            await _runStep(tester, step, warnings);
           } catch (error) {
             warnings.add('步骤「$step」没有执行：$error');
             break;
@@ -619,12 +680,23 @@ Future<void> _render(
         collect();
         if (!settled) warnings.add('等了 8 秒页面仍在加载，图里可能有转圈或骨架屏');
 
-        await _export(
-          boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary,
-          scale,
-          crop,
-          '$dir/$name.png',
-        );
+        final repaint =
+            boundary.currentContext!.findRenderObject()!
+                as RenderRepaintBoundary;
+        await _export(repaint, scale, crop, '$dir/$name.png');
+        // 长图另外切成一屏一张。
+        if (crop == null && size.height > 1200) {
+          const slice = 820.0;
+          var index = 1;
+          for (var top = 0.0; top < size.height; top += slice, index++) {
+            await _export(
+              repaint,
+              scale,
+              Rect.fromLTWH(0, top, size.width, slice),
+              '$dir/$name-p$index.png',
+            );
+          }
+        }
         final note = File('$dir/$name.warnings.txt');
         if (warnings.isEmpty) {
           if (note.existsSync()) note.deleteSync();
@@ -647,9 +719,13 @@ Future<void> _render(
   } finally {
     await tester.pump(const Duration(seconds: 1));
     collect();
+    semantics.dispose();
     debugDisableShadows = true;
   }
 }
+
+String _trim(double value) =>
+    value == value.roundToDouble() ? '${value.round()}' : '$value';
 
 void main() {
   final shots = _selectedShots();

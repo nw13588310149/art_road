@@ -38,20 +38,34 @@ class AppViewTabs<T> extends StatelessWidget {
 
   static const double height = 44;
 
+  /// 一项的点击区域最小宽度。
+  static const double minTapWidth = 44;
+
   @override
   Widget build(BuildContext context) {
+    // 项与项之间的空隙分给两边的点击区域，手指落在空隙里也能点中；第一项
+    // 左边和最后一项右边不留，文字仍和外面的对齐线齐平。
+    final half = (dense ? AppSpace.s16 : AppSpace.s24) / 2;
+    final last = items.length - 1;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final (index, item) in items.indexed) ...[
-          if (index > 0) SizedBox(width: dense ? AppSpace.s16 : AppSpace.s24),
-          _tab(item),
-        ],
+        for (final (index, item) in items.indexed)
+          _tab(
+            item,
+            EdgeInsets.only(
+              left: index == 0 ? 0 : half,
+              right: index == last ? 0 : half,
+            ),
+            index == 0
+                ? Alignment.centerLeft
+                : (index == last ? Alignment.centerRight : Alignment.center),
+          ),
       ],
     );
   }
 
-  Widget _tab(AppViewTab<T> item) {
+  Widget _tab(AppViewTab<T> item, EdgeInsets padding, Alignment alignment) {
     final selected = item.value == value;
     final style = dense
         ? (selected
@@ -65,33 +79,41 @@ class AppViewTabs<T> extends StatelessWidget {
       selected: selected,
       child: Container(
         height: height,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              width: 2,
-              color: selected && !dense
-                  ? AppColors.ink
-                  : const Color(0x00000000),
-            ),
+        constraints: const BoxConstraints(minWidth: minTapWidth),
+        padding: padding,
+        alignment: alignment,
+        child: _label(item, selected, style),
+      ),
+    );
+  }
+
+  Widget _label(AppViewTab<T> item, bool selected, TextStyle style) {
+    return Container(
+      height: height,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            width: 2,
+            color: selected && !dense ? AppColors.ink : const Color(0x00000000),
           ),
         ),
-        child: Text.rich(
-          TextSpan(
-            text: item.label,
-            children: [
-              if (item.count != null)
-                TextSpan(
-                  text: ' ${item.count}',
-                  style: AppText.number(
-                    size: dense ? 13 : 14,
-                    color: selected ? AppColors.ink : AppColors.textTertiary,
-                  ),
+      ),
+      child: Text.rich(
+        TextSpan(
+          text: item.label,
+          children: [
+            if (item.count != null)
+              TextSpan(
+                text: ' ${item.count}',
+                style: AppText.number(
+                  size: dense ? 13 : 14,
+                  color: selected ? AppColors.ink : AppColors.textTertiary,
                 ),
-            ],
-          ),
-          style: style,
+              ),
+          ],
         ),
+        style: style,
       ),
     );
   }

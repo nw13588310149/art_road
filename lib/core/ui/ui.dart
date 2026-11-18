@@ -4,16 +4,18 @@
 library;
 
 export '../widgets/app_loading_indicator.dart'
-    show AppLoadingIndicator, PageInitLoadingShell;
+    show AppLoadingIndicator, AppLoadingOverlay, PageInitLoadingShell;
 export 'app_add_category_button.dart';
 export 'app_avatar.dart';
 export 'app_badge.dart';
 export 'app_button.dart';
+export 'app_canvas_layout.dart';
 export 'app_card.dart';
 export 'app_checkbox.dart';
 export 'app_chip.dart';
 export 'app_colors.dart';
 export 'app_course_card.dart';
+export 'app_data_table.dart';
 export 'app_dialog.dart';
 export 'app_drawer.dart';
 export 'app_empty_state.dart';

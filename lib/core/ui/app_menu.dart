@@ -33,10 +33,14 @@ class AppMenuItem<T> {
 /// 超出右边界时与组件右边对齐。白底圆角 12、行高 36、popover 阴影，淡入 180ms。
 ///
 /// [context] 传触发按钮自身的 context（可用 `Builder` 包一层取得）。点遮罩关闭返回 null。
+///
+/// [selected] 不为空时这是一个选择菜单（排序方式等）：当前项用粗体并在右边
+/// 打一个墨色对勾，不用品牌紫。
 Future<T?> showAppMenu<T>({
   required BuildContext context,
   required List<AppMenuItem<T>> items,
   double width = 160,
+  T? selected,
 }) {
   final box = context.findRenderObject() as RenderBox?;
   final navigator = Navigator.of(context, rootNavigator: true);
@@ -48,7 +52,12 @@ Future<T?> showAppMenu<T>({
   final anchor =
       box.localToGlobal(Offset.zero, ancestor: overlayBox) & box.size;
   return navigator.push<T>(
-    _AppMenuRoute<T>(anchor: anchor, items: items, width: width),
+    _AppMenuRoute<T>(
+      anchor: anchor,
+      items: items,
+      width: width,
+      selected: selected,
+    ),
   );
 }
 
@@ -57,11 +66,13 @@ class _AppMenuRoute<T> extends PopupRoute<T> {
     required this.anchor,
     required this.items,
     required this.width,
+    this.selected,
   });
 
   final Rect anchor;
   final List<AppMenuItem<T>> items;
   final double width;
+  final T? selected;
 
   static const double _rowHeight = 36;
   static const double _panelPadding = 6;
@@ -136,6 +147,7 @@ class _AppMenuRoute<T> extends PopupRoute<T> {
                   for (final item in items)
                     _AppMenuRow(
                       item: item,
+                      selected: selected != null && item.value == selected,
                       onTap: () => Navigator.of(context).pop(item.value),
                     ),
                 ],
@@ -149,10 +161,15 @@ class _AppMenuRoute<T> extends PopupRoute<T> {
 }
 
 class _AppMenuRow extends StatelessWidget {
-  const _AppMenuRow({required this.item, required this.onTap});
+  const _AppMenuRow({
+    required this.item,
+    required this.onTap,
+    this.selected = false,
+  });
 
   final AppMenuItem<Object?> item;
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +179,7 @@ class _AppMenuRow extends StatelessWidget {
     return AppPressable(
       onTap: onTap,
       enabled: item.enabled,
+      selected: selected ? true : null,
       child: Container(
         height: _AppMenuRoute._rowHeight,
         padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -179,9 +197,11 @@ class _AppMenuRow extends StatelessWidget {
                 item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.body14.copyWith(color: color),
+                style: (selected ? AppText.body14Strong : AppText.body14)
+                    .copyWith(color: color),
               ),
             ),
+            if (selected) Icon(Icons.check_rounded, size: 18, color: color),
           ],
         ),
       ),

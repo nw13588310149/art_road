@@ -85,6 +85,12 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
                       'AppImageTile · AppTileGrid，规范见 docs/新页面设计语言.md',
                   _pageKit(),
                 ),
+                _section(
+                  '新页面组件 · 详情、瀑布流与表格',
+                  'AppTitleBar(onBack) · AppIconAction · AppMasonryGrid · '
+                      'AppCanvasLayout · AppDataTable',
+                  _pageKitDetail(),
+                ),
                 _section('颜色', '品牌紫只用于主操作、选中态、关键数字和链接', _colors()),
                 _section(
                   '字体',
@@ -277,6 +283,109 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
                 ],
               ),
             ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// 详情页头、带收藏的瀑布流、画布加面板和表格。
+  Widget _pageKitDetail() {
+    const works = <(String, String, String, double)>[
+      ('sketch-bust-1.jpg', '石膏像 · 侧转头像', '名师范画 · 张明远', 0.75),
+      ('color-still-1.jpg', '浅灰调静物写生', '优秀作品 · 城东校区', 1.33),
+      ('sketch-still-1.jpg', '陶罐、玻璃瓶与苹果', '优秀作品 · 城东校区', 1.33),
+      ('sketch-portrait-1.jpg', '女青年头像 · 四分之三侧面', '名师范画 · 张明远', 0.75),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppTitleBar(
+          title: '大卫石膏像 · 侧转头像',
+          onBack: () => AppToast.showInfo(context, '详情页的返回'),
+          actions: [
+            AppIconAction(
+              icon: Icons.star_border_rounded,
+              activeIcon: Icons.star_rounded,
+              active: _cardSelected,
+              semanticLabel: _cardSelected ? '取消收藏' : '收藏',
+              onTap: () => setState(() => _cardSelected = !_cardSelected),
+            ),
+            AppPlainButton(label: '临摹网格', onTap: () {}),
+            const SizedBox(width: AppSpace.s8),
+            AppButton(label: '对比我的原卷', onTap: () {}),
+          ],
+        ),
+        const SizedBox(height: AppSpace.s16),
+        SizedBox(
+          height: 300,
+          child: AppCanvasLayout(
+            wide: true,
+            hint: '双指缩放 · 双击放大',
+            canvasActions: [
+              AppIconAction(
+                icon: Icons.fullscreen_rounded,
+                semanticLabel: '全屏查看',
+                onTap: () {},
+              ),
+            ],
+            canvas: const Padding(
+              padding: EdgeInsets.all(AppSpace.s16),
+              child: AppImage(
+                src: 'asset:assets/demo/art/sketch-bust-1.jpg',
+                fit: BoxFit.contain,
+              ),
+            ),
+            panel: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('名师范画 · 张明远 · 示范画室', style: AppText.body13),
+                const SizedBox(height: AppSpace.s16),
+                const AppSectionTitle(title: '点评要点'),
+                const SizedBox(height: AppSpace.s8),
+                Text('头、颈、胸三大体块的转向关系明确，动势自然。', style: AppText.body14),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpace.s24),
+        const AppRule(),
+        const SizedBox(height: AppSpace.s24),
+        AppMasonryGrid(
+          columns: 4,
+          itemCount: works.length,
+          aspectRatioOf: (index) => works[index].$4,
+          itemBuilder: (context, index) {
+            final (file, title, meta, ratio) = works[index];
+            return AppImageTile(
+              image: AppImageTile.frame(
+                aspectRatio: ratio,
+                child: AppImage(src: 'asset:assets/demo/art/$file'),
+              ),
+              title: title,
+              meta: meta,
+              action: AppIconAction(
+                icon: Icons.star_border_rounded,
+                semanticLabel: '收藏',
+                onTap: () {},
+              ),
+              onTap: () {},
+            );
+          },
+        ),
+        const SizedBox(height: AppSpace.s24),
+        AppDataTable(
+          semanticLabel: '各科成绩',
+          columns: const [
+            AppTableColumn('科目', flex: 2),
+            AppTableColumn('得分', numeric: true),
+            AppTableColumn('档位', numeric: true),
+            AppTableColumn('全校排名', numeric: true),
+          ],
+          rows: [
+            AppTableRow(const ['素描', '92.5', 'A', '3'], onTap: () {}),
+            AppTableRow(const ['色彩', '86', 'B', '12'], onTap: () {}),
+            const AppTableRow(['合计', '178.5', '—', '6'], emphasis: true),
           ],
         ),
       ],

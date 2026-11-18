@@ -16,6 +16,7 @@ class AppImageTile extends StatelessWidget {
     this.meta = '',
     this.metaColor = AppColors.textTertiary,
     this.onTap,
+    this.action,
     super.key,
   });
 
@@ -27,6 +28,13 @@ class AppImageTile extends StatelessWidget {
   /// 说明的颜色：默认三级文字色；需要提示进行中的状态时用 `AppColors.brandDeep`。
   final Color metaColor;
   final VoidCallback? onTap;
+
+  /// 每一格都有的一个小操作（例如收藏），放在名称右边，不压在图上。
+  /// 通常是 `AppIconAction`。它自己响应点击，不会打开这一格。
+  final Widget? action;
+
+  /// 图下说明区的大致高度（名称两行加说明一行），瀑布流估算列高时用。
+  static const double captionExtent = 12 + 44 + 2 + 18;
 
   /// 图片的圆角。
   static const BorderRadius radius = BorderRadius.all(Radius.circular(6));
@@ -62,12 +70,10 @@ class AppImageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tile = Column(
+    final caption = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        image,
-        const SizedBox(height: AppSpace.s12),
         Text(
           title,
           maxLines: 2,
@@ -85,9 +91,128 @@ class AppImageTile extends StatelessWidget {
         ],
       ],
     );
-    return onTap == null
-        ? tile
-        : AppPressable(onTap: onTap, semanticLabel: title, child: tile);
+    Widget open(Widget child) => onTap == null
+        ? child
+        : AppPressable(onTap: onTap, semanticLabel: title, child: child);
+    final extra = action;
+    if (extra == null) {
+      return open(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            image,
+            const SizedBox(height: AppSpace.s12),
+            caption,
+          ],
+        ),
+      );
+    }
+    // 有操作时，图和名称各自是打开这一格的入口，操作单独响应。读屏只读图那一个
+    // 入口（带上说明），名称那一块不重复。
+    final spoken = meta.isEmpty ? title : '$title，$meta';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (onTap == null)
+          image
+        else
+          AppPressable(onTap: onTap, semanticLabel: spoken, child: image),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ExcludeSemantics(
+                child: open(
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpace.s12),
+                    child: caption,
+                  ),
+                ),
+              ),
+            ),
+            // 操作的点击区域 44 见方，向上和图的下沿留出 2。
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Transform.translate(
+                offset: const Offset(12, 0),
+                child: extra,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// 瀑布流：图按原比例显示，每一格放到当前最短的一列，列宽相等。
+///
+/// 素材中心、作品墙这类比例不一的画用它；比例统一的封面用 [AppTileGrid]。
+/// [aspectRatioOf] 给出第 i 张图的宽高比（宽 / 高），用来在图片加载前就排好位置，
+/// 加载后不跳动。列数和间距同 [AppTileGrid]：横竖混排的画宽屏 4 列、窄屏 3 列。
+/// 它按可用宽度算列宽，不能放进 `IntrinsicHeight` / `IntrinsicWidth` 里。
+class AppMasonryGrid extends StatelessWidget {
+  const AppMasonryGrid({
+    required this.itemCount,
+    required this.itemBuilder,
+    required this.aspectRatioOf,
+    required this.columns,
+    this.gap = 28,
+    this.captionExtent = AppImageTile.captionExtent,
+    super.key,
+  });
+
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+  final double Function(int index) aspectRatioOf;
+  final int columns;
+  final double gap;
+
+  /// 图下说明区的估算高度，只用来分列。
+  final double captionExtent;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final width = ((box.maxWidth - gap * (columns - 1)) / columns)
+            .floorToDouble();
+        final buckets = List.generate(columns, (_) => <int>[]);
+        final heights = List<double>.filled(columns, 0);
+        for (var i = 0; i < itemCount; i++) {
+          var target = 0;
+          for (var c = 1; c < columns; c++) {
+            if (heights[c] < heights[target] - 0.5) target = c;
+          }
+          buckets[target].add(i);
+          final ratio = aspectRatioOf(i);
+          heights[target] +=
+              width / (ratio > 0 ? ratio : 1) + captionExtent + gap;
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var c = 0; c < columns; c++) ...[
+              if (c > 0) SizedBox(width: gap),
+              SizedBox(
+                width: width,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final (n, i) in buckets[c].indexed) ...[
+                      if (n > 0) SizedBox(height: gap),
+                      itemBuilder(context, i),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
   }
 }
 

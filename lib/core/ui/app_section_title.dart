@@ -22,10 +22,7 @@ class AppSectionTitle extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Semantics(
-          header: true,
-          child: Text(title, style: AppText.title16),
-        ),
+        Semantics(header: true, child: Text(title, style: AppText.title16)),
         if (note.isNotEmpty) ...[
           const SizedBox(width: AppSpace.s8),
           Expanded(

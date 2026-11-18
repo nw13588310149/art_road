@@ -55,27 +55,28 @@ void main() {
     expect(AppPageBody.columnGap(false), 32);
   });
 
-  testWidgets('title bar keeps actions on the right edge with or without a caption', (
-    tester,
-  ) async {
-    for (final caption in ['', '11月18日 周三 · 早上好']) {
-      await tester.pumpWidget(
-        _host(
-          AppTitleBar(
-            title: '今日学习',
-            caption: caption,
-            actions: const [
-              SizedBox(key: ValueKey('action'), width: 80, height: 44),
-            ],
+  testWidgets(
+    'title bar keeps actions on the right edge with or without a caption',
+    (tester) async {
+      for (final caption in ['', '11月18日 周三 · 早上好']) {
+        await tester.pumpWidget(
+          _host(
+            AppTitleBar(
+              title: '今日学习',
+              caption: caption,
+              actions: const [
+                SizedBox(key: ValueKey('action'), width: 80, height: 44),
+              ],
+            ),
           ),
-        ),
-      );
-      expect(tester.getSize(find.byType(AppTitleBar)).height, 44);
-      expect(tester.getRect(find.byKey(const ValueKey('action'))).right, 600);
-      expect(find.text('今日学习'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    }
-  });
+        );
+        expect(tester.getSize(find.byType(AppTitleBar)).height, 44);
+        expect(tester.getRect(find.byKey(const ValueKey('action'))).right, 600);
+        expect(find.text('今日学习'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
 
   testWidgets('view tabs report the tapped value and embolden the selection', (
     tester,
@@ -244,47 +245,258 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('tile grid lays out equal columns and tiles keep the whole title', (
+  testWidgets(
+    'detail title bar has a 44 back button and shortens a long name',
+    (tester) async {
+      var backs = 0;
+      await tester.pumpWidget(
+        _host(
+          AppTitleBar(
+            title: '2026 年 9 月月考 · 素描高分卷 · 城东校区 · 林小雨 · 第一名',
+            onBack: () => backs++,
+            actions: const [SizedBox(width: 300, height: 44)],
+          ),
+          width: 520,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(AppBackButton)), const Size(44, 44));
+      expect(find.byTooltip('返回'), findsOneWidget);
+      await tester.tap(find.byType(AppBackButton));
+      expect(backs, 1);
+    },
+  );
+
+  testWidgets(
+    'every view tab is at least 44 wide and the first stays flush left',
+    (tester) async {
+      await tester.pumpWidget(
+        _host(
+          Row(
+            children: [
+              AppViewTabs<int>(
+                dense: true,
+                items: const [
+                  AppViewTab(value: 0, label: '全部'),
+                  AppViewTab(value: 1, label: '石膏'),
+                  AppViewTab(value: 2, label: '联考高分卷'),
+                ],
+                value: 0,
+                onChanged: (_) {},
+              ),
+            ],
+          ),
+        ),
+      );
+      for (final label in ['全部', '石膏', '联考高分卷']) {
+        final target = find
+            .ancestor(of: find.text(label), matching: find.byType(AppPressable))
+            .first;
+        expect(tester.getSize(target).width, greaterThanOrEqualTo(44));
+      }
+      expect(tester.getTopLeft(find.text('全部')).dx, 0);
+    },
+  );
+
+  testWidgets('icon action is a 44 target with a tooltip and a toggled state', (
     tester,
   ) async {
-    const title = '联考素描静物高分解析（示例）';
+    final handle = tester.ensureSemantics();
+    var taps = 0;
+    await tester.pumpWidget(
+      _host(
+        Row(
+          children: [
+            AppIconAction(
+              icon: Icons.star_border_rounded,
+              activeIcon: Icons.star_rounded,
+              active: true,
+              semanticLabel: '取消收藏',
+              onTap: () => taps++,
+            ),
+          ],
+        ),
+      ),
+    );
+    expect(tester.getSize(find.byType(AppIconAction)), const Size(44, 44));
+    expect(find.byTooltip('取消收藏'), findsOneWidget);
+    expect(find.byIcon(Icons.star_rounded), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('取消收藏'));
+    expect(taps, 1);
+    handle.dispose();
+  });
+
+  testWidgets('masonry grid puts each picture in the shortest column', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1180, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    // 第一张很高，第二、三张都应排到第二列，第四张回到第二列下面或第一列。
+    const ratios = [0.5, 2.0, 2.0, 2.0];
+    await tester.pumpWidget(
+      _host(
+        SingleChildScrollView(
+          child: AppMasonryGrid(
+            columns: 2,
+            gap: 20,
+            captionExtent: 0,
+            itemCount: ratios.length,
+            aspectRatioOf: (i) => ratios[i],
+            itemBuilder: (context, i) => AspectRatio(
+              key: ValueKey('w$i'),
+              aspectRatio: ratios[i],
+              child: const ColoredBox(color: AppColors.canvas),
+            ),
+          ),
+        ),
+        width: 420,
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    final first = tester.getRect(find.byKey(const ValueKey('w0')));
+    final second = tester.getRect(find.byKey(const ValueKey('w1')));
+    final third = tester.getRect(find.byKey(const ValueKey('w2')));
+    expect(first.width, 200);
+    expect(second.left, first.right + 20);
+    expect(third.left, second.left);
+    expect(third.top, second.bottom + 20);
+  });
+
+  testWidgets('canvas layout keeps the panel width and fills the height', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1180, 820);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       _host(
-        AppTileGrid(
-          columns: 5,
-          gap: 28,
-          children: [
-            for (var i = 0; i < 6; i++)
-              AppImageTile(
-                key: ValueKey('tile-$i'),
-                image: AppImageTile.frame(
-                  aspectRatio: 3 / 4,
-                  child: const ColoredBox(color: AppColors.surfaceSubtle),
-                ),
-                title: title,
-                meta: '基础 · 12 页',
-              ),
-          ],
+        SizedBox(
+          height: 500,
+          child: AppCanvasLayout(
+            wide: false,
+            hint: '双指缩放 · 双击放大',
+            canvas: const SizedBox.expand(key: ValueKey('canvas')),
+            panel: Column(
+              children: [for (var i = 0; i < 40; i++) Text('点评要点 $i')],
+            ),
+          ),
         ),
-        width: 906,
+        width: 766,
       ),
     );
     expect(tester.takeException(), isNull);
-    final first = tester.getRect(find.byKey(const ValueKey('tile-0')));
-    final second = tester.getRect(find.byKey(const ValueKey('tile-1')));
-    final sixth = tester.getRect(find.byKey(const ValueKey('tile-5')));
-    expect(first.width, 158);
-    expect(second.width, first.width);
-    expect(second.left - first.right, 28);
-    expect(sixth.left, first.left);
-    expect(sixth.top, first.bottom + 28);
-    for (final paragraph in tester.renderObjectList<RenderParagraph>(
-      find.text(title),
-    )) {
-      expect(paragraph.didExceedMaxLines, isFalse);
-    }
+    final canvas = tester.getRect(find.byKey(const ValueKey('canvas')));
+    expect(canvas.width, 766 - 232 - 32);
+    expect(canvas.height, 500 - 24 - AppCanvasLayout.footerHeight);
+    expect(find.text('双指缩放 · 双击放大'), findsOneWidget);
   });
+
+  testWidgets('data table right-aligns number columns', (tester) async {
+    await tester.pumpWidget(
+      _host(
+        AppDataTable(
+          columns: const [
+            AppTableColumn('科目', flex: 2),
+            AppTableColumn('得分', numeric: true),
+          ],
+          rows: [
+            AppTableRow(const ['素描', '92.5'], onTap: () {}),
+          ],
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    final score = tester.getRect(find.text('92.5'));
+    final header = tester.getRect(find.text('得分'));
+    expect((score.right - header.right).abs(), lessThan(1));
+    expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
+    expect(
+      tester
+          .getSize(
+            find
+                .ancestor(
+                  of: find.text('素描'),
+                  matching: find.byType(AppPressable),
+                )
+                .first,
+          )
+          .height,
+      greaterThanOrEqualTo(48),
+    );
+  });
+
+  testWidgets('a choice menu marks the current item with an ink check', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showAppMenu<String>(
+                context: context,
+                selected: 'new',
+                items: const [
+                  AppMenuItem(value: 'new', label: '最新'),
+                  AppMenuItem(value: 'hot', label: '最热'),
+                ],
+              ),
+              child: const Text('排序'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('排序'));
+    await tester.pumpAndSettle();
+    final check = tester.widget<Icon>(find.byIcon(Icons.check_rounded));
+    expect(check.color, AppColors.ink);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+  });
+
+  testWidgets(
+    'tile grid lays out equal columns and tiles keep the whole title',
+    (tester) async {
+      const title = '联考素描静物高分解析（示例）';
+      tester.view.physicalSize = const Size(1180, 820);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _host(
+          AppTileGrid(
+            columns: 5,
+            gap: 28,
+            children: [
+              for (var i = 0; i < 6; i++)
+                AppImageTile(
+                  key: ValueKey('tile-$i'),
+                  image: AppImageTile.frame(
+                    aspectRatio: 3 / 4,
+                    child: const ColoredBox(color: AppColors.surfaceSubtle),
+                  ),
+                  title: title,
+                  meta: '基础 · 12 页',
+                ),
+            ],
+          ),
+          width: 906,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final first = tester.getRect(find.byKey(const ValueKey('tile-0')));
+      final second = tester.getRect(find.byKey(const ValueKey('tile-1')));
+      final sixth = tester.getRect(find.byKey(const ValueKey('tile-5')));
+      expect(first.width, 158);
+      expect(second.width, first.width);
+      expect(second.left - first.right, 28);
+      expect(sixth.left, first.left);
+      expect(sixth.top, first.bottom + 28);
+      for (final paragraph in tester.renderObjectList<RenderParagraph>(
+        find.text(title),
+      )) {
+        expect(paragraph.didExceedMaxLines, isFalse);
+      }
+    },
+  );
 }
