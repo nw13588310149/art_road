@@ -36,6 +36,9 @@ abstract final class RoutePaths {
   /// 组件库演示页：lib/core/ui 全部组件与状态，规范见 docs/设计规范.md。
   static const designSystem = '/design-system';
 
+  /// 新页面方向稿（临时）：`?d=a|b|c&p=today|ebooks`。方向选定后删除。
+  static const designDirections = '/design-system/directions';
+
   static const myNotes = '/my-notes';
   static const myCollection = '/my-collection';
   static const personalCenter = '/personal-center';

@@ -246,6 +246,15 @@ final _shots = <_Shot>[
   // 保留页面，只作对照，不改
   const _Shot('ref-home', '/', roles: ['student', 'teacher']),
   const _Shot('ref-ai', '/personal-Ai'),
+
+  // 新页面方向稿（临时，方向选定后删除）
+  for (final direction in const ['a', 'b', 'c'])
+    for (final page in const ['today', 'ebooks'])
+      _Shot(
+        'draft-$direction-$page',
+        '/design-system/directions',
+        args: {'d': direction, 'p': page, 'bare': '1'},
+      ),
 ];
 
 // ───────────────────────────── 运行参数 ─────────────────────────────

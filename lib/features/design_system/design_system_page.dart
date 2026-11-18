@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/router/route_paths.dart';
 import '../../core/art/art_subject.dart';
 import '../../core/ui/ui.dart';
+import 'directions/directions_page.dart';
 
 /// 组件库演示页（`/design-system`）：按分区展示 lib/core/ui 的全部组件、变体与状态。
 ///
@@ -75,6 +76,31 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // 临时入口：方向选定后和 directions/ 目录一起删除。
+                _section(
+                  '新页面方向稿（临时）',
+                  '三个方向各做了今日和电子书刊的首屏；页面底部的切换条可以换方向、换页面',
+                  Wrap(
+                    spacing: AppSpace.s8,
+                    runSpacing: AppSpace.s8,
+                    children: [
+                      for (final direction in draftDirections.entries)
+                        for (final page in draftPages.entries)
+                          AppButton(
+                            label: '${direction.value} · ${page.value}',
+                            variant: AppButtonVariant.quiet,
+                            size: AppButtonSize.sm,
+                            onTap: () => Navigator.of(context).pushNamed(
+                              RoutePaths.designDirections,
+                              arguments: <String, dynamic>{
+                                'd': direction.key,
+                                'p': page.key,
+                              },
+                            ),
+                          ),
+                    ],
+                  ),
+                ),
                 _section('颜色', '品牌紫只用于主操作、选中态、关键数字和链接', _colors()),
                 _section(
                   '字体',
