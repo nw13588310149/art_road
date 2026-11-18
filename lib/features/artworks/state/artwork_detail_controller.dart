@@ -75,6 +75,61 @@ class StudentArtworkDetailController extends StateNotifier<ArtworkDetailState> {
     );
   }
 
+  /// 作品主人对一处定点点评标「改了 / 没看懂」，[status] 为 null 时清除。先改界面，
+  /// 接口失败时改回去并写入 [ArtworkDetailState.errorMessage]。成功返回 true。
+  Future<bool> respondToMark(
+    NumberedArtworkMark item,
+    ArtworkMarkResponseStatus? status,
+  ) async {
+    final before = state.detail;
+    if (before == null || item.mark.response?.status == status) {
+      return before != null;
+    }
+    state = state.copyWith(
+      detail: before.withMarkResponse(
+        teacherId: item.teacherId,
+        markId: item.mark.id,
+        response: status == null ? null : ArtworkMarkResponse(status: status),
+      ),
+      errorMessage: '',
+    );
+    final response = await _repository.respondToMark(
+      artworkId,
+      teacherId: item.teacherId,
+      markId: item.mark.id,
+      status: status,
+    );
+    if (!mounted) {
+      return false;
+    }
+    final current = state.detail;
+    if (!response.isSuccess) {
+      state = state.copyWith(
+        detail: current?.withMarkResponse(
+          teacherId: item.teacherId,
+          markId: item.mark.id,
+          response: item.mark.response,
+        ),
+        errorMessage: response.errorOr('没有标上，请稍后重试'),
+      );
+      return false;
+    }
+    final data = response.data;
+    final saved = data is Map
+        ? ArtworkMarkResponse.fromJson(data['response'])
+        : null;
+    if (saved != null && current != null) {
+      state = state.copyWith(
+        detail: current.withMarkResponse(
+          teacherId: item.teacherId,
+          markId: item.mark.id,
+          response: saved,
+        ),
+      );
+    }
+    return true;
+  }
+
   void clearError() {
     state = state.copyWith(errorMessage: '');
   }

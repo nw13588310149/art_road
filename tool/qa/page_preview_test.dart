@@ -540,6 +540,46 @@ final _shots = <_Shot>[
     args: {'artworkId': 'aw-lin-10'},
     steps: ['立方体右侧'],
   ),
+  // 学生对每一处的回应：《石膏头像结构练习》第 2 处种子里标了「没看懂」。
+  const _Shot(
+    'artwork-marks-respond',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-09'},
+    steps: ['耳朵偏低'],
+  ),
+  const _Shot(
+    'artwork-marks-teacher-responses',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-09'},
+    roles: ['teacher'],
+    steps: ['继续标记'],
+  ),
+  const _Shot(
+    'artwork-marks-teacher-responses-readonly',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-09'},
+    roles: ['groupLeader'],
+    steps: ['scroll:560@830,500'],
+  ),
+  // 《秋日静物色彩写生》第 2 版：上一版刘芳留了 3 处定点点评，第 2 处林小雨标了没看懂。
+  const _Shot(
+    'artwork-marks-previous',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-06'},
+  ),
+  const _Shot(
+    'artwork-marks-before-after',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-06'},
+    steps: ['陶罐暗部', 'wait:600'],
+  ),
+  // 校长打开第 2 版的点评工作台：右栏有上一版的三处和林小雨的回应。
+  const _Shot(
+    'artwork-marks-teacher-previous',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-06'},
+    roles: ['principal'],
+  ),
 
   // 画室工具箱。图片类工具用路由参数直达并预先载入一张打包的画（imageUrl 的
   // `/a/assets/...` 会直接读资源），前后两次渲染的输入完全相同。画布上的点击用

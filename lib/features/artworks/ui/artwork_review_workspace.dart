@@ -18,6 +18,7 @@ import 'widgets/artwork_annotation.dart';
 import 'widgets/artwork_mark_editor.dart';
 import 'widgets/artwork_mark_layer.dart';
 import 'widgets/artwork_mark_list.dart';
+import 'widgets/artwork_previous_marks.dart';
 import 'widgets/artwork_review_actions.dart';
 import 'widgets/artwork_review_timeline.dart';
 import 'widgets/artwork_voice_comment_field.dart';
@@ -708,6 +709,7 @@ class _ArtworkReviewWorkspaceState
               item.mark.text,
               hasVoice: item.mark.hasVoice,
               voiceSeconds: item.mark.voiceSeconds,
+              response: item.mark.response?.status,
             ),
           ),
       ],
@@ -804,7 +806,9 @@ class _ArtworkReviewWorkspaceState
         AppSectionHeader(
           title: '定点点评',
           titleStyle: AppText.title16,
-          subtitle: numbered.isEmpty ? '在画上指出具体位置' : '${numbered.length} 处',
+          subtitle: numbered.isEmpty
+              ? '在画上指出具体位置'
+              : ArtworkRules.markCount(state.marks),
           trailing: AppButton(
             label: numbered.isEmpty ? '在画上标记' : '继续标记',
             variant: AppButtonVariant.text,
@@ -816,6 +820,7 @@ class _ArtworkReviewWorkspaceState
           ArtworkMarkList(
             marks: numbered,
             maxLines: 2,
+            showResponse: true,
             onSelect: (item) => _startMarking(markId: item.mark.id),
           ),
       ],
@@ -896,11 +901,29 @@ class _ArtworkReviewWorkspaceState
             .where((tag) => !ArtworkRules.isHighlightTag(tag.color))
             .toList() ??
         const <ArtworkTag>[];
+    final previous = state.previous;
+    final previousMarks =
+        previous == null || previous.images.isEmpty || detail.images.isEmpty
+        ? const <NumberedArtworkMark>[]
+        : artworkDetailMarks(previous);
     return <Widget>[
       _StudentCard(detail: detail),
       const SizedBox(height: 12),
       ArtworkReviewSummary(detail: detail),
       const SizedBox(height: AppSpace.s12),
+      if (previousMarks.isNotEmpty) ...[
+        ArtworkPreviousMarks(
+          marks: previousMarks,
+          responsePrefix: '学生：',
+          onOpen: (item) => openArtworkMarkBeforeAfter(
+            context,
+            current: detail,
+            previous: previous!,
+            item: item,
+          ),
+        ),
+        const SizedBox(height: AppSpace.s12),
+      ],
       if (!detail.canReview && review != null) ...[
         ArtworkReviewCard(review: review),
         if (review.voiceUrl.isNotEmpty)
@@ -912,11 +935,18 @@ class _ArtworkReviewWorkspaceState
           const SizedBox(height: AppSpace.s12),
           AppSectionHeader(
             title: '定点点评',
-            subtitle: '${review.marks.length} 处 · 点编号对照画上的位置',
+            subtitle:
+                review.marks.any(
+                  (m) =>
+                      m.response?.status == ArtworkMarkResponseStatus.unclear,
+                )
+                ? ArtworkRules.markCount(review.marks)
+                : '${review.marks.length} 处 · 点编号对照画上的位置',
           ),
           ArtworkMarkList(
             marks: numberArtworkMarks(<ArtworkReview>[review]),
             selectedKey: _viewedMarkKey,
+            showResponse: true,
             onSelect: (item) => setState(() {
               _viewedMarkKey = item.key;
               if (item.mark.imageIndex != _imageIndex) {

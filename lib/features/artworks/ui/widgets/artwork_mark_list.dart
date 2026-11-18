@@ -4,19 +4,28 @@ import '../../../../core/ui/ui.dart';
 import '../../data/artwork_models.dart';
 import '../../data/artwork_rules.dart';
 import 'artwork_mark_layer.dart';
+import 'artwork_mark_response.dart';
 import 'artwork_voice_note.dart';
 
 /// 共用播放器里一处定点点评的语音键。
 String artworkMarkPlayKey(NumberedArtworkMark mark) => 'mark:${mark.key}';
 
-String _semantics(NumberedArtworkMark item, {required bool showTeacher}) =>
-    ArtworkRules.markSemantics(
-      item.number,
-      item.mark.text,
-      hasVoice: item.mark.hasVoice,
-      voiceSeconds: item.mark.voiceSeconds,
-      teacherName: showTeacher ? item.teacherName : '',
-    );
+String _semantics(
+  NumberedArtworkMark item, {
+  required bool showTeacher,
+  bool showResponse = false,
+}) => ArtworkRules.markSemantics(
+  item.number,
+  item.mark.text,
+  hasVoice: item.mark.hasVoice,
+  voiceSeconds: item.mark.voiceSeconds,
+  teacherName: showTeacher ? item.teacherName : '',
+  response: showResponse ? item.mark.response?.status : null,
+);
+
+/// 学生对一处标「改了 / 没看懂」，null 为取消。
+typedef ArtworkMarkRespond =
+    void Function(NumberedArtworkMark item, ArtworkMarkResponseStatus? status);
 
 /// 定点点评列表：编号、这一处说的话、老师和语音，行间细线。点一行选中图上
 /// 对应的编号。
@@ -28,8 +37,16 @@ class ArtworkMarkList extends StatelessWidget {
     this.showTeacher = false,
     this.maxLines,
     this.rowKeys,
+    this.showResponse = false,
+    this.onRespond,
     super.key,
   });
+
+  /// 老师端：每行写出学生的回应（学生：改了 / 没看懂）。
+  final bool showResponse;
+
+  /// 作品主人：每行带「改了」「没看懂」两个回应。
+  final ArtworkMarkRespond? onRespond;
 
   final List<NumberedArtworkMark> marks;
   final String? selectedKey;
@@ -57,6 +74,10 @@ class ArtworkMarkList extends StatelessWidget {
             selected: marks[i].key == selectedKey,
             showTeacher: showTeacher,
             maxLines: maxLines,
+            showResponse: showResponse,
+            onRespond: onRespond == null
+                ? null
+                : (status) => onRespond!(marks[i], status),
             onTap: onSelect == null ? null : () => onSelect!(marks[i]),
           ),
         ],
@@ -71,6 +92,8 @@ class _MarkRow extends StatelessWidget {
     required this.selected,
     required this.showTeacher,
     this.maxLines,
+    this.showResponse = false,
+    this.onRespond,
     this.onTap,
     super.key,
   });
@@ -79,16 +102,56 @@ class _MarkRow extends StatelessWidget {
   final bool selected;
   final bool showTeacher;
   final int? maxLines;
+  final bool showResponse;
+  final ValueChanged<ArtworkMarkResponseStatus?>? onRespond;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final mark = item.mark;
     final text = mark.text.trim();
+    final response = showResponse && onRespond == null
+        ? mark.response?.status
+        : null;
+    Widget content = ExcludeSemantics(
+      excluding: !mark.hasVoice,
+      child: _MarkRowText(
+        item: item,
+        text: text,
+        selected: selected,
+        showTeacher: showTeacher,
+        maxLines: maxLines,
+      ),
+    );
+    if (response != null || onRespond != null) {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          content,
+          if (response != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpace.s4),
+              child: ExcludeSemantics(
+                child: ArtworkMarkResponseLabel(status: response),
+              ),
+            ),
+          if (onRespond case final respond?)
+            ArtworkMarkResponseButtons(
+              number: item.number,
+              value: mark.response?.status,
+              onChanged: respond,
+            ),
+        ],
+      );
+    }
     return AppPressable(
       onTap: onTap,
       selected: selected,
-      semanticLabel: _semantics(item, showTeacher: showTeacher),
+      semanticLabel: _semantics(
+        item,
+        showTeacher: showTeacher,
+        showResponse: response != null,
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 56),
         child: Padding(
@@ -105,56 +168,65 @@ class _MarkRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpace.s12),
-              Expanded(
-                child: ExcludeSemantics(
-                  excluding: !mark.hasVoice,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        text.isEmpty ? '（只有语音）' : text,
-                        maxLines: maxLines,
-                        overflow: maxLines == null
-                            ? null
-                            : TextOverflow.ellipsis,
-                        style: text.isEmpty
-                            ? AppText.body14.copyWith(
-                                color: AppColors.textSecondary,
-                              )
-                            : (selected
-                                  ? AppText.body14Strong
-                                  : AppText.body14),
-                      ),
-                      if (showTeacher && !mark.hasVoice)
-                        Text('${item.teacherName}老师', style: AppText.caption12),
-                      if (mark.hasVoice)
-                        Transform.translate(
-                          offset: const Offset(-6, 0),
-                          child: Row(
-                            children: [
-                              Flexible(
-                                child: ArtworkVoiceNoteButton(
-                                  playKey: artworkMarkPlayKey(item),
-                                  source: mark.voiceUrl,
-                                  seconds: mark.voiceSeconds,
-                                ),
-                              ),
-                              if (showTeacher)
-                                Text(
-                                  ' · ${item.teacherName}老师',
-                                  style: AppText.caption12,
-                                ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+              Expanded(child: content),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 一行里的文字、老师和语音。
+class _MarkRowText extends StatelessWidget {
+  const _MarkRowText({
+    required this.item,
+    required this.text,
+    required this.selected,
+    required this.showTeacher,
+    this.maxLines,
+  });
+
+  final NumberedArtworkMark item;
+  final String text;
+  final bool selected;
+  final bool showTeacher;
+  final int? maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final mark = item.mark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          text.isEmpty ? '（只有语音）' : text,
+          maxLines: maxLines,
+          overflow: maxLines == null ? null : TextOverflow.ellipsis,
+          style: text.isEmpty
+              ? AppText.body14.copyWith(color: AppColors.textSecondary)
+              : (selected ? AppText.body14Strong : AppText.body14),
+        ),
+        if (showTeacher && !mark.hasVoice)
+          Text('${item.teacherName}老师', style: AppText.caption12),
+        if (mark.hasVoice)
+          Transform.translate(
+            offset: const Offset(-6, 0),
+            child: Row(
+              children: [
+                Flexible(
+                  child: ArtworkVoiceNoteButton(
+                    playKey: artworkMarkPlayKey(item),
+                    source: mark.voiceUrl,
+                    seconds: mark.voiceSeconds,
+                  ),
+                ),
+                if (showTeacher)
+                  Text(' · ${item.teacherName}老师', style: AppText.caption12),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
@@ -166,12 +238,16 @@ class ArtworkMarkPopover extends StatelessWidget {
     required this.item,
     required this.onClose,
     this.showTeacher = false,
+    this.onRespond,
     super.key,
   });
 
   final NumberedArtworkMark item;
   final VoidCallback onClose;
   final bool showTeacher;
+
+  /// 作品主人：卡片下面带「改了」「没看懂」两个回应。
+  final ValueChanged<ArtworkMarkResponseStatus?>? onRespond;
 
   static const double width = 264;
 
@@ -238,6 +314,14 @@ class ArtworkMarkPopover extends StatelessWidget {
                     seconds: mark.voiceSeconds,
                   ),
                 ),
+              if (onRespond case final respond?) ...[
+                const SizedBox(height: AppSpace.s8),
+                ArtworkMarkResponseButtons(
+                  number: item.number,
+                  value: mark.response?.status,
+                  onChanged: respond,
+                ),
+              ],
             ],
           ),
         ),

@@ -53,6 +53,23 @@ class ArtworkRepository {
     return client.get('/app/artworks/${_id(id)}');
   }
 
+  /// 作品主人对一处定点点评标「改了 / 没看懂」；[status] 为 null 时清除。
+  Future<ApiResponse> respondToMark(
+    String artworkId, {
+    required String teacherId,
+    required String markId,
+    required ArtworkMarkResponseStatus? status,
+  }) {
+    return client.post(
+      '/app/artworks/${_id(artworkId)}/marks/respond',
+      data: <String, dynamic>{
+        'teacherId': teacherId,
+        'markId': markId,
+        'status': status?.code ?? ArtworkMarkResponseStatus.noneCode,
+      },
+    );
+  }
+
   Future<ApiResponse> getExcellentArtworks({
     String subject = '',
     String campusId = '',

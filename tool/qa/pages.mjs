@@ -467,6 +467,29 @@ export const ROLES = [
           { check: /^关闭这一处点评$/, role: 'button' }, { check: /^第 2 处$/ },
         ],
       },
+      // 回应：第 2 处种子里标了没看懂；把第 1 处标成改了。
+      {
+        id: 'artwork-marks-respond',
+        route: '/artworks',
+        actions: [
+          { click: /石膏头像结构练习/, after: 2500 },
+          { click: /^第 2 处点评/, nth: 0, after: 900 },
+          { check: /^第 2 处已标没看懂/, role: 'button' },
+          { click: /^第 1 处标为改了$/, nth: 0, after: 900 },
+          { check: /^第 1 处已标改了/, role: 'button' },
+        ],
+      },
+      // 第 2 版列出上一版的三处，点第 2 处打开改前改后，顶栏写明是哪一处。
+      {
+        id: 'artwork-marks-before-after',
+        route: '/artworks',
+        actions: [
+          { click: /秋日静物色彩写生/, after: 2500 },
+          { check: '上一版的定点点评' },
+          { click: /^第 2 处点评：陶罐暗部/, after: 1500 },
+          { check: '当前版本' }, { check: '上一版本' }, { check: /^第 2 处 · 陶罐暗部/ },
+        ],
+      },
       {
         id: 'artwork-excellent',
         route: '/artworks/excellent',
@@ -632,6 +655,17 @@ export const ROLES = [
           { type: '三大面区分不够，亮面和灰面要拉开', into: /这一处的问题/ },
           { click: /^完成$/, after: 900 },
           { check: /三大面区分不够/ }, { check: /^继续标记$/, role: 'button' },
+        ],
+      },
+      // 学生的回应：《石膏头像结构练习》第 2 处标了没看懂，列表行和数量里都看得到。
+      {
+        id: 'artwork-marks-teacher-responses',
+        route: '/artworks',
+        actions: [
+          { click: /^已点评$/, after: 1500 },
+          { click: /石膏头像结构练习/, after: 2500 },
+          { click: /^继续标记$/, role: 'button', after: 900 },
+          { check: '3 处 · 1 处没看懂' }, { check: /学生标了没看懂/ },
         ],
       },
       {
