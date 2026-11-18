@@ -46,9 +46,11 @@ class _MirrorBodyState extends State<_MirrorBody> {
   ui.Image? _inverted;
   bool _invertBusy = false;
   bool _failed = false;
+  final _compareView = toolCompareController();
 
   @override
   void dispose() {
+    _compareView.dispose();
     _alternate?.cancel();
     _inverted?.dispose();
     super.dispose();
@@ -131,6 +133,7 @@ class _MirrorBodyState extends State<_MirrorBody> {
       stage: _buildStage,
       panel: _buildPanel,
       canvasActions: [
+        if (_compare) toolCompareActions(_compareView),
         AppPlainButton(
           label: '恢复原图',
           icon: Icons.refresh_rounded,
@@ -172,14 +175,34 @@ class _MirrorBodyState extends State<_MirrorBody> {
     if (!_compare) {
       return mirrored;
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: StageImagePane(image: widget.image.image, label: '原图'),
+    // 翻转是工具自己的设置，画在结果那一侧的画面里；对比画布只管缩放，锁定时
+    // 两侧看画框里同一个位置。
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s12,
+        0,
+        AppSpace.s12,
+        AppSpace.s12,
+      ),
+      child: AppCompareView(
+        controller: _compareView,
+        first: stagePane('原图', widget.image.image),
+        second: stagePane(
+          _label,
+          shown,
+          failed: _failed,
+          onRetry: () => _setInvert(true),
+          wrap: (raw) => Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.diagonal3Values(
+              _horizontal ? -1 : 1,
+              _vertical ? -1 : 1,
+              1,
+            ),
+            child: raw,
+          ),
         ),
-        Expanded(child: mirrored),
-      ],
+      ),
     );
   }
 

@@ -44,6 +44,18 @@ class AppImage extends StatelessWidget {
     return null;
   }
 
+  /// 和 [AppImage] 读同一个地址的图片来源（读尺寸、预加载用）；地址为空时返回 null。
+  static ImageProvider? providerOf(String src) {
+    final value = src.trim();
+    if (value.isEmpty) {
+      return null;
+    }
+    final assetKey = assetKeyOf(value);
+    return assetKey != null
+        ? AssetImage(assetKey)
+        : CachedNetworkImageProvider(MediaUrl.resolve(value));
+  }
+
   @override
   Widget build(BuildContext context) {
     final value = src.trim();

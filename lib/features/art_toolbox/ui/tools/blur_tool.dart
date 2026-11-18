@@ -46,6 +46,13 @@ class _BlurBodyState extends State<_BlurBody>
   bool _grayscale = false;
   bool _compare = true;
   bool _peek = false;
+  final _compareView = toolCompareController();
+
+  @override
+  void dispose() {
+    _compareView.dispose();
+    super.dispose();
+  }
 
   @override
   _BlurParams get params => (level: _level, grayscale: _grayscale);
@@ -68,6 +75,7 @@ class _BlurBodyState extends State<_BlurBody>
   Widget build(BuildContext context) {
     return ImageToolLayout(
       hint: '按住画面可临时查看原图',
+      canvasActions: [if (_compare) toolCompareActions(_compareView)],
       stage: (context) => GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => setState(() => _peek = true),
@@ -78,6 +86,7 @@ class _BlurBodyState extends State<_BlurBody>
           processed: _peek ? widget.image.image : result?.image,
           label: _peek ? '原图' : (_grayscale ? '模糊 · 去色' : '模糊'),
           compare: _compare,
+          controller: _compareView,
           failed: failed,
           onRetry: reprocess,
         ),

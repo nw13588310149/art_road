@@ -108,6 +108,8 @@ class _Shot {
   /// - `label:收藏`：点击读屏名称是「收藏」的控件；
   /// - `scroll:400`：从内容区中部向上滚 400，负数向下；`scroll:400@900,300` 指定
   ///   从哪一点开始拖（整屏坐标），用来滚动侧栏；
+  /// - `pinch:2.5@400,380`：在整屏的 (400, 380) 两指张开到 2.5 倍（小于 1 是捏小）；
+  /// - `dbl:400,380`：在 (400, 380) 双击；
   /// - `wait:800`：多等 800 毫秒。
   final List<String> steps;
 
@@ -234,6 +236,28 @@ final _shots = <_Shot>[
     '/gallery',
     steps: ['大卫石膏像 · 侧转头像', '对比我的原卷', '灰度'],
   ),
+  // 锁定（默认）时在左边的范画上两指放大，右边跟着放大到同一处；
+  // 不锁定时只有左边放大，左边的名称加粗。
+  const _Shot(
+    'gallery-compare-zoom-locked',
+    '/gallery',
+    steps: ['大卫石膏像 · 侧转头像', '对比我的原卷', 'pinch:2.5@200,400'],
+  ),
+  const _Shot(
+    'gallery-compare-zoom-unlocked',
+    '/gallery',
+    steps: [
+      '大卫石膏像 · 侧转头像',
+      '对比我的原卷',
+      'label:锁定两侧',
+      'pinch:2.5@200,400',
+    ],
+  ),
+  const _Shot(
+    'gallery-compare-overlay',
+    '/gallery',
+    steps: ['大卫石膏像 · 侧转头像', '对比我的原卷', '=叠加'],
+  ),
   const _Shot(
     'gallery-viewer',
     '/gallery',
@@ -355,6 +379,11 @@ final _shots = <_Shot>[
     '/study',
     steps: ['查看完整报告', '=素描', '对照样图'],
   ),
+  const _Shot(
+    'study-paper-compare-zoom',
+    '/study',
+    steps: ['查看完整报告', '=素描', '对照样图', 'pinch:2.5@280,420'],
+  ),
   const _Shot('study-standard', '/study', steps: ['评分标准']),
   const _Shot('study-growth-exam', '/study', steps: ['成长曲线']),
   const _Shot('study-growth-from-report', '/study', steps: ['查看完整报告', '成长曲线']),
@@ -454,6 +483,16 @@ final _shots = <_Shot>[
       'wait:800',
     ],
   ),
+  const _Shot(
+    'artwork-compare',
+    '/artworks',
+    steps: ['石膏头像结构练习', '对比范画'],
+  ),
+  const _Shot(
+    'artwork-compare-overlay',
+    '/artworks',
+    steps: ['石膏头像结构练习', '对比范画', '=叠加'],
+  ),
   const _Shot('artwork-upload', '/artworks', steps: ['上传作品']),
   const _Shot(
     'artwork-review',
@@ -510,6 +549,18 @@ final _shots = <_Shot>[
   const _Shot('tool-source', '/toolbox', args: {'tool': 'value'}),
   const _Shot('tool-value', '/toolbox', args: _bust),
   const _Shot('tool-value-notan', '/toolbox', args: _bust, steps: ['=剪影']),
+  const _Shot(
+    'tool-value-compare',
+    '/toolbox',
+    args: _bust,
+    steps: ['与原图并排对比'],
+  ),
+  const _Shot(
+    'tool-value-compare-zoom',
+    '/toolbox',
+    args: _bust,
+    steps: ['与原图并排对比', 'pinch:2.5@340,430'],
+  ),
   const _Shot('tool-blur', '/toolbox', args: {..._still, 'tool': 'blur'}),
   const _Shot(
     'tool-simplify',
@@ -527,6 +578,12 @@ final _shots = <_Shot>[
     '/toolbox',
     args: {..._bustImage, 'tool': 'mirror'},
     steps: ['左右镜像'],
+  ),
+  const _Shot(
+    'tool-mirror-compare',
+    '/toolbox',
+    args: {..._bustImage, 'tool': 'mirror'},
+    steps: ['左右镜像', '与原图并排对比'],
   ),
   const _Shot('tool-color', '/toolbox', args: _flower),
   const _Shot(
@@ -835,6 +892,44 @@ Future<void> _runStep(
 ) async {
   if (step.startsWith('wait:')) {
     await _settle(tester, minMs: int.parse(step.substring(5)));
+    return;
+  }
+  if (step.startsWith('dbl:')) {
+    final xy = step.substring(4).split(',').map(double.parse).toList();
+    final at = Offset(xy[0], xy[1]);
+    await tester.tapAt(at);
+    // 双击识别要求两次点击之间隔开一点真实时间。
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    await tester.pump();
+    await tester.tapAt(at);
+    await _settle(tester, minMs: 400);
+    return;
+  }
+  if (step.startsWith('pinch:')) {
+    // 两根手指从 (x, y) 两侧各 40 处向外（倍数大于 1）或向内移动。
+    final spec = step.substring(6).split('@');
+    final factor = double.parse(spec[0]);
+    final xy = spec[1].split(',').map(double.parse).toList();
+    final center = Offset(xy[0], xy[1]);
+    const start = 40.0;
+    final a = await tester.startGesture(
+      center - const Offset(start, 0),
+      pointer: 901,
+    );
+    final b = await tester.startGesture(
+      center + const Offset(start, 0),
+      pointer: 902,
+    );
+    const moves = 12;
+    for (var i = 1; i <= moves; i++) {
+      final d = start + start * (factor - 1) * i / moves;
+      await a.moveTo(center - Offset(d, 0));
+      await b.moveTo(center + Offset(d, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await a.up();
+    await b.up();
+    await _settle(tester, minMs: 400);
     return;
   }
   if (step.startsWith('scroll:')) {

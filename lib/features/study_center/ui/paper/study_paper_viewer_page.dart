@@ -53,7 +53,9 @@ class StudyPaperViewerPage extends ConsumerStatefulWidget {
 class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
   late String _subjectId;
   late bool _compare;
-  double _split = 0.5;
+  final _compareView = AppCompareController(
+    modes: const [AppCompareMode.sideBySide],
+  );
 
   @override
   void initState() {
@@ -65,6 +67,12 @@ class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
         subjects.firstOrNull?.subjectId ??
         '';
     _compare = widget.initialCompare;
+  }
+
+  @override
+  void dispose() {
+    _compareView.dispose();
+    super.dispose();
   }
 
   StudySubjectKey get _key =>
@@ -92,8 +100,7 @@ class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
         builder: (context, wide) => StudyPaperCompareView(
           paper: paper,
           standard: standard,
-          split: _split,
-          onSplitChanged: (value) => setState(() => _split = value),
+          controller: _compareView,
           onRetryPaper: () => ref.invalidate(studyPaperProvider(_key)),
           onRetryStandard: () =>
               ref.invalidate(studyGradeStandardProvider(_key)),
@@ -131,7 +138,10 @@ class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
               exam: exam,
               subjectId: _subjectId,
               compare: _compare,
-              onSubjectChanged: (id) => setState(() => _subjectId = id),
+              onSubjectChanged: (id) {
+                _compareView.reset();
+                setState(() => _subjectId = id);
+              },
               onCompareChanged: (value) => setState(() => _compare = value),
               onOpenStandard: subject == null
                   ? null

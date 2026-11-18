@@ -49,6 +49,13 @@ class _TemperatureBodyState extends State<_TemperatureBody>
   int _neutralChroma = kDefaultNeutralChroma;
   bool _keepShading = true;
   bool _compare = true;
+  final _compareView = toolCompareController();
+
+  @override
+  void dispose() {
+    _compareView.dispose();
+    super.dispose();
+  }
 
   @override
   _TemperatureParams get params =>
@@ -73,11 +80,13 @@ class _TemperatureBodyState extends State<_TemperatureBody>
   @override
   Widget build(BuildContext context) {
     return ImageToolLayout(
+      canvasActions: [if (_compare) toolCompareActions(_compareView)],
       stage: (context) => CompareStage(
         original: widget.image.image,
         processed: result?.image,
         label: '冷暖分布',
         compare: _compare,
+        controller: _compareView,
         failed: failed,
         onRetry: reprocess,
       ),
