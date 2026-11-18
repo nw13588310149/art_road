@@ -193,6 +193,32 @@ void main() {
     expect(repository.saves.last, 2);
   });
 
+  testWidgets('bookmark toggles in the top bar and the toc jumps to a chapter', (
+    tester,
+  ) async {
+    await _setSize(tester, const Size(1180, 820));
+    final repository = _FakeRepository();
+    await _pumpReader(tester, repository);
+
+    await tester.tap(find.text('加书签'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('已加书签'), findsOneWidget);
+
+    await tester.tap(find.text('目录'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('目录与书签'), findsOneWidget);
+    expect(find.text('1 个'), findsOneWidget);
+
+    await tester.tap(find.text('第一章'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('目录与书签'), findsNothing);
+    expect(_label(tester), '3–4 / 10');
+    await tester.pump(const Duration(seconds: 3));
+  });
+
   testWidgets('resumes from the saved page and returns progress when closed', (
     tester,
   ) async {

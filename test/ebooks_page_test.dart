@@ -127,9 +127,10 @@ class _FakeRepository implements EbookRepository {
   @override
   Future<ApiResponse> getShelf() => shelfUnavailable
       ? Future.value(ApiResponse(code: 500, msg: '暂时无法加载书架'))
+      // 按最近活动排：刚收藏、没读过的排在在读的前面，界面要把在读的提到最前。
       : _ok({
           'records': [
-            for (final b in books.values)
+            for (final b in books.values.toList().reversed)
               if (b['favorite'] == true || b['progress'] != null) b,
           ],
         });
@@ -183,12 +184,16 @@ void main() {
     final repository = _FakeRepository();
     await _pumpInShell(tester, const EbooksPage(args: <String, dynamic>{}), repository);
 
-    expect(find.text('美术书刊'), findsNothing);
-    expect(find.text('精选美术教辅与期刊（示例内容）'), findsNothing);
+    // 页头的名称看得见；接着读是在读的那一本，编辑推荐里不再重复它。
+    expect(find.text('电子书刊'), findsOneWidget);
+    expect(find.text('接着读'), findsOneWidget);
+    expect(find.text('继续阅读'), findsOneWidget);
     expect(find.text('编辑推荐'), findsOneWidget);
+    expect(find.text('编辑推荐一'), findsNothing);
     expect(find.text('编辑推荐二'), findsOneWidget);
     expect(find.text('读到第 4 / 10 页'), findsWidgets);
     expect(find.text('已读完'), findsWidgets);
+    expect(find.text('共 5 本'), findsOneWidget);
 
     // 打开详情：基本信息、目录、相关书刊，加入书架后按钮立即变化。
     await tester.tap(find.text('美院校考作品集（示例）').first);
@@ -196,7 +201,7 @@ void main() {
     await tester.pump();
     expect(find.text('内容简介'), findsOneWidget);
     expect(find.text('相关书刊'), findsOneWidget);
-    expect(find.text('第 5 页'), findsOneWidget);
+    expect(find.text('明暗'), findsOneWidget);
     expect(find.text('开始阅读'), findsOneWidget);
     await tester.tap(find.text('加入书架'));
     await tester.pump();
@@ -207,14 +212,20 @@ void main() {
     await tester.pump();
     expect(find.text('内容简介'), findsNothing);
 
-    // 我的书架：收藏与读过的书刊，带阅读按钮。
+    // 我的书架：收藏与读过的书刊，格子下面写阅读进度，在读的排在最前。
     await tester.tap(find.text('我的书架'));
     await tester.pump();
     await tester.pump();
     expect(find.text('全部 4'), findsOneWidget);
     expect(find.text('在读 1'), findsOneWidget);
-    expect(find.text('继续阅读'), findsOneWidget);
-    expect(find.text('重新阅读'), findsOneWidget);
+    expect(find.text('读到第 4 / 10 页'), findsOneWidget);
+    expect(find.text('已读完'), findsOneWidget);
+    expect(find.text('尚未开始阅读'), findsNWidgets(2));
+    final shelfOrder = [
+      for (final title in ['素描静物解析（示例）', '美院校考作品集（示例）'])
+        tester.getTopLeft(find.text(title)).dx,
+    ];
+    expect(shelfOrder.first, lessThan(shelfOrder.last));
 
     // 回到书库按分类筛选。
     await tester.tap(find.text('书库'));
@@ -247,4 +258,41 @@ void main() {
     expect(find.text('全部 3'), findsOneWidget);
   });
 
+  testWidgets('search without results offers to clear the search', (tester) async {
+    final repository = _FakeRepository();
+    await _pumpInShell(tester, const EbooksPage(), repository);
+
+    await tester.enterText(find.byType(EditableText), '水彩');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('没有找到与「水彩」相关的书刊'), findsOneWidget);
+    expect(find.text('接着读'), findsNothing);
+
+    await tester.tap(find.text('清除搜索'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('没有找到与「水彩」相关的书刊'), findsNothing);
+    expect(find.text('接着读'), findsOneWidget);
+    expect(find.text('共 5 本'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('sort menu marks the current order and switches it', (tester) async {
+    final repository = _FakeRepository();
+    await _pumpInShell(tester, const EbooksPage(), repository);
+
+    // 外壳之外打开本页时不能返回，打开菜单也不会多出返回按钮。
+    expect(find.byTooltip('返回'), findsNothing);
+    await tester.tap(find.text('推荐'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('最新'), findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.byTooltip('返回'), findsNothing);
+
+    await tester.tap(find.text('最新'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('最新'), findsOneWidget);
+    expect(find.text('推荐'), findsNothing);
+  });
 }

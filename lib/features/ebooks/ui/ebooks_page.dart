@@ -3,23 +3,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_assets.dart';
-import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
-import '../../gallery/ui/widgets/library_controls.dart';
-import '../../shell/ui/shell_layout.dart';
 import '../data/ebook_models.dart';
 import '../navigation/ebook_navigation.dart';
 import '../state/ebooks_controller.dart';
 import '../state/ebooks_state.dart';
 import 'ebook_detail_view.dart';
+import 'widgets/ebook_library_view.dart';
+import 'widgets/ebook_shelf_view.dart';
 import 'widgets/ebook_widgets.dart';
 
-/// 美术书刊：编辑推荐、分类浏览、搜索与排序、我的书架，以及页内详情。
+/// 电子书刊：书库（接着读、编辑推荐、分类、搜索与排序）、我的书架，以及页内详情。
 ///
-/// 版式取自原版的收藏页与资源网格：白色内容板内，左上是分段工具栏（书库 /
-/// 我的书架），同一行右侧放搜索和排序；下面依次是筛选条和书刊网格。
+/// 用外壳给的白色底板，版式按 `docs/新页面设计语言.md`：页头是名称、书库 / 我的书架
+/// 切换、搜索和排序；下面是筛选条，再下面是封面网格。整页一起滚动。
 ///
 /// 路由参数（均可选）：`{'bookId': String, 'category': 分类 key 或名称}`；
 /// 带 `bookId` 时直接打开详情，详情返回即关闭本页（回到首页、收藏、搜索等来源页）。
@@ -34,10 +32,6 @@ class EbooksPage extends ConsumerStatefulWidget {
 }
 
 class _EbooksPageState extends ConsumerState<EbooksPage> {
-  /// 内容板四周的留白与工具栏高度，对应原版收藏页「左上 20、内容从 82 开始」。
-  static const _inset = 20.0;
-  static const _toolbarHeight = 42.0;
-
   final ScrollController _scroll = ScrollController();
   final TextEditingController _search = TextEditingController();
   Timer? _debounce;
@@ -72,7 +66,10 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
   }
 
   void _handleScroll() {
-    if (_scroll.hasClients && _scroll.position.extentAfter < 480) {
+    final browse =
+        ref.read(ebooksControllerProvider(_currentQuery)).view ==
+        EbooksView.browse;
+    if (browse && _scroll.hasClients && _scroll.position.extentAfter < 480) {
       unawaited(_controller.loadMore());
     }
   }
@@ -83,6 +80,9 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
     }
     change();
   }
+
+  /// 书库和书架共用一个滚动位置，切换时回到页顶。
+  void _setView(EbooksView view) => _applyFilter(() => _controller.setView(view));
 
   void _onKeywordChanged(String value) {
     _debounce?.cancel();
@@ -97,10 +97,24 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
     _applyFilter(() => _controller.setKeyword(value));
   }
 
-  void _resetFilters() {
-    _debounce?.cancel();
+  void _clearSearch() {
     _search.clear();
-    _applyFilter(_controller.resetFilters);
+    _onKeywordSubmitted('');
+  }
+
+  Future<void> _pickSort(BuildContext anchor, EbookSort current) async {
+    final sort = await showAppMenu<EbookSort>(
+      context: anchor,
+      width: 120,
+      selected: current,
+      items: [
+        for (final sort in EbookSort.values)
+          AppMenuItem(value: sort, label: sort.label),
+      ],
+    );
+    if (sort != null && mounted) {
+      _applyFilter(() => _controller.setSort(sort));
+    }
   }
 
   Future<void> _toggleFavorite(EbookSummary book) async {
@@ -115,11 +129,11 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
     }
   }
 
-  Future<void> _read(EbookSummary book, [int page = 0]) async {
+  Future<void> _read(EbookSummary book, [int? page]) async {
     final progress = await EbookNavigation.openReader(
       context,
       bookId: book.id,
-      page: page,
+      page: page ?? ebookStartPage(book),
     );
     if (!mounted) {
       return;
@@ -173,332 +187,136 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
     });
 
     final openId = state.openBookId;
-    final canPop = Navigator.of(context).canPop();
-    final browse = state.view == EbooksView.browse;
-    return ShellPageSurface(
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
-        borderRadius: AppRadius.br16,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Offstage(
-              offstage: openId != null,
-              child: TickerMode(
-                enabled: openId == null,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(_inset, _inset, _inset, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildToolbar(state, canPop),
-                      const SizedBox(height: _inset),
-                      browse ? _buildCategoryBar(state) : _buildShelfBar(state),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: browse
-                            ? _buildBrowse(state)
-                            : _buildShelf(state),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (openId != null)
-              ColoredBox(
-                color: AppColors.surface,
-                child: EbookDetailView(
-                  key: ValueKey(openId),
-                  detail: state.details[openId],
-                  loading: state.detailLoading.contains(openId),
-                  error: state.detailErrors[openId] ?? '',
-                  onBack: () => _closeDetail(state),
-                  onRetry: () => unawaited(controller.retryDetail()),
-                  onRead: (book, page) => unawaited(_read(book, page)),
-                  onToggleFavorite: (book) => unawaited(_toggleFavorite(book)),
-                  onOpenBook: controller.openDetail,
-                ),
-              ),
-          ],
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Offstage(
+          offstage: openId != null,
+          child: TickerMode(enabled: openId == null, child: _buildList(state)),
         ),
+        if (openId != null)
+          ColoredBox(
+            color: AppColors.surface,
+            child: EbookDetailView(
+              key: ValueKey(openId),
+              detail: state.details[openId],
+              loading: state.detailLoading.contains(openId),
+              error: state.detailErrors[openId] ?? '',
+              onBack: () => _closeDetail(state),
+              onRetry: () => unawaited(controller.retryDetail()),
+              onRead: (book, page) => unawaited(_read(book, page)),
+              onToggleFavorite: (book) => unawaited(_toggleFavorite(book)),
+              onOpenBook: controller.openDetail,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildList(EbooksState state) {
+    final browse = state.view == EbooksView.browse;
+    // 只看这一页下面有没有页面：排序菜单这类盖在上面的浮层不算。
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    void open(EbookSummary book) => _controller.openDetail(book.id);
+    void read(EbookSummary book) => unawaited(_read(book));
+    return AppRefreshIndicator(
+      onRefresh: browse ? _controller.refresh : _controller.refreshShelf,
+      child: AppPageBody.slivers(
+        controller: _scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: (context, wide) => [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildTitleBar(state, wide, canPop),
+                const SizedBox(height: AppSpace.s12),
+                if (browse)
+                  _buildCategoryBar(state)
+                else
+                  EbookShelfBar(
+                    state: state,
+                    onChanged: _controller.setShelfFilter,
+                  ),
+              ],
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: browse
+                ? EbookLibraryView(
+                    state: state,
+                    wide: wide,
+                    onOpen: open,
+                    onRead: read,
+                    onRetry: () => unawaited(_controller.refresh()),
+                    onClearSearch: _clearSearch,
+                    onShowAll: () => _applyFilter(
+                      () => _controller.setCategory(EbookCategory.allKey),
+                    ),
+                  )
+                : EbookShelfView(
+                    state: state,
+                    wide: wide,
+                    onOpen: open,
+                    onRetry: () => unawaited(_controller.refreshShelf()),
+                    onBrowse: () => _setView(EbooksView.browse),
+                  ),
+          ),
+        ],
       ),
     );
   }
 
-  /// 工具栏：左侧分段（书库 / 我的书架），书库视图右侧是 324×40 的搜索框和排序按钮。
-  Widget _buildToolbar(EbooksState state, bool canPop) {
+  /// 页头：名称、书库 / 我的书架；书库视图右边是搜索框和排序。
+  Widget _buildTitleBar(EbooksState state, bool wide, bool canPop) {
     final browse = state.view == EbooksView.browse;
-    return Semantics(
-      container: true,
-      explicitChildNodes: true,
-      label: '美术书刊',
-      hint: '精选美术教辅与期刊（示例内容）',
-      child: SizedBox(
-        height: _toolbarHeight,
-        child: Row(
-          children: [
-            if (canPop) ...[
-              LibraryIconButton.back(
-                onTap: () => Navigator.of(context).maybePop(),
-              ),
-              const SizedBox(width: 12),
-            ],
-            LibrarySegmented<EbooksView>(
-              items: const [
-                LibraryOption(value: EbooksView.browse, label: '书库'),
-                LibraryOption(value: EbooksView.shelf, label: '我的书架'),
-              ],
-              value: state.view,
-              onChanged: _controller.setView,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: browse
-                    ? ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 324),
-                        child: LibrarySearchField(
-                          controller: _search,
-                          hint: '搜索书名、编者、知识点',
-                          height: 40,
-                          onChanged: _onKeywordChanged,
-                          onSubmitted: _onKeywordSubmitted,
-                          onCleared: () => _onKeywordSubmitted(''),
-                        ),
-                      )
-                    : Text(
-                        '阅读进度自动保存',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: libraryText(
-                          size: 12,
-                          weight: AppFont.w500,
-                          color: AppColors.textPlaceholder,
-                        ),
-                      ),
-              ),
-            ),
-            if (browse) ...[
-              const SizedBox(width: 12),
-              LibrarySortButton<EbookSort>(
-                options: [
-                  for (final sort in EbookSort.values)
-                    LibraryOption(value: sort, label: sort.label),
-                ],
-                value: state.sort,
-                onChanged: (sort) =>
-                    _applyFilter(() => _controller.setSort(sort)),
-              ),
-            ],
-          ],
-        ),
+    return AppTitleBar(
+      title: '电子书刊',
+      onBack: canPop ? () => Navigator.of(context).maybePop() : null,
+      tabs: AppViewTabs<EbooksView>(
+        items: const [
+          AppViewTab(value: EbooksView.browse, label: '书库'),
+          AppViewTab(value: EbooksView.shelf, label: '我的书架'),
+        ],
+        value: state.view,
+        onChanged: _setView,
       ),
+      actions: [
+        if (browse) ...[
+          SizedBox(
+            width: wide ? 260 : 220,
+            child: AppSearchField(
+              controller: _search,
+              hint: '搜索书名、编者、知识点',
+              onChanged: _onKeywordChanged,
+              onSubmitted: _onKeywordSubmitted,
+              onCleared: () => _onKeywordSubmitted(''),
+            ),
+          ),
+          const SizedBox(width: AppSpace.s8),
+          Builder(
+            builder: (anchor) => AppPlainButton(
+              label: state.sort.label,
+              icon: Icons.swap_vert_rounded,
+              onTap: () => unawaited(_pickSort(anchor, state.sort)),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
   Widget _buildCategoryBar(EbooksState state) {
     if (state.categories.isEmpty) {
-      return const SizedBox(height: LibraryChip.height);
+      return const SizedBox(height: AppFilterBar.height);
     }
-    return LibraryChipBar<String>(
+    return AppFilterBar<String>(
       items: [
         for (final category in state.categories)
-          LibraryOption(value: category.key, label: category.label),
+          AppFilterItem(value: category.key, label: category.label),
       ],
       value: state.category,
       onChanged: (key) => _applyFilter(() => _controller.setCategory(key)),
-    );
-  }
-
-  Widget _buildShelfBar(EbooksState state) {
-    final shelf = state.shelf;
-    int countOf(EbookShelfFilter filter) => switch (filter) {
-      EbookShelfFilter.all => shelf.records.length,
-      EbookShelfFilter.reading => shelf.reading.length,
-      EbookShelfFilter.favorite => shelf.favorites.length,
-    };
-    return LibraryChipBar<EbookShelfFilter>(
-      items: [
-        for (final filter in EbookShelfFilter.values)
-          LibraryOption(
-            value: filter,
-            label: '${filter.label} ${countOf(filter)}',
-          ),
-      ],
-      value: state.shelfFilter,
-      onChanged: _controller.setShelfFilter,
-    );
-  }
-
-  Widget _buildBrowse(EbooksState state) {
-    if (state.books.isEmpty) {
-      if (state.loading) {
-        return const Center(child: AppLoadingIndicator());
-      }
-      if (state.errorMessage.isNotEmpty) {
-        return AppErrorState(
-          title: '书刊加载失败',
-          description: state.errorMessage,
-          onRetry: () => unawaited(_controller.refresh()),
-        );
-      }
-      return LibraryEmptyState(
-        message: state.keyword.isNotEmpty
-            ? '没有找到与「${state.keyword}」相关的书刊'
-            : '这个分类下暂时还没有书刊',
-        description: '换个关键词或分类试试',
-        actionLabel: state.hasFilters ? '清除筛选' : null,
-        onAction: state.hasFilters ? _resetFilters : null,
-      );
-    }
-    final showFeatured = !state.hasFilters && state.featured.isNotEmpty;
-    final label = state.categoryLabelOf(state.category);
-    final title = state.keyword.isNotEmpty
-        ? '搜索结果'
-        : (showFeatured ||
-                  label.isEmpty ||
-                  state.category == EbookCategory.allKey
-              ? '全部书刊'
-              : label);
-    const groupPadding = EdgeInsets.only(left: 2, bottom: 10);
-    return AppRefreshIndicator(
-      onRefresh: _controller.refresh,
-      child: CustomScrollView(
-        controller: _scroll,
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          if (showFeatured) ...[
-            const SliverPadding(
-              padding: groupPadding,
-              sliver: SliverToBoxAdapter(child: LibraryGroupTitle('编辑推荐')),
-            ),
-            SliverLayoutBuilder(
-              builder: (context, constraints) => SliverGrid(
-                gridDelegate: EbookLessonCard.gridDelegate(
-                  constraints.crossAxisExtent,
-                  itemCount: state.featured.length,
-                ),
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final book = state.featured[index];
-                  return EbookLessonCard(
-                    book: book,
-                    subtitle: book.featuredIntro.isNotEmpty
-                        ? book.featuredIntro
-                        : book.intro,
-                    actionLabel: ebookReadLabel(book, withPage: false),
-                    onAction: () => unawaited(_read(book, ebookStartPage(book))),
-                    onTap: () => _controller.openDetail(book.id),
-                  );
-                }, childCount: state.featured.length),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-          ],
-          SliverPadding(
-            padding: groupPadding,
-            sliver: SliverToBoxAdapter(
-              child: LibraryGroupTitle(title, count: state.total, unit: '本'),
-            ),
-          ),
-          EbookGrid(
-            itemCount: state.books.length,
-            itemBuilder: (context, index) {
-              final book = state.books[index];
-              return EbookCard(
-                book: book,
-                onTap: () => _controller.openDetail(book.id),
-              );
-            },
-          ),
-          SliverToBoxAdapter(child: _ListFooter(state: state)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShelf(EbooksState state) {
-    final items = state.shelfItems;
-    if (items.isEmpty) {
-      if (state.shelfLoading) {
-        return const Center(child: AppLoadingIndicator());
-      }
-      if (state.shelfError.isNotEmpty) {
-        return AppErrorState(
-          title: '书架加载失败',
-          description: state.shelfError,
-          onRetry: () => unawaited(_controller.refreshShelf()),
-        );
-      }
-      return LibraryEmptyState(
-        imageAsset: AppAssets.emptyCollectionPlaceholder,
-        message: switch (state.shelfFilter) {
-          EbookShelfFilter.all => '书架还是空的',
-          EbookShelfFilter.reading => '没有正在读的书刊',
-          EbookShelfFilter.favorite => '还没有加入书架的书刊',
-        },
-        description: '在书刊详情里点「加入书架」，或开始阅读后，书刊会出现在这里',
-        actionLabel: '去书库看看',
-        onAction: () => _controller.setView(EbooksView.browse),
-      );
-    }
-    return AppRefreshIndicator(
-      onRefresh: _controller.refreshShelf,
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverLayoutBuilder(
-            builder: (context, constraints) => SliverGrid(
-              gridDelegate: EbookLessonCard.gridDelegate(
-                constraints.crossAxisExtent,
-              ),
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final book = items[index];
-                return EbookLessonCard(
-                  book: book,
-                  subtitle: '${book.categoryLabel} · ${book.editor} 编',
-                  progressLabel: book.started
-                      ? ebookProgressLabel(book)
-                      : '尚未开始阅读',
-                  actionLabel: ebookReadLabel(book, withPage: false),
-                  onAction: () => unawaited(_read(book, ebookStartPage(book))),
-                  onTap: () => _controller.openDetail(book.id),
-                );
-              }, childCount: items.length),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: _inset)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ListFooter extends StatelessWidget {
-  const _ListFooter({required this.state});
-
-  final EbooksState state;
-
-  @override
-  Widget build(BuildContext context) {
-    if (state.loadingMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(child: AppLoadingIndicator()),
-      );
-    }
-    if (state.hasMore) {
-      return const SizedBox(height: 24);
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Center(
-        child: Text(
-          '已显示全部 ${state.books.length} 本 · 示例书刊仅供演示',
-          style: libraryText(size: 12, color: AppColors.textPlaceholder),
-        ),
-      ),
     );
   }
 }

@@ -484,7 +484,7 @@ export const ROLES = [
       {
         id: 'ebook-reader', route: '/ebooks', actions: [
           /联考素描静物高分解析/, /^(开始|继续|重新)阅读/,
-          { check: '目录与书签', role: 'button' },
+          { check: /^目录$/, role: 'button' }, { check: /^跳页$/, role: 'button' },
         ],
       },
       { id: 'toolbox', route: '/toolbox', settle: 1600 },
