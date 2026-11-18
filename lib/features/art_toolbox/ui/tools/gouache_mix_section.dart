@@ -164,7 +164,7 @@ class _MatchLabel extends StatelessWidget {
     final color = switch (match) {
       MixMatch.close => AppColors.success,
       MixMatch.rough => AppColors.warning,
-      MixMatch.far => AppColors.danger,
+      MixMatch.far => AppColors.textTertiary,
     };
     return Row(
       mainAxisSize: MainAxisSize.min,
