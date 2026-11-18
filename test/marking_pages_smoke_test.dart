@@ -221,11 +221,12 @@ void _pageTests() {
     await _unmount(tester);
   });
 
-  testWidgets('范画库列表与详情', (tester) async {
+  testWidgets('素材中心列表与详情', (tester) async {
     await _pump(tester, const GalleryPage(), account: DemoAccounts.student);
     expect(find.text('范画库'), findsNothing);
     expect(find.byTooltip('返回'), findsNothing);
-    expect(find.text('全部科目'), findsOneWidget);
+    expect(find.text('素材中心'), findsOneWidget);
+    expect(find.text('全部题材'), findsOneWidget);
     await tester.tap(find.text('素描').first);
     await _settle(tester);
     expect(find.textContaining('石膏'), findsWidgets);
@@ -243,10 +244,15 @@ void _pageTests() {
     await _settle(tester);
     final divider = find.bySemanticsLabel('对比分隔线');
     expect(divider, findsOneWidget);
-    expect(tester.getSemantics(divider).getSemanticsData().value, '50%');
+    // 并排时分隔条起始放在让两幅画都尽量大的位置，不一定在正中。
+    final initial = tester.getSemantics(divider).getSemanticsData().value;
+    expect(initial, endsWith('%'));
     await tester.drag(divider, const Offset(120, 0));
     await tester.pump();
-    expect(tester.getSemantics(divider).getSemanticsData().value, isNot('50%'));
+    expect(
+      tester.getSemantics(divider).getSemanticsData().value,
+      isNot(initial),
+    );
     await tester.tap(find.text('滑动'));
     await tester.pump();
     expect(divider, findsOneWidget);

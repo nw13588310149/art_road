@@ -4,22 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/ui.dart';
-import '../../../core/widgets/app_refresh_indicator.dart';
-import '../../shell/ui/shell_layout.dart';
 import '../../smart_campus/navigation/group_chat_return.dart';
 import '../data/gallery_models.dart';
 import '../state/gallery_controller.dart';
 import '../state/gallery_state.dart';
 import 'gallery_detail_view.dart';
-import 'widgets/gallery_widgets.dart';
-import 'widgets/library_controls.dart';
+import 'widgets/gallery_browser.dart';
 
-/// 范画库：名师范画、联考高分卷、学生优秀作品。
+/// 素材中心：名师范画、联考高分卷、学生优秀作品。
 ///
 /// 路由参数（均可选）：`{'subject': '素描'|'色彩'|'速写', 'keyword': String,
 /// 'category': 分类 key 或名称, 'workId': String}`；带 `workId` 时直接打开详情，
 /// 详情返回即关闭本页（回到收藏、群聊等来源页）。
 /// 从侧栏进入（一级页）不显示返回；从其他页面带参数打开时才显示返回。
+/// 页面放在外壳给的白色底板上。
 class GalleryPage extends ConsumerStatefulWidget {
   const GalleryPage({super.key});
 
@@ -144,205 +142,46 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
     final openId = state.openWorkId;
     final canPop = _openedFromPage && Navigator.of(context).canPop();
-    return ShellPageSurface(
-      clipBehavior: Clip.hardEdge,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Offstage(
-            offstage: openId != null,
-            child: TickerMode(
-              enabled: openId == null,
-              child: _GalleryBrowser(
-                state: state,
-                scrollController: _scroll,
-                onBack: canPop
-                    ? () => GroupChatReturnNavigator.pop(context, ref: ref)
-                    : null,
-                onSubjectChanged: (s) =>
-                    _applyFilter(() => controller.setSubject(s)),
-                onCategoryChanged: (c) =>
-                    _applyFilter(() => controller.setCategory(c)),
-                onSortChanged: (s) => _applyFilter(() => controller.setSort(s)),
-                onKeywordChanged: (k) =>
-                    _applyFilter(() => controller.setKeyword(k)),
-                onResetFilters: () => _applyFilter(controller.resetFilters),
-                onRefresh: controller.refresh,
-                onOpen: (work) => controller.openDetail(work.id),
-                onToggleFavorite: _toggleFavorite,
-              ),
-            ),
-          ),
-          if (openId != null)
-            GalleryDetailView(
-              key: ValueKey(openId),
-              detail: state.details[openId],
-              loading: state.detailLoading.contains(openId),
-              error: state.detailErrors[openId] ?? '',
-              onBack: () => _closeDetail(state),
-              onRetry: () => unawaited(controller.retryDetail()),
-              onToggleFavorite: _toggleFavorite,
-              onOpenWork: controller.openDetail,
-              onTagSelected: _searchTag,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 列表：版式取自视频中心。白色内容板内，顶部一行放科目页签、排序和搜索
-/// （四周 16、下 12），下面是分类筛选条和作品网格，一起滚动。
-class _GalleryBrowser extends StatelessWidget {
-  const _GalleryBrowser({
-    required this.state,
-    required this.scrollController,
-    required this.onBack,
-    required this.onSubjectChanged,
-    required this.onCategoryChanged,
-    required this.onSortChanged,
-    required this.onKeywordChanged,
-    required this.onResetFilters,
-    required this.onRefresh,
-    required this.onOpen,
-    required this.onToggleFavorite,
-  });
-
-  final GalleryState state;
-  final ScrollController scrollController;
-  final VoidCallback? onBack;
-  final ValueChanged<String> onSubjectChanged;
-  final ValueChanged<String> onCategoryChanged;
-  final ValueChanged<GallerySort> onSortChanged;
-  final ValueChanged<String> onKeywordChanged;
-  final VoidCallback onResetFilters;
-  final Future<void> Function() onRefresh;
-  final ValueChanged<GalleryWork> onOpen;
-  final ValueChanged<GalleryWork> onToggleFavorite;
-
-  static const _side = 16.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final subtitle = state.total > 0
-        ? '名师范画 · 联考高分卷 · 学生优秀作品 · 共 ${state.total} 幅'
-        : '名师范画 · 联考高分卷 · 学生优秀作品';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Semantics(
-          container: true,
-          explicitChildNodes: true,
-          label: '范画库',
-          hint: subtitle,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(_side, 16, _side, 12),
-            child: GalleryToolbar(
-              state: state,
-              onBack: onBack,
-              onSubjectChanged: onSubjectChanged,
-              onSortChanged: onSortChanged,
-              onKeywordChanged: onKeywordChanged,
-            ),
-          ),
-        ),
-        Expanded(child: _buildBody()),
-      ],
-    );
-  }
-
-  Widget _categoryBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(_side, 0, _side, 16),
-      child: GalleryCategoryBar(state: state, onChanged: onCategoryChanged),
-    );
-  }
-
-  Widget _buildBody() {
-    if (state.works.isEmpty) {
-      // 列表为空时 controller 把失败原因留在 errorMessage 里。
-      final failed = state.loadFailed || state.errorMessage.isNotEmpty;
-      final Widget content;
-      if (state.loading) {
-        content = const Center(child: AppLoadingIndicator());
-      } else if (failed) {
-        content = AppErrorState(
-          title: '范画加载失败',
-          description: '请检查网络后重试',
-          onRetry: () => unawaited(onRefresh()),
-        );
-      } else {
-        content = LibraryEmptyState(
-          message: state.keyword.isNotEmpty
-              ? '没有找到与「${state.keyword}」相关的范画'
-              : '这个分类下暂时还没有作品',
-          description: state.hasFilters ? '换个科目或分类看看' : '老师上传范画后会出现在这里',
-          actionLabel: state.hasFilters ? '清除筛选' : null,
-          onAction: state.hasFilters ? onResetFilters : null,
-        );
-      }
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _categoryBar(),
-          Expanded(child: content),
-        ],
-      );
-    }
     return Stack(
+      fit: StackFit.expand,
       children: [
-        AppRefreshIndicator(
-          onRefresh: onRefresh,
-          child: CustomScrollView(
-            controller: scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(child: _categoryBar()),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: _side),
-                sliver: SliverToBoxAdapter(
-                  child: GalleryMasonryGrid(
-                    works: state.works,
-                    onOpen: onOpen,
-                    onToggleFavorite: onToggleFavorite,
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(child: _ListFooter(state: state)),
-            ],
+        Offstage(
+          offstage: openId != null,
+          child: TickerMode(
+            enabled: openId == null,
+            child: GalleryBrowser(
+              state: state,
+              scrollController: _scroll,
+              onBack: canPop
+                  ? () => GroupChatReturnNavigator.pop(context, ref: ref)
+                  : null,
+              onSubjectChanged: (s) =>
+                  _applyFilter(() => controller.setSubject(s)),
+              onCategoryChanged: (c) =>
+                  _applyFilter(() => controller.setCategory(c)),
+              onSortChanged: (s) => _applyFilter(() => controller.setSort(s)),
+              onKeywordChanged: (k) =>
+                  _applyFilter(() => controller.setKeyword(k)),
+              onResetFilters: () => _applyFilter(controller.resetFilters),
+              onRefresh: controller.refresh,
+              onOpen: (work) => controller.openDetail(work.id),
+              onToggleFavorite: _toggleFavorite,
+            ),
           ),
         ),
-        // 切换筛选时保留旧作品，中间显示加载动画。
-        if (state.loading) const Positioned.fill(child: AppLoadingOverlay()),
+        if (openId != null)
+          GalleryDetailView(
+            key: ValueKey(openId),
+            detail: state.details[openId],
+            loading: state.detailLoading.contains(openId),
+            error: state.detailErrors[openId] ?? '',
+            onBack: () => _closeDetail(state),
+            onRetry: () => unawaited(controller.retryDetail()),
+            onToggleFavorite: _toggleFavorite,
+            onOpenWork: controller.openDetail,
+            onTagSelected: _searchTag,
+          ),
       ],
-    );
-  }
-}
-
-class _ListFooter extends StatelessWidget {
-  const _ListFooter({required this.state});
-
-  final GalleryState state;
-
-  @override
-  Widget build(BuildContext context) {
-    if (state.loadingMore) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: 16),
-        child: Center(child: AppLoadingIndicator()),
-      );
-    }
-    if (state.hasMore) {
-      return const SizedBox(height: 24);
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Center(
-        child: Text(
-          '已显示全部 ${state.works.length} 幅作品',
-          style: libraryText(size: 12, color: AppColors.textPlaceholder),
-        ),
-      ),
     );
   }
 }

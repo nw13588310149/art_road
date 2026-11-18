@@ -126,7 +126,11 @@ final _shots = <_Shot>[
   const _Shot('ebook-detail', '/ebooks', steps: ['联考素描静物高分解析']),
 
   // 素材中心
-  const _Shot('gallery', '/gallery'),
+  const _Shot(
+    'gallery',
+    '/gallery',
+    roles: ['student', 'teacher', 'principal'],
+  ),
   // 从首页的科目卡进来：带科目，下面垫着首页，所以有返回。
   const _Shot(
     'gallery-from-home',
@@ -134,8 +138,44 @@ final _shots = <_Shot>[
     args: {'subject': '素描'},
     below: '/',
   ),
-  const _Shot('gallery-detail', '/gallery', steps: ['大卫石膏像 · 侧转头像']),
+  const _Shot('gallery-subject', '/gallery', steps: ['=素描']),
+  const _Shot('gallery-exam', '/gallery', steps: ['=联考高分卷']),
+  const _Shot('gallery-sort', '/gallery', steps: ['=最新']),
+  const _Shot('gallery-search-empty', '/gallery', args: {'keyword': '油画棒'}),
+  const _Shot(
+    'gallery-detail',
+    '/gallery',
+    roles: ['student', 'teacher', 'principal'],
+    steps: ['大卫石膏像 · 侧转头像'],
+  ),
+  const _Shot(
+    'gallery-detail-exam',
+    '/gallery',
+    args: {'category': '联考高分卷'},
+    steps: ['素描高分卷'],
+  ),
+  const _Shot(
+    'gallery-detail-landscape',
+    '/gallery',
+    args: {'keyword': '浅灰调'},
+    steps: ['浅灰调静物写生'],
+  ),
   const _Shot('gallery-compare', '/gallery', steps: ['大卫石膏像 · 侧转头像', '对比我的原卷']),
+  const _Shot(
+    'gallery-compare-reveal',
+    '/gallery',
+    steps: ['大卫石膏像 · 侧转头像', '对比我的原卷', '滑动'],
+  ),
+  const _Shot(
+    'gallery-compare-gray',
+    '/gallery',
+    steps: ['大卫石膏像 · 侧转头像', '对比我的原卷', '灰度'],
+  ),
+  const _Shot(
+    'gallery-viewer',
+    '/gallery',
+    steps: ['大卫石膏像 · 侧转头像', 'label:全屏查看', 'wait:600'],
+  ),
 
   // 优秀课件
   const _Shot(
