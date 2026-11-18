@@ -450,6 +450,12 @@ export const ROLES = [
         { click: /^素描/, after: 1200 }, { click: /^对照样图$/, after: 1200 },
         { check: '我的原卷' }, { check: /档样图$/ }, { check: '锁定两侧' },
       ] },
+      // 月考讲评：色彩有已发布的讲评，成绩表上那一科标着讲评，从「听讲评」进讲评模式。
+      { id: 'study-critique', route: '/study', actions: [
+        { click: /^查看完整报告$/, after: 1200 }, { check: /有老师讲评/ },
+        { click: /^听色彩讲评/, after: 1500 }, { check: '我的原卷' }, { check: '上一档' },
+        { check: /^讲评$/ }, { check: /^原卷$/ },
+      ] },
       { id: 'artworks', route: '/artworks' },
       {
         id: 'artwork-detail',
@@ -613,6 +619,12 @@ export const ROLES = [
       guideStep,
       noticeStep,
       { id: 'study', route: '/study' },
+      // 月考讲评：选了素描后有「月考讲评」一行，李静的草稿可以继续录、发布。
+      { id: 'critique-workspace', route: '/study', actions: [
+        { click: /^素描$/, after: 1500 }, { check: '月考讲评' },
+        { click: /^继续讲评$/, after: 1800 },
+        { check: /^发布讲评$/, role: 'button' }, { check: '全部原卷' },
+      ] },
       { id: 'artworks', route: '/artworks' },
       {
         id: 'artwork-review',

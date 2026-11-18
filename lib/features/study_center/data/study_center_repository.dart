@@ -122,6 +122,52 @@ class StudyCenterRepository {
     );
   }
 
+  // ── 月考讲评 ─────────────────────────────────────────────────────────
+
+  static String _critique(String prefix, String examId, String subjectId) =>
+      '$prefix/exams/${_seg(examId)}/subjects/${_seg(subjectId)}/critique';
+
+  /// 教职端：这一科的全部卷子、档位、已有的讲评和能不能修改。
+  Future<ApiResponse> staffCritique(String examId, String subjectId) =>
+      client.get(_critique('/school/teacher', examId, subjectId));
+
+  /// 保存一张卷子的讲评（按 archiveId + shared 新增或覆盖），返回整份讲评。
+  Future<ApiResponse> saveCritiquePaper(
+    String examId,
+    String subjectId,
+    Map<String, dynamic> body,
+  ) => client.post(
+    '${_critique('/school/teacher', examId, subjectId)}/papers',
+    data: body,
+  );
+
+  Future<ApiResponse> deleteCritiquePaper(
+    String examId,
+    String subjectId, {
+    required String archiveId,
+    required bool shared,
+  }) => client.post(
+    '${_critique('/school/teacher', examId, subjectId)}/papers/delete',
+    data: <String, dynamic>{'archiveId': archiveId, 'shared': shared},
+  );
+
+  Future<ApiResponse> publishCritique(
+    String examId,
+    String subjectId, {
+    required bool published,
+    bool showNames = false,
+  }) => client.post(
+    '${_critique('/school/teacher', examId, subjectId)}/publish',
+    data: <String, dynamic>{'published': published, 'showNames': showNames},
+  );
+
+  /// 学生端：已发布的讲评（代表卷 + 本人的个人点评）。
+  Future<ApiResponse> studentCritique(String examId, String subjectId) =>
+      client.get(_critique('/app/study', examId, subjectId));
+
+  Future<ApiResponse> markCritiqueRead(String examId, String subjectId) =>
+      client.post('${_critique('/app/study', examId, subjectId)}/read');
+
   /// [subject]：`TOTAL` 或科目名称。
   Future<ApiResponse> studentCurve({
     required String archiveId,

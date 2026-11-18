@@ -47,6 +47,7 @@ class _StudentReportViewState extends ConsumerState<StudentReportView> {
     final action = widget.initialAction;
     if (_initialActionScheduled ||
         (action != StudyCenterInitialView.paper &&
+            action != StudyCenterInitialView.critique &&
             action != StudyCenterInitialView.standard)) {
       return;
     }
@@ -61,7 +62,18 @@ class _StudentReportViewState extends ConsumerState<StudentReportView> {
         return;
       }
       final requested = exam.subjectById(widget.initialSubjectId);
-      if (action == StudyCenterInitialView.paper) {
+      if (action == StudyCenterInitialView.critique) {
+        final target = requested != null && requested.critiqueAvailable
+            ? requested
+            : subjects.where((s) => s.critiqueAvailable).firstOrNull;
+        // 讲评撤回了或还没发布时，按原卷打开同一科。
+        openStudyPaperViewer(
+          context,
+          exam: exam,
+          subjectId: (target ?? requested ?? subjects.first).subjectId,
+          critique: target != null,
+        );
+      } else if (action == StudyCenterInitialView.paper) {
         final target =
             requested ??
             subjects.where((s) => s.paperAvailable).firstOrNull ??
@@ -210,7 +222,16 @@ class _ReportBody extends StatelessWidget {
           note: '共 ${exam.subjects.length} 科 · 点一科查看原卷',
           trailing: exam.subjects.isEmpty
               ? null
-              : AppPlainButton(label: '评分标准', onTap: onOpenStandard),
+              : StudySubjectActions(
+                  exam: exam,
+                  onOpenCritique: (subject) => openStudyPaperViewer(
+                    context,
+                    exam: exam,
+                    subjectId: subject.subjectId,
+                    critique: true,
+                  ),
+                  onOpenStandard: onOpenStandard,
+                ),
         ),
         StudentSubjectTable(exam: exam, onOpenPaper: onOpenPaper, full: true),
         if (report.interpretations.isNotEmpty) ...[

@@ -201,7 +201,7 @@ class TodayStep {
 
   final String id;
 
-  /// lesson / homework / revise / practice / reading / dorm / review / lead /
+  /// lesson / homework / revise / practice / reading / critique / dorm / review / lead /
   /// approval / supervise / follow / message / patrol / punch / note / custom。
   final String kind;
   final String title;

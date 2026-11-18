@@ -6,6 +6,7 @@ import 'content_registry.dart';
 import 'creative_hub_fixtures.dart';
 import 'interaction_registry.dart';
 import 'marking_artwork_fixtures.dart';
+import 'marking_critique_fixtures.dart';
 import 'marking_gallery_fixtures.dart';
 import 'marking_study_fixtures.dart';
 import 'platform_core_fixtures.dart';
@@ -28,6 +29,7 @@ void registerDemoFixtures() {
   registerTodayFixtures(platform);
 
   registerMarkingStudyFixtures(marking);
+  registerMarkingCritiqueFixtures(marking);
   registerMarkingArtworkFixtures(marking);
   registerMarkingGalleryFixtures(marking);
   registerTeachingOverviewFixtures(marking);

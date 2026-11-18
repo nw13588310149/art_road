@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/demo_exam_critique_store.dart';
 import '../data/demo_marking_data.dart';
 import '../demo_backend.dart';
 import '../media/demo_media.dart';
@@ -534,6 +535,13 @@ Map<String, dynamic> _subjectRecord(
   for (final band in DemoMarkingData.bandsFor(def)) {
     if (band.grade == grade) description = band.description;
   }
+  final critique = score == null
+      ? (available: false, unread: false)
+      : DemoExamCritiqueStore.flagsFor(
+          entry.exam.examId,
+          def.subjectId,
+          entry.person.index,
+        );
   return <String, dynamic>{
     'subjectId': def.subjectId,
     'subjectName': def.subjectName,
@@ -548,6 +556,8 @@ Map<String, dynamic> _subjectRecord(
         : _round(score.score - before.score, 1),
     'scoreRate': score == null ? null : _round(score.score / def.fullScore, 4),
     'paperAvailable': score != null && score.result.judges.isNotEmpty,
+    'critiqueAvailable': critique.available,
+    'critiqueUnread': critique.unread,
   };
 }
 

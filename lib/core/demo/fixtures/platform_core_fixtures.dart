@@ -239,7 +239,7 @@ List<Map<String, dynamic>> _seedNotices(DemoAccount account) {
         2,
         _targetStudy,
         student
-            ? '【学情】9 月月考的原卷与评分标准已上线，可在「学情」查看各科原卷和档位说明。'
+            ? '【学情】9 月月考的原卷与评分标准已上线，色彩讲评也已发布，可在「学情」查看。'
             : role == DemoRole.principal
             ? '【学情】9 月月考的原卷已全部上线，可在「全校学情」查看分数分布与校区对比。'
             : '【学情】9 月月考的原卷已全部上线，可在「班级学情」查看分数分布与校区对比。',

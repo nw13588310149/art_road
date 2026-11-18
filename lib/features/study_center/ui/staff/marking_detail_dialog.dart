@@ -5,11 +5,14 @@ import '../../../../core/art/art_tokens.dart';
 import '../../../../core/network/media_url.dart';
 import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/image_gallery_viewer.dart';
+import '../../data/exam_critique_models.dart';
 import '../../data/study_logic.dart';
 import '../../data/study_models.dart';
+import '../../state/exam_critique_controller.dart';
 import '../../state/study_detail_providers.dart';
 import '../widgets/grade_band_table.dart';
 import '../widgets/study_common.dart';
+import 'exam_critique_workspace.dart';
 
 /// 教职端单科阅卷明细：各位老师的分数 / 档位 / 评语与计分过程。
 Future<void> showMarkingDetailDialog(
@@ -53,10 +56,21 @@ class MarkingDetailDialog extends ConsumerWidget {
     );
     final review = ref.watch(staffMarkingReviewProvider(key));
     final who = studentName.isEmpty ? '' : '$studentName · ';
+    final hasPaper = review.valueOrNull?.paperUrl.isNotEmpty ?? false;
     return AppDialog(
       title: '$who${subject.subjectName}阅卷明细',
       message: '每位老师独立评阅 · 仅供机构内部查阅',
       width: 720,
+      showClose: true,
+      fillActions: false,
+      actions: [
+        if (hasPaper)
+          _PersonalCritiqueAction(
+            archiveId: archiveId,
+            examId: examId,
+            subjectId: subject.subjectId,
+          ),
+      ],
       child: review.when(
         loading: () => const SizedBox(
           height: 280,
@@ -75,6 +89,48 @@ class MarkingDetailDialog extends ConsumerWidget {
           subjectName: subject.subjectName,
         ),
       ),
+    );
+  }
+}
+
+/// 阅卷明细底部：给这位学生的这份原卷录个人讲评，已经录过时打开它。
+class _PersonalCritiqueAction extends ConsumerWidget {
+  const _PersonalCritiqueAction({
+    required this.archiveId,
+    required this.examId,
+    required this.subjectId,
+  });
+
+  final String archiveId;
+  final String examId;
+  final String subjectId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final key = StudySubjectKey(examId: examId, subjectId: subjectId);
+    final board = ref.watch(staffCritiqueSummaryProvider(key)).valueOrNull;
+    if (board == null) {
+      return const SizedBox.shrink();
+    }
+    final personal = board.paper(critiquePaperKey(archiveId, shared: false));
+    if (personal == null && !board.canEdit) {
+      return const SizedBox.shrink();
+    }
+    return AppButton(
+      label: personal == null
+          ? '给这份原卷录讲评'
+          : (board.canEdit ? '修改个人讲评' : '查看个人讲评'),
+      variant: AppButtonVariant.secondary,
+      icon: Icons.record_voice_over_outlined,
+      onTap: () async {
+        await openExamCritiqueWorkspace(
+          context,
+          examId: examId,
+          subjectId: subjectId,
+          personalArchiveId: archiveId,
+        );
+        ref.invalidate(staffCritiqueSummaryProvider(key));
+      },
     );
   }
 }

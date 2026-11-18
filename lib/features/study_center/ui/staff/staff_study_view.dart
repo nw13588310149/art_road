@@ -12,6 +12,7 @@ import '../../state/study_report_controller.dart';
 import '../growth/study_growth_view.dart';
 import '../report/study_report_view.dart';
 import '../widgets/study_common.dart';
+import 'staff_critique_entry.dart';
 import 'staff_exam_selector.dart';
 import 'staff_score_charts.dart';
 import 'staff_student_list.dart';
@@ -244,9 +245,24 @@ class _StaffBody extends StatelessWidget {
                   value: subjectName,
                   onChanged: controller.selectSubject,
                 ),
-                child: state.rowsLoading && rows.isEmpty
-                    ? const AppSkeleton(height: 72, radius: AppRadius.card)
-                    : StaffStatTiles(summary: summary, fullScore: fullScore),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    state.rowsLoading && rows.isEmpty
+                        ? const AppSkeleton(height: 72, radius: AppRadius.card)
+                        : StaffStatTiles(summary: summary, fullScore: fullScore),
+                    if (subject != null) ...[
+                      const SizedBox(height: AppSpace.s16),
+                      StaffCritiqueEntry(
+                        key: ValueKey<String>(
+                          'critique-entry-${exam.examId}-${subject.subjectId}',
+                        ),
+                        examId: exam.examId,
+                        subjectId: subject.subjectId,
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),

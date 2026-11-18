@@ -236,7 +236,45 @@ class StudyScoreCell extends StatelessWidget {
   }
 }
 
-/// 各科成绩：整行可点，打开这一科的原卷。
+/// 各科成绩分区标题右边的操作：有讲评时先是「听讲评」，然后是「评分标准」。
+class StudySubjectActions extends StatelessWidget {
+  const StudySubjectActions({
+    required this.exam,
+    required this.onOpenCritique,
+    required this.onOpenStandard,
+    super.key,
+  });
+
+  final StudyExamRecord exam;
+  final ValueChanged<StudySubjectRecord> onOpenCritique;
+  final VoidCallback onOpenStandard;
+
+  /// 先打开还没听过的那一科。
+  static StudySubjectRecord? critiqueSubject(StudyExamRecord exam) =>
+      exam.subjects.where((s) => s.critiqueUnread).firstOrNull ??
+      exam.subjects.where((s) => s.critiqueAvailable).firstOrNull;
+
+  @override
+  Widget build(BuildContext context) {
+    final critique = critiqueSubject(exam);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (critique != null)
+          AppPlainButton(
+            label: '听讲评',
+            icon: Icons.record_voice_over_outlined,
+            semanticLabel: '听${critique.subjectName}讲评',
+            onTap: () => onOpenCritique(critique),
+          ),
+        AppPlainButton(label: '评分标准', onTap: onOpenStandard),
+      ],
+    );
+  }
+}
+
+/// 各科成绩：整行可点，打开这一科的原卷。老师发布了讲评的科目，科目名后面跟一个
+/// 「讲评」标记（没听过时写「讲评 · 新」）；讲评从分区标题右边的「听讲评」进。
 ///
 /// 总览用五列（科目、档位、成绩、科目排名、较上次）；完整报告 [full] 再加上得分率和
 /// 校区排名。
@@ -282,7 +320,9 @@ class StudentSubjectTable extends StatelessWidget {
       rows: [
         for (final subject in subjects)
           AppTableRow([
-            subject.subjectName,
+            subject.critiqueAvailable
+                ? _SubjectWithCritique(subject: subject)
+                : subject.subjectName,
             subject.hasScore
                 ? (subject.grade.isEmpty ? '—' : '${subject.grade} 档')
                 : '待出分',
@@ -302,6 +342,33 @@ class StudentSubjectTable extends StatelessWidget {
 
   static String _rateText(double? rate) =>
       rate == null ? '—' : '${(rate * 100).round()}%';
+}
+
+class _SubjectWithCritique extends StatelessWidget {
+  const _SubjectWithCritique({required this.subject});
+
+  final StudySubjectRecord subject;
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = subject.critiqueUnread;
+    return Semantics(
+      label: '${subject.subjectName}，有老师讲评${unread ? '，还没听' : ''}',
+      excludeSemantics: true,
+      child: Wrap(
+        spacing: AppSpace.s8,
+        runSpacing: 2,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(subject.subjectName, style: AppText.body14),
+          AppStatusTag(
+            label: unread ? '讲评 · 新' : '讲评',
+            color: unread ? AppColors.brandDeep : AppColors.textTertiary,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// 表现解读：每条前面一个「优势 / 待提升」的状态标记。

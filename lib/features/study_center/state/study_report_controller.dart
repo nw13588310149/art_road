@@ -101,6 +101,23 @@ class StudyReportController extends StateNotifier<StudyReportState> {
     );
   }
 
+  /// 学生打开过某一科的讲评：各科成绩表上的「新」不再显示，不必重新读取报告。
+  void markCritiqueRead(String subjectId) {
+    final report = state.report;
+    if (report == null ||
+        !report.subjects.any(
+          (s) => s.subjectId == subjectId && s.critiqueUnread,
+        )) {
+      return;
+    }
+    state = state.copyWith(
+      report: report.withSubjects([
+        for (final subject in report.subjects)
+          subject.subjectId == subjectId ? subject.critiqueRead() : subject,
+      ]),
+    );
+  }
+
   void clearError() {
     state = state.copyWith(errorMessage: '');
   }

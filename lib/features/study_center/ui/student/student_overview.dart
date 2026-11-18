@@ -171,9 +171,15 @@ class _OverviewMain extends StatelessWidget {
             note: '点一科查看原卷',
             trailing: current.subjects.isEmpty
                 ? null
-                : AppPlainButton(
-                    label: '评分标准',
-                    onTap: () => showStudyGradeStandard(
+                : StudySubjectActions(
+                    exam: current,
+                    onOpenCritique: (subject) => openStudyPaperViewer(
+                      context,
+                      exam: current,
+                      subjectId: subject.subjectId,
+                      critique: true,
+                    ),
+                    onOpenStandard: () => showStudyGradeStandard(
                       context,
                       examId: current.examId,
                       subject: current.subjects.first,

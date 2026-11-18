@@ -9,15 +9,20 @@ import '../../data/study_models.dart';
 import '../../state/study_detail_providers.dart';
 import '../standard/grade_standard_dialog.dart';
 import 'study_paper_compare.dart';
+import 'study_paper_critique.dart';
 import 'study_paper_panel.dart';
 import 'study_paper_watermark.dart';
 
-/// 全屏查看原卷：科目切换、缩放、水印、A 档样图对照。
+/// 原卷查看的三种模式：原卷、老师讲评（这一科发布了讲评时才有）、对照样图。
+enum StudyPaperMode { paper, critique, compare }
+
+/// 全屏查看原卷：科目切换、缩放、水印、老师讲评、A 档样图对照。
 Future<void> openStudyPaperViewer(
   BuildContext context, {
   required StudyExamRecord exam,
   String subjectId = '',
   bool compare = false,
+  bool critique = false,
 }) {
   return Navigator.of(context).push<void>(
     MaterialPageRoute<void>(
@@ -25,7 +30,9 @@ Future<void> openStudyPaperViewer(
       builder: (_) => StudyPaperViewerPage(
         exam: exam,
         initialSubjectId: subjectId,
-        initialCompare: compare,
+        initialMode: compare
+            ? StudyPaperMode.compare
+            : (critique ? StudyPaperMode.critique : StudyPaperMode.paper),
       ),
     ),
   );
@@ -37,13 +44,13 @@ class StudyPaperViewerPage extends ConsumerStatefulWidget {
   const StudyPaperViewerPage({
     required this.exam,
     this.initialSubjectId = '',
-    this.initialCompare = false,
+    this.initialMode = StudyPaperMode.paper,
     super.key,
   });
 
   final StudyExamRecord exam;
   final String initialSubjectId;
-  final bool initialCompare;
+  final StudyPaperMode initialMode;
 
   @override
   ConsumerState<StudyPaperViewerPage> createState() =>
@@ -52,7 +59,7 @@ class StudyPaperViewerPage extends ConsumerStatefulWidget {
 
 class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
   late String _subjectId;
-  late bool _compare;
+  late StudyPaperMode _mode;
   final _compareView = AppCompareController(
     modes: const [AppCompareMode.sideBySide],
   );
@@ -61,12 +68,16 @@ class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
   void initState() {
     super.initState();
     final subjects = widget.exam.subjects;
+    final critique = widget.initialMode == StudyPaperMode.critique;
     _subjectId =
         widget.exam.subjectById(widget.initialSubjectId)?.subjectId ??
+        (critique
+            ? subjects.where((s) => s.critiqueAvailable).firstOrNull?.subjectId
+            : null) ??
         subjects.where((s) => s.paperAvailable).firstOrNull?.subjectId ??
         subjects.firstOrNull?.subjectId ??
         '';
-    _compare = widget.initialCompare;
+    _mode = _modeFor(_subjectId, widget.initialMode);
   }
 
   @override
@@ -74,6 +85,13 @@ class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
     _compareView.dispose();
     super.dispose();
   }
+
+  /// 换到没有讲评的科目时，讲评模式退回原卷。
+  StudyPaperMode _modeFor(String subjectId, StudyPaperMode wanted) =>
+      wanted == StudyPaperMode.critique &&
+          !(widget.exam.subjectById(subjectId)?.critiqueAvailable ?? false)
+      ? StudyPaperMode.paper
+      : wanted;
 
   StudySubjectKey get _key =>
       StudySubjectKey(examId: widget.exam.examId, subjectId: _subjectId);
@@ -94,7 +112,17 @@ class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
         text: '这场考试暂无可查看的科目',
         dark: false,
       );
-    } else if (_compare) {
+    } else if (_mode == StudyPaperMode.critique) {
+      body = AppPageBody(
+        scrollable: false,
+        builder: (context, wide) => StudyPaperCritiqueView(
+          key: ValueKey<String>('critique-${subject.subjectId}'),
+          examId: exam.examId,
+          subjectId: subject.subjectId,
+          wide: wide,
+        ),
+      );
+    } else if (_mode == StudyPaperMode.compare) {
       body = AppPageBody(
         scrollable: false,
         builder: (context, wide) => StudyPaperCompareView(
@@ -137,12 +165,16 @@ class _StudyPaperViewerPageState extends ConsumerState<StudyPaperViewerPage> {
             _ViewerTopBar(
               exam: exam,
               subjectId: _subjectId,
-              compare: _compare,
+              mode: _mode,
+              critiqueAvailable: subject?.critiqueAvailable ?? false,
               onSubjectChanged: (id) {
                 _compareView.reset();
-                setState(() => _subjectId = id);
+                setState(() {
+                  _subjectId = id;
+                  _mode = _modeFor(id, _mode);
+                });
               },
-              onCompareChanged: (value) => setState(() => _compare = value),
+              onModeChanged: (value) => setState(() => _mode = value),
               onOpenStandard: subject == null
                   ? null
                   : () => showStudyGradeStandard(
@@ -165,17 +197,19 @@ class _ViewerTopBar extends StatelessWidget {
   const _ViewerTopBar({
     required this.exam,
     required this.subjectId,
-    required this.compare,
+    required this.mode,
+    required this.critiqueAvailable,
     required this.onSubjectChanged,
-    required this.onCompareChanged,
+    required this.onModeChanged,
     required this.onOpenStandard,
   });
 
   final StudyExamRecord exam;
   final String subjectId;
-  final bool compare;
+  final StudyPaperMode mode;
+  final bool critiqueAvailable;
   final ValueChanged<String> onSubjectChanged;
-  final ValueChanged<bool> onCompareChanged;
+  final ValueChanged<StudyPaperMode> onModeChanged;
   final VoidCallback? onOpenStandard;
 
   @override
@@ -203,14 +237,16 @@ class _ViewerTopBar extends StatelessWidget {
               )
             : null,
         actions: [
-          AppViewTabs<bool>(
+          AppViewTabs<StudyPaperMode>(
             dense: true,
-            items: const [
-              AppViewTab(value: false, label: '原卷'),
-              AppViewTab(value: true, label: '对照样图'),
+            items: [
+              const AppViewTab(value: StudyPaperMode.paper, label: '原卷'),
+              if (critiqueAvailable)
+                const AppViewTab(value: StudyPaperMode.critique, label: '讲评'),
+              const AppViewTab(value: StudyPaperMode.compare, label: '对照样图'),
             ],
-            value: compare,
-            onChanged: onCompareChanged,
+            value: mode,
+            onChanged: onModeChanged,
           ),
           const SizedBox(width: AppSpace.s16),
           AppPlainButton(

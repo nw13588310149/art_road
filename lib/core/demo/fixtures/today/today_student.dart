@@ -47,6 +47,7 @@ Future<Json> buildStudentToday(TodayContext ctx) async {
   final steps = <Json>[
     ..._lessons(ctx),
     ..._dormSteps(ctx, dormRecords, config),
+    ...await _critiqueSteps(ctx, exam),
     ..._taskSteps(ctx, tasks),
     ...await _reviseStep(ctx, works),
     ..._practiceSteps(insights, weakest),
@@ -324,6 +325,67 @@ List<Json> _dormSteps(TodayContext ctx, List<Json> records, List<Json> config) {
     if (morning.isNotEmpty) step('dorm:morning', '晨查寝', '晨查寝打卡', morning),
     if (evening.isNotEmpty) step('dorm:evening', '晚查寝', '晚查寝打卡', evening),
   ];
+}
+
+/// 最近一次月考里老师发布了讲评、还没听的科目，各一件「听讲评」。今天听过的显示为
+/// 已完成；今天之前就听过的不再出现。
+Future<List<Json>> _critiqueSteps(TodayContext ctx, Json exam) async {
+  final examId = todayText(exam['examId']);
+  if (examId.isEmpty) return const <Json>[];
+  final examName = todayText(
+    exam['examName'],
+  ).replaceFirst(RegExp(r'^\d{4}\s*年\s*'), '');
+  final steps = <Json>[];
+  for (final subject in todayRows(exam['subjects'])) {
+    if (subject['critiqueAvailable'] != true) continue;
+    final subjectId = todayText(subject['subjectId']);
+    final unread = subject['critiqueUnread'] == true;
+    final id = 'critique:$examId:$subjectId';
+    if (ctx.baseline(id, unread ? 1 : 0) == 0) continue;
+    final critique = todayMap(
+      await ctx.marking(
+        '/app/study/exams/${Uri.encodeComponent(examId)}'
+        '/subjects/${Uri.encodeComponent(subjectId)}/critique',
+      ),
+    );
+    final papers = todayRows(critique['papers']);
+    final shared = papers.where((p) => p['shared'] == true).length;
+    final mine = papers.any((p) => p['mine'] == true);
+    final teacher = todayText(critique['teacherName']);
+    final name = todayText(subject['subjectName']);
+    steps.add(
+      todayStep(
+        id: id,
+        kind: 'critique',
+        title: '听讲评：$examName $name',
+        detail: unread
+            ? [
+                if (teacher.isNotEmpty) '$teacher老师',
+                if (shared > 0) '讲评了 $shared 张代表卷',
+                if (mine) '还看了你的原卷',
+              ].join('，')
+            : '已经听过，可以随时回看',
+        slot: 'anytime',
+        status: unread ? 'todo' : 'done',
+        required: false,
+        minutes: 15,
+        tag: mine && unread ? '有你的原卷' : '',
+        subject: name,
+        source: teacher.isEmpty ? '月考讲评' : '$teacher老师的月考讲评',
+        guide: [
+          if (mine) '先看「我的原卷」上老师标出的几处，点编号听这一处的讲评。',
+          '再对照「我这一档」和「上一档」的代表卷，看差距在哪里。',
+          '把要改的地方记到笔记里，下次作画时注意。',
+        ],
+        action: actionRoute('听讲评', '/study', {
+          'examId': examId,
+          'view': 'critique',
+          'subjectId': subjectId,
+        }),
+      ),
+    );
+  }
+  return steps;
 }
 
 /// 老师布置的作品：没交的排在前面，今天到期、已经交了的也列出来。

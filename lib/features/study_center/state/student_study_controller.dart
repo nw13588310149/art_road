@@ -139,10 +139,12 @@ class StudentStudyController extends StateNotifier<StudentStudyState> {
   int _examsSerial = 0;
 
   static StudyCenterInitialView? _detailAction(StudyCenterArgs args) =>
-      args.view == StudyCenterInitialView.paper ||
-          args.view == StudyCenterInitialView.standard
-      ? args.view
-      : null;
+      switch (args.view) {
+        StudyCenterInitialView.paper ||
+        StudyCenterInitialView.critique ||
+        StudyCenterInitialView.standard => args.view,
+        _ => null,
+      };
 
   static StudentStudyState _initialState(StudyCenterArgs args) {
     if (args.view == StudyCenterInitialView.artworkGrowth) {

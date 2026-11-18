@@ -99,6 +99,7 @@ IconData todayStepIcon(String kind) => switch (kind) {
   'revise' => Icons.auto_fix_high_outlined,
   'practice' => Icons.timer_outlined,
   'reading' => Icons.menu_book_outlined,
+  'critique' => Icons.record_voice_over_outlined,
   'dorm' => Icons.bedtime_outlined,
   'review' => Icons.rate_review_outlined,
   'lead' => Icons.fact_check_outlined,
@@ -115,7 +116,8 @@ IconData todayStepIcon(String kind) => switch (kind) {
 /// 一件事的图标色调：上课紫，作品与点评粉，练习与沟通青，查寝与巡查琥珀，其余蓝。
 TodayTint todayStepTint(String kind) => switch (kind) {
   'lesson' => TodayTint.purple,
-  'homework' || 'revise' || 'review' || 'lead' => TodayTint.pink,
+  'homework' || 'revise' || 'review' || 'lead' || 'critique' =>
+    TodayTint.pink,
   'approval' || 'supervise' => TodayTint.pink,
   'practice' || 'follow' || 'message' => TodayTint.teal,
   'dorm' || 'patrol' || 'punch' => TodayTint.amber,
@@ -129,6 +131,7 @@ String todayStepKindLabel(String kind) => switch (kind) {
   'revise' => '改画',
   'practice' => '练习',
   'reading' => '阅读',
+  'critique' => '讲评',
   'dorm' => '查寝',
   'review' => '点评',
   'lead' => '复核',
