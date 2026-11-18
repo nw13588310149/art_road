@@ -104,7 +104,11 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
 
   @override
   Widget build(BuildContext context) {
-    return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
+    return ImageToolLayout(
+      stage: _buildStage,
+      panel: _buildPanel,
+      hint: '点击画面任意位置取色，双指放大可精确取色',
+    );
   }
 
   Widget _buildStage(BuildContext context) {
@@ -149,7 +153,6 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
               ),
             ),
           ),
-          if (_picked == null) const StageHint('点击画面任意位置取色，双指放大可精确取色'),
         ],
       ),
     );
@@ -206,10 +209,7 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
         ToolPanelSection(
           title: '取色结果',
           child: color == null
-              ? const ToolInfoBlock(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 27),
-                  child: Center(child: ToolNote('点击画面取色')),
-                )
+              ? Text('还没有取色。点击画面任意位置，这里显示颜色的数值和冷暖。', style: AppText.body13)
               : _PickedColorCard(
                   color: color,
                   position: _picked!,
@@ -217,21 +217,8 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
                 ),
         ),
         ToolPanelSection(
-          title: '配色色环',
-          trailing: Text(color == null ? '以面积最大的主色为基色' : '以取到的颜色为基色'),
-          child: base == null
-              ? const AppSkeleton(height: 180, radius: AppRadius.control)
-              : _HarmonySection(
-                  base: base,
-                  scheme: _scheme,
-                  wheel: _wheel,
-                  onScheme: (v) => setState(() => _scheme = v),
-                  onWheel: (v) => setState(() => _wheel = v),
-                ),
-        ),
-        ToolPanelSection(
           title: '画面主色',
-          trailing: const Text('点击复制 HEX'),
+          note: '点击复制 HEX',
           child: _paletteFailed
               ? AppErrorState(
                   title: '主色提取失败',
@@ -247,6 +234,19 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
                   icon: Icons.palette_outlined,
                 )
               : _PaletteView(palette: palette),
+        ),
+        ToolPanelSection(
+          title: '配色色环',
+          note: color == null ? '以面积最大的主色为基色' : '以取到的颜色为基色',
+          child: base == null
+              ? const AppSkeleton(height: 180, radius: AppRadius.control)
+              : _HarmonySection(
+                  base: base,
+                  scheme: _scheme,
+                  wheel: _wheel,
+                  onScheme: (v) => setState(() => _scheme = v),
+                  onWheel: (v) => setState(() => _wheel = v),
+                ),
         ),
         const ToolTipCard(
           title: '用色卡读懂画面',

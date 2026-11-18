@@ -116,6 +116,22 @@ class _Shot {
 TeachingRequest _report(TeachingReport report) =>
     (report: report, campus: '', parameter: '');
 
+// 工具箱镜头预先载入的画。
+const _art = 'http://127.0.0.1/a/assets/demo/art';
+const _bustImage = {'imageUrl': '$_art/sketch-bust-1.jpg', 'title': '大卫石膏像'};
+const _bust = {'tool': 'value', ..._bustImage};
+const _still = {'imageUrl': '$_art/color-still-1.jpg', 'title': '暖调静物'};
+const _flower = {
+  'tool': 'color',
+  'imageUrl': '$_art/color-flower-1.jpg',
+  'title': '花卉静物',
+};
+const _landscape = {
+  'tool': 'grid',
+  'imageUrl': '$_art/color-landscape-1.jpg',
+  'title': '秋日风景',
+};
+
 final _shots = <_Shot>[
   // 今日
   const _Shot('today', '/today', roles: _everyone),
@@ -386,19 +402,105 @@ final _shots = <_Shot>[
   ),
   const _Shot('artwork-excellent', '/artworks/excellent'),
 
-  // 画室工具箱
-  const _Shot('toolbox', '/toolbox'),
-  const _Shot('toolbox-practice', '/toolbox', steps: ['练习训练']),
-  const _Shot('toolbox-exam', '/toolbox', steps: ['备考助手']),
-  const _Shot('tool-value', '/toolbox', steps: ['明度检查', '大卫石膏像']),
-  const _Shot('tool-color', '/toolbox', steps: ['取色', '花卉静物']),
-  const _Shot('tool-grid', '/toolbox', steps: ['构图网格', '秋日风景']),
-  const _Shot('tool-sketch', '/toolbox', steps: ['练习训练', '速写计时']),
-  const _Shot('tool-figure', '/toolbox', steps: ['练习训练', '人体比例参考']),
-  const _Shot('tool-value-order', '/toolbox', steps: ['练习训练', '明度排序训练']),
-  const _Shot('tool-countdown', '/toolbox', steps: ['备考助手', '考试倒计时']),
-  const _Shot('tool-score', '/toolbox', steps: ['备考助手', '综合分计算器']),
-  const _Shot('tool-checklist', '/toolbox', steps: ['备考助手', '考场物品清单']),
+  // 画室工具箱。图片类工具用路由参数直达并预先载入一张打包的画（imageUrl 的
+  // `/a/assets/...` 会直接读资源），前后两次渲染的输入完全相同。画布上的点击用
+  // `scroll:0@x,y`（原地按下抬起）。
+  const _Shot('toolbox', '/toolbox', roles: ['student', 'teacher']),
+  const _Shot('toolbox-image', '/toolbox', steps: ['大卫石膏像', 'scroll:-600']),
+  const _Shot('tool-source', '/toolbox', args: {'tool': 'value'}),
+  const _Shot('tool-value', '/toolbox', args: _bust),
+  const _Shot('tool-value-notan', '/toolbox', args: _bust, steps: ['=剪影']),
+  const _Shot('tool-blur', '/toolbox', args: {..._still, 'tool': 'blur'}),
+  const _Shot(
+    'tool-simplify',
+    '/toolbox',
+    args: {..._still, 'tool': 'simplify'},
+  ),
+  const _Shot(
+    'tool-temperature',
+    '/toolbox',
+    args: {..._still, 'tool': 'temperature'},
+  ),
+  const _Shot('tool-edges', '/toolbox', args: {..._bustImage, 'tool': 'edges'}),
+  const _Shot(
+    'tool-mirror',
+    '/toolbox',
+    args: {..._bustImage, 'tool': 'mirror'},
+    steps: ['左右镜像'],
+  ),
+  const _Shot('tool-color', '/toolbox', args: _flower),
+  const _Shot(
+    'tool-color-picked',
+    '/toolbox',
+    args: _flower,
+    steps: ['scroll:0@430,400'],
+  ),
+  const _Shot(
+    'tool-measure',
+    '/toolbox',
+    args: {..._bustImage, 'tool': 'measure'},
+    steps: [
+      'scroll:0@440,250',
+      'scroll:0@440,380',
+      'scroll:0@380,420',
+      'scroll:0@500,420',
+    ],
+  ),
+  const _Shot('tool-grid', '/toolbox', args: _landscape),
+  const _Shot(
+    'tool-grid-set',
+    '/toolbox',
+    args: _landscape,
+    steps: ['三分法', '八开'],
+  ),
+  const _Shot(
+    'tool-perspective',
+    '/toolbox',
+    args: {
+      'tool': 'perspective',
+      'imageUrl': '$_art/sketch-geometry-1.jpg',
+      'title': '石膏几何体',
+    },
+  ),
+  const _Shot(
+    'tool-portrait',
+    '/toolbox',
+    args: {
+      'tool': 'portrait',
+      'imageUrl': '$_art/sketch-portrait-1.jpg',
+      'title': '素描头像',
+    },
+  ),
+  const _Shot('tool-sketch', '/toolbox', args: {'tool': 'quickSketch'}),
+  const _Shot(
+    'tool-sketch-running',
+    '/toolbox',
+    args: {'tool': 'quickSketch'},
+    steps: ['开始练习'],
+  ),
+  const _Shot(
+    'tool-sketch-review',
+    '/toolbox',
+    args: {'tool': 'quickSketch'},
+    steps: ['开始练习', 'wait:1500', '=跳过', '=结束'],
+  ),
+  const _Shot('tool-figure', '/toolbox', args: {'tool': 'figure'}),
+  const _Shot('tool-value-order', '/toolbox', args: {'tool': 'valueOrder'}),
+  const _Shot(
+    'tool-value-order-check',
+    '/toolbox',
+    args: {'tool': 'valueOrder'},
+    steps: ['检查顺序'],
+  ),
+  const _Shot('tool-countdown', '/toolbox', args: {'tool': 'countdown'}),
+  const _Shot('tool-score', '/toolbox', args: {'tool': 'score'}),
+  const _Shot('tool-checklist', '/toolbox', args: {'tool': 'checklist'}),
+  const _Shot(
+    'tool-checklist-checked',
+    '/toolbox',
+    args: {'tool': 'checklist'},
+    steps: ['=准考证', '=身份证', '=炭笔', '=可塑橡皮', 'scroll:-600'],
+  ),
 
   // 保留页面，只作对照，不改
   const _Shot('ref-home', '/', roles: ['student', 'teacher']),

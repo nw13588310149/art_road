@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../../core/ui/ui.dart';
-import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/geometry.dart';
@@ -119,67 +118,55 @@ class _GridBodyState extends State<_GridBody> {
 
   @override
   Widget build(BuildContext context) {
-    return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
+    return ImageToolLayout(
+      stage: _buildStage,
+      panel: _buildPanel,
+      hint: '双指缩放看细节 · 选画纸比例预览裁切范围',
+      canvasActions: [
+        AppPlainButton(
+          label: '复位缩放',
+          icon: Icons.zoom_out_map_rounded,
+          onTap: () => _transform.value = Matrix4.identity(),
+        ),
+      ],
+    );
   }
 
   Widget _buildStage(BuildContext context) {
     final image = widget.image;
-    return ToolStage(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final fitted = applyBoxFit(
-            BoxFit.contain,
-            _imageSize,
-            Size(
-              (constraints.maxWidth - 24).clamp(1.0, double.infinity),
-              (constraints.maxHeight - 24).clamp(1.0, double.infinity),
+    return InteractiveViewer(
+      transformationController: _transform,
+      maxScale: 8,
+      child: LabeledStage(
+        imageSize: _imageSize,
+        label: _stageLabel,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            RawImage(
+              image: image.image,
+              fit: BoxFit.fill,
+              filterQuality: FilterQuality.medium,
             ),
-          ).destination;
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: InteractiveViewer(
-                  transformationController: _transform,
-                  maxScale: 8,
-                  child: Center(
-                    child: SizedBox(
-                      width: fitted.width,
-                      height: fitted.height,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          RawImage(
-                            image: image.image,
-                            fit: BoxFit.fill,
-                            filterQuality: FilterQuality.medium,
-                          ),
-                          CustomPaint(
-                            painter: _GridPainter(
-                              frame: _frame,
-                              cropped: _paper != null,
-                              thirds: _thirds,
-                              golden: _golden,
-                              diagonal: _diagonal,
-                              grid: _gridCount,
-                              squareCells: _grid == _GridMode.custom && _square
-                                  ? _cells
-                                  : null,
-                              labels: _labels && _grid != _GridMode.none,
-                              color: _lineColor.color,
-                              opacity: _opacity,
-                              transform: _transform,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+            CustomPaint(
+              painter: _GridPainter(
+                frame: _frame,
+                cropped: _paper != null,
+                thirds: _thirds,
+                golden: _golden,
+                diagonal: _diagonal,
+                grid: _gridCount,
+                squareCells: _grid == _GridMode.custom && _square
+                    ? _cells
+                    : null,
+                labels: _labels && _grid != _GridMode.none,
+                color: _lineColor.color,
+                opacity: _opacity,
+                transform: _transform,
               ),
-              Positioned(left: 0, top: 0, child: StageLabel(_stageLabel)),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -223,34 +210,9 @@ class _GridBodyState extends State<_GridBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ToolPanelSection(
-          title: '构图线',
-          trailing: const Text('可同时打开'),
-          bottom: AppSpace.s4,
-          child: Column(
-            children: [
-              ToolSwitchRow(
-                label: '三分法',
-                hint: '主体放在交点附近更稳定、不呆板',
-                value: _thirds,
-                onChanged: (v) => setState(() => _thirds = v),
-              ),
-              ToolSwitchRow(
-                label: '黄金分割',
-                hint: '0.382 与 0.618 分割线',
-                value: _golden,
-                onChanged: (v) => setState(() => _golden = v),
-              ),
-              ToolSwitchRow(
-                label: '对角线',
-                hint: '检查主体与动势是否沿对角线展开',
-                value: _diagonal,
-                onChanged: (v) => setState(() => _diagonal = v),
-              ),
-            ],
-          ),
-        ),
-        ToolPanelSection(
           title: '网格',
+          note: '临摹时按格对照起形',
+          bottom: AppSpace.s12,
           child: ToolSegmented<_GridMode>(
             values: _GridMode.values,
             value: _grid,
@@ -303,8 +265,35 @@ class _GridBodyState extends State<_GridBody> {
             value: _labels,
             onChanged: (v) => setState(() => _labels = v),
           ),
-          const SizedBox(height: AppSpace.s4),
         ],
+        const SizedBox(height: AppSpace.s12),
+        ToolPanelSection(
+          title: '构图线',
+          note: '可同时打开',
+          bottom: AppSpace.s12,
+          child: Column(
+            children: [
+              ToolSwitchRow(
+                label: '三分法',
+                hint: '主体放在交点附近更稳定、不呆板',
+                value: _thirds,
+                onChanged: (v) => setState(() => _thirds = v),
+              ),
+              ToolSwitchRow(
+                label: '黄金分割',
+                hint: '0.382 与 0.618 分割线',
+                value: _golden,
+                onChanged: (v) => setState(() => _golden = v),
+              ),
+              ToolSwitchRow(
+                label: '对角线',
+                hint: '检查主体与动势是否沿对角线展开',
+                value: _diagonal,
+                onChanged: (v) => setState(() => _diagonal = v),
+              ),
+            ],
+          ),
+        ),
         ToolPanelSection(
           title: '画纸比例',
           child: Column(
@@ -364,16 +353,7 @@ class _GridBodyState extends State<_GridBody> {
           valueLabel: '${(_opacity * 100).round()}%',
           onChanged: (v) => setState(() => _opacity = v),
         ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: LibraryActionPill(
-            label: '复位缩放',
-            icon: Icons.zoom_out_map_rounded,
-            iconSize: 18,
-            onTap: () => _transform.value = Matrix4.identity(),
-          ),
-        ),
-        const SizedBox(height: AppSpace.s20),
+        const SizedBox(height: AppSpace.s12),
         ToolTipCard(
           title: '网格放大法',
           text:

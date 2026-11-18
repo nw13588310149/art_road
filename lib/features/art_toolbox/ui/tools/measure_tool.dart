@@ -4,9 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
-import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/geometry.dart';
@@ -91,7 +89,25 @@ class _MeasureBodyState extends State<_MeasureBody> {
 
   @override
   Widget build(BuildContext context) {
-    return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
+    return ImageToolLayout(
+      stage: _buildStage,
+      panel: _buildPanel,
+      hint: _points.isEmpty ? '依次点两个点量出 A 段，再点两个点量出 B 段' : '拖动已有的点可以微调位置',
+      canvasActions: [
+        AppPlainButton(
+          label: '撤销一点',
+          icon: Icons.undo_rounded,
+          onTap: _points.isEmpty
+              ? null
+              : () => setState(() => _points.removeLast()),
+        ),
+        AppPlainButton(
+          label: '清空',
+          icon: Icons.delete_outline_rounded,
+          onTap: _points.isEmpty ? null : () => setState(_points.clear),
+        ),
+      ],
+    );
   }
 
   Widget _buildStage(BuildContext context) {
@@ -152,7 +168,6 @@ class _MeasureBodyState extends State<_MeasureBody> {
               ),
             ),
           ),
-          if (_points.isEmpty) const StageHint('依次点两个点量出 A 段，再点两个点量出 B 段'),
         ],
       ),
     );
@@ -168,12 +183,15 @@ class _MeasureBodyState extends State<_MeasureBody> {
       children: [
         ToolPanelSection(
           title: '比例',
-          child: _RatioSummary(segments: segments, pending: _points.length.isOdd),
+          child: _RatioSummary(
+            segments: segments,
+            pending: _points.length.isOdd,
+          ),
         ),
         if (segments.isNotEmpty)
           ToolPanelSection(
             title: '线段',
-            trailing: const Text('以 A 段为 1'),
+            note: '以 A 段为 1',
             child: Column(
               children: [
                 for (var i = 0; i < segments.length; i++)
@@ -198,26 +216,7 @@ class _MeasureBodyState extends State<_MeasureBody> {
           value: _level,
           onChanged: (v) => setState(() => _level = v),
         ),
-        Wrap(
-          spacing: AppSpace.s8,
-          runSpacing: AppSpace.s8,
-          children: [
-            LibraryActionPill(
-              label: '撤销一点',
-              icon: Icons.undo_rounded,
-              iconSize: 18,
-              onTap: _points.isEmpty
-                  ? null
-                  : () => setState(() => _points.removeLast()),
-            ),
-            LibraryActionPill(
-              label: '清空',
-              iconAsset: AppAssets.coursewareActionDelete,
-              onTap: _points.isEmpty ? null : () => setState(_points.clear),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpace.s20),
+        const SizedBox(height: AppSpace.s12),
         const ToolTipCard(
           title: '怎么量',
           text:
@@ -435,7 +434,10 @@ class _MeasurePainter extends CustomPainter {
       height: painter.height + 4,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(bubble, const Radius.circular(AppRadius.checkbox)),
+      RRect.fromRectAndRadius(
+        bubble,
+        const Radius.circular(AppRadius.checkbox),
+      ),
       Paint()..color = color,
     );
     painter.paint(

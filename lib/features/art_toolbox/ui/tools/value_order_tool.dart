@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
-import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/value_order_records.dart';
 import '../../logic/value_order_game.dart';
@@ -140,132 +138,103 @@ class _ValueOrderToolState extends ConsumerState<ValueOrderTool> {
     return ToolPageScaffold(
       tool: ArtTool.valueOrder,
       onBack: widget.onBack,
-      bodyTopInset: 0,
+      caption: '${_game.length} 块 · ${_level.label}',
+      actions: [
+        AppPlainButton(label: '换一组', icon: Icons.refresh_rounded, onTap: _deal),
+        AppButton(
+          label: _solved ? '已完成' : '检查顺序',
+          icon: Icons.check_rounded,
+          onTap: _solved ? null : _check,
+        ),
+      ],
       body: ImageToolLayout(
-        stage: (_) => ToolStage(
-          child: SingleChildScrollView(primary: false, child: _buildGame()),
+        hint: '点两个色块交换位置，或按住一个拖到目标位置；左边放深的，右边放浅的',
+        stage: (_) => Center(
+          child: SingleChildScrollView(
+            primary: false,
+            padding: const EdgeInsets.all(AppSpace.s24),
+            child: _buildGame(),
+          ),
         ),
         panel: (_) => _buildPanel(),
       ),
     );
   }
 
+  /// 画布里的一局：用时、色块、暗到亮的标尺和检查结果。
   Widget _buildGame() {
-    return AppCard(
-      bordered: false,
-      color: Colors.transparent,
-      title: '从暗到亮排列',
-      subtitle: '${_game.length} 块 · ${_level.label}',
-      trailing: ValueListenableBuilder<int>(
-        valueListenable: _elapsed,
-        builder: (context, millis, _) => Text(
-          formatValueOrderTime(millis),
-          style: AppText.displayNumber(
-            size: 20,
-            color: _solved ? AppColors.brand : AppColors.ink,
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Expanded(child: Text('从暗到亮排列', style: AppText.title16)),
+            Text('用时 ', style: AppText.caption12),
+            ValueListenableBuilder<int>(
+              valueListenable: _elapsed,
+              builder: (context, millis, _) => Text(
+                formatValueOrderTime(millis),
+                style: AppText.displayNumber(
+                  size: 24,
+                  color: _solved ? AppColors.brand : AppColors.ink,
+                ),
+              ),
+            ),
+          ],
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('点两个色块交换位置，或按住一个色块拖到目标位置；左边放深的，右边放浅的。', style: AppText.body13),
-          const SizedBox(height: AppSpace.s16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const gap = AppSpace.s8;
-              final width =
-                  (constraints.maxWidth - gap * (_game.length - 1)) /
-                  _game.length;
-              return Row(
-                children: [
-                  for (var i = 0; i < _game.length; i++) ...[
-                    if (i > 0) const SizedBox(width: gap),
-                    _buildSlot(i, width),
-                  ],
+        const SizedBox(height: AppSpace.s16),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = AppSpace.s8;
+            final width =
+                (constraints.maxWidth - gap * (_game.length - 1)) /
+                _game.length;
+            return Row(
+              children: [
+                for (var i = 0; i < _game.length; i++) ...[
+                  if (i > 0) const SizedBox(width: gap),
+                  _buildSlot(i, width),
                 ],
-              );
-            },
-          ),
-          const SizedBox(height: AppSpace.s8),
-          Row(
-            children: [
-              Text('暗', style: AppText.caption12),
-              const SizedBox(width: AppSpace.s8),
-              Expanded(
-                child: Container(
-                  height: 4,
-                  decoration: const BoxDecoration(
-                    borderRadius: AppRadius.brPill,
-                    gradient: LinearGradient(
-                      colors: [AppColors.ink, AppColors.line],
-                    ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: AppSpace.s8),
+        Row(
+          children: [
+            Text('暗', style: AppText.caption12),
+            const SizedBox(width: AppSpace.s8),
+            Expanded(
+              child: Container(
+                height: 4,
+                decoration: const BoxDecoration(
+                  borderRadius: AppRadius.brPill,
+                  gradient: LinearGradient(
+                    colors: [AppColors.ink, AppColors.line],
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpace.s8),
-              Text('亮', style: AppText.caption12),
-            ],
-          ),
-          const SizedBox(height: AppSpace.s16),
-          if (_solved)
-            ToolNotice(
-              '全部排对了，用时 ${formatValueOrderTime(_elapsed.value)}，检查了 $_checks 次'
-              '${_newRecord ? '，刷新了这一档的个人纪录' : ''}。色块下方的数字是各自的明度。',
-              tone: AppTone.success,
-            )
-          else if (_wrong.isNotEmpty)
-            ToolNotice(
-              '有 ${_wrong.length} 块位置不对，已用红框和 × 标出，调整后再检查',
-              tone: AppTone.danger,
             ),
-          const SizedBox(height: AppSpace.s16),
-          _buildActions(),
-        ],
-      ),
-    );
-  }
-
-  /// 主操作「检查顺序」取原版练习页底部的主按钮（240×52、居中），「换一组」是
-  /// 左侧的操作胶囊（原版刷新图标）。画面很窄时上下排。
-  Widget _buildActions() {
-    final check = SizedBox(
-      width: 240,
-      height: 52,
-      child: AppButton(
-        label: _solved ? '已完成' : '检查顺序',
-        icon: Icons.check_rounded,
-        expand: true,
-        onTap: _solved ? null : _check,
-      ),
-    );
-    final deal = LibraryActionPill(
-      label: '换一组',
-      iconAsset: AppAssets.coursewareRefresh,
-      onTap: _deal,
-    );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 480) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              check,
-              const SizedBox(height: AppSpace.s12),
-              deal,
-            ],
-          );
-        }
-        return Row(
-          children: [
-            Expanded(
-              child: Align(alignment: Alignment.centerLeft, child: deal),
-            ),
-            check,
-            const Expanded(child: SizedBox.shrink()),
+            const SizedBox(width: AppSpace.s8),
+            Text('亮', style: AppText.caption12),
           ],
-        );
-      },
+        ),
+        if (_solved || _wrong.isNotEmpty) const SizedBox(height: AppSpace.s24),
+        if (_solved)
+          ToolNotice(
+            '全部排对了，用时 ${formatValueOrderTime(_elapsed.value)}，检查了 $_checks 次'
+            '${_newRecord ? '，刷新了这一档的个人纪录' : ''}。色块下方的数字是各自的明度。',
+            tone: AppTone.success,
+          )
+        else if (_wrong.isNotEmpty)
+          ToolNotice(
+            '有 ${_wrong.length} 块位置不对，已用红框和 × 标出，调整后再检查',
+            tone: AppTone.danger,
+          ),
+      ],
     );
   }
 
@@ -304,7 +273,7 @@ class _ValueOrderToolState extends ConsumerState<ValueOrderTool> {
                             decoration: BoxDecoration(
                               borderRadius: AppRadius.br8,
                               border: Border.all(
-                                color: AppColors.brand,
+                                color: AppColors.ink,
                                 width: 3,
                               ),
                             ),
@@ -344,7 +313,8 @@ class _ValueOrderToolState extends ConsumerState<ValueOrderTool> {
         ),
         ToolPanelSection(
           title: '难度',
-          trailing: Text(_level.description),
+          note: _level.description,
+          bottom: AppSpace.s12,
           child: ToolSegmented<ValueOrderLevel>(
             values: ValueOrderLevel.values,
             value: _level,
@@ -355,15 +325,14 @@ class _ValueOrderToolState extends ConsumerState<ValueOrderTool> {
             },
           ),
         ),
-        AppStatTile(
-          label: '个人纪录 · $_count 块 · ${_level.label}',
+        const AppRule(),
+        AppStatRow(
+          label: '个人纪录',
+          caption: '$_count 块 · ${_level.label} · 只保存在本机',
           value: best == null ? '—' : formatValueOrderTime(best),
-          valueColor: best == null ? AppColors.textTertiary : AppColors.brand,
-          boxed: true,
         ),
-        const SizedBox(height: AppSpace.s8),
-        const ToolNote('个人纪录只保存在本机'),
-        const SizedBox(height: AppSpace.s20),
+        const AppRule(),
+        const SizedBox(height: AppSpace.s24),
         const ToolTipCard(
           title: '为什么练明度',
           text:
@@ -392,7 +361,7 @@ class _Swatch extends StatelessWidget {
   final bool dragging;
   final String? valueLabel;
 
-  static const double height = 132;
+  static const double height = 160;
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +373,7 @@ class _Swatch extends StatelessWidget {
       borderColor = AppColors.danger;
       borderWidth = 3;
     } else if (selected || dragging) {
-      borderColor = AppColors.brand;
+      borderColor = AppColors.ink;
       borderWidth = 3;
     } else {
       borderColor = AppColors.line;

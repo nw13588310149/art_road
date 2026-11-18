@@ -3,9 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
-import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/geometry.dart';
@@ -41,7 +39,11 @@ enum _PerspectiveMode {
 }
 
 /// 灭点配色：灭点 1、2、3。
-const _vpColors = <Color>[AppColors.danger, AppColors.success, AppColors.warning];
+const _vpColors = <Color>[
+  AppColors.danger,
+  AppColors.success,
+  AppColors.warning,
+];
 
 /// 画面在舞台里的位置：灭点等坐标以图片宽高为 1 存储，可以超出图片。
 class _StageMapping {
@@ -180,7 +182,17 @@ class _PerspectiveBodyState extends State<_PerspectiveBody> {
 
   @override
   Widget build(BuildContext context) {
-    return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
+    return ImageToolLayout(
+      stage: _buildStage,
+      panel: _buildPanel,
+      canvasActions: [
+        AppPlainButton(
+          label: '恢复默认位置',
+          icon: Icons.refresh_rounded,
+          onTap: _reset,
+        ),
+      ],
+    );
   }
 
   Widget _buildStage(BuildContext context) {
@@ -299,15 +311,7 @@ class _PerspectiveBodyState extends State<_PerspectiveBody> {
           valueLabel: '${(_opacity * 100).round()}%',
           onChanged: (v) => setState(() => _opacity = v),
         ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: LibraryActionPill(
-            label: '恢复默认位置',
-            iconAsset: AppAssets.coursewareRefresh,
-            onTap: _reset,
-          ),
-        ),
-        const SizedBox(height: AppSpace.s20),
+        const SizedBox(height: AppSpace.s12),
         const ToolTipCard(
           title: '透视的三条规律',
           text:

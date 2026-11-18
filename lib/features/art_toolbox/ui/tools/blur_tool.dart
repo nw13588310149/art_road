@@ -67,6 +67,7 @@ class _BlurBodyState extends State<_BlurBody>
   @override
   Widget build(BuildContext context) {
     return ImageToolLayout(
+      hint: '按住画面可临时查看原图',
       stage: (context) => GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => setState(() => _peek = true),
@@ -111,8 +112,7 @@ class _BlurBodyState extends State<_BlurBody>
             value: _compare,
             onChanged: (v) => setState(() => _compare = v),
           ),
-          const ToolNote('按住画面可临时查看原图'),
-          const SizedBox(height: AppSpace.s20),
+          const SizedBox(height: AppSpace.s12),
           const ToolTipCard(
             title: '为什么要眯眼看',
             text:

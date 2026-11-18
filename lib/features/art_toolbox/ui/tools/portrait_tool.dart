@@ -3,9 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
-import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/geometry.dart';
@@ -82,10 +80,12 @@ class _PortraitBodyState extends State<_PortraitBody> {
     );
     final insideX = local.dx >= box.left - 8 && local.dx <= box.right + 24;
     if (insideX) {
-      if ((mapping.fromUnit(Offset(0, _browY)).dy - local.dy).abs() <= _lineHit) {
+      if ((mapping.fromUnit(Offset(0, _browY)).dy - local.dy).abs() <=
+          _lineHit) {
         return _Handle.brow;
       }
-      if ((mapping.fromUnit(Offset(0, _noseY)).dy - local.dy).abs() <= _lineHit) {
+      if ((mapping.fromUnit(Offset(0, _noseY)).dy - local.dy).abs() <=
+          _lineHit) {
         return _Handle.nose;
       }
     }
@@ -163,7 +163,32 @@ class _PortraitBodyState extends State<_PortraitBody> {
 
   @override
   Widget build(BuildContext context) {
-    return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
+    return ImageToolLayout(
+      stage: _buildStage,
+      panel: _buildPanel,
+      hint: '拖动方框四角、眉线和鼻底线',
+      canvasActions: [
+        AppPlainButton(
+          label: '恢复三等分',
+          icon: Icons.refresh_rounded,
+          onTap: _brow == 1 / 3 && _nose == 2 / 3
+              ? null
+              : () => setState(() {
+                  _brow = 1 / 3;
+                  _nose = 2 / 3;
+                }),
+        ),
+        AppPlainButton(
+          label: '重置方框',
+          icon: Icons.crop_free_rounded,
+          onTap: () => setState(() {
+            _frame = _defaultFrame();
+            _brow = 1 / 3;
+            _nose = 2 / 3;
+          }),
+        ),
+      ],
+    );
   }
 
   Widget _buildStage(BuildContext context) {
@@ -224,7 +249,7 @@ class _PortraitBodyState extends State<_PortraitBody> {
       children: [
         ToolPanelSection(
           title: '三庭比例',
-          trailing: const Text('以上庭为 1'),
+          note: '以上庭为 1',
           child: ratios == null
               ? Text('拖动眉线与鼻底线后显示比例', style: AppText.body13)
               : Column(
@@ -244,9 +269,7 @@ class _PortraitBodyState extends State<_PortraitBody> {
                   ],
                 ),
         ),
-        const ToolNote(
-          '先拖动方框四角，让上边对齐发际线、下边对齐下巴，左右贴住脸的两侧；再上下拖动眉线和鼻底线到实际位置。',
-        ),
+        const ToolNote('先拖动方框四角，让上边对齐发际线、下边对齐下巴，左右贴住脸的两侧；再上下拖动眉线和鼻底线到实际位置。'),
         const SizedBox(height: AppSpace.s16),
         ToolSwitchRow(
           label: '五眼竖线',
@@ -260,33 +283,7 @@ class _PortraitBodyState extends State<_PortraitBody> {
           value: _axis,
           onChanged: (v) => setState(() => _axis = v),
         ),
-        Wrap(
-          spacing: AppSpace.s8,
-          runSpacing: AppSpace.s8,
-          children: [
-            LibraryActionPill(
-              label: '恢复三等分',
-              iconAsset: AppAssets.coursewareRefresh,
-              onTap: _brow == 1 / 3 && _nose == 2 / 3
-                  ? null
-                  : () => setState(() {
-                      _brow = 1 / 3;
-                      _nose = 2 / 3;
-                    }),
-            ),
-            LibraryActionPill(
-              label: '重置方框',
-              icon: Icons.crop_free_rounded,
-              iconSize: 18,
-              onTap: () => setState(() {
-                _frame = _defaultFrame();
-                _brow = 1 / 3;
-                _nose = 2 / 3;
-              }),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpace.s20),
+        const SizedBox(height: AppSpace.s12),
         const ToolTipCard(
           title: '三庭五眼',
           text:
@@ -394,7 +391,11 @@ class _PortraitPainter extends CustomPainter {
           7,
           Paint()..color = AppColors.surface,
         )
-        ..drawCircle(Offset(box.right + 16, y), 5, Paint()..color = AppColors.brand);
+        ..drawCircle(
+          Offset(box.right + 16, y),
+          5,
+          Paint()..color = AppColors.brand,
+        );
     }
     final tick = Paint()
       ..color = AppColors.surface
@@ -413,13 +414,32 @@ class _PortraitPainter extends CustomPainter {
       box.bottomRight,
     ]) {
       canvas
-        ..drawCircle(corner, 8, Paint()..color = AppColors.ink.withValues(alpha: 0.4))
+        ..drawCircle(
+          corner,
+          8,
+          Paint()..color = AppColors.ink.withValues(alpha: 0.4),
+        )
         ..drawCircle(corner, 6, Paint()..color = AppColors.surface);
     }
 
-    _label(canvas, '上庭', Offset(box.left - 10, (box.top + browY) / 2), right: true);
-    _label(canvas, '中庭', Offset(box.left - 10, (browY + noseY) / 2), right: true);
-    _label(canvas, '下庭', Offset(box.left - 10, (noseY + box.bottom) / 2), right: true);
+    _label(
+      canvas,
+      '上庭',
+      Offset(box.left - 10, (box.top + browY) / 2),
+      right: true,
+    );
+    _label(
+      canvas,
+      '中庭',
+      Offset(box.left - 10, (browY + noseY) / 2),
+      right: true,
+    );
+    _label(
+      canvas,
+      '下庭',
+      Offset(box.left - 10, (noseY + box.bottom) / 2),
+      right: true,
+    );
     _label(canvas, '发际线', Offset(box.right + 28, box.top));
     _label(canvas, '眉线', Offset(box.right + 28, browY));
     _label(canvas, '鼻底线', Offset(box.right + 28, noseY));

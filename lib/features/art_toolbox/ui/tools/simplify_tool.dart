@@ -110,7 +110,7 @@ class _SimplifyBodyState extends State<_SimplifyBody>
         const SizedBox(height: AppSpace.s4),
         ToolPanelSection(
           title: '色块占比',
-          trailing: const Text('点击复制 HEX'),
+          note: '点击复制 HEX',
           child: swatches == null
               ? const AppSkeletonText(lines: 4, lineHeight: 20)
               : _SwatchList(swatches: swatches),

@@ -4,9 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
-import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/image_filters.dart';
@@ -128,53 +126,58 @@ class _MirrorBodyState extends State<_MirrorBody> {
 
   @override
   Widget build(BuildContext context) {
-    return ImageToolLayout(stage: _buildStage, panel: _buildPanel);
+    final changed = _horizontal || _vertical || _invert || _alternate != null;
+    return ImageToolLayout(
+      stage: _buildStage,
+      panel: _buildPanel,
+      canvasActions: [
+        AppPlainButton(
+          label: '恢复原图',
+          icon: Icons.refresh_rounded,
+          onTap: changed ? _reset : null,
+        ),
+      ],
+    );
   }
 
   Widget _buildStage(BuildContext context) {
     final shown = _invert ? _inverted : widget.image.image;
-    final mirrored = ToolStage(
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: shown == null
-                ? StageImagePane(
-                    image: null,
-                    failed: _failed,
-                    onRetry: () => _setInvert(true),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.all(AppSpace.s12),
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.diagonal3Values(
-                        _horizontal ? -1 : 1,
-                        _vertical ? -1 : 1,
-                        1,
-                      ),
-                      child: RawImage(
-                        image: shown,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.medium,
-                      ),
-                    ),
-                  ),
-          ),
-          Positioned(left: 0, top: 0, child: StageLabel(_label)),
-        ],
-      ),
-    );
+    final mirrored = shown == null
+        ? StageImagePane(
+            image: null,
+            label: _label,
+            failed: _failed,
+            onRetry: () => _setInvert(true),
+          )
+        : LabeledStage(
+            imageSize: Size(
+              widget.image.width.toDouble(),
+              widget.image.height.toDouble(),
+            ),
+            label: _label,
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.diagonal3Values(
+                _horizontal ? -1 : 1,
+                _vertical ? -1 : 1,
+                1,
+              ),
+              child: RawImage(
+                image: shown,
+                fit: BoxFit.fill,
+                filterQuality: FilterQuality.medium,
+              ),
+            ),
+          );
     if (!_compare) {
       return mirrored;
     }
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: ToolStage(
-            child: StageImagePane(image: widget.image.image, label: '原图'),
-          ),
+          child: StageImagePane(image: widget.image.image, label: '原图'),
         ),
-        const SizedBox(width: AppSpace.s12),
         Expanded(child: mirrored),
       ],
     );
@@ -216,17 +219,7 @@ class _MirrorBodyState extends State<_MirrorBody> {
           value: _compare,
           onChanged: (v) => setState(() => _compare = v),
         ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: LibraryActionPill(
-            label: '恢复原图',
-            iconAsset: AppAssets.coursewareRefresh,
-            onTap: _horizontal || _vertical || _invert || _alternate != null
-                ? _reset
-                : null,
-          ),
-        ),
-        const SizedBox(height: AppSpace.s20),
+        const SizedBox(height: AppSpace.s12),
         const ToolTipCard(
           title: '翻转后更容易发现问题',
           text:

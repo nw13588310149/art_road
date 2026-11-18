@@ -27,16 +27,12 @@ class _FigureToolState extends State<FigureTool> {
     return ToolPageScaffold(
       tool: ArtTool.figure,
       onBack: widget.onBack,
-      bodyTopInset: 0,
       body: ImageToolLayout(
-        stage: (_) => ToolStage(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpace.s12),
-            child: _FigureDiagram(
-              selected: _pose,
-              onSelect: (pose) => setState(() => _pose = pose),
-            ),
-          ),
+        canvasColor: AppColors.surface,
+        hint: '点人形或右边的姿态切换，查看比例要点',
+        stage: (_) => _FigureDiagram(
+          selected: _pose,
+          onSelect: (pose) => setState(() => _pose = pose),
         ),
         panel: (_) => _buildPanel(),
       ),
@@ -59,19 +55,21 @@ class _FigureToolState extends State<FigureTool> {
         Text.rich(
           TextSpan(
             children: [
-              TextSpan(text: '${_pose.rhyme}  ', style: AppText.title16),
               TextSpan(
                 text: _formatHeads(_pose.heads),
-                style: AppText.displayNumber(size: 24, color: AppColors.brand),
+                style: AppText.displayNumber(size: 32, color: AppColors.brand),
               ),
               TextSpan(text: ' 个头长', style: AppText.body14),
             ],
           ),
         ),
+        const SizedBox(height: AppSpace.s4),
         ToolNote('${_pose.view}图示，头顶到脚底'),
-        const SizedBox(height: AppSpace.s12),
+        const SizedBox(height: AppSpace.s16),
         for (final note in _pose.notes) _Bullet(note),
-        const SizedBox(height: AppSpace.s12),
+        const SizedBox(height: AppSpace.s16),
+        const AppRule(),
+        const SizedBox(height: AppSpace.s24),
         ToolPanelSection(
           bottom: AppSpace.s12,
           title: '通用要点',

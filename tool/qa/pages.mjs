@@ -121,17 +121,16 @@ const toolSteps = [
   ['tool-grid', '构图网格', '秋日风景'],
   ['tool-perspective', '透视辅助', '石膏几何体'],
   ['tool-portrait', '头像比例', '大卫石膏像'],
-  ['tool-sketch', '速写计时', null, '练习训练'],
-  ['tool-figure', '人体比例参考', null, '练习训练'],
-  ['tool-value-order', '明度排序训练', null, '练习训练'],
-  ['tool-countdown', '考试倒计时', null, '备考助手'],
-  ['tool-score', '综合分计算器', null, '备考助手'],
-  ['tool-checklist', '考场物品清单', null, '备考助手'],
-].map(([id, label, sample, group]) => ({
+  ['tool-sketch', '速写计时', null],
+  ['tool-figure', '人体比例参考', null],
+  ['tool-value-order', '明度排序训练', null],
+  ['tool-countdown', '考试倒计时', null],
+  ['tool-score', '综合分计算器', null],
+  ['tool-checklist', '考场物品清单', null],
+].map(([id, label, sample]) => ({
   id,
   route: '/toolbox',
   actions: [
-    ...(group ? [{ click: group, after: 250 }] : []),
     { click: label, after: 2000 },
     ...(sample ? [{ click: sample, after: 2500 }] : []),
   ],
@@ -385,7 +384,7 @@ export const ROLES = [
       {
         id: 'home-toolbox-return', route: '/', actions: [
           skipGuide, { click: /^工具$/ },
-          { check: '分析工具' }, /^返回$/, { check: /^课表$/ },
+          { check: /^看画分析$/ }, /^返回$/, { check: /^课表$/ },
         ],
       },
       guideStep,
@@ -492,7 +491,7 @@ export const ROLES = [
       { id: 'toolbox', route: '/toolbox', settle: 1600 },
       {
         id: 'toolbox-workspace-flow', route: '/toolbox', actions: [
-          /^使用示例画作$/, /大卫石膏像/, { check: /^大卫石膏像$/ },
+          /^大卫石膏像$/, { check: /^大卫石膏像，正在用$/ },
           /^镜像翻转/, { check: /^切换工具$/, role: 'button' },
           /^切换工具$/, /^构图网格$/, { check: /^构图网格$/ },
           { check: /^大卫石膏像$/ },
