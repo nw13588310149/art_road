@@ -48,14 +48,17 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:the_road_of_art_flutter/app/router/app_router.dart';
+import 'package:the_road_of_art_flutter/core/art/photo_rectify.dart';
 import 'package:the_road_of_art_flutter/core/demo/data/demo_artwork_store.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_accounts.dart';
 import 'package:the_road_of_art_flutter/core/demo/demo_store.dart';
@@ -92,6 +95,7 @@ class _Shot {
     this.roles = _student,
     this.steps = const [],
     this.below,
+    this.sizes,
   });
 
   final String id;
@@ -110,11 +114,15 @@ class _Shot {
   ///   从哪一点开始拖（整屏坐标），用来滚动侧栏；
   /// - `pinch:2.5@400,380`：在整屏的 (400, 380) 两指张开到 2.5 倍（小于 1 是捏小）；
   /// - `dbl:400,380`：在 (400, 380) 双击；
+  /// - `drag:300,200>340,260`：从 (300, 200) 拖到 (340, 260)，用来拖把手；
   /// - `wait:800`：多等 800 毫秒。
   final List<String> steps;
 
   /// 先垫在下面的页面，见 BELOW。
   final String? below;
+
+  /// 只在这些尺寸下渲染（`1180x820`），步骤里有按整屏坐标拖动时用。
+  final List<String>? sizes;
 }
 
 TeachingRequest _report(TeachingReport report) =>
@@ -135,6 +143,26 @@ const _landscape = {
   'imageUrl': '$_art/color-landscape-1.jpg',
   'title': '秋日风景',
 };
+
+// 上传作品弹窗里选好一张照片。
+const _uploadPicked = ['上传作品', '添加照片', 'wait:600'];
+const _straightenOpen = [
+  ..._uploadPicked,
+  'label:拉正裁边：第 1 张',
+  'wait:600',
+];
+const _alignCorners1180 = [
+  'drag:200.5,128.4>351.5,186.3',
+  'drag:979.5,128.4>849.7,222.9',
+  'drag:979.5,712.6>893.4,671.7',
+  'drag:200.5,712.6>290.8,640.6',
+];
+const _alignCorners1024 = [
+  'drag:154.4,126.3>293.0,179.4',
+  'drag:869.5,126.3>750.4,213.1',
+  'drag:869.5,662.7>790.5,625.1',
+  'drag:154.4,662.7>237.3,596.6',
+];
 
 // 从范画详情打开统一的看图页。
 const _viewer = ['大卫石膏像 · 侧转头像', 'label:全屏查看', 'wait:400'];
@@ -494,6 +522,38 @@ final _shots = <_Shot>[
     steps: ['石膏头像结构练习', '对比范画', '=叠加'],
   ),
   const _Shot('artwork-upload', '/artworks', steps: ['上传作品']),
+  // 拉正裁边：相册替身选中一张歪放在桌上的素描照片（见 _deskPhoto）。
+  const _Shot('artwork-upload-picked', '/artworks', steps: _uploadPicked),
+  const _Shot(
+    'artwork-upload-straighten',
+    '/artworks',
+    steps: _straightenOpen,
+  ),
+  // 把四个角拖到画纸的四个角上（坐标按各自尺寸下照片的位置算），再点「完成」。
+  const _Shot(
+    'artwork-upload-straighten-aligned',
+    '/artworks',
+    sizes: ['1180x820'],
+    steps: [..._straightenOpen, ..._alignCorners1180],
+  ),
+  const _Shot(
+    'artwork-upload-straighten-aligned',
+    '/artworks',
+    sizes: ['1024x768'],
+    steps: [..._straightenOpen, ..._alignCorners1024],
+  ),
+  const _Shot(
+    'artwork-upload-straightened',
+    '/artworks',
+    sizes: ['1180x820'],
+    steps: [..._straightenOpen, ..._alignCorners1180, '=完成', 'wait:2500'],
+  ),
+  const _Shot(
+    'artwork-upload-straightened',
+    '/artworks',
+    sizes: ['1024x768'],
+    steps: [..._straightenOpen, ..._alignCorners1024, '=完成', 'wait:2500'],
+  ),
   const _Shot(
     'artwork-review',
     '/artworks',
@@ -591,6 +651,13 @@ final _shots = <_Shot>[
     '/toolbox',
     args: _flower,
     steps: ['scroll:0@430,400'],
+  ),
+  // 取色后「调色参考」：在桌面的暖灰处取色，配方要算一会儿。
+  const _Shot(
+    'tool-color-mix',
+    '/toolbox',
+    args: _flower,
+    steps: ['scroll:0@330,520', 'wait:800'],
   ),
   const _Shot(
     'tool-measure',
@@ -815,6 +882,76 @@ void _mockPlugins() {
   };
 }
 
+/// 相册的替身：「添加照片」总是选中一张 [_deskPhoto]。
+class _PreviewFilePicker extends FilePicker {
+  static Uint8List? _photo;
+
+  @override
+  Future<FilePickerResult?> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    bool allowCompression = true,
+    int compressionQuality = 30,
+    bool allowMultiple = false,
+    bool withData = false,
+    bool withReadStream = false,
+    bool lockParentWindow = false,
+    bool readSequential = false,
+  }) async {
+    final bytes = _photo ??= _deskPhoto();
+    return FilePickerResult([
+      PlatformFile(name: '静物写生.jpg', size: bytes.length, bytes: bytes),
+    ]);
+  }
+}
+
+/// 一张「手机拍的作品照片」：素描静物歪着放在木色桌面上，画纸四个角是
+/// [_deskPaper]（1200×900 照片里的像素坐标）。
+const _deskPaper = <PhotoPoint>[
+  (x: 262, y: 118),
+  (x: 968, y: 170),
+  (x: 1030, y: 806),
+  (x: 176, y: 762),
+];
+
+Uint8List _deskPhoto() {
+  final art = img.decodeJpg(
+    File('assets/demo/art/sketch-still-1.jpg').readAsBytesSync(),
+  )!;
+  const w = 1200, h = 900;
+  final aw = art.width.toDouble(), ah = art.height.toDouble();
+  final toArt = solveHomography(_deskPaper, [
+    (x: 0, y: 0),
+    (x: aw, y: 0),
+    (x: aw, y: ah),
+    (x: 0, y: ah),
+  ]);
+  final photo = img.Image(width: w, height: h);
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      final p = applyHomography(toArt, (x: x + 0.5, y: y + 0.5));
+      if (p.x >= 0 && p.x < aw && p.y >= 0 && p.y < ah) {
+        photo.setPixel(x, y, art.getPixel(p.x.toInt(), p.y.toInt()));
+      } else {
+        // 桌面：上暗下亮的木色，带一点横向纹理。
+        final grain = ((y * 7 + (x ~/ 40) * 13) % 23) - 11;
+        final light = 0.78 + 0.18 * y / h;
+        photo.setPixelRgb(
+          x,
+          y,
+          (176 * light + grain).clamp(0, 255).toInt(),
+          (132 * light + grain).clamp(0, 255).toInt(),
+          (92 * light + grain * 0.6).clamp(0, 255).toInt(),
+        );
+      }
+    }
+  }
+  return img.encodeJpg(photo, quality: 88);
+}
+
 /// 转圈和骨架屏。
 final _loading = find.byWidgetPredicate(
   (widget) =>
@@ -903,6 +1040,23 @@ Future<void> _runStep(
     await tester.pump();
     await tester.tapAt(at);
     await _settle(tester, minMs: 400);
+    return;
+  }
+  if (step.startsWith('drag:')) {
+    final ends = [
+      for (final end in step.substring(5).split('>'))
+        end.split(',').map(double.parse).toList(),
+    ];
+    final from = Offset(ends[0][0], ends[0][1]);
+    final to = Offset(ends[1][0], ends[1][1]);
+    final gesture = await tester.startGesture(from, pointer: 903);
+    const moves = 12;
+    for (var i = 1; i <= moves; i++) {
+      await gesture.moveTo(Offset.lerp(from, to, i / moves)!);
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await gesture.up();
+    await _settle(tester, minMs: 300);
     return;
   }
   if (step.startsWith('pinch:')) {
@@ -1188,6 +1342,7 @@ void main() {
 
   setUpAll(() async {
     _mockPlugins();
+    FilePicker.platform = _PreviewFilePicker();
     await _loadFonts();
     // 和应用启动时一样：起本地媒体服务，演示图片按网络地址加载。
     // 测试环境默认把所有 HTTP 请求挡回 400，这里放开，只会访问本机的媒体服务。
@@ -1208,7 +1363,9 @@ void main() {
   });
 
   for (final size in sizes) {
+    final sizeId = '${size.width.round()}x${size.height.round()}';
     for (final shot in shots) {
+      if (shot.sizes != null && !shot.sizes!.contains(sizeId)) continue;
       for (final role in roleFilter.isEmpty ? shot.roles : roleFilter) {
         testWidgets(
           '${shot.id} · $role · ${size.width.round()}x${size.height.round()}',
