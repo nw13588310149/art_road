@@ -2573,6 +2573,7 @@ void _previewFaceImage(BuildContext context, String rawUrl, {String? heroTag}) {
     context,
     images: [url],
     heroTagPrefix: heroTag ?? 'face_library',
+    tools: false,
   );
 }
 

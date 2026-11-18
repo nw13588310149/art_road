@@ -1326,6 +1326,7 @@ class _StudentFaceImgPreview extends StatelessWidget {
               context,
               images: [resolvedUrl],
               heroTagPrefix: heroTag,
+              tools: false,
             )
           : null,
       child: Container(

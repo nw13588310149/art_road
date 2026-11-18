@@ -413,6 +413,7 @@ class _StudentArtworkDetailViewState
                       images: images.map((e) => e.url).toList(),
                       initialIndex: index,
                       heroTagPrefix: 'artwork_${detail.work.id}',
+                      titles: [detail.work.title],
                     ),
                     overlay: _showAnnotations && marksHere.isNotEmpty
                         ? _buildMarkLayer(marksHere, teacherCount)

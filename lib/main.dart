@@ -14,6 +14,8 @@ import 'core/network/media_url.dart';
 import 'core/providers/app_providers.dart';
 import 'core/push/push_notification_service.dart';
 import 'core/storage/app_storage.dart';
+import 'core/widgets/image_viewer_tools.dart';
+import 'features/art_toolbox/ui/viewer/art_viewer_toolkit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,7 +67,12 @@ Future<void> main() async {
   // 异步申请通知权限 / 注册 deviceToken 期间不会阻塞 UI，Web 上则走 stub
   // no-op 直接返回。
   final container = ProviderContainer(
-    overrides: [appStorageProvider.overrideWithValue(storage)],
+    overrides: [
+      appStorageProvider.overrideWithValue(storage),
+      imageViewerToolkitProvider.overrideWithValue(
+        const ArtImageViewerToolkit(),
+      ),
+    ],
   );
   unawaited(container.read(pushNotificationServiceProvider).initialize());
 

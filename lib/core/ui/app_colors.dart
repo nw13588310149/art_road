@@ -33,6 +33,11 @@ abstract final class AppColors {
   /// 沉浸页（阅读器、原卷、全屏看画）用的深色底，同样不带色相。
   static const canvasDark = Color(0xFF1C1C1C);
 
+  /// [canvasDark] 上的文字和图标：一级（选中、标题）、二级（未选中、说明）、细线和选中底。
+  static const onCanvasDark = Color(0xFFFFFFFF);
+  static const onCanvasDarkMuted = Color(0xA8FFFFFF);
+  static const onCanvasDarkLine = Color(0x29FFFFFF);
+
   /// 输入框、次按钮描边与分隔线。
   static const line = Color(0xFFEAEAEA);
 

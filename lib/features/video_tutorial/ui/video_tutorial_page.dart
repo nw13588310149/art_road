@@ -24,6 +24,7 @@ import '../../../core/widgets/app_refresh_indicator.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/class_share_drawer.dart';
+import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../../core/widgets/seamless_banner_carousel.dart';
 import '../../shell/ui/shell_layout.dart';
 import '../../smart_campus/navigation/group_chat_return.dart';
@@ -862,26 +863,17 @@ class _VideoDetailSheetState extends ConsumerState<_VideoDetailSheet>
 
   Future<void> _previewScoreImage(String url) async {
     if (url.isEmpty) return;
-    await showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.9),
-      builder: (ctx) => GestureDetector(
-        onTap: () => Navigator.pop(ctx),
-        child: Center(
-          child: InteractiveViewer(
-            minScale: 0.8,
-            maxScale: 4,
-            child: _VideoCachedImage(
-              url: widget.resolveUrl(url),
-              fit: BoxFit.contain,
-              fallback: const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('图片加载失败', style: TextStyle(color: Colors.white)),
-              ),
-            ),
-          ),
-        ),
-      ),
+    final detail =
+        ref.read(videoTutorialControllerProvider(widget.pageArgs)).detail ??
+        _currentDetail;
+    final images = detail.scoreImages.contains(url)
+        ? detail.scoreImages
+        : [url];
+    await showImageGallery(
+      context,
+      images: images.map(widget.resolveUrl).toList(),
+      initialIndex: images.indexOf(url),
+      titles: [detail.name],
     );
   }
 

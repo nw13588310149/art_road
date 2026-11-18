@@ -480,6 +480,14 @@ export const ROLES = [
         ],
       },
       {
+        id: 'gallery-viewer', route: '/gallery', actions: [
+          /大卫石膏像 · 侧转头像/, /^全屏查看$/,
+          { check: /^更多工具/, role: 'button' },
+          /^明度色阶$/, { check: /^3 档$/ },
+          /^关闭$/, { check: /^对比我的原卷$/ },
+        ],
+      },
+      {
         id: 'gallery-toolbox-return', route: '/gallery', actions: [
           /大卫石膏像 · 侧转头像/, /^临摹网格$/,
           { check: /^构图网格$/ }, { check: /^大卫石膏像 · 侧转头像$/ },
