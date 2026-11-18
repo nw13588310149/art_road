@@ -1,26 +1,11 @@
-import 'dart:ui' show Size;
-
 import 'package:flutter/foundation.dart';
 
-/// 阅读器版式：宽屏双页并排（1–2、3–4…），窄屏单页。
+/// 阅读器版式：一屏一页（阅读器固定用单页），或双页并排（1–2、3–4…）。
 ///
 /// 页码从 1 开始；一屏以「起始页」表示，双页时起始页总是奇数。
 @immutable
 class EbookSpread {
-  const EbookSpread({required this.pageCount, required this.twoPage});
-
-  /// 按阅读区尺寸决定版式：并排两页后单页仍接近满高时才用双页。
-  factory EbookSpread.fit({
-    required int pageCount,
-    required Size area,
-    double pageAspect = 0.75,
-  }) {
-    final singleWidth = area.height * pageAspect;
-    return EbookSpread(
-      pageCount: pageCount,
-      twoPage: area.width >= 760 && area.width >= singleWidth * 1.7,
-    );
-  }
+  const EbookSpread({required this.pageCount, this.twoPage = false});
 
   final int pageCount;
   final bool twoPage;

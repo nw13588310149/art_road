@@ -12,7 +12,7 @@ import '../state/ebook_spread.dart';
 import 'widgets/ebook_reader_bars.dart';
 import 'widgets/ebook_reader_toc.dart';
 
-/// 全屏阅读器：宽屏双页并排、窄屏单页；点左右半屏、两侧箭头、左右滑动或方向键翻页，
+/// 全屏阅读器：一屏一页；点左右半屏、两侧箭头、左右滑动或方向键翻页，
 /// 翻页即时切换。底部缩略图与页码拖动条，支持跳页、目录、书签与放大查看，进度自动保存。
 ///
 /// 沉浸页，不带外壳（`docs/新页面设计语言.md` 第九节）：白色顶栏和底栏，中间是
@@ -202,17 +202,7 @@ class _EbookReaderPageState extends ConsumerState<EbookReaderPage> {
             child: SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final area = Size(
-                    constraints.maxWidth - EbookReaderPage.sideGutter * 2,
-                    constraints.maxHeight -
-                        EbookReaderPage.topBarHeight -
-                        EbookReaderPage.bottomBarHeight -
-                        EbookReaderPage.stagePadding * 2,
-                  );
-                  final spread = EbookSpread.fit(
-                    pageCount: state.pageCount,
-                    area: area,
-                  );
+                  final spread = EbookSpread(pageCount: state.pageCount);
                   _spread = spread;
                   final ready =
                       !state.loading &&

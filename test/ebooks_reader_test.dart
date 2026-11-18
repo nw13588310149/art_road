@@ -119,53 +119,51 @@ void main() {
       expect(spread.lastVisible(7), 8);
     });
 
-    test('single pages step by one; layout follows the available area', () {
-      const spread = EbookSpread(pageCount: 9, twoPage: false);
+    test('single pages step by one', () {
+      const spread = EbookSpread(pageCount: 9);
       expect(spread.pagesAt(4), [4]);
       expect(spread.next(4), 5);
       expect(spread.previous(1), isNull);
-      expect(
-        EbookSpread.fit(pageCount: 9, area: const Size(1036, 586)).twoPage,
-        isTrue,
-      );
-      expect(
-        EbookSpread.fit(pageCount: 9, area: const Size(556, 766)).twoPage,
-        isFalse,
-      );
+      expect(spread.label(4), '4 / 9');
     });
   });
 
-  testWidgets('landscape shows a two-page spread and turns two pages at a time', (
-    tester,
-  ) async {
+  testWidgets('landscape shows one page at a time', (tester) async {
     await _setSize(tester, const Size(1180, 820));
     final repository = _FakeRepository();
     await _pumpReader(tester, repository);
 
-    expect(_label(tester), '1–2 / 10');
+    expect(_label(tester), '1 / 10');
     expect(find.text('测试书刊（示例）'), findsOneWidget);
+    Finder onStage(String label) => find.descendant(
+      of: find.byKey(EbookReaderPage.stageKey),
+      matching: find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == label,
+      ),
+    );
+    expect(onStage('第 1 页'), findsOneWidget);
+    expect(onStage('第 2 页'), findsNothing);
 
     await tester.tap(find.byKey(EbookReaderPage.nextKey));
     await tester.pump();
-    expect(_label(tester), '3–4 / 10');
+    expect(_label(tester), '2 / 10');
 
-    // 点右半屏翻到下一屏，点左半屏回到上一屏。
+    // 点右半屏翻到下一页，点左半屏回到上一页。
     final stage = tester.getRect(find.byKey(EbookReaderPage.stageKey));
     await tester.tapAt(Offset(stage.left + stage.width * 0.75, stage.center.dy));
     await tester.pump();
-    expect(_label(tester), '5–6 / 10');
+    expect(_label(tester), '3 / 10');
     await tester.tapAt(Offset(stage.left + stage.width * 0.25, stage.center.dy));
     await tester.pump();
-    expect(_label(tester), '3–4 / 10');
+    expect(_label(tester), '2 / 10');
 
     await tester.tap(find.byKey(EbookReaderPage.previousKey));
     await tester.pump();
-    expect(_label(tester), '1–2 / 10');
+    expect(_label(tester), '1 / 10');
 
     await tester.pump(const Duration(seconds: 1));
-    // 打开时记第 1 页，停下后记这一屏的最后一页。
     expect(repository.saves.first, 1);
-    expect(repository.saves.last, 2);
+    expect(repository.saves.last, 1);
   });
 
   testWidgets('narrow layout shows one page and turns one page at a time', (
@@ -215,7 +213,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('目录与书签'), findsNothing);
-    expect(_label(tester), '3–4 / 10');
+    expect(_label(tester), '3 / 10');
     await tester.pump(const Duration(seconds: 3));
   });
 
@@ -247,12 +245,12 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(_label(tester), '5–6 / 10');
+    expect(_label(tester), '5 / 10');
     expect(repository.saves, isEmpty);
 
     await tester.tap(find.byKey(EbookReaderPage.nextKey));
     await tester.pump();
-    expect(_label(tester), '7–8 / 10');
+    expect(_label(tester), '6 / 10');
 
     // 立即返回：未到延迟保存的时间也会先落盘，再把进度带回来源页。
     // 阅读器顶栏返回沿用资料预览的 chevron_left 图标按钮。
@@ -260,7 +258,7 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.byType(EbookReaderPage), findsNothing);
-    expect(result?.page, 8);
-    expect(repository.saves, [8]);
+    expect(result?.page, 6);
+    expect(repository.saves, [6]);
   });
 }
