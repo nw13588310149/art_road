@@ -124,6 +124,8 @@ class StudySubjectRecord {
     this.scoreChange,
     this.scoreRate,
     this.paperAvailable = false,
+    this.critiqueAvailable = false,
+    this.critiqueUnread = false,
   });
 
   final String subjectId;
@@ -137,6 +139,28 @@ class StudySubjectRecord {
   final double? scoreChange;
   final double? scoreRate;
   final bool paperAvailable;
+
+  /// 老师发布了这一科的讲评，并且有给我看的卷子。
+  final bool critiqueAvailable;
+
+  /// 讲评还没打开过。
+  final bool critiqueUnread;
+
+  /// 打开过讲评之后的这一科。
+  StudySubjectRecord critiqueRead() => StudySubjectRecord(
+    subjectId: subjectId,
+    subjectName: subjectName,
+    score: score,
+    maxScore: maxScore,
+    ranking: ranking,
+    organizationRanking: organizationRanking,
+    grade: grade,
+    gradeDescription: gradeDescription,
+    scoreChange: scoreChange,
+    scoreRate: scoreRate,
+    paperAvailable: paperAvailable,
+    critiqueAvailable: critiqueAvailable,
+  );
 
   factory StudySubjectRecord.fromJson(Object? raw) {
     final json = _map(raw);
@@ -152,6 +176,9 @@ class StudySubjectRecord {
       scoreChange: _double(json['scoreChange']),
       scoreRate: _double(json['scoreRate']),
       paperAvailable: _bool(json['paperAvailable']),
+      critiqueAvailable: _bool(json['critiqueAvailable']),
+      critiqueUnread:
+          _bool(json['critiqueAvailable']) && _bool(json['critiqueUnread']),
     );
   }
 
@@ -374,6 +401,19 @@ class StudyExamReport {
       organizationParticipantCount:
           _int(json['organizationParticipantCount']) ??
           exam.organizationParticipantCount,
+    );
+  }
+
+  StudyExamReport withSubjects(List<StudySubjectRecord> value) {
+    return StudyExamReport(
+      exam: exam.withSubjects(value),
+      subjects: value,
+      scoreChange: scoreChange,
+      rankingChange: rankingChange,
+      previousExamId: previousExamId,
+      surpassedPercent: surpassedPercent,
+      interpretations: interpretations,
+      organizationParticipantCount: organizationParticipantCount,
     );
   }
 }

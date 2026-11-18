@@ -425,6 +425,51 @@ final _shots = <_Shot>[
   ),
   const _Shot('study-growth-artwork', '/study', steps: ['作品成长']),
 
+  // 月考讲评：学生在成绩报告里看到「讲评 · 新」，从「听讲评」进讲评；老师在班级学情选了
+  // 科目后打开讲评工作台。
+  const _Shot('study-report-critique', '/study', steps: ['查看完整报告']),
+  const _Shot('study-critique', '/study', steps: ['查看完整报告', '听讲评']),
+  const _Shot(
+    'study-critique-popover',
+    '/study',
+    steps: ['查看完整报告', '听讲评', '苹果暗部'],
+  ),
+  const _Shot(
+    'study-critique-band',
+    '/study',
+    steps: ['查看完整报告', '听讲评', '上一档'],
+  ),
+  const _Shot(
+    'study-critique-deeplink',
+    '/study',
+    args: {'examId': '26', 'view': 'critique', 'subjectId': '39'},
+  ),
+  const _Shot(
+    'critique-staff-entry',
+    '/study',
+    roles: ['teacher', 'headTeacher'],
+    steps: ['=素描'],
+  ),
+  const _Shot(
+    'critique-workspace',
+    '/study',
+    roles: ['teacher'],
+    steps: ['=素描', '继续讲评'],
+  ),
+  const _Shot(
+    'critique-workspace-editor',
+    '/study',
+    roles: ['teacher'],
+    steps: ['=素描', '继续讲评', '眼窝和眉弓'],
+  ),
+  // 班主任赵雪教速写：看色彩的讲评只读。
+  const _Shot(
+    'critique-workspace-readonly',
+    '/study',
+    roles: ['headTeacher'],
+    steps: ['=色彩', '查看讲评', '水果组是画面'],
+  ),
+
   // 教学报告：校长从全校学情点进去，老师和组长从今日点进去。
   const _Shot(
     'report-classes',
