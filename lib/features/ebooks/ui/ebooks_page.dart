@@ -37,6 +37,10 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
   Timer? _debounce;
   EbooksQuery? _query;
 
+  /// 从别的页面带参数进来（例如 `bookId`）时页头才有返回，和素材中心一致。
+  /// 左导航进入是替换路由，没有返回。
+  bool _openedFromPage = false;
+
   EbooksQuery get _currentQuery => _query ?? const EbooksQuery();
 
   EbooksController get _controller =>
@@ -51,9 +55,11 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _query ??= EbooksQuery.fromArgs(
-      widget.args ?? ModalRoute.of(context)?.settings.arguments,
-    );
+    if (_query == null) {
+      final args = widget.args ?? ModalRoute.of(context)?.settings.arguments;
+      _openedFromPage = args is Map && args.isNotEmpty;
+      _query = EbooksQuery.fromArgs(args);
+    }
   }
 
   @override
@@ -216,7 +222,8 @@ class _EbooksPageState extends ConsumerState<EbooksPage> {
   Widget _buildList(EbooksState state) {
     final browse = state.view == EbooksView.browse;
     // 只看这一页下面有没有页面：排序菜单这类盖在上面的浮层不算。
-    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final canPop =
+        _openedFromPage && (ModalRoute.of(context)?.canPop ?? false);
     void open(EbookSummary book) => _controller.openDetail(book.id);
     void read(EbookSummary book) => unawaited(_read(book));
     return AppRefreshIndicator(
