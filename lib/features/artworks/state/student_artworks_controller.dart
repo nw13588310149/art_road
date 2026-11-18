@@ -90,23 +90,40 @@ class StudentArtworksState {
   }
 }
 
+/// 刚提交成功的一份作品：[parentId] 不为空时是从那一版改画重交的。
+typedef ArtworkSubmission = ({String id, String parentId});
+
+/// 最近一次提交成功的作品。打开着的旧版本详情听它刷新，并切到新的一版。
+final studentArtworkSubmittedProvider = StateProvider<ArtworkSubmission?>(
+  (ref) => null,
+);
+
 final studentArtworksControllerProvider =
     StateNotifierProvider.autoDispose<
       StudentArtworksController,
       StudentArtworksState
     >((ref) {
       final repository = ref.watch(artworkRepositoryProvider);
-      return StudentArtworksController(repository: repository);
+      return StudentArtworksController(
+        repository: repository,
+        onSubmitted: (submission) =>
+            ref.read(studentArtworkSubmittedProvider.notifier).state =
+                submission,
+      );
     });
 
 class StudentArtworksController extends StateNotifier<StudentArtworksState> {
-  StudentArtworksController({required ArtworkRepository repository})
-    : _repository = repository,
-      super(const StudentArtworksState()) {
+  StudentArtworksController({
+    required ArtworkRepository repository,
+    ValueChanged<ArtworkSubmission>? onSubmitted,
+  }) : _repository = repository,
+       _onSubmitted = onSubmitted,
+       super(const StudentArtworksState()) {
     unawaited(refresh());
   }
 
   final ArtworkRepository _repository;
+  final ValueChanged<ArtworkSubmission>? _onSubmitted;
 
   /// 丢弃过期响应：每次重新拉取列表都会递增。
   int _generation = 0;
@@ -264,6 +281,10 @@ class StudentArtworksController extends StateNotifier<StudentArtworksState> {
     if (!response.isSuccess) {
       return response.errorOr('作品提交失败，请稍后重试');
     }
+    _onSubmitted?.call((
+      id: artworkIdOf(response.data),
+      parentId: draft.parentId,
+    ));
     if (mounted) {
       unawaited(refresh());
     }

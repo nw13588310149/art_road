@@ -2136,7 +2136,33 @@ class _Builder {
       _mark('mk-1', 0.47, 0.68, '球体暗部的反光偏亮，压低一个层次，不要亮过灰面。'),
       _mark('mk-2', 0.84, 0.6, '圆柱的明暗交界线画得肯定，保持这样的力度。'),
     ];
+
+    // 《秋日静物色彩写生》第 1 版：评语说色调偏花、暗部缺环境色。第 2 版背景压灰了
+    // （标「色调不统一」已改善），环境色仍需加强，林小雨当时标了没看懂。
+    final revision = review(DemoArtworkSeed.storyRevisionV1Id);
+    revision['marks'] = [
+      _mark('mk-1', 0.6, 0.16, '背景的黄太跳，和橙子、苹果抢在一起，整体色调偏花；背景压一点灰，向衬布的冷色靠。'),
+      _mark('mk-2', 0.2, 0.42, '陶罐暗部只用了深褐，缺少环境色；靠近蓝衬布的一侧可以带一点冷灰。'),
+      _mark('mk-3', 0.86, 0.7, '白衬布的暗部偏黄发脏，用淡紫灰去画，不要直接加黑。'),
+    ];
+    final colorTeacher = DemoArtworkData.text(revision['teacherId']);
+    works.firstWhere(
+      (w) => w['id'] == DemoArtworkSeed.storyRevisionV1Id,
+    )['markResponses'] = <String, dynamic>{
+      '$colorTeacher/mk-1': _response('FIXED', _clock(3, 12, 5)),
+      '$colorTeacher/mk-2': _response('UNCLEAR', _clock(6, 19, 30)),
+    };
+
+    // 《石膏头像结构练习》：耳朵的位置林小雨没看懂，李静在点评工作台里看得到。
+    works.firstWhere(
+      (w) => w['id'] == DemoArtworkSeed.storyInReviewId,
+    )['markResponses'] = <String, dynamic>{
+      't-1/mk-2': _response('UNCLEAR', _clock(1, 20, 50)),
+    };
   }
+
+  static Map<String, dynamic> _response(String status, DateTime at) =>
+      <String, dynamic>{'status': status, 'time': DemoArtworkData.fmt(at)};
 
   static Map<String, dynamic> _mark(
     String id,

@@ -39,12 +39,17 @@ List<String> _samplesFor(String subject, List<String> myImages) {
 }
 
 /// 全屏对比：左侧我的作品（或当前版本）、右侧同科目范画（或上一版本）。
+///
+/// [focus] 是画上的一处（按图片宽高归一化），打开时两侧一起放大到这一处；
+/// [focusLabel] 写在顶栏名称后面，说明对着的是哪一处。
 Future<void> openArtworkCompare(
   BuildContext context, {
   required List<String> images,
   required String subject,
   int initialIndex = 0,
   List<String>? previousImages,
+  Offset? focus,
+  String focusLabel = '',
 }) {
   return Navigator.of(context, rootNavigator: true).push(
     PageRouteBuilder<void>(
@@ -56,6 +61,8 @@ Future<void> openArtworkCompare(
         subject: subject,
         initialIndex: initialIndex,
         previousImages: previousImages,
+        focus: focus,
+        focusLabel: focusLabel,
       ),
       transitionsBuilder: (_, animation, _, child) =>
           FadeTransition(opacity: animation, child: child),
@@ -72,6 +79,8 @@ class ArtworkComparePage extends StatefulWidget {
     required this.subject,
     this.initialIndex = 0,
     this.previousImages,
+    this.focus,
+    this.focusLabel = '',
     super.key,
   });
 
@@ -79,6 +88,13 @@ class ArtworkComparePage extends StatefulWidget {
   final String subject;
   final int initialIndex;
   final List<String>? previousImages;
+
+  /// 打开时放大到的一处（0–1），两侧锁定一起放大。
+  final Offset? focus;
+  final String focusLabel;
+
+  /// 对着一处打开时放大的倍数。
+  static const double focusScale = 2.5;
 
   @override
   State<ArtworkComparePage> createState() => _ArtworkComparePageState();
@@ -92,9 +108,24 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
   late int _mine = widget.images.isEmpty
       ? 0
       : widget.initialIndex.clamp(0, widget.images.length - 1);
-  int _sample = 0;
+
+  /// 版本对比时上一版也从同一张开始。
+  late int _sample = _revision && _samples.isNotEmpty
+      ? widget.initialIndex.clamp(0, _samples.length - 1)
+      : 0;
 
   bool get _revision => widget.previousImages != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focus case final focus?) {
+      _compare.setSideZoom(
+        0,
+        AppCompareZoom(scale: ArtworkComparePage.focusScale, center: focus),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -152,6 +183,7 @@ class _ArtworkComparePageState extends State<ArtworkComparePage> {
                 listenable: _compare,
                 builder: (context, _) => AppTitleBar(
                   title: revision ? '版本对比' : '对比范画',
+                  caption: widget.focusLabel,
                   onBack: () => Navigator.of(context).maybePop(),
                   backLabel: '关闭对比',
                   actions: [

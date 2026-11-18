@@ -9,12 +9,14 @@ import '../data/artwork_rules.dart';
 import '../state/artwork_detail_controller.dart';
 import '../state/artwork_review_controller.dart';
 import '../state/artwork_voice_player.dart';
+import '../state/student_artworks_controller.dart';
 import 'artwork_compare_page.dart';
 import 'artwork_upload_dialog.dart';
 import 'widgets/artwork_annotation.dart';
 import 'widgets/artwork_mark_layer.dart';
 import 'widgets/artwork_mark_list.dart';
 import 'widgets/artwork_marks.dart';
+import 'widgets/artwork_previous_marks.dart';
 import 'widgets/artwork_review_timeline.dart';
 import 'widgets/artwork_voice_note.dart';
 import 'widgets/artwork_widgets.dart';
@@ -54,9 +56,28 @@ class _StudentArtworkDetailViewState
   final _markRowKeys = <String, GlobalKey>{};
 
   static List<NumberedArtworkMark> _marksOf(ArtworkDetail detail) =>
-      numberArtworkMarks(
-        artworkReviewsByTime(detail.reviews.where((r) => r.reviewed)),
-      );
+      artworkDetailMarks(detail);
+
+  /// 作品主人才能标「改了 / 没看懂」。
+  bool _canRespond(ArtworkDetail detail) => detail.isOwner && !widget.readOnly;
+
+  void _respond(NumberedArtworkMark item, ArtworkMarkResponseStatus? status) {
+    ref
+        .read(studentArtworkDetailProvider(widget.artworkId).notifier)
+        .respondToMark(item, status);
+  }
+
+  /// 从这一版改画重交成功：刷新这一版（版本和「改画重交」跟着变），能切换时切到新的一版。
+  void _onSubmitted(ArtworkSubmission? submission) {
+    if (submission == null || submission.parentId != widget.artworkId) {
+      return;
+    }
+    ref.invalidate(studentArtworkDetailProvider(widget.artworkId));
+    final open = widget.onOpenArtwork;
+    if (open != null && submission.id.isNotEmpty) {
+      open(submission.id);
+    }
+  }
 
   /// 点图上编号或列表行：选中、打开浮层、播这一处的语音。再点同一个编号收起。
   void _selectMark(NumberedArtworkMark item, {bool fromList = false}) {
@@ -124,6 +145,10 @@ class _StudentArtworkDetailViewState
         }
       });
     });
+    ref.listen<ArtworkSubmission?>(
+      studentArtworkSubmittedProvider,
+      (_, next) => _onSubmitted(next),
+    );
 
     final detail = state.detail;
     final work = detail?.work;
@@ -170,16 +195,31 @@ class _StudentArtworkDetailViewState
         ? null
         : ref.watch(studentArtworkDetailProvider(previousId)).detail;
     final marks = _marksOf(detail);
+    final previousMarks =
+        previous == null || previous.images.isEmpty || detail.images.isEmpty
+        ? const <NumberedArtworkMark>[]
+        : _marksOf(previous);
     return LayoutBuilder(
       builder: (context, constraints) {
         final imagePanel = OverlayPortal(
           controller: _popover,
-          overlayChildBuilder: (_) => _buildPopover(marks),
+          overlayChildBuilder: (_) => _buildPopover(detail, marks),
           child: _buildImagePanel(detail, marks),
         );
         final info = _InfoColumn(
           detail: detail,
-          marks: marks.isEmpty ? null : _buildMarksSection(marks),
+          marks: marks.isEmpty ? null : _buildMarksSection(detail, marks),
+          previousMarks: previousMarks.isEmpty
+              ? null
+              : ArtworkPreviousMarks(
+                  marks: previousMarks,
+                  onOpen: (item) => openArtworkMarkBeforeAfter(
+                    context,
+                    current: detail,
+                    previous: previous!,
+                    item: item,
+                  ),
+                ),
           canRevise:
               !widget.readOnly &&
               detail.isOwner &&
@@ -238,7 +278,10 @@ class _StudentArtworkDetailViewState
     );
   }
 
-  Widget _buildMarksSection(List<NumberedArtworkMark> marks) {
+  Widget _buildMarksSection(
+    ArtworkDetail detail,
+    List<NumberedArtworkMark> marks,
+  ) {
     final teachers = marks.map((m) => m.teacherId).toSet();
     for (final item in marks) {
       _markRowKeys.putIfAbsent(item.key, GlobalKey.new);
@@ -261,13 +304,14 @@ class _StudentArtworkDetailViewState
             showTeacher: teachers.length > 1,
             rowKeys: _markRowKeys,
             onSelect: (item) => _selectMark(item, fromList: true),
+            onRespond: _canRespond(detail) ? _respond : null,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPopover(List<NumberedArtworkMark> marks) {
+  Widget _buildPopover(ArtworkDetail detail, List<NumberedArtworkMark> marks) {
     final item = marks.where((m) => m.key == _selectedMark).firstOrNull;
     if (item == null ||
         !_showAnnotations ||
@@ -292,6 +336,9 @@ class _StudentArtworkDetailViewState
             item: item,
             showTeacher: marks.map((m) => m.teacherId).toSet().length > 1,
             onClose: _closeMark,
+            onRespond: _canRespond(detail)
+                ? (status) => _respond(item, status)
+                : null,
           ),
         ),
       ),
@@ -312,6 +359,7 @@ class _StudentArtworkDetailViewState
               hasVoice: item.mark.hasVoice,
               voiceSeconds: item.mark.voiceSeconds,
               teacherName: teachers > 1 ? item.teacherName : '',
+              response: item.mark.response?.status,
             ),
           ),
       ],
@@ -453,6 +501,7 @@ class _InfoColumn extends StatelessWidget {
     required this.detail,
     required this.canRevise,
     this.marks,
+    this.previousMarks,
     this.onOpenArtwork,
     this.onCompare,
   });
@@ -462,6 +511,9 @@ class _InfoColumn extends StatelessWidget {
 
   /// 定点点评列表，紧跟在得分下面，和左边画上的编号对照着看。
   final Widget? marks;
+
+  /// 改画版本：上一版的定点点评，在这一版的定点点评下面。
+  final Widget? previousMarks;
   final ValueChanged<String>? onOpenArtwork;
   final VoidCallback? onCompare;
 
@@ -477,6 +529,10 @@ class _InfoColumn extends StatelessWidget {
       children: [
         _ScoreCard(detail: detail),
         if (marks case final section?) ...[
+          const SizedBox(height: AppSpace.s16),
+          section,
+        ],
+        if (previousMarks case final section?) ...[
           const SizedBox(height: AppSpace.s16),
           section,
         ],

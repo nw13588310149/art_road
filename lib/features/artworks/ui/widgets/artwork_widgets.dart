@@ -248,7 +248,7 @@ class ArtworkReviewCard extends StatelessWidget {
                       if (review.annotations.isNotEmpty)
                         '在作品上留下了 ${review.annotations.length} 处批注',
                       if (review.marks.isNotEmpty)
-                        '${review.marks.length} 处定点点评',
+                        ArtworkRules.markCount(review.marks, unit: '处定点点评'),
                     ].join(' · '),
                     style: AppText.caption12,
                   ),

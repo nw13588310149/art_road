@@ -147,6 +147,70 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     return detail;
   });
 
+  // 作品主人对一处定点点评标「改了 / 没看懂」，NONE 清除。标成没看懂时告诉那位老师。
+  marking.post('/app/artworks/{id}/marks/respond', (req) {
+    _studentIndex(req);
+    final work = DemoArtworkStore.workById(req.param('id'));
+    if (work == null) {
+      throw const DemoApiException('没有找到这份作品，请返回列表刷新', code: 404);
+    }
+    final access = DemoArtworkData.accessOf(req.account, work);
+    if (!access.owner) {
+      throw const DemoApiException('只有作品的主人可以回应点评', code: 403);
+    }
+    final body = req.bodyMap;
+    final teacherId = _text(body['teacherId']);
+    final markId = _text(body['markId']);
+    final status = _text(body['status']).toUpperCase();
+    if (teacherId.isEmpty || markId.isEmpty) {
+      throw const DemoApiException('请指明是哪一处点评', code: 400);
+    }
+    if (!const {'FIXED', 'UNCLEAR', 'NONE'}.contains(status)) {
+      throw const DemoApiException('回应只能是改了、没看懂或清除', code: 400);
+    }
+    final number = access.seesReview
+        ? _markNumber(work, teacherId, markId)
+        : null;
+    if (number == null) {
+      throw const DemoApiException('这一处点评已被老师修改，请刷新后再看', code: 404);
+    }
+    final key = '$teacherId/$markId';
+    final responses =
+        DemoArtworkData.mapOf(work[DemoArtworkStore.markResponsesKey]) ??
+        <String, dynamic>{};
+    final before = _text(DemoArtworkData.mapOf(responses[key])?['status']);
+    Map<String, dynamic>? response;
+    if (status == 'NONE') {
+      responses.remove(key);
+    } else {
+      response = <String, dynamic>{
+        'status': status,
+        'time': DemoArtworkData.fmt(DemoArtworkStore.now()),
+      };
+      responses[key] = response;
+    }
+    work[DemoArtworkStore.markResponsesKey] = responses;
+    DemoArtworkStore.saveWork(work);
+    if (status == 'UNCLEAR' && before != 'UNCLEAR') {
+      final mark = DemoArtworkData.mapsOf(
+        DemoArtworkData.reviewsOf(
+          work,
+        ).firstWhere((review) => review['teacherId'] == teacherId)['marks'],
+      ).firstWhere((mark) => _text(mark['id']) == markId);
+      DemoArtworkStore.notifyTeacherOfUnclearMark(
+        work,
+        teacherId: teacherId,
+        number: number,
+        text: _text(mark['text']),
+      );
+    }
+    return <String, dynamic>{
+      'teacherId': teacherId,
+      'markId': markId,
+      'response': response,
+    };
+  });
+
   marking.post('/app/artworks/images/upload', (req) async {
     final person = _studentIndex(req);
     final file =
@@ -582,6 +646,15 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       'tagResolutions': tagResolutions,
       'marks': marks,
     };
+    // 老师删掉的那几处，学生的回应跟着去掉；还在的（id 不变）保留。
+    if (DemoArtworkData.mapOf(work[DemoArtworkStore.markResponsesKey])
+        case final responses?) {
+      final kept = {for (final mark in marks) '$teacherId/${mark['id']}'};
+      responses.removeWhere(
+        (key, _) => key.startsWith('$teacherId/') && !kept.contains(key),
+      );
+      work[DemoArtworkStore.markResponsesKey] = responses;
+    }
     if (teacherId == work['teacherId']) {
       work['review'] = savedReview;
       work.remove('seedReviewAt');
@@ -1410,6 +1483,46 @@ Map<String, dynamic> _tagInput(
     'color': color,
     'dimension': dimension,
   };
+}
+
+/// 学生看到的编号：点评按时间先后（没有时间的在后），同一位老师的按图片先后、
+/// 再按添加先后，和客户端 `numberArtworkMarks` 一致。找不到这一处时返回 null。
+int? _markNumber(Map<String, dynamic> work, String teacherId, String markId) {
+  final reviews = DemoArtworkData.reviewsOf(work).toList();
+  final order = List<int>.generate(reviews.length, (i) => i)
+    ..sort((a, b) {
+      final ta = _text(reviews[a]['reviewedTime']);
+      final tb = _text(reviews[b]['reviewedTime']);
+      if (ta.isEmpty != tb.isEmpty) {
+        return ta.isEmpty ? 1 : -1;
+      }
+      final byTime = ta.compareTo(tb);
+      return byTime != 0 ? byTime : a.compareTo(b);
+    });
+  var number = 0;
+  for (final i in order) {
+    final review = reviews[i];
+    final marks = DemoArtworkData.mapsOf(review['marks'])
+        .where(
+          (m) =>
+              _text(m['text']).isNotEmpty ||
+              _text(m['voiceUrl'] ?? m['voiceRef']).isNotEmpty,
+        )
+        .toList();
+    final byImage = List<int>.generate(marks.length, (j) => j)
+      ..sort((a, b) {
+        final ia = (marks[a]['imageIndex'] as num?)?.toInt() ?? 0;
+        final ib = (marks[b]['imageIndex'] as num?)?.toInt() ?? 0;
+        return ia != ib ? ia.compareTo(ib) : a.compareTo(b);
+      });
+    for (final j in byImage) {
+      number++;
+      if (review['teacherId'] == teacherId && _text(marks[j]['id']) == markId) {
+        return number;
+      }
+    }
+  }
+  return null;
 }
 
 /// 定点点评整组替换：不传 `marks` 时沿用 [previous]，空列表表示全部清除。

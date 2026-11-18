@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'artwork_models.dart';
+
 /// 作品档案 / 作品点评的输入规则与展示格式（与阅卷系统接口校验一致）。
 abstract final class ArtworkRules {
   static const imageLimit = 9;
@@ -194,13 +196,27 @@ abstract final class ArtworkRules {
     int voiceSeconds = 0,
     bool hasVoice = false,
     String teacherName = '',
+    ArtworkMarkResponseStatus? response,
   }) {
     final parts = <String>[
       if (teacherName.isNotEmpty) '$teacherName老师',
       text.trim().isEmpty ? '只有语音' : text.trim(),
       if (hasVoice) voiceSeconds > 0 ? '有语音 $voiceSeconds 秒' : '有语音',
+      if (response != null) '学生标了${response.label}',
     ];
     return '第 $number 处点评：${parts.join('，')}';
+  }
+
+  /// 定点点评的数量，有学生标「没看懂」的一并写上：「3 处 · 1 处没看懂」。
+  static String markCount(Iterable<ArtworkMark> marks, {String unit = '处'}) {
+    final list = marks.toList();
+    final unclear = list
+        .where((m) => m.response?.status == ArtworkMarkResponseStatus.unclear)
+        .length;
+    return <String>[
+      '${list.length} $unit',
+      if (unclear > 0) '$unclear 处没看懂',
+    ].join(' · ');
   }
 
   /// 组长复核：调分理由至少 10 字，星级必选。

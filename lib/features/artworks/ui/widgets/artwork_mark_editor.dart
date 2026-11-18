@@ -5,6 +5,7 @@ import '../../data/artwork_models.dart';
 import '../../data/artwork_rules.dart';
 import 'artwork_mark_layer.dart';
 import 'artwork_mark_list.dart';
+import 'artwork_mark_response.dart';
 import 'artwork_voice_comment_field.dart';
 
 /// 点评工作台「定点点评」模式下的右栏：选中一处时编辑它的文字和语音，下面列出
@@ -43,7 +44,9 @@ class ArtworkMarkEditorPanel extends StatelessWidget {
           AppSectionHeader(
             title: '定点点评',
             titleStyle: AppText.title16,
-            subtitle: marks.isEmpty ? null : '${marks.length} 处',
+            subtitle: marks.isEmpty
+                ? null
+                : ArtworkRules.markCount(marks.map((m) => m.mark)),
           ),
           const SizedBox(height: AppSpace.s4),
           Text(
@@ -57,8 +60,16 @@ class ArtworkMarkEditorPanel extends StatelessWidget {
               children: [
                 ArtworkMarkDot(number: current.number, size: 24),
                 const SizedBox(width: AppSpace.s8),
+                Text('第 ${current.number} 处', style: AppText.title16),
+                const SizedBox(width: AppSpace.s12),
                 Expanded(
-                  child: Text('第 ${current.number} 处', style: AppText.title16),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: switch (current.mark.response?.status) {
+                      final status? => ArtworkMarkResponseLabel(status: status),
+                      null => const SizedBox.shrink(),
+                    },
+                  ),
                 ),
                 AppIconAction(
                   icon: Icons.delete_outline_rounded,
@@ -102,6 +113,7 @@ class ArtworkMarkEditorPanel extends StatelessWidget {
               marks: marks,
               selectedKey: current?.key,
               maxLines: 2,
+              showResponse: true,
               onSelect: onSelect,
             ),
         ],

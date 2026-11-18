@@ -430,6 +430,7 @@ abstract final class DemoArtworkStore {
             viewer.teacherId != null &&
             viewer.teacherId == DemoArtworkData.text(review['teacherId']),
         'reviewed': true,
+        'marks': marksWithResponses(work, review),
         'annotations': strokesOf(
           DemoArtworkData.text(work['id']),
           DemoArtworkData.text(review['teacherId']),
@@ -478,6 +479,7 @@ abstract final class DemoArtworkStore {
                   ),
                   'mine': viewer.teacherId == item['teacherId'],
                   'reviewed': true,
+                  'marks': marksWithResponses(work, item),
                   'annotations': strokesOf(
                     DemoArtworkData.text(work['id']),
                     DemoArtworkData.text(item['teacherId']),
@@ -523,6 +525,32 @@ abstract final class DemoArtworkStore {
         'seesQuality': access.seesQuality,
       },
     };
+  }
+
+  /// 学生对定点点评的回应，`{'<teacherId>/<markId>': {status, time}}`。
+  static const markResponsesKey = 'markResponses';
+
+  /// 一位老师的定点点评，每处带上学生的回应（有的话）。
+  static List<Map<String, dynamic>> marksWithResponses(
+    Map<String, dynamic> work,
+    Map<String, dynamic> review,
+  ) {
+    final responses = DemoArtworkData.mapOf(work[markResponsesKey]);
+    final teacherId = DemoArtworkData.text(review['teacherId']);
+    return <Map<String, dynamic>>[
+      for (final mark in DemoArtworkData.mapsOf(review['marks']))
+        <String, dynamic>{
+          ...mark,
+          if (DemoArtworkData.mapOf(
+                responses?['$teacherId/${DemoArtworkData.text(mark['id'])}'],
+              )
+              case final response?)
+            'response': <String, dynamic>{
+              'status': response['status'],
+              'time': response['time'],
+            },
+        },
+    ];
   }
 
   static Map<String, dynamic> projectSummary(
@@ -689,6 +717,26 @@ abstract final class DemoArtworkStore {
           '${clause.isEmpty ? '，可以查看分数与评语。' : '：$clause。'}',
       targetId: DemoArtworkData.text(work['id']),
       seedMayCover: true,
+    );
+  }
+
+  /// 学生把第 [number] 处点评标成「没看懂」：告诉留下这一处的老师。
+  static void notifyTeacherOfUnclearMark(
+    Map<String, dynamic> work, {
+    required String teacherId,
+    required int number,
+    required String text,
+  }) {
+    final userId = DemoArtworkData.userIdOfTeacher(teacherId);
+    if (userId == null) return;
+    final name = DemoArtworkData.studentName(DemoArtworkData.personOf(work));
+    final clause = text.split(RegExp('[，,。；;！？]')).first.trim();
+    appendNotice(
+      userId: userId,
+      content:
+          '【作品】$name对《${work['title']}》第 $number 处点评标了没看懂'
+          '${clause.isEmpty ? '，请再看看这一处。' : '：$clause。'}',
+      targetId: DemoArtworkData.text(work['id']),
     );
   }
 

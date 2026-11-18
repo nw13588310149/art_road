@@ -527,6 +527,59 @@ class AnnotationStroke {
   }
 }
 
+/// 学生对一处定点点评的回应。
+enum ArtworkMarkResponseStatus {
+  fixed('FIXED', '改了'),
+  unclear('UNCLEAR', '没看懂');
+
+  const ArtworkMarkResponseStatus(this.code, this.label);
+
+  /// 接口里的写法；清除回应时传 [noneCode]。
+  final String code;
+  final String label;
+
+  static const noneCode = 'NONE';
+
+  static ArtworkMarkResponseStatus? fromCode(Object? raw) {
+    final code = raw?.toString().trim().toUpperCase() ?? '';
+    for (final status in values) {
+      if (status.code == code) {
+        return status;
+      }
+    }
+    return null;
+  }
+}
+
+/// 学生标的「改了 / 没看懂」和标的时间。
+@immutable
+class ArtworkMarkResponse {
+  const ArtworkMarkResponse({required this.status, this.time = ''});
+
+  /// 没有回应、或状态认不出时返回 null。
+  static ArtworkMarkResponse? fromJson(Object? raw) {
+    if (raw is! Map) {
+      return null;
+    }
+    final status = ArtworkMarkResponseStatus.fromCode(raw['status']);
+    return status == null
+        ? null
+        : ArtworkMarkResponse(status: status, time: _str(raw['time']));
+  }
+
+  final ArtworkMarkResponseStatus status;
+  final String time;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ArtworkMarkResponse &&
+      other.status == status &&
+      other.time == time;
+
+  @override
+  int get hashCode => Object.hash(status, time);
+}
+
 /// 定点点评：老师在作品图上点一个位置，留一句话或一段语音。
 ///
 /// [x]、[y] 是这个位置按图片宽高归一化到 0–1 的坐标；[imageIndex] 是第几张图。
@@ -541,6 +594,7 @@ class ArtworkMark {
     this.text = '',
     this.voiceUrl = '',
     this.voiceSeconds = 0,
+    this.response,
   });
 
   factory ArtworkMark.fromJson(Object? raw) {
@@ -554,6 +608,7 @@ class ArtworkMark {
       text: _str(json['text']),
       voiceUrl: voice.isEmpty ? _str(json['voiceRef']) : voice,
       voiceSeconds: _int(json['voiceSeconds']),
+      response: ArtworkMarkResponse.fromJson(json['response']),
     );
   }
 
@@ -566,6 +621,9 @@ class ArtworkMark {
   /// 上传接口返回的相对路径或完整地址，没有语音时为空。
   final String voiceUrl;
   final int voiceSeconds;
+
+  /// 作品主人的回应；只读，由回应接口写入，保存点评时不回传。
+  final ArtworkMarkResponse? response;
 
   bool get hasVoice => voiceUrl.isNotEmpty;
 
@@ -588,8 +646,21 @@ class ArtworkMark {
       text: text ?? this.text,
       voiceUrl: voiceUrl ?? this.voiceUrl,
       voiceSeconds: voiceSeconds ?? this.voiceSeconds,
+      response: response,
     );
   }
+
+  /// 换掉回应（null 为清除），其余不变。
+  ArtworkMark withResponse(ArtworkMarkResponse? value) => ArtworkMark(
+    id: id,
+    x: x,
+    y: y,
+    imageIndex: imageIndex,
+    text: text,
+    voiceUrl: voiceUrl,
+    voiceSeconds: voiceSeconds,
+    response: value,
+  );
 
   Map<String, dynamic> toJson() {
     double r4(double v) => (v * 10000).round() / 10000;
@@ -613,11 +684,12 @@ class ArtworkMark {
       other.imageIndex == imageIndex &&
       other.text == text &&
       other.voiceUrl == voiceUrl &&
-      other.voiceSeconds == voiceSeconds;
+      other.voiceSeconds == voiceSeconds &&
+      other.response == response;
 
   @override
   int get hashCode =>
-      Object.hash(id, x, y, imageIndex, text, voiceUrl, voiceSeconds);
+      Object.hash(id, x, y, imageIndex, text, voiceUrl, voiceSeconds, response);
 }
 
 /// 一位老师的定点点评按图片先后、再按添加先后排开（排序稳定）。
@@ -801,6 +873,26 @@ class ArtworkReview {
           tags.isNotEmpty ||
           voiceUrl.isNotEmpty ||
           marks.isNotEmpty);
+
+  /// 换掉定点点评，其余不变。
+  ArtworkReview withMarks(List<ArtworkMark> value) => ArtworkReview(
+    teacherId: teacherId,
+    teacherName: teacherName,
+    mine: mine,
+    reviewed: reviewed,
+    score: score,
+    maxScore: maxScore,
+    content: content,
+    reviewedTime: reviewedTime,
+    dimensions: dimensions,
+    requestLeadReview: requestLeadReview,
+    tags: tags,
+    tagResolutions: tagResolutions,
+    annotations: annotations,
+    marks: value,
+    voiceUrl: voiceUrl,
+    voiceSeconds: voiceSeconds,
+  );
 }
 
 @immutable
@@ -924,6 +1016,42 @@ class ArtworkDetail {
 
   List<ArtworkReview> get otherReviews =>
       reviews.where((item) => !item.mine).toList();
+
+  /// [teacherId] 那位老师的 [markId] 一处换上回应 [response]（null 为清除）。
+  ArtworkDetail withMarkResponse({
+    required String teacherId,
+    required String markId,
+    required ArtworkMarkResponse? response,
+  }) {
+    ArtworkReview apply(ArtworkReview review) => review.teacherId != teacherId
+        ? review
+        : review.withMarks(<ArtworkMark>[
+            for (final mark in review.marks)
+              mark.id == markId ? mark.withResponse(response) : mark,
+          ]);
+    final current = review;
+    return ArtworkDetail(
+      work: work,
+      requiredFullScore: requiredFullScore,
+      teachers: teachers,
+      images: images,
+      reviews: reviews.map(apply).toList(),
+      review: current == null ? null : apply(current),
+      leadReview: leadReview,
+      principalComments: principalComments,
+      timeline: timeline,
+      versions: versions,
+      dimensions: dimensions,
+      canReview: canReview,
+      canSupplement: canSupplement,
+      canComment: canComment,
+      canFeature: canFeature,
+      seesLeadReasons: seesLeadReasons,
+      seesQuality: seesQuality,
+      isOwner: isOwner,
+      canLeadReview: canLeadReview,
+    );
+  }
 }
 
 @immutable
