@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/ui/ui.dart';
 import '../../../../core/widgets/app_date_time_pickers.dart';
 import '../../data/countdown_repository.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../state/countdown_controller.dart';
 import '../widgets/image_tool_frame.dart';
-import '../widgets/tool_panel.dart';
 
 /// 考试倒计时：本地保存的考试日程，可增删改。
 class CountdownTool extends ConsumerWidget {
@@ -65,7 +63,7 @@ class CountdownTool extends ConsumerWidget {
     final state = ref.watch(countdownControllerProvider);
     final now = DateTime.now();
     final items = state.sorted(now);
-    Widget content;
+    final Widget content;
     if (state.loading) {
       content = const _CountdownList.skeleton();
     } else if (items.isEmpty) {
@@ -90,31 +88,45 @@ class CountdownTool extends ConsumerWidget {
     return ToolPageScaffold(
       tool: ArtTool.countdown,
       onBack: onBack,
+      caption: '只保存在本机',
       actions: [
         AppButton(
           label: '添加倒计时',
           icon: Icons.add_rounded,
-          size: AppButtonSize.sm,
           onTap: state.loading ? null : () => _edit(context, ref),
         ),
       ],
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.page,
-          0,
-          AppSpace.page,
-          AppSpace.s24,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const ToolNotice(
-              '默认日期仅为示例，具体考试时间请以甘肃省教育考试院及各招生院校发布的官方公告为准，点击考试可修改日期。',
-            ),
-            const SizedBox(height: AppSpace.s16),
-            content,
-          ],
-        ),
+      body: Builder(
+        builder: (context) {
+          final wide = ToolFrame.of(context)?.wide ?? true;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  primary: false,
+                  padding: const EdgeInsets.only(bottom: AppSpace.s24),
+                  child: content,
+                ),
+              ),
+              SizedBox(width: AppPageBody.columnGap(wide)),
+              SizedBox(
+                width: AppPageBody.sideWidth(wide),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const AppSectionTitle(title: '日期说明'),
+                    const SizedBox(height: AppSpace.s8),
+                    Text(
+                      '默认日期仅为示例，具体考试时间请以甘肃省教育考试院及各招生院校发布的官方公告为准。点一场考试可以修改名称和日期。',
+                      style: AppText.body13.copyWith(height: 22 / 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -154,7 +166,9 @@ class _CountdownList extends StatelessWidget {
     }
     final today = now!;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const AppRule(),
         for (var index = 0; index < items.length; index++)
           _CountdownRow(
             item: items[index],
@@ -168,6 +182,8 @@ class _CountdownList extends StatelessWidget {
   }
 }
 
+/// 一场考试：左边是还剩几天（行的开头，一眼能比较），中间是名称和日期，整行
+/// 点开修改；行尾只有一个删除，删除前要确认。
 class _CountdownRow extends StatelessWidget {
   const _CountdownRow({
     required this.item,
@@ -195,78 +211,85 @@ class _CountdownRow extends StatelessWidget {
       > 0 => '未开始',
       _ => '已结束',
     };
-    return AppPressable(
-      onTap: onEdit,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 72),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpace.s8,
-          vertical: AppSpace.s12,
-        ),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.event_available_rounded,
-              size: 20,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(width: AppSpace.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.body14Strong,
-                  ),
-                  Text(
-                    '${item.dateText} ${item.weekdayText} · $status',
-                    style: AppText.body13,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpace.s8),
-            Text.rich(
-              TextSpan(
-                style: AppText.body13.copyWith(color: color),
-                children: [
-                  if (daysLeft == 0)
-                    const TextSpan(text: '今天')
-                  else ...[
-                    TextSpan(
-                      text: '${daysLeft.abs()}',
-                      style: AppText.displayNumber(size: 24, color: color),
-                    ),
-                    TextSpan(text: past ? ' 天前' : ' 天'),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpace.s8),
-            AppIconButton.asset(
-              asset: AppAssets.homeRename,
-              assetSize: 18,
-              semanticLabel: '编辑',
-              size: AppButtonSize.sm,
-              filled: false,
+    final daysText = switch (daysLeft) {
+      0 => '今天',
+      > 0 => '还有 $daysLeft 天',
+      _ => '${-daysLeft} 天前',
+    };
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.lineSoft)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: AppPressable(
               onTap: onEdit,
+              semanticLabel: '${item.name}，${item.dateText}，$daysText，点按修改',
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 72),
+                child: ExcludeSemantics(
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 104,
+                        child: daysLeft == 0
+                            ? Text(
+                                '今天',
+                                style: AppText.title20.copyWith(color: color),
+                              )
+                            : Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: '${daysLeft.abs()}',
+                                      style: AppText.displayNumber(
+                                        size: 24,
+                                        color: color,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: past ? ' 天前' : ' 天',
+                                      style: AppText.caption12,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              item.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.body14Strong,
+                            ),
+                            Text(
+                              '${item.dateText} ${item.weekdayText} · $status',
+                              style: AppText.body13,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            AppIconButton.asset(
-              asset: AppAssets.coursewareActionDelete,
-              assetSize: 18,
-              semanticLabel: '删除',
-              size: AppButtonSize.sm,
-              filled: false,
+          ),
+          const SizedBox(width: AppSpace.s8),
+          Transform.translate(
+            offset: const Offset(AppSpace.s12, 0),
+            child: AppIconAction(
+              icon: Icons.delete_outline_rounded,
+              semanticLabel: '删除「${item.name}」',
               onTap: onDelete,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

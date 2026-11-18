@@ -11,6 +11,9 @@ import '../widgets/image_tool_frame.dart';
 import '../widgets/tool_panel.dart';
 
 /// 综合分计算器：按省份预设公式估算艺术类综合分（排序成绩），展示计算过程与依据。
+///
+/// 左边是单列的表单，右边面板是结果：一个大数字、计算过程和依据。没有画，
+/// 所以「画布」用白底，表单直接放在底板上。
 class ScoreTool extends ConsumerStatefulWidget {
   const ScoreTool({required this.onBack, super.key});
 
@@ -68,35 +71,20 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
     return ToolPageScaffold(
       tool: ArtTool.score,
       onBack: widget.onBack,
-      bodyTopInset: 0,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 760;
-          final form = state.loading
-              ? const AppCard(child: AppSkeletonText(lines: 8, lineHeight: 20))
-              : _buildForm(state.data);
-          final result = state.loading
-              ? const AppCard(child: AppSkeletonText(lines: 6, lineHeight: 20))
-              : _ResultCard(data: state.data);
-          if (wide) {
-            return ImageToolLayout(
-              panelWidth: 380,
-              stage: (_) => SingleChildScrollView(primary: false, child: form),
-              panel: (_) => result,
-            );
-          }
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpace.s16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                form,
-                const SizedBox(height: AppSpace.s16),
-                result,
-              ],
-            ),
-          );
-        },
+      caption: '修改后自动保存在本机',
+      body: ImageToolLayout(
+        hint: '',
+        canvasColor: AppColors.surface,
+        stage: (_) => SingleChildScrollView(
+          primary: false,
+          padding: const EdgeInsets.only(bottom: AppSpace.s24),
+          child: state.loading
+              ? const AppSkeletonText(lines: 8, lineHeight: 20)
+              : _buildForm(state.data),
+        ),
+        panel: (_) => state.loading
+            ? const AppSkeletonText(lines: 6, lineHeight: 20)
+            : _ScoreResult(data: state.data),
       ),
     );
   }
@@ -105,96 +93,96 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
     final rule = data.rule;
     final outcome = data.outcome;
     final error = outcome.error;
-    return AppCard(
-      title: '输入成绩',
-      subtitle: '修改后自动保存在本机',
-      bordered: false,
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ToolPanelSection(
-            title: '省份',
-            child: AppSelect<ScoreProvince>(
-              options: [
-                for (final p in ScoreProvince.values)
-                  AppSelectOption(value: p, label: _provinceLabel(p)),
-              ],
-              value: data.province,
-              onChanged: (p) => _update((d) => d.copyWith(province: p)),
-            ),
-          ),
-          if (data.province == ScoreProvince.yunnan)
-            ToolPanelSection(
-              title: '计算方式',
-              trailing: Text(data.yunnanMode.description),
-              child: ToolSegmented<YunnanMode>(
-                values: YunnanMode.values,
-                value: data.yunnanMode,
-                labelOf: (m) => m.label,
-                onChanged: (m) => _update((d) => d.copyWith(yunnanMode: m)),
-              ),
-            ),
-          if (data.province == ScoreProvince.custom) ..._buildCustom(data),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: AppInputField(
-                  controller: _culture,
-                  label: '文化课成绩',
-                  hint: '如 500',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: _scoreFormatters,
-                  errorText: error != null && error.startsWith('文化')
-                      ? error
-                      : null,
-                  onChanged: (v) => _update((d) => d.copyWith(culture: v)),
-                ),
-              ),
-              const SizedBox(width: AppSpace.s12),
-              Expanded(
-                child: AppInputField(
-                  controller: _professional,
-                  label: '专业统考成绩',
-                  hint: rule.cultureOnly ? '只作合格判断' : '如 240',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: _scoreFormatters,
-                  errorText: error != null && error.startsWith('专业')
-                      ? error
-                      : null,
-                  onChanged: (v) => _update((d) => d.copyWith(professional: v)),
-                ),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ToolField(
+          label: '省份',
+          child: AppSelect<ScoreProvince>(
+            options: [
+              for (final p in ScoreProvince.values)
+                AppSelectOption(value: p, label: _provinceLabel(p)),
             ],
+            value: data.province,
+            onChanged: (p) => _update((d) => d.copyWith(province: p)),
           ),
-          const SizedBox(height: AppSpace.s4),
-          Text(
-            '文化课满分 750 · 专业统考满分 ${rule.professionalFull}',
-            style: AppText.caption12,
+        ),
+        const SizedBox(height: AppSpace.s16),
+        if (data.province == ScoreProvince.yunnan) ...[
+          ToolField(
+            label: '计算方式',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ToolSegmented<YunnanMode>(
+                  values: YunnanMode.values,
+                  value: data.yunnanMode,
+                  labelOf: (m) => m.label,
+                  onChanged: (m) => _update((d) => d.copyWith(yunnanMode: m)),
+                ),
+                ToolNote(data.yunnanMode.description),
+              ],
+            ),
           ),
-          if (rule.withBonus) ...[
-            const SizedBox(height: AppSpace.s16),
-            AppInputField(
-              controller: _bonus,
-              label: '政策加分（没有可不填）',
-              hint: '如 10',
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+          const SizedBox(height: AppSpace.s16),
+        ],
+        if (data.province == ScoreProvince.custom) ..._buildCustom(data),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: AppInputField(
+                controller: _culture,
+                label: '文化课成绩',
+                hint: '如 500',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: _scoreFormatters,
+                errorText: error != null && error.startsWith('文化')
+                    ? error
+                    : null,
+                onChanged: (v) => _update((d) => d.copyWith(culture: v)),
               ),
-              inputFormatters: _scoreFormatters,
-              errorText: error != null && error.startsWith('政策') ? error : null,
-              onChanged: (v) => _update((d) => d.copyWith(bonus: v)),
+            ),
+            const SizedBox(width: AppSpace.s16),
+            Expanded(
+              child: AppInputField(
+                controller: _professional,
+                label: '专业统考成绩',
+                hint: rule.cultureOnly ? '只作合格判断' : '如 240',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: _scoreFormatters,
+                errorText: error != null && error.startsWith('专业')
+                    ? error
+                    : null,
+                onChanged: (v) => _update((d) => d.copyWith(professional: v)),
+              ),
             ),
           ],
-          const SizedBox(height: AppSpace.s20),
-          ToolTipCard(title: '计算公式', text: rule.formula),
+        ),
+        const SizedBox(height: AppSpace.s4),
+        Text(
+          '文化课满分 750 · 专业统考满分 ${rule.professionalFull}',
+          style: AppText.caption12,
+        ),
+        if (rule.withBonus) ...[
+          const SizedBox(height: AppSpace.s16),
+          AppInputField(
+            controller: _bonus,
+            label: '政策加分（没有可不填）',
+            hint: '如 10',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: _scoreFormatters,
+            errorText: error != null && error.startsWith('政策') ? error : null,
+            onChanged: (v) => _update((d) => d.copyWith(bonus: v)),
+          ),
         ],
-      ),
+        const SizedBox(height: AppSpace.s24),
+        ToolTipCard(title: '计算公式', text: rule.formula),
+      ],
     );
   }
 
@@ -221,7 +209,6 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
               d.copyWith(custom: d.custom.copyWith(culturePercent: v.round())),
         ),
       ),
-      const SizedBox(height: AppSpace.s4),
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -252,33 +239,30 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
               },
             ),
           ),
-          const SizedBox(width: AppSpace.s12),
+          const SizedBox(width: AppSpace.s16),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('保留小数', style: AppText.body14),
-                const SizedBox(height: 6),
-                ToolSegmented<int>(
-                  values: const [0, 1, 2, 3],
-                  value: custom.decimals,
-                  labelOf: (n) => n == 0 ? '取整' : '$n 位',
-                  onChanged: (n) => _update(
-                    (d) => d.copyWith(custom: d.custom.copyWith(decimals: n)),
-                  ),
+            child: ToolField(
+              label: '保留小数',
+              child: ToolSegmented<int>(
+                values: const [0, 1, 2, 3],
+                value: custom.decimals,
+                labelOf: (n) => n == 0 ? '取整' : '$n 位',
+                onChanged: (n) => _update(
+                  (d) => d.copyWith(custom: d.custom.copyWith(decimals: n)),
                 ),
-              ],
+              ),
             ),
           ),
         ],
       ),
-      const SizedBox(height: AppSpace.s20),
+      const SizedBox(height: AppSpace.s16),
     ];
   }
 }
 
-class _ResultCard extends StatelessWidget {
-  const _ResultCard({required this.data});
+/// 右侧面板：综合分（一屏唯一的大数字）、计算过程、依据和免责说明。
+class _ScoreResult extends StatelessWidget {
+  const _ScoreResult({required this.data});
 
   final ScoreFormData data;
 
@@ -287,92 +271,66 @@ class _ResultCard extends StatelessWidget {
     final rule = data.rule;
     final outcome = data.outcome;
     final result = outcome.result;
-    final Widget body;
-    if (outcome.error != null) {
-      body = AppEmptyState(
-        title: '请检查输入',
-        description: outcome.error,
-        icon: Icons.error_outline_rounded,
-        iconColor: AppColors.danger,
-        iconBackground: AppColors.dangerSoft,
-      );
+    final error = outcome.error;
+    final List<Widget> body;
+    if (error != null) {
+      body = [ToolNotice(error, tone: AppTone.danger)];
     } else if (result == null) {
-      body = const AppEmptyState(
-        title: '输入成绩后显示综合分',
-        description: '文化课满分 750，专业统考满分 300',
-        icon: Icons.calculate_outlined,
-      );
+      body = [Text('填好文化课和专业统考成绩后，这里显示综合分和计算过程。', style: AppText.body13)];
     } else {
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('综合分（排序成绩）', style: AppText.caption12),
-          const SizedBox(height: AppSpace.s4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Flexible(
-                child: Text(
-                  result.text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.displayNumber(
-                    size: 32,
-                    color: AppColors.brand,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpace.s4),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('分', style: AppText.body14),
-              ),
-            ],
-          ),
-          if (rule.note.isNotEmpty) ...[
-            const SizedBox(height: AppSpace.s8),
-            Wrap(children: [AppTag(label: rule.note)]),
-          ],
-          const SizedBox(height: AppSpace.s16),
-          Text('计算过程', style: AppText.body14Strong),
-          const SizedBox(height: AppSpace.s8),
-          for (final step in result.steps)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpace.s8),
-              child: Container(
-                padding: const EdgeInsets.all(AppSpace.s12),
-                decoration: const BoxDecoration(
-                  color: AppColors.surfaceSubtle,
-                  borderRadius: AppRadius.br8,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(step.label, style: AppText.caption12),
-                    const SizedBox(height: 2),
-                    Text(step.expression, style: AppText.number(size: 14)),
-                  ],
-                ),
+      body = [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Flexible(
+              child: Text(
+                result.text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.displayNumber(size: 32, color: AppColors.brand),
               ),
             ),
+            const SizedBox(width: AppSpace.s4),
+            Text('分', style: AppText.body14),
+          ],
+        ),
+        if (rule.note.isNotEmpty) Text(rule.note, style: AppText.caption12),
+        const SizedBox(height: AppSpace.s24),
+        const AppSectionTitle(title: '计算过程'),
+        const SizedBox(height: AppSpace.s4),
+        for (final (index, step) in result.steps.indexed) ...[
+          if (index > 0) const AppRule(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpace.s12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(step.label, style: AppText.caption12),
+                const SizedBox(height: 2),
+                Text(step.expression, style: AppText.number(size: 14)),
+              ],
+            ),
+          ),
         ],
-      );
+      ];
     }
-    return AppCard(
-      title: '计算结果',
-      subtitle: _provinceLabel(data.province),
-      bordered: false,
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          body,
-          const SizedBox(height: AppSpace.s8),
-          Text('依据：${rule.source}', style: AppText.caption12),
-          const SizedBox(height: AppSpace.s12),
-          const ToolNotice('$kScoreDisclaimer。计算结果仅供估算参考，录取以官方公布的成绩和招生章程为准。'),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppSectionTitle(
+          title: '综合分',
+          note: '排序成绩 · ${_provinceLabel(data.province)}',
+        ),
+        const SizedBox(height: AppSpace.s12),
+        ...body,
+        const SizedBox(height: AppSpace.s24),
+        const AppRule(),
+        const SizedBox(height: AppSpace.s16),
+        Text('依据：${rule.source}', style: AppText.caption12),
+        const SizedBox(height: AppSpace.s12),
+        const ToolNotice('$kScoreDisclaimer。计算结果仅供估算参考，录取以官方公布的成绩和招生章程为准。'),
+      ],
     );
   }
 }

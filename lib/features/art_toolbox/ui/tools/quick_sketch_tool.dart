@@ -8,7 +8,8 @@ import 'quick_sketch_session_page.dart';
 
 /// 速写计时练习：选择每张时长、张数与参考图集，进入全屏计时练习。
 ///
-/// 版式与看画分析的工具一致：左侧画布预览参考图，右侧白色侧栏放练习设置。
+/// 版式与看画分析的工具一致：画布里按原比例预览这一组参考图，右边面板放练习
+/// 设置，「开始练习」是页头里唯一的主按钮。
 class QuickSketchTool extends StatefulWidget {
   const QuickSketchTool({required this.onBack, super.key});
 
@@ -20,7 +21,7 @@ class QuickSketchTool extends StatefulWidget {
 
 class _QuickSketchToolState extends State<QuickSketchTool> {
   int _interval = 60;
-  int _count = 10;
+  int _count = sketchCounts.first;
   SketchReferenceSet _set = SketchReferenceSet.figures;
 
   String get _totalText {
@@ -49,35 +50,19 @@ class _QuickSketchToolState extends State<QuickSketchTool> {
     return ToolPageScaffold(
       tool: ArtTool.quickSketch,
       onBack: widget.onBack,
-      bodyTopInset: 0,
-      body: ImageToolLayout(
-        stage: (_) => ToolStage(child: _ReferencePreview(set: _set)),
-        panel: (_) => _buildSettings(),
-        panelFooter: (_) => _buildStart(),
-      ),
-    );
-  }
-
-  /// 固定在参数下方的「开始练习」：原版练习设置页底部的主按钮（240×52）。
-  Widget _buildStart() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ToolNote(
+      caption:
           '共 $_count 张 · 每张 ${sketchIntervalLabel(_interval)} · 预计 $_totalText',
-        ),
-        const SizedBox(height: AppSpace.s8),
-        SizedBox(
-          width: 240,
-          height: 52,
-          child: AppButton(
-            label: '开始练习',
-            icon: Icons.play_arrow_rounded,
-            expand: true,
-            onTap: _start,
-          ),
-        ),
+      actions: [
+        AppButton(label: '开始练习', icon: Icons.play_arrow_rounded, onTap: _start),
       ],
+      body: ImageToolLayout(
+        hint: '共 ${_set.assets.length} 张素材，随机出题，张数不够时循环使用',
+        stage: (_) => ToolStage(
+          label: '「${_set.label}」参考图',
+          child: _ReferencePreview(set: _set),
+        ),
+        panel: (_) => _buildSettings(),
+      ),
     );
   }
 
@@ -115,7 +100,6 @@ class _QuickSketchToolState extends State<QuickSketchTool> {
                 labelOf: (v) => v.label,
                 onChanged: (v) => setState(() => _set = v),
               ),
-              const SizedBox(height: AppSpace.s8),
               ToolNote(_set.description),
             ],
           ),
@@ -131,69 +115,49 @@ class _QuickSketchToolState extends State<QuickSketchTool> {
   }
 }
 
-/// 画布里的参考图预览：最多九张，三列方图。
+/// 画布里的参考图预览：最多九张，等高、按原比例排开，不裁。
 class _ReferencePreview extends StatelessWidget {
   const _ReferencePreview({required this.set});
 
   final SketchReferenceSet set;
 
-  static const double _gap = AppSpace.s12;
+  static const double _gap = AppSpace.s16;
 
   @override
   Widget build(BuildContext context) {
     final assets = set.assets.take(9).toList();
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // 三列方图，整组不超过画布高度；画布太矮时可以滚动。
-              final rows = (assets.length / 3).ceil();
-              final byWidth = (constraints.maxWidth - 32 - _gap * 2) / 3;
-              final byHeight =
-                  (constraints.maxHeight - 88 - _gap * (rows - 1)) / rows;
-              final size = byWidth
-                  .clamp(48.0, byHeight.clamp(96.0, 240.0))
-                  .floorToDouble();
-              final decodeWidth =
-                  (size * MediaQuery.devicePixelRatioOf(context) * 1.5).round();
-              return Center(
-                child: SingleChildScrollView(
-                  primary: false,
-                  padding: const EdgeInsets.fromLTRB(16, 44, 16, 44),
-                  child: SizedBox(
-                    width: size * 3 + _gap * 2,
-                    child: Wrap(
-                      spacing: _gap,
-                      runSpacing: _gap,
-                      children: [
-                        for (final asset in assets)
-                          ClipRRect(
-                            borderRadius: AppRadius.br8,
-                            child: Image.asset(
-                              asset,
-                              width: size,
-                              height: size,
-                              fit: BoxFit.cover,
-                              cacheWidth: decodeWidth,
-                              filterQuality: FilterQuality.medium,
-                            ),
-                          ),
-                      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final rows = assets.length <= 3 ? 2 : 3;
+        final height = ((constraints.maxHeight - 48 - _gap * (rows - 1)) / rows)
+            .clamp(72.0, 240.0)
+            .floorToDouble();
+        final decodeHeight =
+            (height * MediaQuery.devicePixelRatioOf(context) * 1.5).round();
+        return Center(
+          child: SingleChildScrollView(
+            primary: false,
+            padding: const EdgeInsets.all(AppSpace.s24),
+            child: Wrap(
+              spacing: _gap,
+              runSpacing: _gap,
+              alignment: WrapAlignment.center,
+              children: [
+                for (final asset in assets)
+                  AppImageTile.frame(
+                    child: Image.asset(
+                      asset,
+                      height: height,
+                      fit: BoxFit.contain,
+                      cacheHeight: decodeHeight,
+                      filterQuality: FilterQuality.medium,
                     ),
                   ),
-                ),
-              );
-            },
+              ],
+            ),
           ),
-        ),
-        Positioned(
-          left: 0,
-          top: 0,
-          child: StageLabel('「${set.label}」参考图'),
-        ),
-        StageHint('共 ${set.assets.length} 张素材，随机出题，张数不够时循环使用'),
-      ],
+        );
+      },
     );
   }
 }

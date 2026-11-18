@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/ui/ui.dart';
-import '../../../gallery/ui/widgets/library_controls.dart';
 import '../../data/toolbox_catalog.dart';
 import '../../data/toolbox_image_source.dart';
 import '../../logic/color_analysis.dart';
@@ -282,19 +281,15 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
             },
           ),
           if (_autoThreshold != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: LibraryActionPill(
-                label: '使用自动阈值（$_autoThreshold）',
-                icon: Icons.auto_fix_high_rounded,
-                iconSize: 18,
-                onTap: _threshold == _autoThreshold
-                    ? null
-                    : () {
-                        setState(() => _threshold = _autoThreshold!);
-                        _requestNotan();
-                      },
-              ),
+            ToolInlineAction(
+              label: '使用自动阈值（$_autoThreshold）',
+              icon: Icons.auto_fix_high_rounded,
+              onTap: _threshold == _autoThreshold
+                  ? null
+                  : () {
+                      setState(() => _threshold = _autoThreshold!);
+                      _requestNotan();
+                    },
             ),
           const SizedBox(height: AppSpace.s20),
           if (darkRatio != null)
@@ -305,7 +300,7 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
         ] else
           ToolPanelSection(
             title: '色阶数',
-            trailing: const Text('越少越概括'),
+            note: '越少越概括',
             child: ToolSegmented<int>(
               values: _levelOptions,
               value: _levels,

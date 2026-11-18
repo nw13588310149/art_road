@@ -10,7 +10,6 @@ import 'package:the_road_of_art_flutter/features/art_toolbox/data/toolbox_image_
 import 'package:the_road_of_art_flutter/features/art_toolbox/logic/image_ops.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/state/toolbox_image_controller.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/ui/art_toolbox_page.dart';
-import 'package:the_road_of_art_flutter/features/art_toolbox/ui/widgets/image_tool_frame.dart';
 import 'package:the_road_of_art_flutter/features/art_toolbox/ui/widgets/tool_panel.dart';
 
 class _PreloadedImageController extends ToolboxImageController {
@@ -88,25 +87,33 @@ void main() {
 
   for (final size in const [Size(950, 740), Size(720, 400)]) {
     testWidgets(
-      'home switches groups and lists their tools at ${size.width.round()}',
+      'home lists every group and tool on one page at ${size.width.round()}',
       (tester) async {
         await _pumpToolbox(tester, size: size);
+        expect(find.text('画室工具箱'), findsOneWidget);
         for (final group in ArtToolGroup.values) {
           expect(find.text(group.label), findsOneWidget);
-          await tester.tap(find.text(group.label));
-          await tester.pump();
-          for (final tool in ArtTool.values) {
-            final item = find.text(tool.label);
-            expect(item, tool.group == group ? findsOneWidget : findsNothing);
-            if (tool.group == group) await tester.ensureVisible(item);
-          }
         }
+        for (final tool in ArtTool.values) {
+          final item = find.text(tool.label);
+          expect(item, findsOneWidget);
+          await tester.ensureVisible(item);
+        }
+        expect(find.text('去使用'), findsNothing);
         await tester.tap(find.text(ArtTool.countdown.label));
         await tester.pump();
+        expect(
+          find.descendant(
+            of: find.byType(AppTitleBar),
+            matching: find.text(ArtTool.countdown.label),
+          ),
+          findsOneWidget,
+        );
         await tester.tap(find.byTooltip('返回'));
         await tester.pump();
         expect(find.text(ArtTool.countdown.label), findsOneWidget);
-        expect(find.text(ArtTool.value.label), findsNothing);
+        expect(find.text(ArtTool.value.label), findsOneWidget);
+        expect(tester.takeException(), isNull);
       },
     );
 
@@ -119,7 +126,7 @@ void main() {
         expect(find.byTooltip('返回'), findsOneWidget);
         expect(
           find.descendant(
-            of: find.byType(ToolDetailHeader),
+            of: find.byType(AppTitleBar),
             matching: find.text(tool.label),
           ),
           findsOneWidget,
@@ -150,11 +157,7 @@ void main() {
             lessThan(tester.getTopLeft(labels.last).dx),
           );
         }
-        expect(find.text(tool.help), findsNothing);
-        await tester.tap(find.byTooltip('工具用法'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 200));
-        expect(find.text(tool.help), findsOneWidget);
+        expect(find.byTooltip('工具用法'), findsNothing);
         expect(tester.takeException(), isNull);
       });
     }
@@ -182,9 +185,9 @@ void main() {
     expect(find.text('已暂停，点击继续'), findsOneWidget);
     await tester.tap(find.text('继续'));
     await tester.pump();
-    await tester.tap(find.byTooltip('跳过'));
+    await tester.tap(find.text('跳过'));
     await tester.pump();
-    await tester.tap(find.byTooltip('结束'));
+    await tester.tap(find.text('结束'));
     await tester.pump();
     expect(find.text('练习回顾'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -207,7 +210,7 @@ void main() {
     expect(find.text('选一张画作，开始使用「构图网格」'), findsNothing);
     await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
-    expect(find.text('分析工具'), findsOneWidget);
+    expect(find.text('看画分析'), findsOneWidget);
     expect(find.text('测试图'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
