@@ -66,6 +66,8 @@ import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
 import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
 import 'package:the_road_of_art_flutter/core/theme/app_theme.dart';
 import 'package:the_road_of_art_flutter/core/ui/ui.dart';
+import 'package:the_road_of_art_flutter/core/widgets/image_viewer_tools.dart';
+import 'package:the_road_of_art_flutter/features/art_toolbox/ui/viewer/art_viewer_toolkit.dart';
 import 'package:the_road_of_art_flutter/features/teaching_overview/data/teaching_overview_repository.dart';
 
 // ───────────────────────────── 镜头清单 ─────────────────────────────
@@ -131,6 +133,9 @@ const _landscape = {
   'imageUrl': '$_art/color-landscape-1.jpg',
   'title': '秋日风景',
 };
+
+// 从范画详情打开统一的看图页。
+const _viewer = ['大卫石膏像 · 侧转头像', 'label:全屏查看', 'wait:400'];
 
 final _shots = <_Shot>[
   // 今日
@@ -233,6 +238,50 @@ final _shots = <_Shot>[
     'gallery-viewer',
     '/gallery',
     steps: ['大卫石膏像 · 侧转头像', 'label:全屏查看', 'wait:600'],
+  ),
+  // 看图页的工具。画面上的点击用 `scroll:0@x,y`，坐标在两种尺寸下都落在画上。
+  const _Shot('viewer-gray', '/gallery', steps: [..._viewer, 'label:灰度']),
+  const _Shot(
+    'viewer-levels',
+    '/gallery',
+    steps: [..._viewer, 'label:明度色阶', 'wait:800'],
+  ),
+  const _Shot(
+    'viewer-levels-5',
+    '/gallery',
+    steps: [..._viewer, 'label:明度色阶', 'label:5 档', 'wait:800'],
+  ),
+  const _Shot(
+    'viewer-blur',
+    '/gallery',
+    steps: [..._viewer, 'label:眯眼模糊', 'wait:800'],
+  ),
+  const _Shot('viewer-mirror', '/gallery', steps: [..._viewer, 'label:镜像']),
+  const _Shot(
+    'viewer-grid',
+    '/gallery',
+    steps: [..._viewer, 'label:构图网格', 'label:对角线'],
+  ),
+  const _Shot(
+    'viewer-color',
+    '/gallery',
+    steps: [..._viewer, 'label:取色', 'scroll:0@560,300', 'wait:600'],
+  ),
+  const _Shot(
+    'viewer-measure',
+    '/gallery',
+    steps: [
+      ..._viewer,
+      'label:比例测量',
+      'scroll:0@540,190',
+      'wait:400',
+      'scroll:0@540,330',
+      'wait:400',
+      'scroll:0@660,200',
+      'wait:400',
+      'scroll:0@660,470',
+      'wait:400',
+    ],
   ),
 
   // 优秀课件
@@ -388,6 +437,23 @@ final _shots = <_Shot>[
     roles: ['student', 'teacher', 'groupLeader', 'principal'],
   ),
   const _Shot('artwork-detail', '/artworks', steps: ['石膏头像结构练习']),
+  const _Shot(
+    'artwork-viewer',
+    '/artworks',
+    steps: ['石膏头像结构练习', 'label:查看大图', 'wait:600'],
+  ),
+  const _Shot(
+    'artwork-viewer-levels',
+    '/artworks',
+    steps: [
+      '石膏头像结构练习',
+      'label:查看大图',
+      'wait:400',
+      'label:明度色阶',
+      'label:构图网格',
+      'wait:800',
+    ],
+  ),
   const _Shot('artwork-upload', '/artworks', steps: ['上传作品']),
   const _Shot(
     'artwork-review',
@@ -504,6 +570,12 @@ final _shots = <_Shot>[
 
   // 保留页面，只作对照，不改
   const _Shot('ref-home', '/', roles: ['student', 'teacher']),
+  // 群聊里的图片消息全屏查看（统一的看图页，坐标按 1180×820 取）。
+  const _Shot(
+    'chat-viewer',
+    '/smart-campus',
+    steps: ['群聊', 'scroll:-450@700,350', 'scroll:0@616,432', 'wait:600'],
+  ),
   const _Shot('ref-ai', '/personal-Ai'),
 
   // 组件库演示页，最上面一节是新页面的组件
@@ -849,7 +921,13 @@ Future<void> _render(
   DemoArtworkStore.clearCache();
 
   final container = ProviderContainer(
-    overrides: [appStorageProvider.overrideWithValue(AppStorage(prefs))],
+    overrides: [
+      appStorageProvider.overrideWithValue(AppStorage(prefs)),
+      // 与 lib/main.dart 相同：看图页带看画工具。
+      imageViewerToolkitProvider.overrideWithValue(
+        const ArtImageViewerToolkit(),
+      ),
+    ],
   );
   final below = _belowArg.isNotEmpty ? _belowArg : (shot.below ?? '');
   // 打开语义树，`label:` 步骤才能按读屏名称找控件。

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/image_gallery_viewer.dart';
 import '../data/gallery_models.dart';
 import 'gallery_compare_page.dart';
-import 'gallery_viewer_page.dart';
 import 'widgets/gallery_detail_panel.dart';
 import 'widgets/gallery_images.dart';
 import 'widgets/gallery_widgets.dart';
@@ -105,11 +105,10 @@ class GalleryDetailView extends StatelessWidget {
                     semanticLabel: '全屏查看',
                     onTap: work.imageUrl.isEmpty
                         ? null
-                        : () => showGalleryViewer(
+                        : () => showImageGallery(
                             context,
-                            src: work.imageUrl,
-                            title: work.title,
-                            aspectRatio: work.aspectRatio,
+                            images: [work.imageUrl],
+                            titles: [work.title],
                           ),
                   ),
                 ],

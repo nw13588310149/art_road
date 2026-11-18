@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/image_gallery_viewer.dart';
 import '../data/creative_models.dart';
 import '../data/market_delivery_service.dart';
 import '../data/market_repository.dart';
@@ -637,32 +638,28 @@ class _MarketDeliveryDrawerState extends ConsumerState<MarketDeliveryDrawer> {
                           AppButton(
                             label: '预览文件 ${i + 1}',
                             variant: AppButtonVariant.secondary,
-                            onTap: () => Navigator.of(context).push(
-                              PageRouteBuilder<void>(
-                                transitionDuration: Duration.zero,
-                                reverseTransitionDuration: Duration.zero,
-                                pageBuilder: (_, _, _) => Scaffold(
-                                  appBar: AppBar(
-                                    title: Text('${d['title']} · ${i + 1}'),
-                                  ),
-                                  body: files[i]['kind'] == 'pdf'
-                                      ? CreativePdfReader(
-                                          url: creativeText(files[i]['url']),
-                                        )
-                                      : Center(
-                                          child: InteractiveViewer(
-                                            maxScale: 5,
-                                            child: AppImage(
-                                              src: creativeText(
-                                                files[i]['url'],
-                                              ),
-                                              fit: BoxFit.contain,
-                                            ),
+                            onTap: () => files[i]['kind'] == 'pdf'
+                                ? Navigator.of(context).push(
+                                    PageRouteBuilder<void>(
+                                      transitionDuration: Duration.zero,
+                                      reverseTransitionDuration: Duration.zero,
+                                      pageBuilder: (_, _, _) => Scaffold(
+                                        appBar: AppBar(
+                                          title: Text(
+                                            '${d['title']} · ${i + 1}',
                                           ),
                                         ),
-                                ),
-                              ),
-                            ),
+                                        body: CreativePdfReader(
+                                          url: creativeText(files[i]['url']),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : showImageGallery(
+                                    context,
+                                    images: [creativeText(files[i]['url'])],
+                                    titles: ['${d['title']} · ${i + 1}'],
+                                  ),
                           ),
                           AppButton(
                             label: '保存文件 ${i + 1}',

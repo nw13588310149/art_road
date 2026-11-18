@@ -1502,6 +1502,7 @@ class _HomeSchoolImageBubble extends ConsumerWidget {
             images: [url],
             initialIndex: 0,
             heroTagPrefix: _heroTagPrefix,
+            headers: headers,
           );
           return;
         }
@@ -1510,6 +1511,7 @@ class _HomeSchoolImageBubble extends ConsumerWidget {
           images: galleryImages,
           initialIndex: heroIndex,
           heroTagPrefix: _heroTagPrefix,
+          headers: headers,
         );
       },
       child: Hero(

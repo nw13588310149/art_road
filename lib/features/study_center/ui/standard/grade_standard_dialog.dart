@@ -202,6 +202,10 @@ class _BandList extends StatelessWidget {
       for (final band in bands)
         if (band.imageUrl.isNotEmpty) MediaUrl.resolve(band.imageUrl),
     ];
+    final titles = [
+      for (final band in bands)
+        if (band.imageUrl.isNotEmpty) '${band.grade} 档样图',
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -220,6 +224,7 @@ class _BandList extends StatelessWidget {
                       images.indexOf(MediaUrl.resolve(band.imageUrl)),
                     ),
                     heroTagPrefix: 'study_band',
+                    titles: titles,
                   ),
           ),
           const AppRule(),

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/network/media_url.dart';
+import '../../../core/ui/app_image.dart';
 import '../logic/image_filters.dart';
 import '../logic/image_ops.dart';
 
@@ -82,9 +83,9 @@ class ToolboxImageLoader {
     return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
   }
 
-  /// 演示媒体地址直接读打包资源，其余地址走网络下载。
+  /// 打包资源（`asset:` 引用、`assets/` 路径、演示媒体地址）直接读资源，其余地址走网络下载。
   Future<Uint8List> download(String url) async {
-    final assetKey = demoAssetKeyOf(url);
+    final assetKey = AppImage.assetKeyOf(url) ?? demoAssetKeyOf(url);
     if (assetKey != null) {
       try {
         return await loadAsset(assetKey);
@@ -183,6 +184,27 @@ Future<({ArtImageData data, ui.Image image})?> _decodeWithEngine(
     return null;
   }
 }
+
+/// 已经解码显示的图片（例如看图页里的那张）转成工具用的像素：铺白透明区域，长边缩到
+/// [kToolboxMaxSide] 以内。不用重新下载，带鉴权头、打包资源、blob 地址的图都适用。
+/// 调用方保证 [image] 在返回之前不被释放。
+Future<ArtImageData?> artImageFromUiImage(ui.Image image) async {
+  final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  if (byteData == null) {
+    return null;
+  }
+  final rgba = byteData.buffer.asUint8List(
+    byteData.offsetInBytes,
+    byteData.lengthInBytes,
+  );
+  return compute(
+    _flattenAndFit,
+    ArtImageData(width: image.width, height: image.height, rgba: rgba),
+  );
+}
+
+ArtImageData _flattenAndFit(ArtImageData image) =>
+    downscale(flattenPremultipliedImage(image), kToolboxMaxSide);
 
 /// 把处理后的像素转成可显示的图片。
 Future<ui.Image> artImageToUiImage(ArtImageData data) {

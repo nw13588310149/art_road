@@ -4833,8 +4833,6 @@ class _ImageBubbleView extends StatelessWidget {
       );
     }
 
-    // hero tag 需与 showImageGallery 内部 tag 格式一致
-    // showImageGallery 使用 '${heroTagPrefix}_${image}_$index'
     const prefix = 'chat_img';
     final heroTag = '${prefix}_${url}_0';
     return GestureDetector(

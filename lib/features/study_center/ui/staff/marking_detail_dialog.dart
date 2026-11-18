@@ -457,6 +457,7 @@ class _PaperThumb extends StatelessWidget {
         context,
         images: [MediaUrl.resolve(url)],
         heroTagPrefix: 'study_marking_paper',
+        titles: const ['原卷'],
       ),
       semanticLabel: '查看原卷大图',
       child: Column(

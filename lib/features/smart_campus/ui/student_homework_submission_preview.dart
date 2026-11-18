@@ -10,6 +10,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/providers/app_providers.dart';
+import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../courseware/ui/courseware_inline_preview.dart';
 import '../../courseware/ui/courseware_url_opener.dart';
 import '../../shell/ui/shell_layout.dart';
@@ -89,6 +90,21 @@ Future<void> showStudentHomeworkSubmissionPreview(
 }) async {
   final u = fileUrl.trim();
   if (u.isEmpty) return;
+
+  final kind = inferStudentSubmissionPreviewKind(
+    u,
+    typeTag: typeTag,
+    mediumLabel: mediumLabel,
+    attachmentName: attachmentName,
+  );
+  if (kind == StudentSubmissionPreviewKind.image) {
+    await showImageGallery(
+      context,
+      images: [u],
+      titles: [if (title.trim().isNotEmpty) title.trim()],
+    );
+    return;
+  }
 
   final token = ref.read(appStorageProvider).token;
   if (!context.mounted) return;

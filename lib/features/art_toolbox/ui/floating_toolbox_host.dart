@@ -5,6 +5,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/ui/ui.dart';
+import '../../../core/widgets/image_gallery_viewer.dart'
+    show imageViewerRouteName;
 import '../../../app/router/route_paths.dart';
 import '../../my_notes/state/my_notes_controller.dart';
 import '../../my_notes/state/my_notes_state.dart';
@@ -251,6 +253,7 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost>
     final route = widget.observer.page?.settings.name;
     final ownTools =
         route == RoutePaths.artToolbox ||
+        route == imageViewerRouteName ||
         (route == RoutePaths.myNotes &&
             ref.watch(myNotesControllerProvider.select((s) => s.view)) ==
                 MyNotesView.editor);
