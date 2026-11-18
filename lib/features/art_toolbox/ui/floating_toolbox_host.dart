@@ -254,6 +254,7 @@ class _FloatingToolboxHostState extends ConsumerState<FloatingToolboxHost>
     final ownTools =
         route == RoutePaths.artToolbox ||
         route == imageViewerRouteName ||
+        route == imageCompareRouteName ||
         (route == RoutePaths.myNotes &&
             ref.watch(myNotesControllerProvider.select((s) => s.view)) ==
                 MyNotesView.editor);

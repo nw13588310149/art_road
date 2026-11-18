@@ -53,6 +53,7 @@ Future<void> openArtworkCompare(
 }) {
   return Navigator.of(context, rootNavigator: true).push(
     PageRouteBuilder<void>(
+      settings: const RouteSettings(name: imageCompareRouteName),
       fullscreenDialog: true,
       transitionDuration: AppMotion.overlay,
       reverseTransitionDuration: AppMotion.overlay,

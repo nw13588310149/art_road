@@ -49,7 +49,7 @@
 ## Architecture
 - Routing: Navigator 1.0 `onGenerateRoute` with `RoutePaths`. Art routes and their arguments:
   - `/today` → `TodayPage` (no arguments; the role comes from the session)
-  - `/study` → `StudyCenterPage` (`examId`, `view`, `subjectId`)
+  - `/study` → `StudyCenterPage` (`examId`, `view`, `subjectId`); `view: 'critique'` opens the paper viewer in 讲评 mode
   - `/artworks` → `ArtworksPage` (`artworkId`)
   - `/gallery` → `GalleryPage` (`subject`, `keyword`, `category`, `workId`)
   - `/toolbox` → `ArtToolboxPage` (`tool`, `imageUrl`, `title`); `tool` is an `ArtTool.key` from `art_toolbox/data/toolbox_catalog.dart` (17 tools in three groups). Other modules deep-link by key, so never rename an existing key.
@@ -57,6 +57,14 @@
   - `/micro-lessons` → `LearningTopicsPage`; `/market` → `MarketplacePage` (creative_hub data/state/ui).
 - Creative Hub fixtures use DemoStore for topics, resources, listings, per-user favorites and immutable order snapshots. Purchases are explicitly demo transactions.
 - Artwork teacher reviews are independent per assigned teacher; `teacherStageComplete` gates leader review. Principal scores remain separate from the teaching reference score.
+- Pins (定点点评) carry a student `response` (`FIXED` / `UNCLEAR`) set through `POST /app/artworks/{id}/marks/respond`; only a change to `UNCLEAR` notifies the teacher. A resubmitted version shows the previous version's pins read-only with a focused before/after compare.
+- 月考讲评 is one critique per exam + subject, stored in `DemoExamCritiqueStore` (`exam_critiques:v1`) and served by `marking_critique_fixtures.dart`:
+ - representative papers (`shared`) are visible to every student in that exam; a personal critique only to its owner; drafts stay hidden until published;
+ - whether someone may edit comes from the API's `access.canEdit` (subject teachers from the artwork teacher roster plus group leaders of that subject); the client never decides by role;
+ - paper pins reuse the artwork pin widgets and limits;
+ - the study payload's per-subject `critiqueAvailable` / `critiqueUnread` drive the 「讲评 · 新」 tag and the Today step 「听讲评」.
+- Photo straightening is pure maths in `lib/core/art/photo_rectify.dart` (homography, quad checks, `rectifyPhoto` for `compute`); the page is `artworks/ui/artwork_photo_straighten_page.dart`. Gouache mixing recipes live in `art_toolbox/data/gouache_pigments.dart` + `art_toolbox/logic/pigment_mix.dart` (CIEDE2000) and are labelled as estimates.
+- Full-screen compare pages push with `imageCompareRouteName` (from `app_compare_view.dart`); the floating tool rail hides there, as it does on `imageViewerRouteName`.
 - FL Chart 1.3.1 is cached with the user's one-time download approval; keep future dependency resolution offline.
 - Notifications carry `targetType` + `targetId`; the mapping to routes lives in `lib/features/shell/navigation/shell_notice_routes.dart`.
 - First-login guide per role: content in `lib/features/help_guide/data/role_guides.dart`, seen flags `role_guide_seen_v1:<role>` in SharedPreferences.

@@ -268,6 +268,10 @@ void _pageTests() {
     await _settle(tester);
     final divider = find.bySemanticsLabel('对比分隔线');
     expect(divider, findsOneWidget);
+    expect(
+      ModalRoute.of(tester.element(find.byType(AppCompareView)))?.settings.name,
+      imageCompareRouteName,
+    );
     // 并排时分隔条起始放在让两幅画都尽量大的位置，不一定在正中。
     final initial = tester.getSemantics(divider).getSemanticsData().value;
     expect(initial, endsWith('%'));
@@ -383,6 +387,10 @@ void _pageTests() {
       findsOneWidget,
     );
     expect(find.text('我的作品'), findsOneWidget);
+    expect(
+      ModalRoute.of(tester.element(find.byType(AppCompareView)))?.settings.name,
+      imageCompareRouteName,
+    );
     expect(find.text('范画 · 素描'), findsOneWidget);
     expect(find.text('换一张范画'), findsOneWidget);
     expect(find.text('叠加'), findsOneWidget);

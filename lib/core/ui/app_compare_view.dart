@@ -10,6 +10,9 @@ import 'app_compare_zoom_box.dart';
 import 'app_pressable.dart';
 import 'app_text.dart';
 
+/// 整屏对比页的路由名。随页工具栏据此让开（对比页有自己的工具）。
+const imageCompareRouteName = '/image-compare';
+
 /// [AppCompareView] 的一侧：名称和一张图。
 class AppComparePane {
   /// 一张图。[child] 铺满按原比例算好的画框（用 `BoxFit.contain` 或 `fill` 画）。

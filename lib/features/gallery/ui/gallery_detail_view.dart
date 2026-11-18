@@ -87,6 +87,9 @@ class GalleryDetailView extends StatelessWidget {
                   label: '对比我的原卷',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
+                      settings: const RouteSettings(
+                        name: imageCompareRouteName,
+                      ),
                       fullscreenDialog: true,
                       builder: (_) => GalleryComparePage(work: work),
                     ),
