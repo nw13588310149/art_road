@@ -76,47 +76,71 @@ void main() {
 }
 
 void _pageTests() {
-  testWidgets('学情总览：成绩卡学号、超过百分比与各科卡片', (tester) async {
+  testWidgets('学情总览：学号、超过百分比、各科成绩与评分标准', (tester) async {
     await _pump(
       tester,
       const StudentStudyView(args: StudyCenterArgs()),
       account: DemoAccounts.student,
     );
     expect(find.text('我的学情'), findsNothing);
+    expect(find.text('学情'), findsOneWidget);
     expect(find.textContaining('学号 2027001'), findsOneWidget);
     expect(find.text('超过全画室 82% 的考生'), findsOneWidget);
-    expect(find.text('各科表现'), findsOneWidget);
+    expect(find.text('各科成绩'), findsOneWidget);
+    expect(find.text('查看完整报告'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('全画室排名')).dy,
       tester.getTopLeft(find.text('城东校区排名')).dy,
     );
-    await tester.ensureVisible(find.text('评分标准').first);
+    await tester.ensureVisible(find.text('评分标准'));
     await _settle(tester);
-    await tester.tap(find.text('评分标准').first);
+    await tester.tap(find.text('评分标准'));
     await _settle(tester);
     expect(find.text('素描 · 评分标准'), findsOneWidget);
+    await tester.tap(
+      find.descendant(of: find.byType(AppDialog), matching: find.text('色彩')),
+    );
+    await _settle(tester);
+    expect(find.text('色彩 · 评分标准'), findsOneWidget);
     await tester.tapAt(const Offset(8, 8));
     await _settle(tester);
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.drag(
+      find.byType(CustomScrollView).first,
+      const Offset(0, -900),
+    );
     await _settle(tester);
-    expect(find.textContaining('考试记录'), findsOneWidget);
+    expect(find.text('考试记录'), findsOneWidget);
     await _unmount(tester);
   });
 
-  testWidgets('成绩报告与成长曲线', (tester) async {
+  testWidgets('成绩报告：点一科打开原卷，再看成长曲线', (tester) async {
     await _pump(
       tester,
       const StudentStudyView(args: StudyCenterArgs(examId: '26')),
       account: DemoAccounts.student,
     );
     expect(find.textContaining(RegExp(r'^各科成绩')), findsOneWidget);
+    await tester.tap(find.text('色彩'));
+    await _settle(tester);
+    expect(find.text('色彩 · 我的成绩'), findsOneWidget);
+    await tester.tap(find.byTooltip('关闭原卷'));
+    await _settle(tester);
+
     await tester.tap(find.text('成长曲线'));
     await _settle(tester);
     expect(find.textContaining('分数走势'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -600));
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -600),
+    );
     await _settle(tester);
     expect(find.textContaining('历次成绩'), findsOneWidget);
+    await tester.ensureVisible(find.byTooltip('返回'));
+    await _settle(tester);
+    await tester.tap(find.byTooltip('返回'));
+    await _settle(tester);
+    expect(find.textContaining(RegExp(r'^各科成绩')), findsOneWidget);
     await _unmount(tester);
   });
 

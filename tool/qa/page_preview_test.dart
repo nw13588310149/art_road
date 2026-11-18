@@ -281,8 +281,26 @@ final _shots = <_Shot>[
     roles: ['student', 'teacher', 'headTeacher', 'principal'],
   ),
   const _Shot('study-report', '/study', steps: ['查看完整报告']),
-  const _Shot('study-paper', '/study', steps: ['查看完整报告', '看原卷']),
+  const _Shot('study-exam-other', '/study', steps: ['2026 年 8 月月考']),
+  // 各科成绩表整行可点，点科目名打开那一科的原卷。
+  const _Shot('study-paper', '/study', steps: ['查看完整报告', '=素描']),
+  const _Shot('study-paper-color', '/study', steps: ['查看完整报告', '=色彩']),
+  const _Shot(
+    'study-paper-compare',
+    '/study',
+    steps: ['查看完整报告', '=素描', '对照样图'],
+  ),
+  const _Shot('study-standard', '/study', steps: ['评分标准']),
   const _Shot('study-growth-exam', '/study', steps: ['成长曲线']),
+  const _Shot('study-growth-from-report', '/study', steps: ['查看完整报告', '成长曲线']),
+  const _Shot('study-growth-sketch', '/study', steps: ['成长曲线', '=素描']),
+  const _Shot('study-growth-color', '/study', steps: ['成长曲线', '=色彩']),
+  const _Shot('study-growth-speed', '/study', steps: ['成长曲线', '=速写']),
+  const _Shot(
+    'study-growth-rank',
+    '/study',
+    steps: ['成长曲线', '=排名', 'scroll:-800'],
+  ),
   const _Shot('study-growth-artwork', '/study', steps: ['作品成长']),
 
   // 教学报告：校长从全校学情点进去，老师和组长从今日点进去。
