@@ -188,7 +188,7 @@ const sharedContent = [
   {
     id: 'gallery-nav',
     route: '/',
-    actions: [nav('素材中心'), { check: '全部科目' }],
+    actions: [nav('素材中心'), { check: '全部题材' }],
   },
   {
     id: 'topics-nav',
