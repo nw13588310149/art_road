@@ -451,6 +451,17 @@ export const ROLES = [
         route: '/artworks',
         actions: [{ click: /石膏头像结构练习/, after: 2500 }, { check: '点评时间线' }],
       },
+      // 定点点评：点图上第 2 处的编号，旁边弹出这一处的点评。
+      {
+        id: 'artwork-marks',
+        route: '/artworks',
+        actions: [
+          { click: /石膏头像结构练习/, after: 2500 },
+          { check: /^定点点评$/ },
+          { click: /^第 2 处点评/, nth: 0, after: 900 },
+          { check: /^关闭这一处点评$/, role: 'button' }, { check: /^第 2 处$/ },
+        ],
+      },
       {
         id: 'artwork-excellent',
         route: '/artworks/excellent',
@@ -565,6 +576,21 @@ export const ROLES = [
         id: 'artwork-review',
         route: '/artworks',
         actions: [{ click: '开始点评', after: 2500 }, { check: '保存并下一份', role: 'button' }],
+      },
+      // 定点点评：进入模式，点画面中部加一处，写一句话，完成后表单里列出这一处。
+      {
+        id: 'artwork-marks-add',
+        route: '/artworks',
+        actions: [
+          { click: '开始点评', after: 2500 },
+          { click: /^定点点评$/, role: 'button', after: 900 },
+          { check: '点画上要说的位置，加一处定点点评' },
+          { tap: [400, 420], after: 900 },
+          { check: /^第 1 处$/ },
+          { type: '三大面区分不够，亮面和灰面要拉开', into: /这一处的问题/ },
+          { click: /^完成$/, after: 900 },
+          { check: /三大面区分不够/ }, { check: /^继续标记$/, role: 'button' },
+        ],
       },
       {
         id: 'artwork-tags',

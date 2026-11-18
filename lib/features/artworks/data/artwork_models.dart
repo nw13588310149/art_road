@@ -527,6 +527,156 @@ class AnnotationStroke {
   }
 }
 
+/// 定点点评：老师在作品图上点一个位置，留一句话或一段语音。
+///
+/// [x]、[y] 是这个位置按图片宽高归一化到 0–1 的坐标；[imageIndex] 是第几张图。
+/// 文字和语音至少有一样。
+@immutable
+class ArtworkMark {
+  const ArtworkMark({
+    required this.id,
+    required this.x,
+    required this.y,
+    this.imageIndex = 0,
+    this.text = '',
+    this.voiceUrl = '',
+    this.voiceSeconds = 0,
+  });
+
+  factory ArtworkMark.fromJson(Object? raw) {
+    final json = _map(raw);
+    final voice = _str(json['voiceUrl']);
+    return ArtworkMark(
+      id: _str(json['id']),
+      x: (_num(json['x']) ?? 0).clamp(0.0, 1.0),
+      y: (_num(json['y']) ?? 0).clamp(0.0, 1.0),
+      imageIndex: _int(json['imageIndex']),
+      text: _str(json['text']),
+      voiceUrl: voice.isEmpty ? _str(json['voiceRef']) : voice,
+      voiceSeconds: _int(json['voiceSeconds']),
+    );
+  }
+
+  final String id;
+  final double x;
+  final double y;
+  final int imageIndex;
+  final String text;
+
+  /// 上传接口返回的相对路径或完整地址，没有语音时为空。
+  final String voiceUrl;
+  final int voiceSeconds;
+
+  bool get hasVoice => voiceUrl.isNotEmpty;
+
+  /// 既没有文字也没有语音：保存时丢弃。
+  bool get isEmpty => text.trim().isEmpty && voiceUrl.isEmpty;
+
+  Offset get position => Offset(x, y);
+
+  ArtworkMark copyWith({
+    Offset? position,
+    String? text,
+    String? voiceUrl,
+    int? voiceSeconds,
+  }) {
+    return ArtworkMark(
+      id: id,
+      x: position == null ? x : position.dx.clamp(0.0, 1.0),
+      y: position == null ? y : position.dy.clamp(0.0, 1.0),
+      imageIndex: imageIndex,
+      text: text ?? this.text,
+      voiceUrl: voiceUrl ?? this.voiceUrl,
+      voiceSeconds: voiceSeconds ?? this.voiceSeconds,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    double r4(double v) => (v * 10000).round() / 10000;
+    return <String, dynamic>{
+      'id': id,
+      'imageIndex': imageIndex,
+      'x': r4(x),
+      'y': r4(y),
+      'text': text.trim(),
+      if (voiceUrl.isNotEmpty) 'voiceUrl': voiceUrl,
+      if (voiceUrl.isNotEmpty && voiceSeconds > 0) 'voiceSeconds': voiceSeconds,
+    };
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ArtworkMark &&
+      other.id == id &&
+      other.x == x &&
+      other.y == y &&
+      other.imageIndex == imageIndex &&
+      other.text == text &&
+      other.voiceUrl == voiceUrl &&
+      other.voiceSeconds == voiceSeconds;
+
+  @override
+  int get hashCode =>
+      Object.hash(id, x, y, imageIndex, text, voiceUrl, voiceSeconds);
+}
+
+/// 一位老师的定点点评按图片先后、再按添加先后排开（排序稳定）。
+List<ArtworkMark> artworkMarksInOrder(Iterable<ArtworkMark> marks) {
+  final list = marks.toList();
+  final indices = List<int>.generate(list.length, (i) => i)
+    ..sort((a, b) {
+      final byImage = list[a].imageIndex.compareTo(list[b].imageIndex);
+      return byImage != 0 ? byImage : a.compareTo(b);
+    });
+  return <ArtworkMark>[for (final i in indices) list[i]];
+}
+
+/// 定点点评的编号（mark id → 从 1 起的序号）。
+Map<String, int> artworkMarkNumbers(Iterable<ArtworkMark> marks) {
+  final ordered = artworkMarksInOrder(marks);
+  return <String, int>{
+    for (var i = 0; i < ordered.length; i++) ordered[i].id: i + 1,
+  };
+}
+
+/// 带编号和老师的定点点评，学生端和只读视图用。
+@immutable
+class NumberedArtworkMark {
+  const NumberedArtworkMark({
+    required this.mark,
+    required this.number,
+    required this.teacherId,
+    required this.teacherName,
+  });
+
+  final ArtworkMark mark;
+  final int number;
+  final String teacherId;
+  final String teacherName;
+
+  /// 跨老师唯一：不同老师的 mark id 可能相同。
+  String get key => '$teacherId/${mark.id}';
+}
+
+/// 把几位老师的定点点评连续编号：[reviews] 按点评先后传入，同一位老师的按
+/// 图片先后、再按添加先后。这样作品上的每个编号只对应一处点评。
+List<NumberedArtworkMark> numberArtworkMarks(Iterable<ArtworkReview> reviews) {
+  final result = <NumberedArtworkMark>[];
+  for (final review in reviews) {
+    for (final mark in artworkMarksInOrder(review.marks)) {
+      result.add(
+        NumberedArtworkMark(
+          mark: mark,
+          number: result.length + 1,
+          teacherId: review.teacherId,
+          teacherName: review.teacherName,
+        ),
+      );
+    }
+  }
+  return result;
+}
+
 @immutable
 class ArtworkTeacher {
   const ArtworkTeacher({
@@ -567,6 +717,7 @@ class ArtworkReview {
     this.tags = const <ArtworkTag>[],
     this.tagResolutions = const <({String tag, bool resolved})>[],
     this.annotations = const <AnnotationStroke>[],
+    this.marks = const <ArtworkMark>[],
     this.voiceUrl = '',
     this.voiceSeconds = 0,
   });
@@ -608,6 +759,11 @@ class ArtworkReview {
       annotations: _maps(
         json['annotations'],
       ).map(AnnotationStroke.fromJson).toList(),
+      marks: <ArtworkMark>[
+        for (final item in _maps(json['marks']))
+          if (ArtworkMark.fromJson(item) case final mark when !mark.isEmpty)
+            mark,
+      ],
       voiceUrl: voice.isEmpty ? _str(json['voiceRef']) : voice,
       voiceSeconds: _int(json['voiceSeconds']),
     );
@@ -627,6 +783,9 @@ class ArtworkReview {
   final List<({String tag, bool resolved})> tagResolutions;
   final List<AnnotationStroke> annotations;
 
+  /// 定点点评，按老师添加的先后。
+  final List<ArtworkMark> marks;
+
   /// 语音评语：上传接口返回的相对路径或完整地址（接口字段 `voiceUrl` / `voiceRef`），
   /// 没有时为空。
   final String voiceUrl;
@@ -640,7 +799,8 @@ class ArtworkReview {
       (score != null ||
           content.isNotEmpty ||
           tags.isNotEmpty ||
-          voiceUrl.isNotEmpty);
+          voiceUrl.isNotEmpty ||
+          marks.isNotEmpty);
 }
 
 @immutable

@@ -167,6 +167,7 @@ class ArtworkRepository {
         const <({String tag, bool resolved})>[],
     String voiceUrl = '',
     int voiceSeconds = 0,
+    List<ArtworkMark> marks = const <ArtworkMark>[],
   }) {
     return client.post(
       '/school/teacher/artworks/review?next=$next',
@@ -184,6 +185,11 @@ class ArtworkRepository {
         ],
         if (voiceUrl.isNotEmpty) 'voiceUrl': voiceUrl,
         if (voiceSeconds > 0) 'voiceSeconds': voiceSeconds,
+        // 整组提交：空列表表示清除这位老师在这一版上的全部定点点评。
+        'marks': <Map<String, dynamic>>[
+          for (final mark in marks)
+            if (!mark.isEmpty) mark.toJson(),
+        ],
       },
     );
   }

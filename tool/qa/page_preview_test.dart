@@ -402,6 +402,40 @@ final _shots = <_Shot>[
   ),
   const _Shot('artwork-excellent', '/artworks/excellent'),
 
+  // 定点点评：《石膏头像结构练习》李静留了 3 处，《几何体明暗关系》李静 2 处、赵雪 1 处。
+  const _Shot(
+    'artwork-marks-review',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-09'},
+    roles: ['teacher', 'groupLeader'],
+  ),
+  const _Shot(
+    'artwork-marks-marking',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-09'},
+    roles: ['teacher'],
+    steps: ['继续标记'],
+  ),
+  const _Shot(
+    'artwork-marks-editor',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-09'},
+    roles: ['teacher'],
+    steps: ['继续标记', '耳朵偏低'],
+  ),
+  const _Shot(
+    'artwork-marks-popover',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-09'},
+    steps: ['两眼的位置偏高'],
+  ),
+  const _Shot(
+    'artwork-marks-teachers',
+    '/artworks',
+    args: {'artworkId': 'aw-lin-10'},
+    steps: ['立方体右侧'],
+  ),
+
   // 画室工具箱。图片类工具用路由参数直达并预先载入一张打包的画（imageUrl 的
   // `/a/assets/...` 会直接读资源），前后两次渲染的输入完全相同。画布上的点击用
   // `scroll:0@x,y`（原地按下抬起）。

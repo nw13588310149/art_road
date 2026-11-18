@@ -43,7 +43,8 @@ class AnnotationPen {
 
 /// 作品图 + 批注层：图片按原始比例完整显示，批注坐标相对图片归一化。
 ///
-/// 传入 [pen] 时进入绘制模式，每画完一笔回调 [onStrokeEnd]。
+/// 传入 [pen] 时进入绘制模式，每画完一笔回调 [onStrokeEnd]。[overlay] 叠在
+/// 图片和批注上面、和图片一样大（定点点评的编号放在这里）。
 class ArtworkAnnotatedImage extends StatefulWidget {
   const ArtworkAnnotatedImage({
     required this.url,
@@ -52,6 +53,7 @@ class ArtworkAnnotatedImage extends StatefulWidget {
     this.imageIndex = 0,
     this.onStrokeEnd,
     this.onTap,
+    this.overlay,
     super.key,
   });
 
@@ -61,6 +63,11 @@ class ArtworkAnnotatedImage extends StatefulWidget {
   final int imageIndex;
   final ValueChanged<AnnotationStroke>? onStrokeEnd;
   final VoidCallback? onTap;
+  final Widget? overlay;
+
+  /// 测试用：替换图片来源（测试环境里网络图片加载不出来）。
+  @visibleForTesting
+  static ImageProvider Function(String url)? debugImageProvider;
 
   @override
   State<ArtworkAnnotatedImage> createState() => _ArtworkAnnotatedImageState();
@@ -74,6 +81,7 @@ class _ArtworkAnnotatedImageState extends State<ArtworkAnnotatedImage> {
   bool _failed = false;
 
   ImageProvider get _provider =>
+      ArtworkAnnotatedImage.debugImageProvider?.call(widget.url) ??
       CachedNetworkImageProvider(MediaUrl.resolve(widget.url));
 
   @override
@@ -178,6 +186,8 @@ class _ArtworkAnnotatedImageState extends State<ArtworkAnnotatedImage> {
             height: box.height,
             child: Stack(
               fit: StackFit.expand,
+              // 编号点在图片边上时，圆点露出一半也要画全。
+              clipBehavior: Clip.none,
               children: [
                 Image(
                   image: _provider,
@@ -211,6 +221,7 @@ class _ArtworkAnnotatedImageState extends State<ArtworkAnnotatedImage> {
                     semanticLabel: '查看大图',
                     child: const SizedBox.expand(),
                   ),
+                ?widget.overlay,
               ],
             ),
           ),

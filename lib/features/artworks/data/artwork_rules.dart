@@ -166,6 +166,7 @@ abstract final class ArtworkRules {
     required double? score,
     required int tagCount,
     required String comment,
+    int markCount = 0,
   }) {
     if (lengthOf(comment) > commentLimit) {
       return '评语最多 $commentLimit 个字';
@@ -173,10 +174,33 @@ abstract final class ArtworkRules {
     if (tagCount > tagsPerReview) {
       return '每份作品最多选择 $tagsPerReview 个标签';
     }
-    if (score == null && tagCount == 0 && lengthOf(comment) == 0) {
-      return '请至少填写分数、选择标签或填写评语';
+    if (score == null &&
+        tagCount == 0 &&
+        lengthOf(comment) == 0 &&
+        markCount == 0) {
+      return '请至少填写分数、选择标签、填写评语或在图上加一处点评';
     }
     return null;
+  }
+
+  /// 定点点评：每张图最多 [marksPerImage] 处，每处文字最多 [markTextLimit] 字。
+  static const marksPerImage = 20;
+  static const markTextLimit = 200;
+
+  /// 一处定点点评的读屏文字：「第 2 处点评：三大面区分不够，有语音 12 秒」。
+  static String markSemantics(
+    int number,
+    String text, {
+    int voiceSeconds = 0,
+    bool hasVoice = false,
+    String teacherName = '',
+  }) {
+    final parts = <String>[
+      if (teacherName.isNotEmpty) '$teacherName老师',
+      text.trim().isEmpty ? '只有语音' : text.trim(),
+      if (hasVoice) voiceSeconds > 0 ? '有语音 $voiceSeconds 秒' : '有语音',
+    ];
+    return '第 $number 处点评：${parts.join('，')}';
   }
 
   /// 组长复核：调分理由至少 10 字，星级必选。
