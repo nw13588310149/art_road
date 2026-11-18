@@ -50,13 +50,13 @@ void main() {
 
       await mount(const LearningTopicsPage());
       expect(find.text('把明暗交界线画进体积里'), findsOneWidget);
-      await tester.tap(find.text('新增小课件'));
+      await tester.tap(find.text('新增课件'));
       await settle(tester);
-      expect(find.text('专题内容'), findsOneWidget);
+      expect(find.text('课件内容'), findsOneWidget);
       expect(find.text('阅读资料'), findsOneWidget);
-      await tester.tap(find.text('发布小课件'));
+      await tester.tap(find.text('发布课件'));
       await settle(tester);
-      expect(find.textContaining('专题名称须为'), findsOneWidget);
+      expect(find.textContaining('课件名称须为'), findsOneWidget);
       final fields = find.byType(AppInputField);
       expect(tester.getSize(fields.first).width, greaterThan(220));
       expect(tester.takeException(), isNull);
