@@ -37,16 +37,17 @@ class _WatermarkPainter extends CustomPainter {
     if (size.isEmpty) {
       return;
     }
-    // 深色字 + 浅色描影，浅色画纸和深色背景上都能辨认。
+    // 深色字 + 浅色描影，浅色画纸和深色背景上都能辨认。间距放宽、字淡一些，
+    // 整张卷子仍然铺满，但看画时不再抢眼。
     final painter = TextPainter(
       text: TextSpan(
         text: text,
-        style: AppText.body16.copyWith(
+        style: AppText.body14.copyWith(
           fontWeight: AppFont.w500,
-          color: AppColors.ink.withValues(alpha: 0.13),
+          color: AppColors.ink.withValues(alpha: 0.09),
           shadows: [
             Shadow(
-              color: AppColors.onBrand.withValues(alpha: 0.14),
+              color: AppColors.onBrand.withValues(alpha: 0.10),
               offset: const Offset(0.8, 0.8),
             ),
           ],
@@ -56,8 +57,8 @@ class _WatermarkPainter extends CustomPainter {
       maxLines: 1,
     )..layout();
 
-    final stepX = painter.width + 72;
-    final stepY = painter.height + 64;
+    final stepX = painter.width + 160;
+    final stepY = painter.height + 150;
     final diagonal = math.sqrt(
       size.width * size.width + size.height * size.height,
     );

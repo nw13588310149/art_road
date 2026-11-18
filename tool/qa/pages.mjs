@@ -424,7 +424,7 @@ export const ROLES = [
       ] },
       { id: 'focus-evidence', route: '/study', actions: [
         { click: /^作品成长$/, after: 1400 }, { scroll: 500, after: 700 },
-        { click: /^查看依据$/, nth: 0 }, { check: '点评依据' }, { check: /^查看原作品$/ },
+        { click: /^查看点评依据/, nth: 0 }, { check: '点评依据' }, { check: /^查看原作品$/ },
       ] },
       { id: 'focus-practice', route: '/study', actions: [
         { click: /^作品成长$/, after: 1400 }, { scroll: 500, after: 700 },
@@ -437,12 +437,14 @@ export const ROLES = [
       { id: 'study-exam-growth', route: '/study', actions: [
         { click: /^成长曲线$/, after: 1200 }, { check: '历次成绩' },
       ] },
+      // 各科成绩表整行可点，打开那一科的原卷。
       { id: 'study-exam-report', route: '/study', actions: [
-        { click: /^查看完整报告$/, after: 1200 }, { check: /^看原卷$/, role: 'button' },
+        { click: /^查看完整报告$/, after: 1200 }, { check: /^素描/, role: 'button' },
+        { check: /^评分标准$/, role: 'button' },
       ] },
       { id: 'study-exam-paper', route: '/study', actions: [
         { click: /^查看完整报告$/, after: 1200 },
-        { click: /^看原卷$/, after: 1200 }, { check: '对照样图' },
+        { click: /^素描/, after: 1200 }, { check: '对照样图' }, { check: '素描 · 我的成绩' },
       ] },
       { id: 'artworks', route: '/artworks' },
       {
