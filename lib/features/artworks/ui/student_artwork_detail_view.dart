@@ -8,12 +8,15 @@ import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/artwork_detail_controller.dart';
 import '../state/artwork_review_controller.dart';
-import '../../smart_campus/ui/widgets/homework_voice_comment.dart';
+import '../state/artwork_voice_player.dart';
 import 'artwork_compare_page.dart';
 import 'artwork_upload_dialog.dart';
 import 'widgets/artwork_annotation.dart';
+import 'widgets/artwork_mark_layer.dart';
+import 'widgets/artwork_mark_list.dart';
 import 'widgets/artwork_marks.dart';
 import 'widgets/artwork_review_timeline.dart';
+import 'widgets/artwork_voice_note.dart';
 import 'widgets/artwork_widgets.dart';
 
 /// 学生作品详情：大图（可切换老师批注、对比范画）、最终得分、作品信息与老师点评。
@@ -40,6 +43,69 @@ class _StudentArtworkDetailViewState
     extends ConsumerState<StudentArtworkDetailView> {
   int _imageIndex = 0;
   bool _showAnnotations = true;
+
+  /// 选中的定点点评（[NumberedArtworkMark.key]），图上编号和列表行一起高亮。
+  String? _selectedMark;
+  final _popover = OverlayPortalController();
+  final _popoverLink = LayerLink();
+
+  /// 图上编号、浮层和列表算一组：点它们不会关掉浮层。
+  final _markGroup = Object();
+  final _markRowKeys = <String, GlobalKey>{};
+
+  static List<NumberedArtworkMark> _marksOf(ArtworkDetail detail) =>
+      numberArtworkMarks(
+        artworkReviewsByTime(detail.reviews.where((r) => r.reviewed)),
+      );
+
+  /// 点图上编号或列表行：选中、打开浮层、播这一处的语音。再点同一个编号收起。
+  void _selectMark(NumberedArtworkMark item, {bool fromList = false}) {
+    final player = ref.read(artworkVoicePlayerProvider.notifier);
+    final previous = _selectedMark;
+    if (previous == item.key && !fromList) {
+      _closeMark();
+      return;
+    }
+    setState(() {
+      _selectedMark = item.key;
+      _showAnnotations = true;
+      _imageIndex = item.mark.imageIndex;
+    });
+    _popover.show();
+    if (item.mark.hasVoice) {
+      player.play(
+        artworkMarkPlayKey(item),
+        item.mark.voiceUrl,
+        seconds: item.mark.voiceSeconds,
+      );
+    } else if (previous != null) {
+      player.stopIfActive('mark:$previous');
+    }
+    if (!fromList) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final row = _markRowKeys[item.key]?.currentContext;
+        if (mounted && row != null) {
+          Scrollable.ensureVisible(row, alignment: 0.3);
+        }
+      });
+    }
+  }
+
+  void _closeMark() {
+    if (_selectedMark == null) {
+      return;
+    }
+    setState(() => _selectedMark = null);
+    _popover.hide();
+  }
+
+  void _selectImage(int index) {
+    if (index == _imageIndex) {
+      return;
+    }
+    _closeMark();
+    setState(() => _imageIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,16 +155,31 @@ class _StudentArtworkDetailViewState
     );
   }
 
+  @override
+  void didUpdateWidget(covariant StudentArtworkDetailView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.artworkId != widget.artworkId) {
+      _selectedMark = null;
+      _imageIndex = 0;
+    }
+  }
+
   Widget _buildBody(ArtworkDetail detail) {
     final previousId = ArtworkReviewController.previousVersionId(detail);
     final previous = previousId == null
         ? null
         : ref.watch(studentArtworkDetailProvider(previousId)).detail;
+    final marks = _marksOf(detail);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final imagePanel = _buildImagePanel(detail);
+        final imagePanel = OverlayPortal(
+          controller: _popover,
+          overlayChildBuilder: (_) => _buildPopover(marks),
+          child: _buildImagePanel(detail, marks),
+        );
         final info = _InfoColumn(
           detail: detail,
+          marks: marks.isEmpty ? null : _buildMarksSection(marks),
           canRevise:
               !widget.readOnly &&
               detail.isOwner &&
@@ -157,12 +238,104 @@ class _StudentArtworkDetailViewState
     );
   }
 
-  Widget _buildImagePanel(ArtworkDetail detail) {
+  Widget _buildMarksSection(List<NumberedArtworkMark> marks) {
+    final teachers = marks.map((m) => m.teacherId).toSet();
+    for (final item in marks) {
+      _markRowKeys.putIfAbsent(item.key, GlobalKey.new);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppSectionHeader(
+          title: '定点点评',
+          trailing: Text(
+            '${marks.length} 处 · 点编号看画上的位置',
+            style: AppText.caption12,
+          ),
+        ),
+        TapRegion(
+          groupId: _markGroup,
+          child: ArtworkMarkList(
+            marks: marks,
+            selectedKey: _selectedMark,
+            showTeacher: teachers.length > 1,
+            rowKeys: _markRowKeys,
+            onSelect: (item) => _selectMark(item, fromList: true),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPopover(List<NumberedArtworkMark> marks) {
+    final item = marks.where((m) => m.key == _selectedMark).firstOrNull;
+    if (item == null ||
+        !_showAnnotations ||
+        item.mark.imageIndex != _imageIndex) {
+      return const SizedBox.shrink();
+    }
+    // 编号在画的左侧时浮层放右边，在下半部时浮层向上展开，尽量不出画面。
+    final right = item.mark.x <= 0.6;
+    final down = item.mark.y <= 0.6;
+    return Positioned(
+      left: 0,
+      top: 0,
+      child: CompositedTransformFollower(
+        link: _popoverLink,
+        showWhenUnlinked: false,
+        targetAnchor: Alignment(right ? 1 : -1, down ? -1 : 1),
+        followerAnchor: Alignment(right ? -1 : 1, down ? -1 : 1),
+        child: TapRegion(
+          groupId: _markGroup,
+          onTapOutside: (_) => _closeMark(),
+          child: ArtworkMarkPopover(
+            item: item,
+            showTeacher: marks.map((m) => m.teacherId).toSet().length > 1,
+            onClose: _closeMark,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMarkLayer(List<NumberedArtworkMark> marksHere, int teachers) {
+    return ArtworkMarkLayer(
+      pins: [
+        for (final item in marksHere)
+          ArtworkMarkPin(
+            key: item.key,
+            position: item.mark.position,
+            number: item.number,
+            semanticLabel: ArtworkRules.markSemantics(
+              item.number,
+              item.mark.text,
+              hasVoice: item.mark.hasVoice,
+              voiceSeconds: item.mark.voiceSeconds,
+              teacherName: teachers > 1 ? item.teacherName : '',
+            ),
+          ),
+      ],
+      selectedKey: _selectedMark,
+      selectedLink: _popoverLink,
+      tapGroup: _markGroup,
+      onTapPin: (key) => _selectMark(marksHere.firstWhere((m) => m.key == key)),
+    );
+  }
+
+  Widget _buildImagePanel(
+    ArtworkDetail detail,
+    List<NumberedArtworkMark> marks,
+  ) {
     final images = detail.images;
     final index = images.isEmpty ? 0 : _imageIndex.clamp(0, images.length - 1);
     final withAnnotations = detail.reviews
         .where((r) => r.annotations.isNotEmpty)
         .toList();
+    final marksHere = <NumberedArtworkMark>[
+      for (final item in marks)
+        if (item.mark.imageIndex == index) item,
+    ];
+    final teacherCount = marks.map((m) => m.teacherId).toSet().length;
     final strokes = <AnnotationStroke>[
       for (final review in withAnnotations)
         ...review.annotations.where((s) => s.imageIndex == index),
@@ -180,7 +353,7 @@ class _StudentArtworkDetailViewState
         children: [
           Row(
             children: [
-              if (withAnnotations.isNotEmpty)
+              if (withAnnotations.isNotEmpty || marks.isNotEmpty)
                 AppSegmented<bool>(
                   size: AppControlSize.sm,
                   segments: const [
@@ -188,8 +361,12 @@ class _StudentArtworkDetailViewState
                     AppSegment(value: true, label: '老师批注'),
                   ],
                   value: _showAnnotations,
-                  onChanged: (value) =>
-                      setState(() => _showAnnotations = value),
+                  onChanged: (value) {
+                    if (!value) {
+                      _closeMark();
+                    }
+                    setState(() => _showAnnotations = value);
+                  },
                 )
               else
                 Flexible(
@@ -237,14 +414,20 @@ class _StudentArtworkDetailViewState
                       initialIndex: index,
                       heroTagPrefix: 'artwork_${detail.work.id}',
                     ),
+                    overlay: _showAnnotations && marksHere.isNotEmpty
+                        ? _buildMarkLayer(marksHere, teacherCount)
+                        : null,
                   ),
           ),
           if (images.isNotEmpty) ...[
             const SizedBox(height: AppSpace.s8),
             Text(
-              _showAnnotations && annotators.isNotEmpty
-                  ? '批注来自${annotators.join('、')}老师 · 点击图片全屏查看原图'
-                  : '点击图片全屏查看原图',
+              <String>[
+                if (_showAnnotations && annotators.isNotEmpty)
+                  '批注来自${annotators.join('、')}老师',
+                if (_showAnnotations && marksHere.isNotEmpty) '点编号看这一处的点评',
+                '点击图片全屏查看原图',
+              ].join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppText.caption12,
@@ -255,7 +438,7 @@ class _StudentArtworkDetailViewState
             ArtworkThumbnailStrip(
               images: images,
               selectedIndex: index,
-              onSelect: (i) => setState(() => _imageIndex = i),
+              onSelect: _selectImage,
             ),
           ],
         ],
@@ -268,12 +451,16 @@ class _InfoColumn extends StatelessWidget {
   const _InfoColumn({
     required this.detail,
     required this.canRevise,
+    this.marks,
     this.onOpenArtwork,
     this.onCompare,
   });
 
   final ArtworkDetail detail;
   final bool canRevise;
+
+  /// 定点点评列表，紧跟在得分下面，和左边画上的编号对照着看。
+  final Widget? marks;
   final ValueChanged<String>? onOpenArtwork;
   final VoidCallback? onCompare;
 
@@ -288,6 +475,10 @@ class _InfoColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ScoreCard(detail: detail),
+        if (marks case final section?) ...[
+          const SizedBox(height: AppSpace.s16),
+          section,
+        ],
         const SizedBox(height: 12),
         ArtworkReviewSummary(detail: detail),
         if (artworkMarkTags(work).isNotEmpty)
@@ -362,9 +553,10 @@ class _InfoColumn extends StatelessWidget {
             if (i > 0) const SizedBox(height: AppSpace.s8),
             ArtworkReviewCard(review: reviewed[i]),
             if (reviewed[i].voiceUrl.isNotEmpty)
-              HomeworkVoiceCommentBubble(
-                relativePath: reviewed[i].voiceUrl,
-                durationSec: reviewed[i].voiceSeconds,
+              ArtworkVoiceNoteBar(
+                playKey: 'review:${reviewed[i].teacherId}',
+                source: reviewed[i].voiceUrl,
+                seconds: reviewed[i].voiceSeconds,
               ),
           ],
         if (detail.timeline.isNotEmpty) ...[

@@ -8,7 +8,8 @@
 /// images[{id, ref}], taskId(自主练习为空), teacherId(责任老师)
 /// review: null | {teacherId, score|null, maxScore, content, reviewedTime,
 ///   dimensions{key: 1..5}, tags[{id, name, explanation, color, dimension}],
-///   voiceRef, voiceSeconds, requestLeadReview, tagResolutions[{tag, resolved}]}
+///   voiceRef, voiceSeconds, requestLeadReview, tagResolutions[{tag, resolved}],
+///   marks[{id, imageIndex, x, y, text, voiceRef, voiceSeconds}]}
 /// supplements[{teacherId, content, time}]
 /// leadReview: null | {reasons[], enteredTime, leaderId, action: null|KEEP|ADJUST|
 ///   SUPPLEMENT, score, reason, content, qualityStars, qualityNote, time}

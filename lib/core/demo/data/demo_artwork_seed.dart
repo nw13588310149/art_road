@@ -1050,6 +1050,7 @@ class _Builder {
         'maxScore': 100,
         'content': '形体转折明确，建议用长线条概括边缘，让局部服从整体。',
         'reviewedTime': DemoArtworkData.fmt(_clock(4, 14, 20)),
+        'marks': [_mark('mk-1', 0.475, 0.42, '立方体右侧这条边线断得太碎，用一根长线拉下来。')],
       },
       {
         'teacherId': 't-5',
@@ -1062,6 +1063,7 @@ class _Builder {
     for (final comment in chain['principalComments'] as List) {
       comment['score'] = 93;
     }
+    _seedMarks(seededWorks);
     return DemoArtworkSeedResult(
       now: now,
       works: seededWorks,
@@ -2111,6 +2113,45 @@ class _Builder {
         'seedReviewAt': DemoArtworkData.fmt(w.pendingReviewAt!),
     };
   }
+
+  // ── 定点点评 ──────────────────────────────────────────────────────────
+
+  /// 两份编排作品上的定点点评，位置对着批注和评语里说到的地方（赵雪的那一处
+  /// 写在 `teacherReviews` 里）。演示包里没有人声录音，种子只有文字；语音由
+  /// 老师在点评工作台里现录。
+  void _seedMarks(List<Map<String, dynamic>> works) {
+    Map<String, dynamic> review(String id) =>
+        works.firstWhere((w) => w['id'] == id)['review']
+            as Map<String, dynamic>;
+
+    // 《石膏头像结构练习》：李静的评语说五官位置有偏差、暗部要整体。
+    review(DemoArtworkSeed.storyInReviewId)['marks'] = [
+      _mark('mk-1', 0.53, 0.318, '两眼的位置偏高，眼睛应在头顶到下巴的二分之一处，先用三庭五眼量一遍。'),
+      _mark('mk-2', 0.285, 0.5, '耳朵偏低，上缘对齐眉弓、下缘对齐鼻底，参考画上的两条横线。'),
+      _mark('mk-3', 0.64, 0.64, '脖子暗部的笔触太碎，用大的调子压一遍，让暗部连成一片。'),
+    ];
+
+    // 《几何体明暗关系》：李静说反光要含蓄。
+    review(DemoArtworkSeed.storyChainId)['marks'] = [
+      _mark('mk-1', 0.47, 0.68, '球体暗部的反光偏亮，压低一个层次，不要亮过灰面。'),
+      _mark('mk-2', 0.84, 0.6, '圆柱的明暗交界线画得肯定，保持这样的力度。'),
+    ];
+  }
+
+  static Map<String, dynamic> _mark(
+    String id,
+    double x,
+    double y,
+    String text,
+  ) => <String, dynamic>{
+    'id': id,
+    'imageIndex': 0,
+    'x': x,
+    'y': y,
+    'text': text,
+    'voiceRef': '',
+    'voiceSeconds': 0,
+  };
 
   // ── 批注 ──────────────────────────────────────────────────────────────
 

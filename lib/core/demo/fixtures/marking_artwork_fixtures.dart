@@ -16,6 +16,9 @@ const _tagLimit = 50;
 const _tagsPerReview = 8;
 const _strokesPerImage = 200;
 const _pointsPerStroke = 2000;
+const _marksPerImage = 20;
+const _markTextLimit = 200;
+const _markVoiceLimit = 120;
 const _keptUploads = 60;
 
 /// 作品点评链演示接口（阅卷一侧，口径见实施规格 2.6）。
@@ -469,6 +472,13 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         .toList();
     final dimensions = _parseDimensions(body['dimensions'], work);
     final tagResolutions = _parseResolutions(body['tagResolutions']);
+    final marks = _parseMarks(
+      body['marks'],
+      work,
+      DemoArtworkData.reviewsOf(work)
+          .where((review) => review['teacherId'] == teacherId)
+          .firstOrNull?['marks'],
+    );
 
     if (content.runes.length > 2000) {
       throw const DemoApiException('评语最多 2000 个字', code: 400);
@@ -476,8 +486,8 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     if (tagIds.length > _tagsPerReview) {
       throw const DemoApiException('每份作品最多选择 8 个标签', code: 400);
     }
-    if (score == null && content.isEmpty && tagIds.isEmpty) {
-      throw const DemoApiException('请至少填写分数、选择标签或填写评语', code: 400);
+    if (score == null && content.isEmpty && tagIds.isEmpty && marks.isEmpty) {
+      throw const DemoApiException('请至少填写分数、选择标签、填写评语或在图上加一处点评', code: 400);
     }
     if (maxScore <= 0 || !_twoDecimals(maxScore)) {
       throw const DemoApiException('满分须为大于 0 的数字，最多两位小数', code: 400);
@@ -520,7 +530,14 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
     DemoArtworkStore.saveTags(teacherId);
 
     final workId = _text(work['id']);
-    final hasAnno = DemoArtworkStore.hasAnnotations(workId, teacherId);
+    // 定点点评的文字算进评语长度，带语音的一处和批注一样算「在作品上讲过」。
+    final hasAnno =
+        DemoArtworkStore.hasAnnotations(workId, teacherId) ||
+        marks.any((mark) => _text(mark['voiceRef']).isNotEmpty);
+    final reviewText = <String>[
+      content,
+      for (final mark in marks) _text(mark['text']),
+    ].where((text) => text.isNotEmpty).join('；');
     final reasons = DemoArtworkData.leadReasons(
       id: workId,
       requested: requestLead,
@@ -531,7 +548,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
         subject: _text(work['subject']),
         excludeId: workId,
       ),
-      content: content,
+      content: reviewText,
       hasAnnotations: hasAnno,
       spotCheckPercent: DemoArtworkStore.settings().spotCheckPercent,
     );
@@ -563,6 +580,7 @@ void registerMarkingArtworkFixtures(DemoRouter marking) {
       'voiceSeconds': voiceSeconds,
       'requestLeadReview': requestLead,
       'tagResolutions': tagResolutions,
+      'marks': marks,
     };
     if (teacherId == work['teacherId']) {
       work['review'] = savedReview;
@@ -1392,6 +1410,80 @@ Map<String, dynamic> _tagInput(
     'color': color,
     'dimension': dimension,
   };
+}
+
+/// 定点点评整组替换：不传 `marks` 时沿用 [previous]，空列表表示全部清除。
+List<Map<String, dynamic>> _parseMarks(
+  Object? raw,
+  Map<String, dynamic> work,
+  Object? previous,
+) {
+  if (raw == null) {
+    return DemoArtworkData.mapsOf(previous).toList();
+  }
+  if (raw is! List) {
+    throw const DemoApiException('定点点评格式无效', code: 400);
+  }
+  final imageCount = DemoArtworkData.imagesOf(work).length;
+  final perImage = <int, int>{};
+  final ids = <String>{};
+  final marks = <Map<String, dynamic>>[];
+  for (final item in raw) {
+    if (item is! Map) {
+      throw const DemoApiException('定点点评格式无效', code: 400);
+    }
+    final imageIndex = item['imageIndex'] is num
+        ? (item['imageIndex'] as num).toInt()
+        : int.tryParse('${item['imageIndex'] ?? 0}') ?? -1;
+    if (imageIndex < 0 || imageIndex >= imageCount) {
+      throw const DemoApiException('定点点评的图片序号无效，请刷新后重试', code: 400);
+    }
+    double? coordinate(Object? value) {
+      final number = value is num
+          ? value.toDouble()
+          : double.tryParse('$value');
+      return number == null || !number.isFinite ? null : number.clamp(0.0, 1.0);
+    }
+
+    final x = coordinate(item['x']);
+    final y = coordinate(item['y']);
+    if (x == null || y == null) {
+      throw const DemoApiException('定点点评的位置无效', code: 400);
+    }
+    final text = _text(item['text']);
+    if (text.runes.length > _markTextLimit) {
+      throw const DemoApiException('每处定点点评最多 200 个字', code: 400);
+    }
+    final voiceRef = _text(item['voiceUrl'] ?? item['voiceRef']);
+    if (text.isEmpty && voiceRef.isEmpty) {
+      throw const DemoApiException('每处定点点评要写一句话或录一段语音', code: 400);
+    }
+    final count = (perImage[imageIndex] ?? 0) + 1;
+    if (count > _marksPerImage) {
+      throw const DemoApiException('每张图片最多 20 处定点点评', code: 400);
+    }
+    perImage[imageIndex] = count;
+    final seconds = (item['voiceSeconds'] as num?)?.toInt() ?? 0;
+    var id = _text(item['id']);
+    if (id.isEmpty || id.length > 40 || ids.contains(id)) {
+      var n = marks.length + 1;
+      while (ids.contains('mk-$n')) {
+        n++;
+      }
+      id = 'mk-$n';
+    }
+    ids.add(id);
+    marks.add(<String, dynamic>{
+      'id': id,
+      'imageIndex': imageIndex,
+      'x': (x * 10000).round() / 10000,
+      'y': (y * 10000).round() / 10000,
+      'text': text,
+      'voiceRef': voiceRef,
+      'voiceSeconds': voiceRef.isEmpty ? 0 : seconds.clamp(0, _markVoiceLimit),
+    });
+  }
+  return marks;
 }
 
 List<Map<String, dynamic>> _normalizeStrokes(

@@ -230,19 +230,28 @@ class ArtworkReviewCard extends StatelessWidget {
             const SizedBox(height: AppSpace.s8),
             Text(review.content, style: AppText.body14),
           ],
-          if (review.annotations.isNotEmpty) ...[
+          if (review.annotations.isNotEmpty || review.marks.isNotEmpty) ...[
             const SizedBox(height: AppSpace.s8),
             Row(
               children: [
-                const Icon(
-                  Icons.gesture_rounded,
+                Icon(
+                  review.annotations.isNotEmpty
+                      ? Icons.gesture_rounded
+                      : Icons.place_outlined,
                   size: 14,
                   color: AppColors.textTertiary,
                 ),
                 const SizedBox(width: AppSpace.s4),
-                Text(
-                  '在作品上留下了 ${review.annotations.length} 处批注',
-                  style: AppText.caption12,
+                Expanded(
+                  child: Text(
+                    <String>[
+                      if (review.annotations.isNotEmpty)
+                        '在作品上留下了 ${review.annotations.length} 处批注',
+                      if (review.marks.isNotEmpty)
+                        '${review.marks.length} 处定点点评',
+                    ].join(' · '),
+                    style: AppText.caption12,
+                  ),
                 ),
               ],
             ),

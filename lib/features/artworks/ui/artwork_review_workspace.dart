@@ -15,6 +15,9 @@ import '../state/principal_artwork_actions_controller.dart';
 import 'artwork_compare_page.dart';
 import 'artwork_tag_manager_dialog.dart';
 import 'widgets/artwork_annotation.dart';
+import 'widgets/artwork_mark_editor.dart';
+import 'widgets/artwork_mark_layer.dart';
+import 'widgets/artwork_mark_list.dart';
 import 'widgets/artwork_review_actions.dart';
 import 'widgets/artwork_review_timeline.dart';
 import 'widgets/artwork_voice_comment_field.dart';
@@ -60,6 +63,15 @@ class _ArtworkReviewWorkspaceState
   String _savedForm = '';
   int _imageIndex = 0;
   bool _annotating = false;
+
+  /// 「定点点评」模式：点画上加一处，右栏换成这一处的编辑。
+  bool _marking = false;
+  String? _selectedMarkId;
+
+  /// 只读时（组长、校长）点中的那一处，key 见 [NumberedArtworkMark.key]。
+  String? _viewedMarkKey;
+  final _markText = TextEditingController();
+  final _markTextFocus = FocusNode();
   String _penColor = kAnnotationPenColors.first;
   double _penWidth = kAnnotationPenWidths[1];
   bool _savingNext = false;
@@ -77,6 +89,8 @@ class _ArtworkReviewWorkspaceState
     _principalComment.dispose();
     _principalScore.dispose();
     _transform.dispose();
+    _markText.dispose();
+    _markTextFocus.dispose();
     super.dispose();
   }
 
@@ -90,6 +104,8 @@ class _ArtworkReviewWorkspaceState
     ..._tagResolutions.entries.map((e) => '${e.key}:${e.value}'),
     ..._tagIds,
     ..._dimensions.entries.map((e) => '${e.key}:${e.value}'),
+    for (final mark in ref.read(_provider).marks)
+      if (!mark.isEmpty) mark.toJson().toString(),
   ].join('\u0001');
 
   bool get _formDirty => _formReady && _formSignature() != _savedForm;
@@ -141,7 +157,84 @@ class _ArtworkReviewWorkspaceState
       return;
     }
     _transform.value = Matrix4.identity();
+    _selectMark(null);
     setState(() => _imageIndex = index);
+  }
+
+  /// 选中一处定点点评（null 为不选）。离开的那一处没写字也没录音时去掉。
+  void _selectMark(String? id, {bool focusText = false}) {
+    final controller = ref.read(_provider.notifier);
+    if (id != _selectedMarkId) {
+      controller.pruneEmptyMarks(keep: id);
+    }
+    final mark = ref.read(_provider).marks.where((m) => m.id == id).firstOrNull;
+    setState(() {
+      _selectedMarkId = mark?.id;
+      _markText.text = mark?.text ?? '';
+      if (mark != null && mark.imageIndex != _imageIndex) {
+        _transform.value = Matrix4.identity();
+        _imageIndex = mark.imageIndex;
+      }
+    });
+    if (mark != null && focusText) {
+      _markTextFocus.requestFocus();
+    } else {
+      _markTextFocus.unfocus();
+    }
+  }
+
+  void _startMarking({String? markId}) {
+    setState(() => _marking = true);
+    _selectMark(markId);
+  }
+
+  void _finishMarking() {
+    _selectMark(null);
+    setState(() => _marking = false);
+  }
+
+  void _addMark(int imageIndex, Offset at) {
+    final controller = ref.read(_provider.notifier);
+    controller.pruneEmptyMarks();
+    final id = controller.addMark(imageIndex, at);
+    if (id == null) {
+      AppToast.showError(context, '每张图最多 ${ArtworkRules.marksPerImage} 处定点点评');
+      return;
+    }
+    _selectMark(id, focusText: true);
+  }
+
+  Future<void> _confirmDeleteMark(int number) async {
+    final id = _selectedMarkId;
+    if (id == null) {
+      return;
+    }
+    final mark = ref.read(_provider).marks.where((m) => m.id == id).firstOrNull;
+    if (mark != null && !mark.isEmpty) {
+      final confirmed = await showAppConfirm(
+        context: context,
+        title: '删除第 $number 处点评',
+        message: mark.hasVoice ? '这一处的文字和语音都会删除。' : '这一处的文字会删除。',
+        confirmLabel: '删除',
+        danger: true,
+      );
+      if (!confirmed || !mounted) {
+        return;
+      }
+    }
+    ref.read(_provider.notifier).removeMark(id);
+    _selectMark(null);
+  }
+
+  List<NumberedArtworkMark> _numberedMine(ArtworkReviewState state) {
+    final mine = state.detail?.myReview;
+    return numberArtworkMarks(<ArtworkReview>[
+      ArtworkReview(
+        teacherId: mine?.teacherId ?? 'me',
+        teacherName: mine?.teacherName ?? '',
+        marks: state.marks,
+      ),
+    ]);
   }
 
   Future<void> _saveStrokes() async {
@@ -181,6 +274,11 @@ class _ArtworkReviewWorkspaceState
       return;
     }
     FocusScope.of(context).unfocus();
+    ref.read(_provider.notifier).pruneEmptyMarks();
+    if (_selectedMarkId != null &&
+        !ref.read(_provider).marks.any((m) => m.id == _selectedMarkId)) {
+      _selectMark(null);
+    }
     final parsed = ArtworkRules.parseScore(
       _score.text,
       _maxScore.text,
@@ -192,6 +290,7 @@ class _ArtworkReviewWorkspaceState
           score: parsed.score,
           tagCount: _tagIds.length,
           comment: _comment.text,
+          markCount: ref.read(_provider).marks.length,
         );
     if (error != null) {
       AppToast.showError(context, error);
@@ -249,11 +348,12 @@ class _ArtworkReviewWorkspaceState
         }
       }
     }
+    ref.read(_provider.notifier).pruneEmptyMarks();
     if (_formDirty) {
       final leave = await showAppConfirm(
         context: context,
         title: '放弃未保存的点评？',
-        message: '分数、标签或评语还没有保存，返回后这些修改将丢失。',
+        message: '分数、标签、评语或定点点评还没有保存，返回后这些修改将丢失。',
         confirmLabel: '放弃修改',
         cancelLabel: '继续点评',
         danger: true,
@@ -355,7 +455,9 @@ class _ArtworkReviewWorkspaceState
     return LayoutBuilder(
       builder: (context, constraints) {
         final imagePanel = _buildImagePanel(detail, state);
-        final form = _buildFormSections(detail, state, tagsState);
+        final form = _marking && detail.canReview
+            ? <Widget>[_buildMarkPanel(state)]
+            : _buildFormSections(detail, state, tagsState);
         final actions = _buildActions(state);
         const padding = EdgeInsets.fromLTRB(
           AppSpace.page,
@@ -399,8 +501,8 @@ class _ArtworkReviewWorkspaceState
             children: [
               Expanded(
                 child: SingleChildScrollView(
-                  // 批注时禁止滚动，竖向笔画才不会被当成滚动手势。
-                  physics: _annotating
+                  // 批注、拖动编号时禁止滚动，竖向手势才不会被当成滚动。
+                  physics: _annotating || _marking
                       ? const NeverScrollableScrollPhysics()
                       : null,
                   padding: const EdgeInsets.only(bottom: AppSpace.s8),
@@ -447,6 +549,7 @@ class _ArtworkReviewWorkspaceState
           ? AnnotationPen(color: _penColor, width: _penWidth)
           : null,
       onStrokeEnd: controller.addStroke,
+      overlay: _buildMarkOverlay(detail, state, index),
     );
     return AppCard(
       color: AppColors.surfaceSubtle,
@@ -456,13 +559,15 @@ class _ArtworkReviewWorkspaceState
         children: [
           if (_annotating)
             _buildAnnotationToolbar(state, index, strokes)
+          else if (_marking)
+            _buildMarkingToolbar(state, index)
           else
             _buildViewerToolbar(state, images, index, strokes),
           const SizedBox(height: AppSpace.s12),
           Expanded(
             child: ClipRRect(
               borderRadius: AppRadius.br8,
-              child: _annotating
+              child: _annotating || _marking
                   // 保留当前缩放位置绘制；不放在 InteractiveViewer 里，避免手势相互抢占。
                   ? Transform(transform: _transform.value, child: image)
                   : InteractiveViewer(
@@ -492,9 +597,15 @@ class _ArtworkReviewWorkspaceState
     int index,
     List<AnnotationStroke> strokes,
   ) {
+    final marks = state.detail?.canReview == true
+        ? state.marksOf(index).length
+        : (state.detail?.review?.marks ?? const <ArtworkMark>[])
+              .where((m) => m.imageIndex == index)
+              .length;
     final parts = <String>[
       images.length > 1 ? '第 ${index + 1}/${images.length} 张' : '作品原图',
       if (strokes.isNotEmpty) '批注 ${strokes.length} 笔',
+      if (marks > 0) '定点 $marks 处',
       if (state.dirtyImages.contains(index)) '未保存',
     ];
     return Row(
@@ -546,11 +657,166 @@ class _ArtworkReviewWorkspaceState
         if (state.detail?.canReview == true) const SizedBox(width: AppSpace.s8),
         if (state.detail?.canReview == true)
           AppButton(
+            label: '定点点评',
+            icon: Icons.place_outlined,
+            variant: AppButtonVariant.quiet,
+            size: AppButtonSize.sm,
+            onTap: _startMarking,
+          ),
+        if (state.detail?.canReview == true)
+          AppButton(
             label: '批注改画',
             icon: Icons.brush_outlined,
             variant: AppButtonVariant.quiet,
             size: AppButtonSize.sm,
             onTap: () => setState(() => _annotating = true),
+          ),
+      ],
+    );
+  }
+
+  /// 图上的定点点评编号：能点评的老师看自己的（定点点评模式下可加、可拖），
+  /// 组长、校长看责任老师的（只读，点编号高亮右栏那一行）。
+  Widget? _buildMarkOverlay(
+    ArtworkDetail detail,
+    ArtworkReviewState state,
+    int index,
+  ) {
+    if (_annotating) {
+      return null;
+    }
+    final editable = detail.canReview;
+    final numbered = editable
+        ? _numberedMine(state)
+        : numberArtworkMarks(<ArtworkReview>[?detail.review]);
+    final here = numbered.where((m) => m.mark.imageIndex == index).toList();
+    final adding = editable && _marking;
+    if (here.isEmpty && !adding) {
+      return null;
+    }
+    String idOf(String key) => here.firstWhere((m) => m.key == key).mark.id;
+    final controller = ref.read(_provider.notifier);
+    return ArtworkMarkLayer(
+      pins: <ArtworkMarkPin>[
+        for (final item in here)
+          ArtworkMarkPin(
+            key: item.key,
+            position: item.mark.position,
+            number: item.number,
+            semanticLabel: ArtworkRules.markSemantics(
+              item.number,
+              item.mark.text,
+              hasVoice: item.mark.hasVoice,
+              voiceSeconds: item.mark.voiceSeconds,
+            ),
+          ),
+      ],
+      selectedKey: editable
+          ? here.where((m) => m.mark.id == _selectedMarkId).firstOrNull?.key
+          : _viewedMarkKey,
+      zoom: _transform,
+      onTapPin: !editable
+          ? (key) => setState(
+              () => _viewedMarkKey = _viewedMarkKey == key ? null : key,
+            )
+          : (adding
+                ? (key) => _selectMark(idOf(key), focusText: true)
+                : (key) => _startMarking(markId: idOf(key))),
+      onMovePin: adding
+          ? (key, position) {
+              final id = idOf(key);
+              controller.moveMark(id, position);
+              if (_selectedMarkId != id) {
+                _selectMark(id);
+              }
+            }
+          : null,
+      onTapBlank: adding ? (position) => _addMark(index, position) : null,
+    );
+  }
+
+  Widget _buildMarkingToolbar(ArtworkReviewState state, int index) {
+    final count = state.marksOf(index).length;
+    return Row(
+      children: [
+        const Icon(
+          Icons.place_outlined,
+          size: 16,
+          color: AppColors.textSecondary,
+        ),
+        const SizedBox(width: AppSpace.s4),
+        Expanded(
+          child: Text(
+            count == 0
+                ? '点画上要说的位置，加一处定点点评'
+                : '点画上加一处 · 按住编号拖动 · 这张 $count / ${ArtworkRules.marksPerImage} 处',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.caption12,
+          ),
+        ),
+        const SizedBox(width: AppSpace.s8),
+        AppButton(
+          label: '完成',
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.sm,
+          onTap: _finishMarking,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMarkPanel(ArtworkReviewState state) {
+    final controller = ref.read(_provider.notifier);
+    final numbered = _numberedMine(state);
+    final selected = numbered
+        .where((m) => m.mark.id == _selectedMarkId)
+        .firstOrNull;
+    return ArtworkMarkEditorPanel(
+      marks: numbered,
+      selected: selected,
+      textController: _markText,
+      textFocus: _markTextFocus,
+      onTextChanged: (text) {
+        final id = _selectedMarkId;
+        if (id != null) {
+          controller.setMarkText(id, text);
+        }
+      },
+      onVoiceChanged: (path, seconds) {
+        final id = _selectedMarkId;
+        if (id != null) {
+          controller.setMarkVoice(id, path, seconds);
+        }
+      },
+      onUpload: controller.uploadVoice,
+      onDelete: () => _confirmDeleteMark(selected?.number ?? 0),
+      onSelect: (item) => _selectMark(item.mark.id, focusText: true),
+    );
+  }
+
+  /// 点评表单里的「定点点评」：列出我的几处，点一行进入定点点评模式改它。
+  Widget _buildMarkSummary(ArtworkReviewState state) {
+    final numbered = _numberedMine(state);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppSectionHeader(
+          title: '定点点评',
+          titleStyle: AppText.title16,
+          subtitle: numbered.isEmpty ? '在画上指出具体位置' : '${numbered.length} 处',
+          trailing: AppButton(
+            label: numbered.isEmpty ? '在画上标记' : '继续标记',
+            variant: AppButtonVariant.text,
+            size: AppButtonSize.sm,
+            onTap: _startMarking,
+          ),
+        ),
+        if (numbered.isNotEmpty)
+          ArtworkMarkList(
+            marks: numbered,
+            maxLines: 2,
+            onSelect: (item) => _startMarking(markId: item.mark.id),
           ),
       ],
     );
@@ -642,6 +908,24 @@ class _ArtworkReviewWorkspaceState
             relativePath: review.voiceUrl,
             durationSec: review.voiceSeconds,
           ),
+        if (review.marks.isNotEmpty) ...[
+          const SizedBox(height: AppSpace.s12),
+          AppSectionHeader(
+            title: '定点点评',
+            subtitle: '${review.marks.length} 处 · 点编号对照画上的位置',
+          ),
+          ArtworkMarkList(
+            marks: numberArtworkMarks(<ArtworkReview>[review]),
+            selectedKey: _viewedMarkKey,
+            onSelect: (item) => setState(() {
+              _viewedMarkKey = item.key;
+              if (item.mark.imageIndex != _imageIndex) {
+                _transform.value = Matrix4.identity();
+                _imageIndex = item.mark.imageIndex;
+              }
+            }),
+          ),
+        ],
         if (review.dimensions.isNotEmpty)
           Wrap(
             spacing: AppSpace.s8,
@@ -729,6 +1013,8 @@ class _ArtworkReviewWorkspaceState
                   _voiceSeconds = seconds;
                 }),
               ),
+              const SizedBox(height: AppSpace.s16),
+              _buildMarkSummary(state),
               if (previousTags.isNotEmpty) ...[
                 const SizedBox(height: AppSpace.s16),
                 const AppSectionHeader(title: '上版问题'),

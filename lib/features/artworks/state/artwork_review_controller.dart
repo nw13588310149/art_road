@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Offset;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,6 +39,7 @@ class ArtworkReviewState {
     this.previous,
     this.strokes = const <int, List<AnnotationStroke>>{},
     this.dirtyImages = const <int>{},
+    this.marks = const <ArtworkMark>[],
     this.saving = false,
     this.savingStrokes = false,
     this.errorMessage = '',
@@ -55,6 +57,9 @@ class ArtworkReviewState {
   /// 批注有改动、尚未保存的图片序号。
   final Set<int> dirtyImages;
 
+  /// 我的定点点评（随点评一起保存），按添加的先后。
+  final List<ArtworkMark> marks;
+
   /// 正在提交：保存点评、提交复核、补充点评、校长点评与推优共用。
   final bool saving;
   final bool savingStrokes;
@@ -64,6 +69,14 @@ class ArtworkReviewState {
       strokes[imageIndex] ?? const <AnnotationStroke>[];
 
   bool get hasUnsavedStrokes => dirtyImages.isNotEmpty;
+
+  List<ArtworkMark> marksOf(int imageIndex) => <ArtworkMark>[
+    for (final mark in marks)
+      if (mark.imageIndex == imageIndex) mark,
+  ];
+
+  /// 定点点评的编号：按图片先后、再按添加先后，从 1 起连续编号。
+  Map<String, int> get markNumbers => artworkMarkNumbers(marks);
 
   /// 上一版图片上的老师批注，按图片序号分组。
   List<AnnotationStroke> previousStrokesOf(int imageIndex) =>
@@ -79,6 +92,7 @@ class ArtworkReviewState {
     ArtworkDetail? previous,
     Map<int, List<AnnotationStroke>>? strokes,
     Set<int>? dirtyImages,
+    List<ArtworkMark>? marks,
     bool? saving,
     bool? savingStrokes,
     String? errorMessage,
@@ -89,6 +103,7 @@ class ArtworkReviewState {
       previous: previous ?? this.previous,
       strokes: strokes ?? this.strokes,
       dirtyImages: dirtyImages ?? this.dirtyImages,
+      marks: marks ?? this.marks,
       saving: saving ?? this.saving,
       savingStrokes: savingStrokes ?? this.savingStrokes,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -125,6 +140,10 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
   final ArtworkVoiceUploader? _voiceUploader;
   final String artworkId;
 
+  /// 老师改过定点点评后，重新读取详情不再用接口里的覆盖本地。
+  bool _marksTouched = false;
+  int _markSeq = 0;
+
   Future<void> load() async {
     state = state.copyWith(loading: true, errorMessage: '');
     final results = await Future.wait(<Future<ApiResponse>>[
@@ -154,10 +173,14 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
       }
     }
     final parsed = ArtworkDetail.fromJson(detail.data);
+    final mine = parsed.myReview;
     state = state.copyWith(
       loading: false,
       detail: parsed,
       strokes: state.hasUnsavedStrokes ? null : strokes,
+      marks: _marksTouched
+          ? null
+          : (mine != null && mine.reviewed ? mine.marks : const []),
     );
     await _loadPrevious(parsed);
   }
@@ -262,6 +285,80 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
     return true;
   }
 
+  /// 在 [imageIndex] 张图的 [at]（归一化坐标）加一处定点点评，返回它的 id；
+  /// 这张图已满 [ArtworkRules.marksPerImage] 处时返回 null。
+  String? addMark(int imageIndex, Offset at) {
+    if (state.marksOf(imageIndex).length >= ArtworkRules.marksPerImage) {
+      return null;
+    }
+    final taken = state.marks.map((mark) => mark.id).toSet();
+    String id;
+    do {
+      id = 'mk-${DateTime.now().millisecondsSinceEpoch}-${_markSeq++}';
+    } while (taken.contains(id));
+    _setMarks(<ArtworkMark>[
+      ...state.marks,
+      ArtworkMark(
+        id: id,
+        x: at.dx.clamp(0.0, 1.0),
+        y: at.dy.clamp(0.0, 1.0),
+        imageIndex: imageIndex,
+      ),
+    ]);
+    return id;
+  }
+
+  void moveMark(String id, Offset to) =>
+      _updateMark(id, (mark) => mark.copyWith(position: to));
+
+  void setMarkText(String id, String text) => _updateMark(
+    id,
+    (mark) => mark.copyWith(
+      text: String.fromCharCodes(text.runes.take(ArtworkRules.markTextLimit)),
+    ),
+  );
+
+  void setMarkVoice(String id, String voiceUrl, int seconds) => _updateMark(
+    id,
+    (mark) => mark.copyWith(voiceUrl: voiceUrl, voiceSeconds: seconds),
+  );
+
+  void removeMark(String id) {
+    if (state.marks.any((mark) => mark.id == id)) {
+      _setMarks(<ArtworkMark>[
+        for (final mark in state.marks)
+          if (mark.id != id) mark,
+      ]);
+    }
+  }
+
+  /// 去掉既没写字也没录音的标记（点了位置又没说什么），[keep] 那一处除外。
+  void pruneEmptyMarks({String? keep}) {
+    bool drop(ArtworkMark mark) => mark.isEmpty && mark.id != keep;
+    if (state.marks.any(drop)) {
+      _setMarks(<ArtworkMark>[
+        for (final mark in state.marks)
+          if (!drop(mark)) mark,
+      ]);
+    }
+  }
+
+  void _updateMark(String id, ArtworkMark Function(ArtworkMark) change) {
+    final index = state.marks.indexWhere((mark) => mark.id == id);
+    if (index < 0) {
+      return;
+    }
+    final updated = change(state.marks[index]);
+    if (updated != state.marks[index]) {
+      _setMarks(<ArtworkMark>[...state.marks]..[index] = updated);
+    }
+  }
+
+  void _setMarks(List<ArtworkMark> marks) {
+    _marksTouched = true;
+    state = state.copyWith(marks: List<ArtworkMark>.unmodifiable(marks));
+  }
+
   /// 上传语音评语，返回可保存的路径；失败返回 null。
   Future<String?> uploadVoice(Uint8List bytes, String filename) async {
     final uploader = _voiceUploader;
@@ -311,6 +408,10 @@ class ArtworkReviewController extends StateNotifier<ArtworkReviewState> {
       tagResolutions: tagResolutions,
       voiceUrl: voiceUrl,
       voiceSeconds: voiceSeconds,
+      marks: <ArtworkMark>[
+        for (final mark in state.marks)
+          if (!mark.isEmpty) mark,
+      ],
     );
     if (!mounted) {
       return null;
