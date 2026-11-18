@@ -121,9 +121,51 @@ final _shots = <_Shot>[
   const _Shot('today', '/today', roles: _everyone),
 
   // 电子书刊
-  const _Shot('ebooks', '/ebooks'),
+  const _Shot('ebooks', '/ebooks', roles: ['student', 'teacher']),
   const _Shot('ebooks-shelf', '/ebooks', steps: ['我的书架']),
+  const _Shot('ebooks-shelf-reading', '/ebooks', steps: ['我的书架', '在读']),
+  const _Shot('ebooks-shelf-favorite', '/ebooks', steps: ['我的书架', '收藏']),
+  const _Shot('ebooks-sort', '/ebooks', steps: ['=推荐']),
+  const _Shot('ebooks-cat-exam', '/ebooks', steps: ['=联考真题解析']),
+  const _Shot('ebooks-cat-works', '/ebooks', steps: ['=高分范画集']),
+  const _Shot('ebooks-cat-sketch', '/ebooks', steps: ['=素描教程']),
+  const _Shot('ebooks-cat-color', '/ebooks', steps: ['=色彩教程']),
+  const _Shot('ebooks-cat-speed', '/ebooks', steps: ['=速写教程']),
+  const _Shot('ebooks-cat-academy', '/ebooks', steps: ['=美院校考']),
+  const _Shot('ebooks-cat-history', '/ebooks', steps: ['=美术史与鉴赏']),
+  const _Shot('ebooks-cat-magazine', '/ebooks', steps: ['=期刊']),
+  // 详情：在读的一本、书名最长的一本、没开始读的一本。
   const _Shot('ebook-detail', '/ebooks', steps: ['联考素描静物高分解析']),
+  const _Shot('ebook-detail-long', '/ebooks', steps: ['联考真题与评分要点']),
+  const _Shot('ebook-detail-new', '/ebooks', steps: ['石膏头像结构入门']),
+  // 别的模块带 bookId 直接打开详情，下面垫着首页，返回回到首页。
+  const _Shot(
+    'ebook-deeplink',
+    '/ebooks',
+    args: {'bookId': 'eb-sketch-still'},
+    below: '/',
+  ),
+  // 阅读器：没读过的从第一页开始，在读的接着上次的页码。
+  const _Shot(
+    'ebook-reader-first',
+    '/ebooks',
+    steps: ['石膏头像结构入门', '开始阅读'],
+  ),
+  const _Shot(
+    'ebook-reader-middle',
+    '/ebooks',
+    steps: ['联考素描静物高分解析', '继续阅读'],
+  ),
+  const _Shot(
+    'ebook-reader-toc',
+    '/ebooks',
+    steps: ['联考素描静物高分解析', '继续阅读', '目录'],
+  ),
+  const _Shot(
+    'ebook-reader-jump',
+    '/ebooks',
+    steps: ['联考素描静物高分解析', '继续阅读', '跳页'],
+  ),
 
   // 素材中心
   const _Shot('gallery', '/gallery'),

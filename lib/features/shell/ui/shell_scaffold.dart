@@ -30,7 +30,6 @@ const _routesWithOwnSurface = {
   RoutePaths.circle,
   RoutePaths.helpGuide,
   RoutePaths.gallery,
-  RoutePaths.ebooks,
   RoutePaths.personalCenter,
   RoutePaths.mock,
 };
