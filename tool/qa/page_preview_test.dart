@@ -138,9 +138,46 @@ final _shots = <_Shot>[
   const _Shot('gallery-compare', '/gallery', steps: ['大卫石膏像 · 侧转头像', '对比我的原卷']),
 
   // 优秀课件
-  const _Shot('topics', '/micro-lessons'),
-  const _Shot('topic-detail', '/micro-lessons', steps: ['把明暗交界线画进体积里']),
-  const _Shot('topic-new', '/micro-lessons', steps: ['新增小课件']),
+  const _Shot(
+    'topics',
+    '/micro-lessons',
+    roles: ['student', 'teacher', 'principal'],
+  ),
+  const _Shot('topics-saved', '/micro-lessons', steps: ['我的收藏']),
+  const _Shot('topics-mine', '/micro-lessons', steps: ['我的发布']),
+  const _Shot('topics-subject', '/micro-lessons', args: {'subject': '色彩'}),
+  const _Shot('topics-search', '/micro-lessons', args: {'keyword': '水彩'}),
+  // 学情「找学习资料」带着科目和知识点进来：下面垫着首页，所以有返回。
+  const _Shot(
+    'topics-linked',
+    '/micro-lessons',
+    args: {'subject': '素描', 'keyword': '体积'},
+    below: '/',
+  ),
+  const _Shot(
+    'topic-detail',
+    '/micro-lessons',
+    roles: ['student', 'teacher'],
+    steps: ['把明暗交界线画进体积里'],
+  ),
+  // 美术常识只有这一份，没有侧栏；说明也最长。
+  const _Shot(
+    'topic-detail-long',
+    '/micro-lessons',
+    args: {'topicId': 'topic-8'},
+  ),
+  const _Shot(
+    'topic-reader',
+    '/micro-lessons',
+    steps: ['一组静物，建立统一的色调', '色彩静物冷暖关系 30 讲（示例） · PDF'],
+  ),
+  const _Shot('topic-new', '/micro-lessons', steps: ['新增课件']),
+  const _Shot('topic-new-errors', '/micro-lessons', steps: ['新增课件', '发布课件']),
+  const _Shot(
+    'topic-new-picked',
+    '/micro-lessons',
+    steps: ['新增课件', 'label:选择色彩静物冷暖关系 30 讲（示例） · PDF', 'label:选择石膏头像结构入门（示例）'],
+  ),
 
   // 集市
   const _Shot('market', '/market', roles: ['student', 'principal']),

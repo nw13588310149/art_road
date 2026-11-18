@@ -193,7 +193,7 @@ const sharedContent = [
   {
     id: 'topics-nav',
     route: '/',
-    actions: [nav('优秀课件'), { check: '发现专题' }],
+    actions: [nav('优秀课件'), { check: '全部课件' }],
   },
   {
     id: 'courseware-speed',
@@ -838,13 +838,13 @@ export const ROLES = [
   },
 ];
 
-// 3.1：专题与集市为全身份入口，断言具体结果，避免路由回退页误通过。
+// 3.1：优秀课件与集市为全身份入口，断言具体结果，避免路由回退页误通过。
 for (const role of ROLES) {
   if (role.id === 'guest') continue;
   role.steps.push(
-    { id: 'v31-topics', route: '/micro-lessons', actions: [{ check: '发现专题' }, { check: '把明暗交界线画进体积里' }] },
+    { id: 'v31-topics', route: '/micro-lessons', actions: [{ check: '全部课件' }, { check: '把明暗交界线画进体积里' }] },
     { id: 'v31-topic-detail', route: '/micro-lessons', actions: [{ click: '把明暗交界线画进体积里' }, { check: '阅读资料' }, { check: '开始阅读' }] },
-    { id: 'v31-topic-new', route: '/micro-lessons', actions: [{ click: '新增小课件' }, { check: '专题内容' }, { check: '上传 PDF / 图片' }, { check: '发布小课件' }] },
+    { id: 'v31-topic-new', route: '/micro-lessons', actions: [{ click: '新增课件' }, { check: '课件内容' }, { check: '上传 PDF / 图片' }, { check: '发布课件' }] },
     { id: 'v31-market', route: '/market', actions: [{ check: '发现作品' }, { check: '午后的静物' }, { check: '数字授权' }] },
     { id: 'v31-market-detail', route: '/market', actions: [{ click: '午后的静物' }, { check: '个人学习使用' }, { check: '演示交易' }] },
     { id: 'v31-market-new', route: '/market', actions: [{ click: /^发布作品$/ }, { check: '创作信息' }, { check: '交易方式' }, { check: '上传作品图片' }] },
@@ -860,30 +860,30 @@ ROLES.find((role) => role.id === 'principal').steps.push({
 
 ROLES.find((role) => role.id === 'student').steps.push(
   { id: 'v31-upload-reader-resume', route: '/micro-lessons', actions: [
-    { click: '新增小课件' }, { check: '每份不超过 20 MB' },
+    { click: '新增课件' }, { check: '每份不超过 20 MB' },
     { type: '两页体积观察', into: '例如：把明暗交界线画进体积里' },
-    { type: '通过两页图片观察形体转折和明暗变化。', into: '这份小课件解决什么问题？读完可以尝试什么？' },
+    { type: '通过两页图片观察形体转折和明暗变化。', into: '这份课件解决什么问题？读完可以尝试什么？' },
     { uploadFiles: ['assets/demo/ebooks/eb-sketch-still-p02.jpg', 'assets/demo/ebooks/eb-sketch-still-p03.jpg'], into: '上传 PDF / 图片', after: 2000 },
-    { check: '图片书籍 · 2 页' }, { click: '发布小课件' },
+    { check: '图片书籍 · 2 页' }, { click: '发布课件' },
     { click: '两页体积观察' }, { click: '开始阅读' }, { check: '1 / 2' },
     { click: '下一页' }, { check: '2 / 2' }, { click: '返回' },
     { click: '开始阅读' }, { check: '2 / 2' },
   ] },
   { id: 'v31-topic-publish', route: '/micro-lessons', actions: [
-    { click: '新增小课件' },
-    { click: '发布小课件' }, { check: '专题名称须为' },
+    { click: '新增课件' },
+    { click: '发布课件' }, { check: '课件名称须为' },
     { type: '明暗关系阅读练习', into: '例如：把明暗交界线画进体积里' },
-    { type: '通过图文对照观察明暗关系与形体转折。', into: '这份小课件解决什么问题？读完可以尝试什么？' },
+    { type: '通过图文对照观察明暗关系与形体转折。', into: '这份课件解决什么问题？读完可以尝试什么？' },
     { click: /^选择联考素描静物高分解析（示例）$/ },
     { click: /^选择联考素描静物高分解析（示例） · PDF$/ },
-    { click: '发布小课件' }, { check: '明暗关系阅读练习' },
-    { click: '明暗关系阅读练习' }, { check: '2 份阅读资料' },
-    { click: '收藏专题' }, { check: '已收藏' },
+    { click: '发布课件' }, { check: '明暗关系阅读练习' },
+    { click: '明暗关系阅读练习' }, { check: '2 份 · 点封面开始阅读' },
+    { click: /^收藏$/ }, { check: '已收藏' },
   ] },
   { id: 'v31-topic-pdf', route: '/micro-lessons', actions: [
     { click: '一组静物，建立统一的色调' },
     { click: /色彩静物冷暖关系 30 讲（示例） · PDF/, role: 'button' },
-    { check: 'PDF 阅读' }, { check: '1 / 10', after: 1500 },
+    { check: '1 / 10', after: 1500 },
     { click: '下一页' }, { check: '2 / 10', after: 1500 },
   ] },
   { id: 'v31-topic-image-book', route: '/micro-lessons', actions: [
