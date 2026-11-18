@@ -500,6 +500,30 @@ export const ROLES = [
         route: '/artworks',
         actions: [{ click: '上传作品', after: 1800 }, { check: '关联作品' }],
       },
+      // 选一张照片后点缩略图拉正裁边，完成后回到上传弹窗。
+      {
+        id: 'artwork-upload-straighten',
+        route: '/artworks',
+        actions: [
+          { click: '上传作品', after: 1800 },
+          { uploadFiles: ['assets/demo/art/sketch-still-1.jpg'], into: /^添加照片$/, after: 1500 },
+          { check: '点照片可以拉正' },
+          { click: /^拉正裁边：第 1 张$/, after: 1500 },
+          { check: /^拖动左上角$/ }, { check: '拖动四个角对齐画纸的四个角' },
+          { click: /^完成$/, after: 4000 },
+          { check: /^拉正裁边：第 1 张$/ }, { absent: '拖动四个角对齐画纸的四个角' },
+        ],
+      },
+      // 取色后显示水粉调色参考。
+      {
+        id: 'tool-color-mix',
+        route: '/toolbox',
+        actions: [
+          { click: '取色', after: 2000 }, { click: '花卉静物', after: 2500 },
+          { tap: [330, 520], after: 1500 },
+          { check: '调色参考' }, { check: /份，(接近|大致|偏差较大)$/ },
+        ],
+      },
       { id: 'gallery', route: '/gallery' },
       {
         id: 'gallery-compare', route: '/gallery', actions: [

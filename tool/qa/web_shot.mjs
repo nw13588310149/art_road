@@ -14,7 +14,10 @@
 //   --role    student teacher groupLeader headTeacher dormManager admin principal（默认 student）；
 //             guest 表示不登录
 //   --route   路由，默认 /
-//   --tap     进入页面后依次点击的文字，多个用 | 分隔（按无障碍名称包含匹配）
+//   --tap     进入页面后依次点击的文字，多个用 | 分隔（按无障碍名称包含匹配）。另有几种写法：
+//             `@330,520` 点整屏坐标；`drag:200,128>350,186` 从一点拖到另一点；`wait:800` 多等
+//             一会儿；`gone:文字` 等到页面上没有这段文字，并打印从上一步到现在用了多久
+//   --upload  页面弹出选文件时交给它的文件（例如上传作品照片）
 //   --size    视口，默认 1180x820
 //   --scale   像素比，默认 2
 //   --settle  进入页面和每次点击后的等待毫秒数，默认 3500 / 1500
@@ -117,6 +120,13 @@ try {
   const waiting = new Map();
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
+    if (message.method === 'Page.fileChooserOpened' && args.upload) {
+      send('DOM.setFileInputFiles', {
+        files: [path.resolve(args.upload)],
+        backendNodeId: message.params.backendNodeId,
+      }).catch((e) => console.error(`选文件失败：${e.message}`));
+      return;
+    }
     const entry = waiting.get(message.id);
     if (!entry) return;
     waiting.delete(message.id);
@@ -135,6 +145,8 @@ try {
       expression,
       awaitPromise: true,
       returnByValue: true,
+      // 当作用户手势，页面里由点击触发的选文件才会弹出。
+      userGesture: true,
     });
     if (result.exceptionDetails) {
       throw new Error(result.exceptionDetails.exception?.description || '页面脚本出错');
@@ -143,6 +155,7 @@ try {
   };
 
   await send('Page.enable');
+  if (args.upload) await send('Page.setInterceptFileChooserDialog', { enabled: true });
   await send('Emulation.setDeviceMetricsOverride', {
     width,
     height,
@@ -185,7 +198,7 @@ try {
         const node = exact || nodes
           .filter((n) => nameOf(n).includes(wanted))
           .sort((a, b) => nameOf(a).length - nameOf(b).length)[0];
-        if (node) { node.click(); return true; }
+        if (node) { window.__lastTap = performance.now(); node.click(); return true; }
         await sleep(400);
       }
       return false;
@@ -210,11 +223,70 @@ try {
     await sleep(1200);
   }
 
+  const point = (spec) => spec.split(',').map(Number);
+  const mouse = (type, [x, y]) =>
+    send('Input.dispatchMouseEvent', {
+      type,
+      x,
+      y,
+      button: type === 'mouseMoved' ? 'none' : 'left',
+      buttons: type === 'mouseReleased' ? 0 : 1,
+      clickCount: 1,
+    });
+  /**
+   * 在页面里等到无障碍树里没有这段文字，返回从上一次点击到现在的毫秒数。计时在
+   * 页面里做：网页端的后台计算和页面同一个线程，计算期间页面停住，回来时再看钟。
+   */
+  const waitGone = (text) =>
+    evaluate(`(async () => {
+      const wanted = ${JSON.stringify(text)};
+      const has = () => [...document.querySelectorAll('flt-semantics')].some((n) =>
+        ((n.getAttribute('aria-label') || '') + (n.textContent || '')).includes(wanted));
+      const seen = has();
+      for (let i = 0; i < 600 && has(); i++) await new Promise((r) => setTimeout(r, 50));
+      return { seen, ms: Math.round(performance.now() - (window.__lastTap || 0)) };
+    })()`);
+
   await open(route);
   await sleep(settle);
   if (taps.length) await enableSemantics();
   for (const text of taps) {
-    if (!(await tap(text))) throw new Error(`找不到要点击的「${text}」`);
+    if (text.startsWith('wait:')) {
+      await sleep(Number(text.slice(5)));
+      continue;
+    }
+    if (text.startsWith('gone:')) {
+      const wanted = text.slice(5);
+      const { seen, ms } = await waitGone(wanted);
+      console.log(
+        seen
+          ? `「${wanted}」在上一次点击后 ${ms} ms 消失`
+          : `「${wanted}」在第一次查看时已经不在（距上一次点击 ${ms} ms）`,
+      );
+      continue;
+    }
+    if (text.startsWith('@')) {
+      const at = point(text.slice(1));
+      await evaluate('window.__lastTap = performance.now()');
+      await mouse('mousePressed', at);
+      await mouse('mouseReleased', at);
+    } else if (text.startsWith('drag:')) {
+      const [from, to] = text.slice(5).split('>').map(point);
+      await mouse('mousePressed', from);
+      for (let i = 1; i <= 16; i++) {
+        await send('Input.dispatchMouseEvent', {
+          type: 'mouseMoved',
+          x: from[0] + ((to[0] - from[0]) * i) / 16,
+          y: from[1] + ((to[1] - from[1]) * i) / 16,
+          button: 'left',
+          buttons: 1,
+        });
+        await sleep(16);
+      }
+      await mouse('mouseReleased', to);
+    } else if (!(await tap(text))) {
+      throw new Error(`找不到要点击的「${text}」`);
+    }
     await sleep(Number(args.settle || 1500));
   }
 

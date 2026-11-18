@@ -12,8 +12,10 @@ import '../../logic/color_harmony.dart';
 import '../../logic/image_ops.dart';
 import '../widgets/image_tool_frame.dart';
 import '../widgets/tool_panel.dart';
+import 'gouache_mix_section.dart';
 
-/// 取色与色卡：点击画面取色（HEX / RGB / HSB / 色彩三要素 / 冷暖），提取主色，生成配色色环。
+/// 取色与色卡：点击画面取色（HEX / RGB / HSB / 色彩三要素 / 冷暖）并给出水粉调色参考，
+/// 提取主色，生成配色色环。
 class ColorPickerTool extends StatelessWidget {
   const ColorPickerTool({required this.onBack, super.key});
 
@@ -216,6 +218,7 @@ class _ColorPickerBodyState extends State<_ColorPickerBody> {
                   onCopy: (hex) => copyHex(context, hex),
                 ),
         ),
+        if (color != null) GouacheMixSection(color: color),
         ToolPanelSection(
           title: '画面主色',
           note: '点击复制 HEX',

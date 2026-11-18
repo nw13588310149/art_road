@@ -10,6 +10,7 @@ import '../data/artwork_models.dart';
 import '../data/artwork_rules.dart';
 import '../state/student_artworks_controller.dart';
 import '../state/artwork_tasks_controller.dart';
+import 'artwork_photo_straighten_page.dart';
 
 /// 学生上传作品弹窗；提交成功返回 true。
 ///
@@ -192,6 +193,33 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
     if (problem != null) {
       AppToast.showError(context, problem);
     }
+  }
+
+  Future<void> _straighten(ArtworkDraftImage image) async {
+    final index = _images.indexOf(image);
+    if (index < 0 || _submitting) {
+      return;
+    }
+    final bytes = await showArtworkPhotoStraighten(
+      context,
+      bytes: image.bytes,
+      caption: '第 ${index + 1} 张',
+    );
+    if (bytes == null || !mounted) {
+      return;
+    }
+    final at = _images.indexOf(image);
+    if (at < 0) {
+      return;
+    }
+    final base = image.name.replaceFirst(RegExp(r'\.[^.]*$'), '');
+    setState(() {
+      _images[at] = ArtworkDraftImage(
+        bytes: bytes,
+        name: '${base.isEmpty ? 'artwork' : base}.jpg',
+      );
+      _uploaded.remove(image);
+    });
   }
 
   Future<void> _pickDate() async {
@@ -378,9 +406,11 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
           spacing: AppSpace.s12,
           runSpacing: AppSpace.s12,
           children: [
-            for (final image in _images)
+            for (final (index, image) in _images.indexed)
               _PickedThumb(
                 image: image,
+                index: index,
+                onTap: enabled ? () => _straighten(image) : null,
                 onRemove: enabled
                     ? () => setState(() => _images.remove(image))
                     : null,
@@ -392,6 +422,10 @@ class _ArtworkUploadDialogState extends ConsumerState<ArtworkUploadDialog> {
               ),
           ],
         ),
+        if (_images.isNotEmpty) ...[
+          const SizedBox(height: AppSpace.s8),
+          Text('点照片可以拉正歪斜、裁掉画纸外的背景', style: AppText.caption12),
+        ],
         const SizedBox(height: AppSpace.s20),
         AppInputField(
           controller: _title,
@@ -512,9 +546,16 @@ class _FieldLabel extends StatelessWidget {
 }
 
 class _PickedThumb extends StatelessWidget {
-  const _PickedThumb({required this.image, required this.onRemove});
+  const _PickedThumb({
+    required this.image,
+    required this.index,
+    required this.onTap,
+    required this.onRemove,
+  });
 
   final ArtworkDraftImage image;
+  final int index;
+  final VoidCallback? onTap;
   final VoidCallback? onRemove;
 
   @override
@@ -526,18 +567,23 @@ class _PickedThumb extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(
-            child: ClipRRect(
-              borderRadius: AppRadius.br8,
-              child: Image.memory(
-                image.bytes,
-                fit: BoxFit.cover,
-                cacheWidth: 240,
-                gaplessPlayback: true,
-                errorBuilder: (_, _, _) => const ColoredBox(
-                  color: AppColors.surfaceSubtle,
-                  child: Icon(
-                    Icons.broken_image_outlined,
-                    color: AppColors.textPlaceholder,
+            child: AppPressable(
+              onTap: onTap,
+              enabled: onTap != null,
+              semanticLabel: '拉正裁边：第 ${index + 1} 张',
+              child: ClipRRect(
+                borderRadius: AppRadius.br8,
+                child: Image.memory(
+                  image.bytes,
+                  fit: BoxFit.cover,
+                  cacheWidth: 240,
+                  gaplessPlayback: true,
+                  errorBuilder: (_, _, _) => const ColoredBox(
+                    color: AppColors.surfaceSubtle,
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: AppColors.textPlaceholder,
+                    ),
                   ),
                 ),
               ),
