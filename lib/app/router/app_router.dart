@@ -16,7 +16,6 @@ import '../../features/common/ui/terms_page.dart';
 import '../../features/courseware/ui/courseware_page.dart';
 import '../../features/circle/ui/circle_page.dart';
 import '../../features/design_system/design_system_page.dart';
-import '../../features/design_system/directions/directions_page.dart';
 import '../../features/home/ui/home_page.dart';
 import '../../features/help_guide/ui/help_guide_page.dart';
 import '../../features/my_collection/ui/my_collection_page.dart'
@@ -54,19 +53,6 @@ class AppRouter {
           if (settings.arguments is Map)
             ...Map<String, dynamic>.from(settings.arguments as Map),
         },
-      );
-    }
-    // 新页面方向稿（临时）：左导航高亮它要替换的那一页，方向选定后删除。
-    if (incoming?.path == RoutePaths.designDirections) {
-      final args = <String, dynamic>{
-        ...incoming!.queryParameters,
-        if (settings.arguments is Map)
-          ...Map<String, dynamic>.from(settings.arguments as Map),
-      };
-      final draft = DirectionDraftPage.fromArgs(args);
-      return _buildProtectedRoute(
-        ShellScaffold(currentRoute: draft.shellRoute, child: draft),
-        RouteSettings(name: RoutePaths.designDirections, arguments: args),
       );
     }
     final routeName = settings.name ?? RoutePaths.home;

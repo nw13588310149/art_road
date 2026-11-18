@@ -17,6 +17,8 @@
 
 - 产品规划：`docs/美术之路产品规划.md`
 - 设计规范与组件库：`docs/设计规范.md`、`lib/core/ui`（`import 'ui.dart'`）
+- 新页面的设计语言与进度：`docs/新页面设计语言.md`、`docs/走查/新页面统一进度.md`；改新页面的界面按 `.cursor/skills/ui-partner/SKILL.md` 做
+- 单页预览：`flutter test --no-pub tool/qa/page_preview_test.dart`，用法见 `.cursor/skills/ui-partner/eyes.md`
 - 后端缺口：`docs/后端缺口清单.md`
 - 走查与修复记录：`docs/走查问题清单.md`、`docs/走查/`
 - 运行说明与演示账号：`README.md`

@@ -247,14 +247,8 @@ final _shots = <_Shot>[
   const _Shot('ref-home', '/', roles: ['student', 'teacher']),
   const _Shot('ref-ai', '/personal-Ai'),
 
-  // 新页面方向稿（临时，方向选定后删除）
-  for (final direction in const ['a', 'b', 'c'])
-    for (final page in const ['today', 'ebooks'])
-      _Shot(
-        'draft-$direction-$page',
-        '/design-system/directions',
-        args: {'d': direction, 'p': page, 'bare': '1'},
-      ),
+  // 组件库演示页，最上面一节是新页面的组件
+  const _Shot('kit', '/design-system'),
 ];
 
 // ───────────────────────────── 运行参数 ─────────────────────────────
@@ -386,14 +380,30 @@ void _mockPlugins() {
   };
 }
 
-/// 还在加载：转圈、骨架屏。
-final _busy = find.byWidgetPredicate(
+/// 转圈和骨架屏。
+final _loading = find.byWidgetPredicate(
   (widget) =>
       widget is CircularProgressIndicator ||
       widget is AppLoadingIndicator ||
       widget is PageInitLoadingShell ||
       widget is AppSkeleton,
 );
+
+/// 屏幕里还有东西在加载。滚动区里屏幕以外的不算（组件库演示页下方就有
+/// 一直在转的示例）。
+bool _busy(WidgetTester tester) {
+  final view = tester.view;
+  final screen = Offset.zero & (view.physicalSize / view.devicePixelRatio);
+  for (final element in _loading.evaluate()) {
+    final box = element.renderObject;
+    if (box is RenderBox && box.attached && box.hasSize) {
+      if ((box.localToGlobal(Offset.zero) & box.size).overlaps(screen)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 /// 等页面稳定下来。整个渲染在真实时间里进行（见 [_render]），所以演示接口的
 /// 模拟延迟、图片下载和解码、后台线程里的图片处理都按真实速度完成。
@@ -408,10 +418,10 @@ Future<bool> _settle(
   while (watch.elapsedMilliseconds < maxMs) {
     await Future<void>.delayed(const Duration(milliseconds: 60));
     await tester.pump(const Duration(milliseconds: 100));
-    calm = _busy.evaluate().isEmpty ? calm + 1 : 0;
+    calm = _busy(tester) ? 0 : calm + 1;
     if (watch.elapsedMilliseconds >= minMs && calm >= 4) {
       await _loadImages(tester);
-      if (_busy.evaluate().isEmpty) return true;
+      if (!_busy(tester)) return true;
       calm = 0;
     }
   }

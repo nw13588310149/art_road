@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../app/router/route_paths.dart';
 import '../../core/art/art_subject.dart';
 import '../../core/ui/ui.dart';
-import 'directions/directions_page.dart';
 
 /// 组件库演示页（`/design-system`）：按分区展示 lib/core/ui 的全部组件、变体与状态。
 ///
@@ -16,6 +15,9 @@ class DesignSystemPage extends StatefulWidget {
 }
 
 class _DesignSystemPageState extends State<DesignSystemPage> {
+  String _pageView = 'library';
+  String _pageFilter = 'all';
+  String _pageScope = 'all';
   String _view = 'all';
   String _range = 'week';
   String _tab = 'pending';
@@ -76,30 +78,12 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 临时入口：方向选定后和 directions/ 目录一起删除。
                 _section(
-                  '新页面方向稿（临时）',
-                  '三个方向各做了今日和电子书刊的首屏；页面底部的切换条可以换方向、换页面',
-                  Wrap(
-                    spacing: AppSpace.s8,
-                    runSpacing: AppSpace.s8,
-                    children: [
-                      for (final direction in draftDirections.entries)
-                        for (final page in draftPages.entries)
-                          AppButton(
-                            label: '${direction.value} · ${page.value}',
-                            variant: AppButtonVariant.quiet,
-                            size: AppButtonSize.sm,
-                            onTap: () => Navigator.of(context).pushNamed(
-                              RoutePaths.designDirections,
-                              arguments: <String, dynamic>{
-                                'd': direction.key,
-                                'p': page.key,
-                              },
-                            ),
-                          ),
-                    ],
-                  ),
+                  '新页面组件',
+                  'AppTitleBar · AppViewTabs · AppFilterBar · AppPlainButton · '
+                      'AppSectionTitle · AppRule · AppStatRow · AppProgressRing · '
+                      'AppImageTile · AppTileGrid，规范见 docs/新页面设计语言.md',
+                  _pageKit(),
                 ),
                 _section('颜色', '品牌紫只用于主操作、选中态、关键数字和链接', _colors()),
                 _section(
@@ -152,6 +136,148 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  /// 新页面的组件拼成的一小块示例：页头、筛选、分区、封面网格和右栏的数字。
+  Widget _pageKit() {
+    const covers = <(String, String, String, bool)>[
+      ('eb-cast-head-cover.jpg', '石膏头像结构入门（示例）', '读到第 5 / 10 页', true),
+      ('eb-color-warmcool-cover.jpg', '色彩静物冷暖关系 30 讲（示例）', '基础 · 10 页', false),
+      ('eb-exam-sketch-cover.jpg', '联考真题与评分要点·素描（示例）', '冲刺 · 12 页', false),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppTitleBar(
+          title: '页面名称',
+          tabs: AppViewTabs<String>(
+            items: const [
+              AppViewTab(value: 'library', label: '书库'),
+              AppViewTab(value: 'shelf', label: '我的书架'),
+            ],
+            value: _pageView,
+            onChanged: (value) => setState(() => _pageView = value),
+          ),
+          actions: [
+            AppPlainButton(
+              label: '推荐',
+              icon: Icons.swap_vert_rounded,
+              onTap: () => AppToast.showInfo(context, '次要操作用墨色文字'),
+            ),
+            const SizedBox(width: AppSpace.s8),
+            AppButton(label: '主操作', onTap: () {}),
+          ],
+        ),
+        const SizedBox(height: AppSpace.s12),
+        AppFilterBar<String>(
+          items: const [
+            AppFilterItem(value: 'all', label: '全部'),
+            AppFilterItem(value: 'sketch', label: '素描教程'),
+            AppFilterItem(value: 'color', label: '色彩教程'),
+            AppFilterItem(value: 'speed', label: '速写教程'),
+            AppFilterItem(value: 'magazine', label: '期刊'),
+          ],
+          value: _pageFilter,
+          onChanged: (value) => setState(() => _pageFilter = value),
+        ),
+        const SizedBox(height: AppSpace.s24),
+        const AppRule(),
+        const SizedBox(height: AppSpace.s24),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppSectionTitle(
+                    title: '分区标题',
+                    note: '共 3 本',
+                    trailing: AppViewTabs<String>(
+                      dense: true,
+                      items: const [
+                        AppViewTab(value: 'all', label: '全部', count: 3),
+                        AppViewTab(value: 'open', label: '在读', count: 1),
+                      ],
+                      value: _pageScope,
+                      onChanged: (value) => setState(() => _pageScope = value),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpace.s16),
+                  AppTileGrid(
+                    columns: 3,
+                    gap: AppSpace.s24,
+                    children: [
+                      for (final (file, title, meta, reading) in covers)
+                        AppImageTile(
+                          image: AppImageTile.frame(
+                            aspectRatio: 3 / 4,
+                            child: AppImage(
+                              src: 'asset:assets/demo/ebooks/$file',
+                            ),
+                          ),
+                          title: title,
+                          meta: meta,
+                          metaColor: reading
+                              ? AppColors.brandDeep
+                              : AppColors.textTertiary,
+                          onTap: () {},
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 48),
+            SizedBox(
+              width: 260,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const AppProgressRing(value: 0.3, semanticLabel: '今日进度'),
+                      const SizedBox(width: AppSpace.s16),
+                      Text.rich(
+                        TextSpan(
+                          text: '3',
+                          children: [
+                            TextSpan(
+                              text: ' / 10 件',
+                              style: AppText.number(
+                                size: 14,
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        style: AppText.displayNumber(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpace.s20),
+                  const AppRule(),
+                  const AppStatRow(
+                    label: '今日课程',
+                    caption: '已上完 1 节',
+                    value: '3',
+                    unit: '节',
+                  ),
+                  const AppRule(),
+                  const AppStatRow(
+                    label: '距离联考',
+                    caption: '2026-12-06 开考',
+                    value: '18',
+                    unit: '天',
+                  ),
+                  const AppRule(),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );
