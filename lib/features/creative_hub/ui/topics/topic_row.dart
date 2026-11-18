@@ -102,10 +102,10 @@ class TopicRow extends StatelessWidget {
         Transform.translate(
           offset: const Offset(12, 0),
           child: AppIconAction(
-            icon: topic.favorite
-                ? Icons.bookmark_rounded
-                : Icons.bookmark_border_rounded,
-            color: topic.favorite ? AppColors.ink : AppColors.textSecondary,
+            icon: Icons.bookmark_border_rounded,
+            activeIcon: Icons.bookmark_rounded,
+            active: topic.favorite,
+            activeColor: AppColors.ink,
             semanticLabel: topic.favorite ? '取消收藏课件' : '收藏课件',
             onTap: onFavorite,
           ),

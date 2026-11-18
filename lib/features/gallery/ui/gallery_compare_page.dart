@@ -440,7 +440,8 @@ class _CompareTopBar extends StatelessWidget {
               value: mode,
               onChanged: onModeChanged,
             ),
-            const SizedBox(width: AppSpace.s32),
+            // 两组切换之间放一条短竖线，不然读起来像四个页签。
+            const SizedBox(height: 20, child: AppRule.vertical(gap: 33)),
             AppViewTabs<bool>(
               items: const [
                 AppViewTab(value: false, label: '彩色'),

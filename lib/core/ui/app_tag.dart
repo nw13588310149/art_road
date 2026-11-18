@@ -21,11 +21,21 @@ class AppTag extends StatelessWidget {
   });
 
   /// 科目标签：素描 / 色彩 / 速写用科目色，其他课程用品牌紫；[muted] 时转灰。
-  factory AppTag.subject(String subject, {bool muted = false, Key? key}) {
+  ///
+  /// 新页面传 [otherNeutral]：美术常识、文化课这类其他科目用中性灰，不占品牌紫。
+  factory AppTag.subject(
+    String subject, {
+    bool muted = false,
+    bool otherNeutral = false,
+    Key? key,
+  }) {
     if (muted) {
       return AppTag(label: subject, key: key);
     }
     final matched = _subjectOf(subject);
+    if (matched == null && otherNeutral) {
+      return AppTag(label: subject, key: key);
+    }
     return AppTag(
       label: subject,
       color: matched?.accent ?? AppColors.brandDeep,

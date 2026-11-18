@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/art/art_subject.dart';
 import '../../../../core/ui/ui.dart';
 import '../../data/ebook_models.dart';
 
@@ -41,10 +40,8 @@ Color ebookMetaColor(EbookSummary book) =>
     book.reading ? AppColors.brandDeep : AppColors.textTertiary;
 
 /// 科目标签：素描 / 色彩 / 速写用科目色，美术常识等其他科目用中性灰。
-Widget ebookSubjectTag(String subject) {
-  final isArt = ArtSubject.values.any((s) => subject.contains(s.label));
-  return isArt ? AppTag.subject(subject) : AppTag(label: subject);
-}
+Widget ebookSubjectTag(String subject) =>
+    AppTag.subject(subject, otherNeutral: true);
 
 /// 3:4 封面，完整显示，上面不压任何东西。
 ///

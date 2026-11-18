@@ -190,39 +190,15 @@ class ToolSwitchRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpace.s12),
-              ExcludeSemantics(child: _InkSwitch(value: value)),
+              ExcludeSemantics(
+                child: AppSwitch(
+                  value: value,
+                  onChanged: onChanged,
+                  activeColor: AppColors.ink,
+                ),
+              ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 墨色开关：和 `AppSwitch` 同样 42×26，开的时候是墨色底。整行负责点击。
-class _InkSwitch extends StatelessWidget {
-  const _InkSwitch({required this.value});
-
-  final bool value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 42,
-      height: 26,
-      padding: const EdgeInsets.all(2),
-      alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-      decoration: BoxDecoration(
-        color: value ? AppColors.ink : AppColors.line,
-        borderRadius: AppRadius.brPill,
-      ),
-      child: Container(
-        width: 22,
-        height: 22,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          shape: BoxShape.circle,
-          boxShadow: AppShadow.knob,
         ),
       ),
     );
@@ -233,7 +209,6 @@ class _InkSwitch extends StatelessWidget {
 final TextStyle _noteStyle = AppText.caption12;
 
 /// 靠左放在正文里的一个次要操作：文字和上面的正文对齐（抵消按钮自带的 12 内距）。
-/// `AppPlainButton` 在宽松约束下会撑满整行、文字居中，所以放进 Row 里。
 class ToolInlineAction extends StatelessWidget {
   const ToolInlineAction({
     required this.label,

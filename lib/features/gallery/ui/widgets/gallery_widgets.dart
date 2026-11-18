@@ -36,16 +36,21 @@ String formatViewCount(int views) {
   return '$views';
 }
 
-/// 收藏：星形图标，已收藏时是实心的品牌紫。
+/// 收藏：星形图标，已收藏时是实心的。
+///
+/// 详情页只有一颗星，已收藏用品牌紫；列表里 [inList] 为 true，一屏可能有很多
+/// 已收藏，用墨色，靠实心图标表示状态。
 class GalleryFavoriteAction extends StatelessWidget {
   const GalleryFavoriteAction({
     required this.favorite,
     required this.onTap,
+    this.inList = false,
     super.key,
   });
 
   final bool favorite;
   final VoidCallback onTap;
+  final bool inList;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +58,7 @@ class GalleryFavoriteAction extends StatelessWidget {
       icon: Icons.star_border_rounded,
       activeIcon: Icons.star_rounded,
       active: favorite,
+      activeColor: inList ? AppColors.ink : AppColors.brand,
       semanticLabel: favorite ? '取消收藏' : '收藏',
       onTap: onTap,
     );
@@ -96,6 +102,7 @@ class GalleryWorkTile extends StatelessWidget {
       action: GalleryFavoriteAction(
         favorite: work.favorite,
         onTap: onToggleFavorite,
+        inList: true,
       ),
     );
   }

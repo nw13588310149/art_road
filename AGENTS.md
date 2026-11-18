@@ -41,7 +41,7 @@
 - Shared shell areas such as the left navigation and top bar stay reusable and stable.
 - Left nav keeps 首页、今日、小美同学、学情（教职）、电子书刊、校园资料（学校开启时）、优秀课件、素材中心、我的云盘、视频中心、智慧校园、个人中心, plus a fixed footer 「意见反馈」.
   - 今日 sits right below 首页: students see 「今日学习」, staff see 「今日工作」 (`todayNavLabel`). Its badge is the number of pending items (`todayPendingCountProvider`, applied in `ShellScaffold`).
-  - 电子书刊 sits above 校园资料 and opens `/ebooks` (精选书刊). 优秀课件 sits below 校园资料 and opens `/micro-lessons`. 素材中心 sits below 优秀课件 and opens `/gallery`.
+  - 电子书刊 sits above 校园资料 and opens `/ebooks` (书库 / 我的书架). 优秀课件 sits below 校园资料 and opens `/micro-lessons`. 素材中心 sits below 优秀课件 and opens `/gallery`.
   - Staff see 班级学情 and the principal sees 全校学情; students open 学情 from the home quick actions; dorm managers do not see 学情.
   - 我的笔记 and 我的收藏 open from 个人中心 and highlight it. Staff have twelve items, which fit 1180×820 and 1024×768 without scrolling; move an entry elsewhere before adding a thirteenth.
 

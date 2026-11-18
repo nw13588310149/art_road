@@ -136,8 +136,9 @@ class AppBackButton extends StatelessWidget {
 
 /// 只有图标的次要操作（收藏、全屏、更多）：没有底色，点击区域 44 见方。
 ///
-/// [semanticLabel] 同时是读屏名称和悬停提示。[active] 为 true 时图标用品牌紫
-/// （例如已收藏），一屏里算一处品牌紫。
+/// [semanticLabel] 同时是读屏名称和悬停提示。[active] 为 true 时图标用
+/// [activeColor]，默认品牌紫（例如详情页里已收藏），一屏里算一处品牌紫。列表里
+/// 每行都可能处于已收藏时传 `activeColor: AppColors.ink`，靠实心图标表示状态。
 class AppIconAction extends StatelessWidget {
   const AppIconAction({
     required this.icon,
@@ -147,6 +148,7 @@ class AppIconAction extends StatelessWidget {
     this.activeIcon,
     this.size = 20,
     this.color = AppColors.textSecondary,
+    this.activeColor = AppColors.brand,
     super.key,
   });
 
@@ -157,6 +159,7 @@ class AppIconAction extends StatelessWidget {
   final bool active;
   final double size;
   final Color color;
+  final Color activeColor;
 
   static const double extent = 44;
 
@@ -177,7 +180,7 @@ class AppIconAction extends StatelessWidget {
             child: Icon(
               active ? (activeIcon ?? icon) : icon,
               size: size,
-              color: active ? AppColors.brand : color,
+              color: active ? activeColor : color,
             ),
           ),
         ),

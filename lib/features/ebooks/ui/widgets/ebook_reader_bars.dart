@@ -40,14 +40,24 @@ class EbookReaderTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget action(String label, IconData icon, VoidCallback onTap) => compact
+    Widget action(
+      String label,
+      IconData icon,
+      VoidCallback onTap, {
+      String? spoken,
+    }) => compact
         ? AppIconAction(
             icon: icon,
-            semanticLabel: label,
+            semanticLabel: spoken ?? label,
             color: AppColors.ink,
             onTap: onTap,
           )
-        : AppPlainButton(label: label, icon: icon, onTap: onTap);
+        : AppPlainButton(
+            label: label,
+            icon: icon,
+            onTap: onTap,
+            semanticLabel: spoken,
+          );
     return ColoredBox(
       color: AppColors.surface,
       child: Column(
@@ -68,6 +78,7 @@ class EbookReaderTopBar extends StatelessWidget {
                         '目录',
                         Icons.format_list_bulleted_rounded,
                         onToc,
+                        spoken: '目录与书签',
                       ),
                       action(
                         bookmarked ? '已加书签' : '加书签',

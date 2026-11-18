@@ -201,6 +201,63 @@ void main() {
     expect(taps, 1);
   });
 
+  testWidgets('new-page options keep control states ink and labels complete', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _host(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppPlainButton(
+              label: '目录',
+              semanticLabel: '目录与书签',
+              onTap: () {},
+            ),
+            AppIconAction(
+              icon: Icons.bookmark_border_rounded,
+              activeIcon: Icons.bookmark_rounded,
+              active: true,
+              activeColor: AppColors.ink,
+              semanticLabel: '取消收藏',
+              onTap: () {},
+            ),
+            AppSwitch(
+              value: true,
+              onChanged: (_) {},
+              activeColor: AppColors.ink,
+            ),
+            AppTag.subject('美术常识', otherNeutral: true),
+            AppTag.subject('美术常识'),
+          ],
+        ),
+      ),
+    );
+
+    // 宽松约束下按内容取宽，不再撑满整行。
+    expect(tester.getSize(find.byType(AppPlainButton)).width, lessThan(120));
+    expect(find.bySemanticsLabel('目录与书签'), findsOneWidget);
+
+    final icon = tester.widget<Icon>(find.byIcon(Icons.bookmark_rounded));
+    expect(icon.color, AppColors.ink);
+
+    final track = tester
+        .widgetList<Container>(
+          find.descendant(
+            of: find.byType(AppSwitch),
+            matching: find.byType(Container),
+          ),
+        )
+        .first;
+    expect((track.decoration! as BoxDecoration).color, AppColors.ink);
+
+    final tags = tester.widgetList<AppTag>(find.byType(AppTag)).toList();
+    expect(tags[0].color, isNull, reason: '其他科目转中性灰');
+    expect(tags[1].color, AppColors.brandDeep, reason: '保留页面的默认不变');
+    handle.dispose();
+  });
+
   testWidgets('stat row keeps a long caption inside a narrow side column', (
     tester,
   ) async {
