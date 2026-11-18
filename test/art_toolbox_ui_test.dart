@@ -141,21 +141,28 @@ void main() {
               ArtTool.mirror,
             }.contains(tool)) {
           final compare = find.text('与原图并排对比');
-          final labels = find.byType(StageLabel);
-          final initiallyComparing = labels.evaluate().length == 2;
+          final view = find.byType(AppCompareView);
+          final initiallyComparing = view.evaluate().isNotEmpty;
           await tester.ensureVisible(compare);
           await tester.tap(compare);
           await tester.pump();
           if (initiallyComparing) {
-            expect(labels, findsOneWidget);
+            expect(view, findsNothing);
+            expect(find.byType(StageLabel), findsOneWidget);
+            expect(find.byTooltip('锁定两侧'), findsNothing);
             await tester.tap(compare);
             await tester.pump();
           }
-          expect(labels, findsNWidgets(2));
+          expect(view, findsOneWidget);
+          final labels = find.descendant(of: view, matching: find.byType(Text));
+          expect(tester.widget<Text>(labels.first).data, '原图');
           expect(
             tester.getTopLeft(labels.first).dx,
             lessThan(tester.getTopLeft(labels.last).dx),
           );
+          // 原图和结果一样大，默认锁定；锁定和复位放在画布下面一行。
+          expect(find.byTooltip('锁定两侧'), findsOneWidget);
+          expect(find.byTooltip('复位缩放'), findsOneWidget);
         }
         expect(find.byTooltip('工具用法'), findsNothing);
         expect(tester.takeException(), isNull);

@@ -42,6 +42,13 @@ class _EdgesBodyState extends State<_EdgesBody>
   int _threshold = 48;
   int _smooth = 1;
   bool _compare = false;
+  final _compareView = toolCompareController();
+
+  @override
+  void dispose() {
+    _compareView.dispose();
+    super.dispose();
+  }
 
   @override
   _EdgeParams get params => (threshold: _threshold, smooth: _smooth);
@@ -59,11 +66,13 @@ class _EdgesBodyState extends State<_EdgesBody>
   @override
   Widget build(BuildContext context) {
     return ImageToolLayout(
+      canvasActions: [if (_compare) toolCompareActions(_compareView)],
       stage: (context) => CompareStage(
         original: widget.image.image,
         processed: result?.image,
         label: '轮廓线稿',
         compare: _compare,
+        controller: _compareView,
         failed: failed,
         onRetry: reprocess,
       ),

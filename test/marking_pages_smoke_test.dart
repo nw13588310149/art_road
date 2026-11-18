@@ -280,6 +280,125 @@ void _pageTests() {
     await tester.tap(find.text('滑动'));
     await tester.pump();
     expect(divider, findsOneWidget);
+
+    // 默认锁定；锁定是开关，提示跟着变。
+    final lock = find.bySemanticsLabel('锁定两侧');
+    expect(lock, findsOneWidget);
+    expect(find.textContaining('两张图一起缩放'), findsOneWidget);
+    await tester.tap(find.text('并排'));
+    await tester.pump();
+    expect(find.textContaining('已锁定'), findsOneWidget);
+    await tester.tap(lock);
+    await tester.pump();
+    expect(find.textContaining('未锁定'), findsOneWidget);
+    expect(
+      tester.getSemantics(lock),
+      isSemantics(hasToggledState: true, isToggled: false),
+    );
+
+    await tester.tap(find.text('叠加'));
+    await tester.pump();
+    expect(find.bySemanticsLabel('上层不透明度'), findsOneWidget);
+    expect(find.textContaining('上层'), findsWidgets);
+    expect(tester.takeException(), isNull);
+    await _unmount(tester);
+  });
+
+  testWidgets('原卷对照样图：同高并排、锁定缩放与复位', (tester) async {
+    await _pump(
+      tester,
+      const StudentStudyView(args: StudyCenterArgs(examId: '26')),
+      account: DemoAccounts.student,
+    );
+    await tester.tap(find.text('素描'));
+    await _settle(tester);
+    await tester.tap(find.text('对照样图'));
+    await _settle(tester);
+    expect(find.text('我的原卷'), findsOneWidget);
+    expect(find.textContaining('档样图'), findsOneWidget);
+    expect(find.bySemanticsLabel('对比分隔线'), findsOneWidget);
+    expect(find.bySemanticsLabel('锁定两侧'), findsOneWidget);
+    // 原卷对照只有并排，不显示并排 / 滑动 / 叠加的切换。
+    expect(find.text('叠加'), findsNothing);
+    final boxes = find.byType(AppCompareZoomBox);
+    expect(boxes, findsNWidgets(2));
+    expect(
+      tester.getSize(boxes.first).height,
+      moreOrLessEquals(tester.getSize(boxes.last).height),
+    );
+
+    final mine = tester.getCenter(boxes.first);
+    await tester.tapAt(mine);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tapAt(mine);
+    await _settle(tester);
+    // 锁定时放大一张，样图跟着放大。
+    final transforms = find.descendant(
+      of: find.byType(AppCompareView),
+      matching: find.byType(InteractiveViewer),
+    );
+    for (final element in transforms.evaluate()) {
+      final viewer = element.widget as InteractiveViewer;
+      expect(
+        viewer.transformationController!.value.getMaxScaleOnAxis(),
+        moreOrLessEquals(AppCompareController.doubleTapScale),
+      );
+    }
+    await tester.tap(find.bySemanticsLabel('复位缩放和摆放'));
+    await _settle(tester);
+    for (final element in transforms.evaluate()) {
+      final viewer = element.widget as InteractiveViewer;
+      expect(
+        viewer.transformationController!.value.getMaxScaleOnAxis(),
+        moreOrLessEquals(1),
+      );
+    }
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip('关闭原卷'));
+    await _settle(tester);
+    await _unmount(tester);
+  });
+
+  testWidgets('作品对比范画：页头、名称在画上方、换范画', (tester) async {
+    await _pump(
+      tester,
+      const StudentArtworksView(),
+      account: DemoAccounts.student,
+    );
+    await tester.scrollUntilVisible(
+      find.text('石膏头像结构练习'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await _settle(tester);
+    await tester.tap(find.text('石膏头像结构练习'));
+    await _settle(tester);
+    await tester.tap(find.text('对比范画'));
+    await _settle(tester);
+    expect(
+      find.descendant(
+        of: find.byType(AppTitleBar),
+        matching: find.text('对比范画'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('我的作品'), findsOneWidget);
+    expect(find.text('范画 · 素描'), findsOneWidget);
+    expect(find.text('换一张范画'), findsOneWidget);
+    expect(find.text('叠加'), findsOneWidget);
+    expect(find.bySemanticsLabel('锁定两侧'), findsOneWidget);
+    final boxes = find.byType(AppCompareZoomBox);
+    expect(boxes, findsNWidgets(2));
+    expect(
+      tester.getBottomLeft(find.text('我的作品')).dy,
+      lessThanOrEqualTo(tester.getTopLeft(boxes.first).dy),
+    );
+    await tester.tap(find.bySemanticsLabel('换一张范画第 2 张'));
+    await _settle(tester);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip('关闭对比'));
+    await _settle(tester);
+    expect(find.text('对比范画'), findsOneWidget);
     await _unmount(tester);
   });
 }

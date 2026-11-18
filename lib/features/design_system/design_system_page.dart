@@ -31,9 +31,11 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
   bool _cardSelected = true;
   final _nameController = TextEditingController(text: '联考冲刺');
   final _noteController = TextEditingController();
+  final _compare = AppCompareController();
 
   @override
   void dispose() {
+    _compare.dispose();
     _nameController.dispose();
     _noteController.dispose();
     super.dispose();
@@ -90,6 +92,12 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
                   'AppTitleBar(onBack) · AppIconAction · AppMasonryGrid · '
                       'AppCanvasLayout · AppDataTable',
                   _pageKitDetail(),
+                ),
+                _section(
+                  '新页面组件 · 两张画对比',
+                  'AppCompareView · AppCompareModeTabs · AppCompareFooter，'
+                      '默认锁定：缩放、旋转一侧，另一侧同样处理',
+                  _compareKit(),
                 ),
                 _section('颜色', '品牌紫只用于主操作、选中态、关键数字和链接', _colors()),
                 _section(
@@ -388,6 +396,65 @@ class _DesignSystemPageState extends State<DesignSystemPage> {
             const AppTableRow(['合计', '178.5', '—', '6'], emphasis: true),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _compareKit() {
+    const sample = 'asset:assets/demo/art/sketch-bust-1.jpg';
+    const mine = 'asset:assets/demo/art/sketch-bust-2.jpg';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            AppCompareModeTabs(controller: _compare),
+            const SizedBox(height: 20, child: AppRule.vertical(gap: 33)),
+            ListenableBuilder(
+              listenable: _compare,
+              builder: (context, _) => AppViewTabs<bool>(
+                items: const [
+                  AppViewTab(value: false, label: '彩色'),
+                  AppViewTab(value: true, label: '灰度'),
+                ],
+                value: _compare.grayscale,
+                onChanged: _compare.setGrayscale,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpace.s8),
+        ClipRRect(
+          borderRadius: AppCanvasLayout.radius,
+          child: ColoredBox(
+            color: AppColors.canvas,
+            child: SizedBox(
+              height: 360,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.s16,
+                  0,
+                  AppSpace.s16,
+                  AppSpace.s16,
+                ),
+                child: AppCompareView(
+                  controller: _compare,
+                  first: AppComparePane(
+                    label: '范画',
+                    image: AppImage.providerOf(sample),
+                    child: const AppImage(src: sample, fit: BoxFit.contain),
+                  ),
+                  second: AppComparePane(
+                    label: '我的作品',
+                    image: AppImage.providerOf(mine),
+                    child: const AppImage(src: mine, fit: BoxFit.contain),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        AppCompareFooter(controller: _compare),
       ],
     );
   }

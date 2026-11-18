@@ -65,6 +65,7 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
   _ValueView _view = _ValueView.levels;
   int _levels = 3;
   bool _compare = false;
+  final _compareView = toolCompareController();
   ui.Image? _gray;
   bool _grayBusy = false;
   final Map<int, _Levels> _posterized = <int, _Levels>{};
@@ -108,6 +109,7 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
 
   @override
   void dispose() {
+    _compareView.dispose();
     _notanJob.dispose();
     _gray?.dispose();
     _notan?.image.dispose();
@@ -223,12 +225,15 @@ class _ValueCheckBodyState extends State<_ValueCheckBody> {
 
   @override
   Widget build(BuildContext context) {
+    final comparing = _compare && _view != _ValueView.original;
     return ImageToolLayout(
+      canvasActions: [if (comparing) toolCompareActions(_compareView)],
       stage: (context) => CompareStage(
         original: widget.image.image,
         processed: _processed,
         label: _processedLabel,
-        compare: _compare && _view != _ValueView.original,
+        compare: comparing,
+        controller: _compareView,
         failed: _failed,
         onRetry: _retry,
       ),

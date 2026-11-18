@@ -44,6 +44,13 @@ class _SimplifyBodyState extends State<_SimplifyBody>
   int _colors = 6;
   bool _smooth = true;
   bool _compare = false;
+  final _compareView = toolCompareController();
+
+  @override
+  void dispose() {
+    _compareView.dispose();
+    super.dispose();
+  }
 
   @override
   _SimplifyParams get params => (colors: _colors, smooth: _smooth);
@@ -63,11 +70,13 @@ class _SimplifyBodyState extends State<_SimplifyBody>
   @override
   Widget build(BuildContext context) {
     return ImageToolLayout(
+      canvasActions: [if (_compare) toolCompareActions(_compareView)],
       stage: (context) => CompareStage(
         original: widget.image.image,
         processed: result?.image,
         label: '$_colors 色简化',
         compare: _compare,
+        controller: _compareView,
         failed: failed,
         onRetry: reprocess,
       ),

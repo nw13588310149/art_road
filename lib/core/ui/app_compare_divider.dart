@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/ui/ui.dart';
+import 'app_colors.dart';
+import 'app_compare_controller.dart';
 
-/// 对比页中间的分隔条：44 宽的拖动区域，里面一条细线和一个白色把手。
-/// 左右方向键微调，Home 或双击复位；读屏当作滑块。
-class CompareDivider extends StatelessWidget {
-  const CompareDivider({
+/// 对比的分隔条：44 宽的拖动区域，里面一条细线和一个白色把手。
+/// 左右方向键微调，Home 或双击复位；读屏当作滑块「对比分隔线」。
+class AppCompareDivider extends StatelessWidget {
+  const AppCompareDivider({
     required this.value,
     required this.onDrag,
     required this.onChanged,
@@ -14,14 +15,16 @@ class CompareDivider extends StatelessWidget {
     super.key,
   });
 
-  /// 分隔条位置，0.15–0.85。
+  /// 分隔条位置，[min]–[max]。
   final double value;
+
+  /// 拖动的横向位移（逻辑像素）。
   final ValueChanged<double> onDrag;
   final ValueChanged<double> onChanged;
   final VoidCallback onReset;
 
-  static const double min = 0.15;
-  static const double max = 0.85;
+  static const double min = AppCompareController.splitMin;
+  static const double max = AppCompareController.splitMax;
   static const double extent = 44;
 
   @override

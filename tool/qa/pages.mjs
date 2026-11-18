@@ -445,6 +445,11 @@ export const ROLES = [
         { click: /^查看完整报告$/, after: 1200 },
         { click: /^素描/, after: 1200 }, { check: '对照样图' }, { check: '素描 · 我的成绩' },
       ] },
+      { id: 'study-paper-compare', route: '/study', actions: [
+        { click: /^查看完整报告$/, after: 1200 },
+        { click: /^素描/, after: 1200 }, { click: /^对照样图$/, after: 1200 },
+        { check: '我的原卷' }, { check: /档样图$/ }, { check: '锁定两侧' },
+      ] },
       { id: 'artworks', route: '/artworks' },
       {
         id: 'artwork-detail',
@@ -465,7 +470,29 @@ export const ROLES = [
       {
         id: 'gallery-compare', route: '/gallery', actions: [
           /大卫石膏像 · 侧转头像/, /^对比我的原卷$/,
-          { check: /^我的原卷/ },
+          { check: /^我的原卷/ }, { check: '对比分隔线' }, { check: '锁定两侧' },
+          { check: /^已锁定/ },
+        ],
+      },
+      // 锁定时滚轮在范画上放大，两侧一起；按 L 解锁后提示跟着变。
+      {
+        id: 'gallery-compare-lock', route: '/gallery', actions: [
+          /大卫石膏像 · 侧转头像/, /^对比我的原卷$/,
+          { scroll: -400, at: [240, 420], after: 600 }, { check: /^复位缩放和摆放$/, role: 'button', enabled: true },
+          { key: 'l' }, { check: /^未锁定/ },
+        ],
+      },
+      {
+        id: 'gallery-compare-overlay', route: '/gallery', actions: [
+          /大卫石膏像 · 侧转头像/, /^对比我的原卷$/,
+          { click: /^叠加$/ }, { check: '上层不透明度' }, { check: /· 上层$/ },
+        ],
+      },
+      {
+        id: 'artwork-compare', route: '/artworks', actions: [
+          { click: /石膏头像结构练习/, after: 2500 }, { click: /^对比范画$/, after: 1500 },
+          { check: '我的作品' }, { check: '换一张范画' }, { check: '锁定两侧' },
+          { check: '对比分隔线' },
         ],
       },
       {
@@ -495,6 +522,13 @@ export const ROLES = [
           /^镜像翻转/, { check: /^切换工具$/, role: 'button' },
           /^切换工具$/, /^构图网格$/, { check: /^构图网格$/ },
           { check: /^大卫石膏像$/ },
+        ],
+      },
+      // 与原图并排对比：原图和结果一样大，默认锁定，锁定和复位在画布下面一行。
+      {
+        id: 'toolbox-value-compare', route: '/toolbox', actions: [
+          /^大卫石膏像$/, /^明度检查/, /^与原图并排对比$/,
+          { check: '锁定两侧' }, { check: '对比分隔线' },
         ],
       },
       ...toolSteps,
