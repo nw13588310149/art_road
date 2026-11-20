@@ -82,7 +82,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           if (passwordError == null) ...[
             const SizedBox(height: 11),
             Text(
-              '密码为 6–20 位，建议同时包含字母和数字',
+              '密码为 8–64 位，建议同时包含字母和数字',
               style: AppText.caption12.copyWith(height: 1),
             ),
           ],

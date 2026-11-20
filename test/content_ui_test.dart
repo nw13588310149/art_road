@@ -45,6 +45,49 @@ class _ContentApi extends Fake implements ApiClient {
   }
 }
 
+class _NoteDetailApi extends Fake implements ApiClient {
+  int? openedId;
+  bool missing = false;
+
+  @override
+  Future<ApiResponse> post(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? headers,
+    Duration? timeout,
+    bool lightweightJson = false,
+  }) async {
+    final file = <String, dynamic>{'id': 91, 'categoryId': 7, 'paperType': 2};
+    switch (path) {
+      case '/app/user/noteCategoryList':
+        return const ApiResponse(
+          code: 0,
+          msg: 'ok',
+          data: [
+            {'id': 7, 'name': '习作', 'count': 4},
+          ],
+        );
+      case '/app/user/noteList':
+        return ApiResponse(
+          code: 0,
+          msg: 'ok',
+          data: [
+            {...file, 'title': '列表旧标题'},
+          ],
+        );
+      case '/app/user/noteDetail':
+        openedId = (data as Map)['id'] as int;
+        if (missing) return ApiResponse.failure('笔记不存在或已删除', code: 404);
+        return ApiResponse(
+          code: 0,
+          msg: 'ok',
+          data: {...file, 'title': '详情新标题'},
+        );
+    }
+    throw StateError('意外请求 $path');
+  }
+}
+
 Future<void> _pumpPage(
   WidgetTester tester,
   Widget page, {
@@ -85,6 +128,24 @@ Future<void> _settle(WidgetTester tester) async {
 
 void main() {
   setUpAll(registerDemoFixtures);
+
+  for (final missing in [false, true]) {
+    testWidgets('打开笔记重新读取详情，已删除时继续留在列表 $missing', (tester) async {
+      final api = _NoteDetailApi()..missing = missing;
+      await _pumpPage(
+        tester,
+        const MyNotesPage(),
+        size: const Size(970, 732),
+        client: api,
+      );
+      expect(find.text('习作（4）'), findsOneWidget);
+      await tester.tap(find.text('列表旧标题'));
+      await _settle(tester);
+      expect(api.openedId, 91);
+      expect(find.text('详情新标题'), missing ? findsNothing : findsOneWidget);
+      expect(find.text('列表旧标题'), missing ? findsOneWidget : findsNothing);
+    });
+  }
 
   for (final width in [970.0, 814.0]) {
     testWidgets('video recommendation rail stays 255 by 280 at $width', (
@@ -189,11 +250,7 @@ void main() {
   testWidgets('note width slider keeps its overlay inside the toolbar', (
     tester,
   ) async {
-    await _pumpPage(
-      tester,
-      const MyNotesPage(),
-      size: const Size(814, 680),
-    );
+    await _pumpPage(tester, const MyNotesPage(), size: const Size(814, 680));
     await tester.tap(find.text('新建笔记'));
     await _settle(tester);
     await tester.enterText(find.byType(AppTextField), '构图观察记录');

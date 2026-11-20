@@ -7,6 +7,8 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import '../../../core/network/media_url.dart';
+
 import '../../../core/audio/mpv_player_smooth.dart';
 
 /// 原生平台（iOS / Android / 桌面）通用文件内嵌预览。
@@ -30,9 +32,7 @@ class CoursewareInlinePreview extends StatelessWidget {
   final String url;
   final Widget? placeholder;
 
-  /// 后端鉴权 token，会作为 `app-token` 请求头附加到 PDF 下载请求上，
-  /// 与 theory 页面的 PDF 一致。courseware 的资源链 URL 大多本身就
-  /// 是公开静态资源，没有 token 也能正常加载，这里仅保险起见。
+  /// 保留现有调用签名。静态预览直接打开公开资源。
   final String authToken;
 
   @override
@@ -40,13 +40,14 @@ class CoursewareInlinePreview extends StatelessWidget {
     if (url.trim().isEmpty) {
       return placeholder ?? const _UnsupportedPreview();
     }
-    switch (_kindForUrl(url)) {
+    final resolved = MediaUrl.resolve(url);
+    switch (_kindForUrl(resolved)) {
       case _PreviewKind.pdf:
-        return _CoursewarePdfPreview(url: url, authToken: authToken);
+        return _CoursewarePdfPreview(url: resolved);
       case _PreviewKind.image:
-        return _CoursewareImagePreview(url: url);
+        return _CoursewareImagePreview(url: resolved);
       case _PreviewKind.video:
-        return _CoursewareVideoPreview(url: url);
+        return _CoursewareVideoPreview(url: resolved);
       case _PreviewKind.audio:
       case _PreviewKind.office:
       case _PreviewKind.text:
@@ -59,20 +60,15 @@ class CoursewareInlinePreview extends StatelessWidget {
 /// 原生 PDF 预览：与 theory 页面 PDF 阅读器使用相同的 pdfrx 调用约定，
 /// 包括自定义加载条、错误占位、去掉每页四周的黑色阴影等。
 class _CoursewarePdfPreview extends StatelessWidget {
-  const _CoursewarePdfPreview({required this.url, required this.authToken});
+  const _CoursewarePdfPreview({required this.url});
 
   final String url;
-  final String authToken;
 
   @override
   Widget build(BuildContext context) {
-    final headers = <String, String>{
-      if (authToken.isNotEmpty) 'app-token': authToken,
-    };
     return PdfViewer.uri(
-      Uri.parse(url),
-      headers: headers.isEmpty ? null : headers,
-      withCredentials: true,
+      Uri.parse(MediaUrl.resolve(url)),
+      withCredentials: false,
       params: PdfViewerParams(
         backgroundColor: const Color(0xFFFAFAFB),
         margin: 12,

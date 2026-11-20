@@ -1,3 +1,4 @@
+import 'toolbox_identity.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -68,25 +69,73 @@ class ChecklistItem {
 
 /// 默认清单（id 固定，勾选状态按 id 保存）。
 const kDefaultChecklistItems = <ChecklistItem>[
-  ChecklistItem(id: 'doc-admission', group: ChecklistGroup.documents, label: '准考证'),
+  ChecklistItem(
+    id: 'doc-admission',
+    group: ChecklistGroup.documents,
+    label: '准考证',
+  ),
   ChecklistItem(id: 'doc-id', group: ChecklistGroup.documents, label: '身份证'),
-  ChecklistItem(id: 'doc-pouch', group: ChecklistGroup.documents, label: '透明文件袋'),
-  ChecklistItem(id: 'sketch-pencil', group: ChecklistGroup.sketch, label: '2B–8B 铅笔（每种备几支）'),
-  ChecklistItem(id: 'sketch-charcoal', group: ChecklistGroup.sketch, label: '炭笔'),
-  ChecklistItem(id: 'sketch-kneaded', group: ChecklistGroup.sketch, label: '可塑橡皮'),
-  ChecklistItem(id: 'sketch-eraser', group: ChecklistGroup.sketch, label: '硬橡皮'),
-  ChecklistItem(id: 'sketch-knife', group: ChecklistGroup.sketch, label: '美工刀（削笔用）'),
+  ChecklistItem(
+    id: 'doc-pouch',
+    group: ChecklistGroup.documents,
+    label: '透明文件袋',
+  ),
+  ChecklistItem(
+    id: 'sketch-pencil',
+    group: ChecklistGroup.sketch,
+    label: '2B–8B 铅笔（每种备几支）',
+  ),
+  ChecklistItem(
+    id: 'sketch-charcoal',
+    group: ChecklistGroup.sketch,
+    label: '炭笔',
+  ),
+  ChecklistItem(
+    id: 'sketch-kneaded',
+    group: ChecklistGroup.sketch,
+    label: '可塑橡皮',
+  ),
+  ChecklistItem(
+    id: 'sketch-eraser',
+    group: ChecklistGroup.sketch,
+    label: '硬橡皮',
+  ),
+  ChecklistItem(
+    id: 'sketch-knife',
+    group: ChecklistGroup.sketch,
+    label: '美工刀（削笔用）',
+  ),
   ChecklistItem(id: 'sketch-stump', group: ChecklistGroup.sketch, label: '纸擦笔'),
-  ChecklistItem(id: 'color-paint', group: ChecklistGroup.color, label: '水粉颜料（检查常用色余量）'),
-  ChecklistItem(id: 'color-brush', group: ChecklistGroup.color, label: '水粉笔（大中小号）'),
+  ChecklistItem(
+    id: 'color-paint',
+    group: ChecklistGroup.color,
+    label: '水粉颜料（检查常用色余量）',
+  ),
+  ChecklistItem(
+    id: 'color-brush',
+    group: ChecklistGroup.color,
+    label: '水粉笔（大中小号）',
+  ),
   ChecklistItem(id: 'color-palette', group: ChecklistGroup.color, label: '调色盒'),
   ChecklistItem(id: 'color-bucket', group: ChecklistGroup.color, label: '水桶'),
   ChecklistItem(id: 'color-sponge', group: ChecklistGroup.color, label: '吸水海绵'),
   ChecklistItem(id: 'color-cloth', group: ChecklistGroup.color, label: '抹布或纸巾'),
-  ChecklistItem(id: 'speed-pen', group: ChecklistGroup.speed, label: '速写用笔（炭笔、钢笔或针管笔）'),
+  ChecklistItem(
+    id: 'speed-pen',
+    group: ChecklistGroup.speed,
+    label: '速写用笔（炭笔、钢笔或针管笔）',
+  ),
   ChecklistItem(id: 'speed-spare', group: ChecklistGroup.speed, label: '备用笔'),
-  ChecklistItem(id: 'other-tape', group: ChecklistGroup.other, label: '纸胶带 / 夹子'),
-  ChecklistItem(id: 'other-watch', group: ChecklistGroup.other, label: '手表（非智能手表）'),
+  ChecklistItem(
+    id: 'other-tape',
+    group: ChecklistGroup.other,
+    label: '纸胶带 / 夹子',
+  ),
+  ChecklistItem(
+    id: 'other-watch',
+    group: ChecklistGroup.other,
+    label: '手表（非智能手表）',
+  ),
   ChecklistItem(id: 'other-water', group: ChecklistGroup.other, label: '饮用水'),
 ];
 
@@ -110,7 +159,8 @@ class ExamChecklist {
 
   int get total => items.length;
 
-  int get checkedCount => items.where((item) => checked.contains(item.id)).length;
+  int get checkedCount =>
+      items.where((item) => checked.contains(item.id)).length;
 
   bool isChecked(String id) => checked.contains(id);
 
@@ -188,11 +238,17 @@ class ExamChecklist {
 
 /// 考场物品清单本地存储（SharedPreferences JSON）。
 class ExamChecklistRepository {
+  // Default preserves standalone demo tools; application providers always bind an owner.
+  ExamChecklistRepository({this.ownerKey = 'legacy-demo'});
+  final String? ownerKey;
+
   static const storageKey = 'art_toolbox_exam_checklist_v1';
 
   Future<ExamChecklist> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(storageKey);
+    final raw = ownerKey == null
+        ? null
+        : prefs.getString(toolboxStorageKey(storageKey, ownerKey));
     if (raw == null) {
       return const ExamChecklist();
     }
@@ -205,6 +261,10 @@ class ExamChecklistRepository {
 
   Future<void> save(ExamChecklist checklist) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(storageKey, jsonEncode(checklist.toJson()));
+    if (ownerKey == null) return;
+    await prefs.setString(
+      toolboxStorageKey(storageKey, ownerKey),
+      jsonEncode(checklist.toJson()),
+    );
   }
 }

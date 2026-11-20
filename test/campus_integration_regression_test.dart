@@ -31,7 +31,11 @@ void main() {
     final router = DemoRouter('course-move');
     registerCampusBAdmin(router);
     final repo = AdminRepository(
-      client: ApiClient(storage: storage, demoRouter: router),
+      client: ApiClient(
+        storage: storage,
+        demoRouter: router,
+        dispatchDemoBySession: false,
+      ),
     );
     final sourceDay = cbAddDays(cbToday(), 14);
     final source = cbCoursesOn(sourceDay).first;
@@ -98,7 +102,11 @@ void main() {
         overrides: [
           appStorageProvider.overrideWithValue(storage),
           apiClientProvider.overrideWithValue(
-            ApiClient(storage: storage, demoRouter: router),
+            ApiClient(
+              storage: storage,
+              demoRouter: router,
+              dispatchDemoBySession: false,
+            ),
           ),
         ],
         child: MaterialApp(
@@ -153,7 +161,11 @@ void main() {
         });
       final controller = TeacherExamController(
         repository: TeacherRepository(
-          client: ApiClient(storage: storage, demoRouter: router),
+          client: ApiClient(
+            storage: storage,
+            demoRouter: router,
+            dispatchDemoBySession: false,
+          ),
         ),
       );
       final container = ProviderContainer(

@@ -7,14 +7,12 @@ import 'package:flutter/foundation.dart';
 
 import 'demo_backend.dart';
 
-/// 演示模式下拦截发往 [apiHost] 的请求，交给 [router] 本地应答。
-///
-/// 其它主机（演示媒体服务、第三方地图等）的请求原样放行。
+/// 将客户端明确分配到本地演示的请求交给 [router]。
 class DemoApiInterceptor extends Interceptor {
-  DemoApiInterceptor({required this.router, required this.apiHost});
+  DemoApiInterceptor({required this.router});
 
+  static const canDispatch = 'canDispatchDemo';
   final DemoRouter router;
-  final String apiHost;
   final math.Random _random = math.Random();
 
   @override
@@ -22,12 +20,13 @@ class DemoApiInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final uri = options.uri;
-    if (uri.host.isNotEmpty && uri.host != apiHost) {
+    final allowed = options.extra[canDispatch];
+    if (allowed is! bool Function()) {
       handler.next(options);
       return;
     }
     final method = options.method.toUpperCase();
+    final uri = options.uri;
     final path = uri.path.isEmpty ? '/' : uri.path;
     final match = router.match(method, path);
 
@@ -35,18 +34,28 @@ class DemoApiInterceptor extends Interceptor {
       Duration(milliseconds: 120 + _random.nextInt(180)),
     );
 
+    if (!allowed()) {
+      handler.reject(_cancelled(options));
+      return;
+    }
     if (match == null) {
       DemoBackend.reportMissing(router.name, method, path);
-      handler.resolve(_json(options, <String, dynamic>{
-        'code': 0,
-        'msg': 'ok',
-        'data': null,
-      }));
+      if (options.responseType == ResponseType.bytes) {
+        handler.reject(_byteError(options, 404, '接口不存在'));
+        return;
+      }
+      handler.resolve(
+        _json(options, <String, dynamic>{'code': 0, 'msg': 'ok', 'data': null}),
+      );
       return;
     }
 
     try {
       final request = await _buildRequest(options, method, path, match.params);
+      if (!allowed()) {
+        handler.reject(_cancelled(options));
+        return;
+      }
       final result = await match.handler(request);
       if (result is DemoBytes) {
         handler.resolve(
@@ -58,26 +67,61 @@ class DemoApiInterceptor extends Interceptor {
         );
         return;
       }
-      handler.resolve(_json(options, <String, dynamic>{
-        'code': 0,
-        'msg': 'ok',
-        'data': _jsonify(result),
-      }));
+      if (options.responseType == ResponseType.bytes) {
+        handler.reject(_byteError(options, 500, '接口未返回文件'));
+        return;
+      }
+      handler.resolve(
+        _json(options, <String, dynamic>{
+          'code': 0,
+          'msg': 'ok',
+          'data': _jsonify(result),
+        }),
+      );
     } on DemoApiException catch (error) {
-      handler.resolve(_json(options, <String, dynamic>{
-        'code': error.code,
-        'msg': error.message,
-        'data': null,
-      }));
-    } catch (error, stack) {
-      debugPrint('[demo] $method $path 处理失败：$error\n$stack');
-      handler.resolve(_json(options, <String, dynamic>{
-        'code': 500,
-        'msg': '演示数据暂不可用',
-        'data': null,
-      }));
+      if (options.responseType == ResponseType.bytes) {
+        final expected = error.code >= 400 && error.code <= 599;
+        handler.reject(
+          _byteError(options, expected ? error.code : 500, error.message),
+        );
+        return;
+      }
+      handler.resolve(
+        _json(options, <String, dynamic>{
+          'code': error.code,
+          'msg': error.message,
+          'data': null,
+        }),
+      );
+    } catch (_) {
+      debugPrint('[demo] $method $path 处理失败');
+      if (options.responseType == ResponseType.bytes) {
+        handler.reject(_byteError(options, 500, '演示数据暂不可用'));
+        return;
+      }
+      handler.resolve(
+        _json(options, <String, dynamic>{
+          'code': 500,
+          'msg': '演示数据暂不可用',
+          'data': null,
+        }),
+      );
     }
   }
+
+  DioException _cancelled(RequestOptions options) =>
+      DioException.requestCancelled(requestOptions: options, reason: '会话已切换');
+
+  DioException _byteError(RequestOptions options, int status, String message) =>
+      DioException.badResponse(
+        statusCode: status,
+        requestOptions: options,
+        response: Response<dynamic>(
+          requestOptions: options,
+          statusCode: status,
+          data: {'code': status, 'msg': message, 'data': null},
+        ),
+      );
 
   Response<dynamic> _json(RequestOptions options, Map<String, dynamic> body) {
     return Response<dynamic>(

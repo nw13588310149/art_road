@@ -3,6 +3,8 @@ import 'dart:ui_web' as ui_web;
 import 'package:flutter/widgets.dart';
 import 'package:web/web.dart' as web;
 
+import '../../../core/network/media_url.dart';
+
 /// Web 端通用内嵌预览：根据文件后缀选择最合适的 HTML 元素直接在页面内
 /// 渲染，避免在新标签页打开。
 ///
@@ -61,7 +63,7 @@ class _CoursewareInlinePreviewState extends State<CoursewareInlinePreview> {
   void _registerView() {
     _viewType =
         'cw-inline-preview-${DateTime.now().millisecondsSinceEpoch}-${_seq++}';
-    final url = widget.url.trim();
+    final url = MediaUrl.resolve(widget.url);
     final kind = _kindForUrl(url);
 
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {

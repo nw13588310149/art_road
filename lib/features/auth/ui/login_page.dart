@@ -8,7 +8,6 @@ import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/demo/data/demo_artwork_store.dart';
 import '../../../core/demo/demo_accounts.dart';
-import '../../../core/demo/demo_config.dart';
 import '../../../core/demo/demo_store.dart';
 import '../../../core/ui/ui.dart';
 import '../../../features/shell/state/school_binding_controller.dart';
@@ -41,13 +40,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         children: [
           AppIconInputField(
             iconAsset: AppAssets.authPhone,
-            hint: '请输入手机号',
-            keyboardType: TextInputType.phone,
+            hint: '请输入手机号或教职账号',
+            keyboardType: TextInputType.text,
             textInputAction: TextInputAction.next,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(11),
-            ],
+            inputFormatters: [LengthLimitingTextInputFormatter(64)],
             errorText: state.errorOf(AuthField.mobile),
             onChanged: controller.setMobile,
           ),
@@ -89,13 +85,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ],
       ),
-      below: kDemoMode
-          ? _DemoIdentityPanel(
-              enabled: !state.isSubmitting,
-              onPick: _onDemoLogin,
-              onReset: _onDemoReset,
-            )
-          : null,
+      below: _DemoIdentityPanel(
+        enabled: !state.isSubmitting,
+        onPick: _onDemoLogin,
+        onReset: _onDemoReset,
+      ),
     );
   }
 
@@ -212,7 +206,7 @@ class _DemoIdentityPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '演示版 · 选择体验身份（无需密码）',
+                  '体验身份 · 本机演示（无需密码）',
                   style: AppText.caption12Strong,
                 ),
               ),

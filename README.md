@@ -2,7 +2,7 @@
 
 面向美术艺考生、画室老师与画室管理者的 iPad 横屏 App（艺考网出品）。围绕阅卷系统，提供学情中心、作品档案与作品点评、范画库、美术书刊、画室工具箱（三组 17 个工具），以及资讯、校园课件、云盘、视频、笔记、收藏、题库、AI 美术助教「小美同学」、校圈、智慧校园等通用模块。首页对所有身份是同一套版式；左侧导航「今日学习 / 今日工作」、新手引导和通知按学生、任课老师（含教学组长）、班主任、宿管、管理员、校长配置。
 
-当前版本为 **3.1 演示版**。演示后端在本机提供数据，作品贯通多位任课老师独立点评、组长点评、校长查阅与可选评分；新增小课件知识专题与作品集市。产品规则见 [3.1 产品与交互方案](docs/美育集3.1产品与交互方案.md)。实施口径见 [3.0 实施规格](docs/美育集3.0实施规格.md)，界面规范见 [设计规范](docs/设计规范.md)，真实接口的待对接项见 [后端缺口清单](docs/后端缺口清单.md)。
+同一套客户端支持正式账号与七个演示账号。正式账号读取学校后端数据；演示账号使用本机示范画室，体验多位老师独立点评、组长复核和校长评分。作品集市交易本期仅供演示。产品规则见 [3.1 产品与交互方案](docs/美育集3.1产品与交互方案.md)，界面规范见 [设计规范](docs/设计规范.md)。
 
 ## 3.1 体验路径
 
@@ -12,7 +12,7 @@
 - 集市：支持仅展示、数字授权、实物作品；草稿与审核、地址簿、结算、模拟支付、数字交付、发货收货、评价、退货退款、举报及平台介入均可体验。买家使用「我的订单」，卖家使用「创作者工作台」，校长和管理员使用「集市审核」。全部为演示交易，不收取真实款项。接口和状态规则见 [集市商业闭环与接口契约](docs/集市商业闭环与接口契约.md)。
 - 随页工具栏：右侧单列画具可拖到左右边缘，取色、测量时收起让出画面；关闭参数保留效果，结束工具清除效果。进入笔记编辑、业务弹窗或完整工具箱时自动让出操作区域。
 - 我的短板：按科目查看近期已点评作品的分项、样本与老师反馈依据，制定练习、查阅相关小课件并提交练习作品；作品成长页继续跟踪。老师和校长可在学生名单记录沟通与跟进历史。
-- Web 上传的 Blob 文件只在当前浏览器文档有效，刷新后需要重新上传；示例资源可重复阅读。业务记录与收藏保存在本机，原生端上传媒体按原有文件存储机制处理。
+- 演示账号在 Web 上传的 Blob 文件只在当前浏览器文档有效，刷新后需要重新上传；示例资源可重复阅读。演示业务记录与收藏保存在本机。正式账号的上传和业务记录由后端保存。
 - 本次已获许可缓存 FL Chart 1.3.1；后续继续使用离线依赖解析。
 
 ## 环境
@@ -32,7 +32,7 @@ Web 发布构建（Windows 上增量构建会因资源已存在而失败，脚�
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tool\build_web.ps1
-python -m http.server 8787 --directory build/web
+# 同一构建接真实账号时，在后端仓库运行本机预览，见「接入真实接口」。
 ```
 
 ### iPad 体验包
@@ -40,7 +40,7 @@ python -m http.server 8787 --directory build/web
 在 macOS 或 Codemagic 上用已配置签名的 iOS 体验分支构建 Release IPA，沿用当前的导出签名选项。
 
 ```sh
-flutter build ipa --release --dart-define=DEMO_MODE=true
+flutter build ipa --release --dart-define=ART_ROAD_API_BASE_URL=https://ipad-test.example.com/
 ```
 
 Debug 包需从 Xcode 或 `flutter run` 启动。装包验证时断开调试器，从 iPad 主屏幕启动 Release 包，确认能进入登录页或首页。
@@ -51,7 +51,7 @@ Debug 包需从 Xcode 或 `flutter run` 启动。装包验证时断开调试器�
 
 ## 演示模式
 
-默认开启（`DEMO_MODE` 默认为 `true`）：
+使用下表任一体验身份登录即可进入本机演示：
 - 请求由 `DemoApiInterceptor` 在本地应答，模拟 120–300 ms 网络延迟。
 - 上传的作品、老师点评、笔记、收藏、请假等写操作保存在本机（SharedPreferences，键前缀 `demo_store:`），重启后仍在。
 - 登录页「重置演示数据」可以一键恢复初始数据。
@@ -74,14 +74,14 @@ Debug 包需从 Xcode 或 `flutter run` 启动。装包验证时断开调试器�
 
 ### 接入真实接口
 
-默认启动演示模式。使用专用测试账号在联调环境运行时，关闭演示并指定新后端的 HTTPS 根地址：
+正式账号在登录页输入原有账号和密码。Web 同源部署时自动使用网页来源；原生设备需在构建时指定后端 HTTPS 根地址：
 
 ```powershell
-flutter run -d chrome --dart-define=DEMO_MODE=false --dart-define=ART_ROAD_API_BASE_URL=https://ipad-test.example.com/
-flutter build ipa --release --dart-define=DEMO_MODE=false --dart-define=ART_ROAD_API_BASE_URL=https://ipad-test.example.com/
+flutter run -d chrome --dart-define=ART_ROAD_API_BASE_URL=https://ipad-test.example.com/
+flutter build ipa --release --dart-define=ART_ROAD_API_BASE_URL=https://ipad-test.example.com/
 ```
 
-把示例地址换成测试负责人提供的地址。传入 `ART_ROAD_API_BASE_URL` 后，平台、阅卷、云盘与群聊 WebSocket 统一接入该服务。省略地址参数且关闭演示时，继续使用原平台和阅卷地址。真机还需验证登录与默认学校、文件预览和下载、WSS 收发与重连。
+把示例地址换成实际 HTTPS 服务。平台、阅卷、云盘与群聊 WebSocket 共享同一后端。Windows 本机联调通过 `127.0.0.1:8787` 的网页预览与 SSH 隧道访问已部署服务；启动和媒体地址参数见同级后端仓库 `docs/integration/ipad-web-preview.md`。当前 14 个老系统转发接口在线上关闭，待单独发版。连接失败或当前学校没有数据时，正式账号展示相应的错误或空状态。
 
 正式包中，学生可从「我的作品」提交带作业 ID 的图片，随后在教师待批列表、点评结果和重交状态中核对同一份作品。班主任家校沟通保留入口和历史，暂不开放发送。学年从 8 月起算，教师和校长页面标明哪些数字仅统计已同步作品。作品集市暂缓，老系统作品读全与增量读取待确认。完整的真机场景与证据记录方式见同级后端仓库 `art_road_api/docs/integration/`。
 

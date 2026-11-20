@@ -1,3 +1,4 @@
+import '../../../core/demo/demo_accounts.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,9 +39,9 @@ class AuthController extends StateNotifier<AuthState> {
 
   Timer? _timer;
 
-  static final _mobileReg = RegExp(r'^\d{11}$');
-  static const passwordMinLength = 6;
-  static const passwordMaxLength = 20;
+  static final _mobileReg = RegExp(r'^1\d{10}$');
+  static const passwordMinLength = 8;
+  static const passwordMaxLength = 64;
   static const _ok = AuthActionResult(success: true, message: '');
 
   void setMobile(String value) {
@@ -96,20 +97,20 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   AuthActionResult? _checkSmsCode() {
-    if (state.smsCode.isEmpty) {
-      return _fail(AuthField.smsCode, '请输入短信验证码');
+    if (!RegExp(r'^\d{6}$').hasMatch(state.smsCode)) {
+      return _fail(AuthField.smsCode, '请输入 6 位短信验证码');
     }
     return null;
   }
 
-  /// 注册与重设密码：6–20 位，并与确认密码一致。
+  /// 注册与重设密码：8–64 位，并与确认密码一致。
   AuthActionResult? _checkNewPassword() {
     final length = state.password.length;
     if (length == 0) {
       return _fail(AuthField.password, '请输入密码');
     }
     if (length < passwordMinLength || length > passwordMaxLength) {
-      return _fail(AuthField.password, '密码应为 6–20 位');
+      return _fail(AuthField.password, '密码应为 8–64 位');
     }
     if (state.confirmPassword.isEmpty) {
       return _fail(AuthField.confirmPassword, '请再次输入密码');
@@ -142,31 +143,43 @@ class AuthController extends StateNotifier<AuthState> {
       return const AuthActionResult(success: false, message: '验证码已发送，请稍后再试');
     }
 
-    final smsType = scene == AuthScene.forgetPassword ? 1 : 0;
-    final response = await _repository.sendSms(
-      mobile: state.mobile,
-      type: smsType,
-    );
-
-    final success = _isSendSmsSuccess(response.code);
-    if (!success) {
-      return AuthActionResult(
-        success: false,
-        message: response.displayMsg,
+    final mobile = state.mobile;
+    state = state.copyWith(isSendingSms: true);
+    try {
+      final response = await _repository.sendSms(
+        mobile: mobile,
+        type: scene == AuthScene.forgetPassword ? 1 : 0,
       );
+      if (!mounted || state.mobile != mobile) {
+        return const AuthActionResult(
+          success: false,
+          message: '手机号已变更，请重新获取验证码',
+        );
+      }
+      if (!_isSendSmsSuccess(response.code)) {
+        return AuthActionResult(success: false, message: response.displayMsg);
+      }
+      _startCountdown();
+      return AuthActionResult(
+        success: true,
+        message: DemoAccounts.lookupMobile(mobile) != null
+            ? '演示验证码：123456（不会发送真实短信）'
+            : '验证码已发送',
+      );
+    } finally {
+      if (mounted && state.smsCountDown == 0) {
+        state = state.copyWith(isSendingSms: false);
+      }
     }
-
-    _startCountdown();
-    return const AuthActionResult(success: true, message: '验证码已发送');
   }
 
   /// 手机号 + 密码登录；未勾选协议时返回 [AuthField.terms]，由页面弹窗征得同意。
   Future<AuthActionResult> submitLogin() async {
     final invalid =
-        _checkMobile() ??
-        (state.password.isEmpty
-            ? _fail(AuthField.password, '请输入密码')
+        (state.mobile.isEmpty || state.mobile.length > 64
+            ? _fail(AuthField.mobile, '请输入 1–64 位手机号或教职账号')
             : null) ??
+        (state.password.isEmpty ? _fail(AuthField.password, '请输入密码') : null) ??
         _checkTerms();
     if (invalid != null) {
       return invalid;
@@ -175,27 +188,38 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<AuthActionResult> _login() async {
+    if (state.isSubmitting) {
+      return const AuthActionResult(success: false, message: '正在提交，请稍候');
+    }
+    final attemptMobile = state.mobile;
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       final response = await _repository.login(
         mobile: state.mobile,
         password: state.password,
       );
+      if (!mounted) {
+        return const AuthActionResult(success: false, message: '登录已取消');
+      }
       if (response.code != 0) {
-        return AuthActionResult(
-          success: false,
-          message: response.displayMsg,
-        );
+        return AuthActionResult(success: false, message: response.displayMsg);
       }
 
       final token = _extractToken(response.data);
-      if (token.isNotEmpty) {
-        await _repository.persistToken(token);
+      if (token.isEmpty) {
+        return const AuthActionResult(success: false, message: '登录未完成，请重新登录');
       }
-      await _repository.persistMobile(state.mobile);
+      await _repository.persistToken(token);
+      await _repository.persistMobile(attemptMobile, expectedToken: token);
+      if (!mounted) {
+        return const AuthActionResult(success: true, message: '登录成功');
+      }
 
       // 登录成功后再拉一次字典/审核开关，结果写入本地供各业务页读取。
-      await _syncCheckStatus().catchError((_) {});
+      await _syncCheckStatus(expectedToken: token).catchError((_) {});
+      if (!mounted) {
+        return const AuthActionResult(success: true, message: '登录成功');
+      }
       unawaited(_reportCidIfNeeded());
       unawaited(_appConfigRepository.refreshFileBaseUrl());
       // 登录成功后用新 token 重新建立 WS 长连接，承担 AI / 系统 / 群聊消息推送。
@@ -203,7 +227,7 @@ class AuthController extends StateNotifier<AuthState> {
 
       return const AuthActionResult(success: true, message: '登录成功');
     } finally {
-      state = state.copyWith(isSubmitting: false);
+      if (mounted) state = state.copyWith(isSubmitting: false);
     }
   }
 
@@ -211,6 +235,16 @@ class AuthController extends StateNotifier<AuthState> {
   ///
   /// 演示身份只读写本机演示数据，不替用户勾选协议，也不改变勾选状态。
   Future<AuthActionResult> submitDemoLogin(String mobile) {
+    if (state.isSubmitting) {
+      return Future.value(
+        const AuthActionResult(success: false, message: '正在提交，请稍候'),
+      );
+    }
+    if (DemoAccounts.lookupMobile(mobile) == null) {
+      return Future.value(
+        const AuthActionResult(success: false, message: '请选择预置演示身份'),
+      );
+    }
     state = state.copyWith(mobile: mobile, password: '123456');
     return _login();
   }
@@ -218,14 +252,20 @@ class AuthController extends StateNotifier<AuthState> {
   Future<AuthActionResult> submitGuestLogin() async {
     await _repository.persistToken('youke');
     unawaited(_appConfigRepository.refreshFileBaseUrl());
-    // 游客 token 也尝试连一次 WS，至少能收到系统级被踢 / 升级提示等下行事件。
-    _chatSocket.reconnect();
+    _chatSocket.disconnect();
     return const AuthActionResult(success: true, message: '已进入游客模式');
   }
 
   Future<AuthActionResult> submitRegister() async {
+    if (state.isSubmitting) {
+      return const AuthActionResult(success: false, message: '正在提交，请稍候');
+    }
+    final attemptMobile = state.mobile;
     final invalid =
-        _checkMobile() ?? _checkSmsCode() ?? _checkNewPassword() ?? _checkTerms();
+        _checkMobile() ??
+        _checkSmsCode() ??
+        _checkNewPassword() ??
+        _checkTerms();
     if (invalid != null) {
       return invalid;
     }
@@ -238,31 +278,41 @@ class AuthController extends StateNotifier<AuthState> {
         smsCode: state.smsCode,
       );
 
+      if (!mounted) {
+        return const AuthActionResult(success: false, message: '登录已取消');
+      }
       if (response.code != 0) {
-        return AuthActionResult(
-          success: false,
-          message: response.displayMsg,
-        );
+        return AuthActionResult(success: false, message: response.displayMsg);
       }
 
       final token = _extractToken(response.data);
-      if (token.isNotEmpty) {
-        await _repository.persistToken(token);
+      if (token.isEmpty) {
+        return const AuthActionResult(success: false, message: '登录未完成，请重新登录');
       }
-      await _repository.persistMobile(state.mobile);
+      await _repository.persistToken(token);
+      await _repository.persistMobile(attemptMobile, expectedToken: token);
+      if (!mounted) {
+        return const AuthActionResult(success: true, message: '登录成功');
+      }
 
-      await _syncCheckStatus().catchError((_) {});
+      await _syncCheckStatus(expectedToken: token).catchError((_) {});
+      if (!mounted) {
+        return const AuthActionResult(success: true, message: '登录成功');
+      }
       unawaited(_appConfigRepository.refreshFileBaseUrl());
       unawaited(_reportCidIfNeeded());
       _chatSocket.reconnect();
 
       return const AuthActionResult(success: true, message: '注册成功');
     } finally {
-      state = state.copyWith(isSubmitting: false);
+      if (mounted) state = state.copyWith(isSubmitting: false);
     }
   }
 
   Future<AuthActionResult> submitForgetPassword() async {
+    if (state.isSubmitting) {
+      return const AuthActionResult(success: false, message: '正在提交，请稍候');
+    }
     final invalid = _checkMobile() ?? _checkSmsCode() ?? _checkNewPassword();
     if (invalid != null) {
       return invalid;
@@ -276,16 +326,16 @@ class AuthController extends StateNotifier<AuthState> {
         smsCode: state.smsCode,
       );
 
+      if (!mounted) {
+        return const AuthActionResult(success: false, message: '登录已取消');
+      }
       if (response.code != 0) {
-        return AuthActionResult(
-          success: false,
-          message: response.displayMsg,
-        );
+        return AuthActionResult(success: false, message: response.displayMsg);
       }
 
       return const AuthActionResult(success: true, message: '密码已重置，请用新密码登录');
     } finally {
-      state = state.copyWith(isSubmitting: false);
+      if (mounted) state = state.copyWith(isSubmitting: false);
     }
   }
 
@@ -313,8 +363,8 @@ class AuthController extends StateNotifier<AuthState> {
   String _extractToken(dynamic data) {
     if (data is Map<String, dynamic>) {
       final token = data['token'];
-      if (token != null) {
-        return token.toString();
+      if (token is String) {
+        return token.trim();
       }
     }
     return '';
@@ -327,11 +377,14 @@ class AuthController extends StateNotifier<AuthState> {
     return code == 0 || code == 200;
   }
 
-  Future<void> _syncCheckStatus() async {
+  Future<void> _syncCheckStatus({String? expectedToken}) async {
     final checkResponse = await _repository.getCheck();
     if (checkResponse.code == 0) {
       // data: true → 审核中，隐藏会员入口；data: false → 正常展示。
-      await _repository.saveCheckStatus(checkResponse.data);
+      await _repository.saveCheckStatus(
+        checkResponse.data,
+        expectedToken: expectedToken,
+      );
     }
   }
 

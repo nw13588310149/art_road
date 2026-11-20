@@ -247,6 +247,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
   void backToList() {
     state = state.copyWith(
       view: MyNotesView.list,
+      busy: false,
       strokes: const <NoteStroke>[],
       redoStrokes: const <NoteStroke>[],
       toolMode: NoteToolMode.pen,
@@ -275,7 +276,24 @@ class MyNotesController extends StateNotifier<MyNotesState> {
     _clearStrokeHistory();
   }
 
-  Future<void> openExistingNote(NoteEntry note) async {
+  Future<String?> openExistingNote(int id) async {
+    if (state.busy || id <= 0) return null;
+    final categoryId = state.selectedCategoryId;
+    state = state.copyWith(busy: true, clearError: true);
+    final response = await _repository.getNote(id);
+    if (!mounted) return null;
+    if (state.view != MyNotesView.list ||
+        state.selectedCategoryId != categoryId) {
+      state = state.copyWith(busy: false);
+      return null;
+    }
+    final note = _parseNotes([response.data]).firstOrNull;
+    if (!response.isSuccess || note == null || note.id != id) {
+      state = state.copyWith(busy: false);
+      return response.displayMsg.isNotEmpty && !response.isSuccess
+          ? response.displayMsg
+          : '无法读取笔记详情';
+    }
     _clearStrokeHistory();
     // 有底图时始终垫底图；否则沿用旧逻辑：先用 param1 整页图，加载到矢量层后再移除。
     final hasBase = note.baseImageUrl.isNotEmpty;
@@ -298,10 +316,11 @@ class MyNotesController extends StateNotifier<MyNotesState> {
     );
 
     final payload = await _resolveDrawingPayload(note.drawingData);
+    if (!mounted || state.editingNote?.id != id) return null;
     if (payload == null) {
       // 旧笔记 / 只有底图的笔记：保留背景图叠画。
       state = state.copyWith(busy: false, editorHasVectorLayer: false);
-      return;
+      return null;
     }
 
     switch (payload.kind) {
@@ -331,6 +350,7 @@ class MyNotesController extends StateNotifier<MyNotesState> {
         state = state.copyWith(busy: false, editorHasVectorLayer: false);
         break;
     }
+    return null;
   }
 
   Future<NoteDrawingPayload?> _resolveDrawingPayload(String raw) async {

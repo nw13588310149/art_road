@@ -40,6 +40,11 @@ class ShellController extends StateNotifier<ShellState> {
   final ShellRepository _repository;
   final AppStorage _storage;
   final Ref _ref;
+  String? _profileSession;
+
+  /// Only expose the myInfo account ID for the session that loaded it.
+  String get authenticatedUserId =>
+      _profileSession == _storage.token ? state.user.id : '';
 
   Timer? _logoTimer;
   Timer? _noticeTimer;
@@ -62,16 +67,13 @@ class ShellController extends StateNotifier<ShellState> {
   }
 
   Future<void> logout() async {
+    final session = _storage.token;
     try {
       await _repository.logout();
     } catch (_) {
       // 网络失败时仍必须清本地会话，否则顶栏退出无法回到登录页。
     }
-    await _storage.clearToken();
-    await _storage.clearSchoolId();
-    await _storage.clearMobile();
-    unawaited(_storage.clearAvatarUrl());
-    unawaited(_storage.clearNickname());
+    if (!mounted || _storage.token != session) return;
     // 主动断开全局 WS（不再自动重连），并在下次登录成功后由 AuthController
     // 触发 reconnect 重新握手。否则旧 token 的 WS 会持续在后台尝试重连，
     // 不仅浪费连接，还可能让后端误把已登出用户当作在线状态。
@@ -97,6 +99,7 @@ class ShellController extends StateNotifier<ShellState> {
     // 左侧仍展示上一账号的缓存列表。
     _ref.invalidate(aiChatControllerProvider);
     pausePolling();
+    await _storage.clearToken();
   }
 
   /// 进入登录 / 注册等认证页时调用，停止 myInfo / schoolList / 未读轮询。
@@ -151,17 +154,18 @@ class ShellController extends StateNotifier<ShellState> {
 
   /// 未读数决定铃铛角标；列表含已读消息（置灰显示），没有未读时也照常拉取。
   Future<void> refreshNoticeData() async {
-    if (_storage.token.isEmpty) {
+    final session = _storage.token;
+    if (session.isEmpty) {
       return;
     }
     final countResponse = await _repository.getUnreadCount();
-    if (countResponse.code != 0 || !mounted) {
+    if (countResponse.code != 0 || !mounted || _storage.token != session) {
       return;
     }
     final count = _readUnreadCount(countResponse.data);
 
     final listResponse = await _repository.getMessageList();
-    if (!mounted) {
+    if (!mounted || _storage.token != session) {
       return;
     }
     state = state.copyWith(
@@ -174,7 +178,8 @@ class ShellController extends StateNotifier<ShellState> {
   }
 
   Future<void> refreshUserAndSchool() async {
-    if (_storage.token.isEmpty) {
+    final session = _storage.token;
+    if (session.isEmpty) {
       return;
     }
     // 并行请求用户信息与学校信息，总耗时降为单次 RTT
@@ -182,10 +187,12 @@ class ShellController extends StateNotifier<ShellState> {
       _repository.getMyInfo(),
       _repository.getSchoolInfo(),
     ]);
+    if (!mounted || _storage.token != session) return;
     final myInfoResponse = responses[0];
     final schoolResponse = responses[1];
 
     if (myInfoResponse.code == 0) {
+      _profileSession = session;
       final userMap = _extractUser(myInfoResponse.data);
       final role = userMap['role']?.toString() ?? '';
       final avatarUrl = userMap['headUrl']?.toString() ?? '';
@@ -204,7 +211,9 @@ class ShellController extends StateNotifier<ShellState> {
           secondary: userMap['secondary']?.toString() ?? '',
           school: userMap['school']?.toString() ?? '',
           targetSchool: userMap['targetSchool']?.toString() ?? '',
-          groupLeaderSubjects: _parseGroupLeaderSubjects(userMap['groupLeader']),
+          groupLeaderSubjects: _parseGroupLeaderSubjects(
+            userMap['groupLeader'],
+          ),
           vipExpireDate: _parseVipExpireDate(userMap['vipExpireDate']),
         ),
         navItems: buildDefaultNavItems(
@@ -229,6 +238,7 @@ class ShellController extends StateNotifier<ShellState> {
       if (schoolId.isNotEmpty && schoolId != '0') {
         await _storage.saveSchoolId(schoolId);
       }
+      if (!mounted || _storage.token != session) return;
       if (data.isNotEmpty) {
         final logo = _readSchoolLogo(data);
         final schoolName = data['name']?.toString().trim() ?? '';
@@ -250,7 +260,6 @@ class ShellController extends StateNotifier<ShellState> {
         state = state.copyWith(isSchoolReady: false);
       }
     } else {
-      await _storage.saveSchoolId(0);
       state = state.copyWith(isSchoolReady: false);
     }
   }

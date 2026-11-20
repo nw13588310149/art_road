@@ -6,7 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'app/app.dart';
-import 'core/demo/demo_config.dart';
+import 'app/router/app_navigator.dart';
+import 'core/demo/demo_accounts.dart';
 import 'core/demo/demo_store.dart';
 import 'core/demo/fixtures/demo_fixtures.dart';
 import 'core/demo/media/demo_media.dart';
@@ -46,37 +47,80 @@ Future<void> main() async {
   if (cid != null && cid.isNotEmpty) {
     await storage.savePushId(cid);
   }
-  if (kDemoMode) {
-    // 演示后端：本地接口应答 + 本地媒体服务，须在首个请求前就绪。
-    await DemoStore.init();
-    await DemoMedia.start();
-    registerDemoFixtures();
-    MediaUrl.setFileBaseUrl(DemoMedia.fileBaseUrl);
-    await storage.saveFileBaseUrl(DemoMedia.fileBaseUrl);
-  } else {
-    // 启动时立即把上次缓存的「文件服务器域名」注入 MediaUrl，让首屏就能正常
-    // 解析图片/音频路径，登录后再通过 configList 异步刷新。
-    final cachedFileBase = storage.fileBaseUrl;
-    if (cachedFileBase.isNotEmpty) {
-      MediaUrl.setFileBaseUrl(cachedFileBase);
-    }
+  if (storage.isGuestSession ||
+      DemoAccounts.isObsoleteDemoToken(storage.token)) {
+    await storage.clearToken();
+  }
+  await DemoStore.init();
+  await DemoMedia.start();
+  registerDemoFixtures();
+  final push = PushNotificationService.forStorage(storage);
+  unawaited(push.initialize());
+  runApp(AccountApp(storage: storage, push: push));
+}
+
+/// 退出账号时清除页面栈、轮询与业务缓存。首次登录保留正在提交的表单。
+class AccountApp extends StatefulWidget {
+  const AccountApp({super.key, required this.storage, required this.push});
+  final AppStorage storage;
+  final PushNotificationService push;
+
+  @override
+  State<AccountApp> createState() => _AccountAppState();
+}
+
+class _AccountAppState extends State<AccountApp> {
+  late String _previousToken;
+  Key _scopeKey = UniqueKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _previousToken = widget.storage.token;
+    _restoreMedia();
+    widget.storage.sessionToken.addListener(_changeSession);
   }
 
-  // 根容器：把 storage 注入 [appStorageProvider]，并在 runApp 之前预读
-  // [pushNotificationServiceProvider] 把 GeTui SDK 的初始化跑起来。原生平台
-  // 异步申请通知权限 / 注册 deviceToken 期间不会阻塞 UI，Web 上则走 stub
-  // no-op 直接返回。
-  final container = ProviderContainer(
+  void _restoreMedia() {
+    final storage = widget.storage;
+    MediaUrl.setFileBaseUrl(
+      storage.isDemoSession
+          ? DemoMedia.fileBaseUrl
+          : storage.token.isEmpty
+          ? ''
+          : storage.fileBaseUrl,
+    );
+  }
+
+  void _changeSession() {
+    final wasSignedIn = _previousToken.isNotEmpty;
+    _previousToken = widget.storage.token;
+    _restoreMedia();
+    if (!wasSignedIn) return;
+    final images = PaintingBinding.instance.imageCache;
+    images.clear();
+    images.clearLiveImages();
+    rootNavigatorKey = GlobalKey<NavigatorState>();
+    setState(() => _scopeKey = UniqueKey());
+  }
+
+  @override
+  void dispose() {
+    widget.storage.sessionToken.removeListener(_changeSession);
+    unawaited(widget.push.dispose());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ProviderScope(
+    key: _scopeKey,
     overrides: [
-      appStorageProvider.overrideWithValue(storage),
+      appStorageProvider.overrideWithValue(widget.storage),
+      pushNotificationServiceProvider.overrideWithValue(widget.push),
       imageViewerToolkitProvider.overrideWithValue(
         const ArtImageViewerToolkit(),
       ),
     ],
-  );
-  unawaited(container.read(pushNotificationServiceProvider).initialize());
-
-  runApp(
-    UncontrolledProviderScope(container: container, child: const MyApp()),
+    child: const MyApp(),
   );
 }

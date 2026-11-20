@@ -48,6 +48,9 @@ final learningTopicsProvider =
 final readingResourcesProvider = FutureProvider.autoDispose(
   (ref) => ref.watch(creativeRepositoryProvider).resources(),
 );
+final marketSamplesProvider = FutureProvider.autoDispose(
+  (ref) => ref.watch(creativeRepositoryProvider).marketSamples(),
+);
 final marketMyArtworksProvider = FutureProvider.autoDispose(
   (ref) => ref.watch(creativeRepositoryProvider).myArtworks(),
 );
@@ -105,6 +108,20 @@ class LearningTopicsController extends CreativeController<LearningTopic> {
       .toList();
   Future<String?> favorite(String id) =>
       action(() => repository.favorite('micro-lessons', id));
+  Future<String?> remove(String id) {
+    if (!state.items.any((topic) => topic.id == id && topic.mine)) {
+      return Future.value('只能撤下自己发布的课件');
+    }
+    return action(() async {
+      await repository.remove('micro-lessons', id);
+      if (mounted) {
+        state = state.copyWith(
+          items: state.items.where((topic) => topic.id != id).toList(),
+        );
+      }
+    });
+  }
+
   Future<String?> publish(CreativeJson body) => action(() async {
     await repository.publish('micro-lessons', body);
     filter(keyword: '', subject: '', view: 'mine');

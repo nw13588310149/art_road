@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/ui/ui.dart';
 import '../../data/score_form_repository.dart';
 import '../../data/toolbox_catalog.dart';
+import '../../data/toolbox_identity.dart';
 import '../../logic/score_calculator.dart';
 import '../../state/score_controller.dart';
 import '../widgets/image_tool_frame.dart';
@@ -41,6 +42,7 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
   final _bonus = TextEditingController();
   final _full = TextEditingController();
   bool _seeded = false;
+  String? _owner;
 
   @override
   void dispose() {
@@ -64,6 +66,11 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
 
   @override
   Widget build(BuildContext context) {
+    final owner = ref.watch(toolboxOwnerProvider);
+    if (_owner != owner) {
+      _owner = owner;
+      _seeded = false;
+    }
     final state = ref.watch(scoreFormControllerProvider);
     if (!state.loading && !_seeded) {
       _seed(state.data);
@@ -71,7 +78,7 @@ class _ScoreToolState extends ConsumerState<ScoreTool> {
     return ToolPageScaffold(
       tool: ArtTool.score,
       onBack: widget.onBack,
-      caption: '修改后自动保存在本机',
+      caption: owner == null ? '当前输入不保存' : '修改后自动保存在本机',
       body: ImageToolLayout(
         hint: '',
         canvasColor: AppColors.surface,

@@ -42,6 +42,9 @@ class CreativeRepository {
   Future<List<ReadingResource>> resources() async => creativeRows(
     await _data(client.get('/app/micro-lessons/resources')),
   ).map(ReadingResource.fromJson).toList();
+  Future<List<ReadingResource>> marketSamples() async => creativeRows(
+    await _data(client.get('/app/market/samples')),
+  ).map(ReadingResource.fromJson).toList();
   Future<List<CreativeJson>> myArtworks() async =>
       creativeRows(await _data(client.get('/app/market/my-artworks')));
   Future<void> favorite(String kind, String id) async =>

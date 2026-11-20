@@ -29,7 +29,11 @@ void main() {
     router = DemoRouter('ebooks-test');
     registerEbookFixtures(router);
     repository = EbookRepository(
-      client: ApiClient(storage: AppStorage(prefs), demoRouter: router),
+      client: ApiClient(
+        storage: AppStorage(prefs),
+        demoRouter: router,
+        dispatchDemoBySession: false,
+      ),
     );
   });
 
@@ -111,28 +115,36 @@ void main() {
       magazines.map((b) => b.id),
     );
     expect((await books(keyword: '石膏')).map((b) => b.id), ['eb-cast-head']);
-    expect(
-      (await books(category: 'color', keyword: '风景')).map((b) => b.id),
-      ['eb-color-landscape'],
-    );
+    expect((await books(category: 'color', keyword: '风景')).map((b) => b.id), [
+      'eb-color-landscape',
+    ]);
     final speed = await books(keyword: '速写');
-    expect(speed.every((b) => b.subjects.contains('速写') || b.title.contains('速写')), isTrue);
+    expect(
+      speed.every((b) => b.subjects.contains('速写') || b.title.contains('速写')),
+      isTrue,
+    );
     expect(speed.map((b) => b.id), contains('eb-speed-figure'));
     expect(await books(keyword: '不存在的书名'), isEmpty);
     expect(await books(category: 'unknown'), hasLength(10));
   });
 
-  test('every sample is labelled 示例 and carries cover, stage and subjects', () async {
-    final all = await books();
-    expect(all, hasLength(10));
-    for (final book in all) {
-      expect(book.title, endsWith('（示例）'));
-      expect(book.coverUrl, contains('assets/demo/ebooks/${book.id}-cover.jpg'));
-      expect(['基础', '提高', '冲刺'], contains(book.stage));
-      expect(book.subjects, isNotEmpty);
-      expect(book.pageCount, inInclusiveRange(8, 12));
-    }
-  });
+  test(
+    'every sample is labelled 示例 and carries cover, stage and subjects',
+    () async {
+      final all = await books();
+      expect(all, hasLength(10));
+      for (final book in all) {
+        expect(book.title, endsWith('（示例）'));
+        expect(
+          book.coverUrl,
+          contains('assets/demo/ebooks/${book.id}-cover.jpg'),
+        );
+        expect(['基础', '提高', '冲刺'], contains(book.stage));
+        expect(book.subjects, isNotEmpty);
+        expect(book.pageCount, inInclusiveRange(8, 12));
+      }
+    },
+  );
 
   test('sorts by recommend, latest and popular; featured and paging', () async {
     expect((await books()).first.id, 'eb-sketch-still');
@@ -183,9 +195,9 @@ void main() {
       DemoFavorites.contains(userId, kDemoEbookFavoriteType, 'eb-cast-head'),
       isTrue,
     );
-    final entry = DemoFavorites.of(userId).firstWhere(
-      (f) => f['targetId'] == 'eb-cast-head',
-    );
+    final entry = DemoFavorites.of(
+      userId,
+    ).firstWhere((f) => f['targetId'] == 'eb-cast-head');
     expect(entry['title'], '石膏头像结构入门（示例）');
     expect(entry['subtitle'], '素描教程 · 王海波');
     expect(entry['cover'], 'asset:assets/demo/ebooks/eb-cast-head-cover.jpg');
@@ -200,12 +212,17 @@ void main() {
 
   test('shelf lists favourites and books in progress', () async {
     final seeded = await shelf();
-    expect(seeded.reading.map((b) => b.id), ['eb-sketch-still', 'eb-speed-figure']);
+    expect(seeded.reading.map((b) => b.id), [
+      'eb-sketch-still',
+      'eb-speed-figure',
+    ]);
     expect(
       seeded.favorites.map((b) => b.id),
       containsAll(<String>['eb-monthly-202611', 'eb-color-warmcool']),
     );
-    final finished = seeded.records.firstWhere((b) => b.id == 'eb-monthly-202610');
+    final finished = seeded.records.firstWhere(
+      (b) => b.id == 'eb-monthly-202610',
+    );
     expect(finished.finished, isTrue);
     expect(seeded.records.map((b) => b.id), isNot(contains('eb-cast-head')));
 
@@ -229,9 +246,17 @@ void main() {
     expect(await bookmarks(), [5, 11]);
     await repository.setBookmark('eb-sketch-still', 7, bookmarked: true);
     expect(await bookmarks(), [5, 7, 11]);
-    final off = await repository.setBookmark('eb-sketch-still', 5, bookmarked: false);
+    final off = await repository.setBookmark(
+      'eb-sketch-still',
+      5,
+      bookmarked: false,
+    );
     expect(EbookReading.fromJson(off.data).bookmarks, [7, 11]);
-    final invalid = await repository.setBookmark('eb-sketch-still', 13, bookmarked: true);
+    final invalid = await repository.setBookmark(
+      'eb-sketch-still',
+      13,
+      bookmarked: true,
+    );
     expect(invalid.isSuccess, isFalse);
   });
 
@@ -242,7 +267,10 @@ void main() {
     expect(book.toc.first.page, 3);
     expect(book.related, hasLength(4));
     expect(book.related.first.id, 'eb-color-warmcool');
-    expect(book.related.map((b) => b.id), isNot(contains('eb-color-landscape')));
+    expect(
+      book.related.map((b) => b.id),
+      isNot(contains('eb-color-landscape')),
+    );
 
     final missing = await repository.getDetail('eb-missing');
     expect(missing.isSuccess, isFalse);
@@ -268,51 +296,69 @@ void main() {
       'target': <String, dynamic>{
         'title': '石膏头像结构入门（示例）',
         'subtitle': '素描教程 · 王海波',
-        'coverImg': 'http://127.0.0.1/a/assets/demo/ebooks/eb-cast-head-cover.jpg',
+        'coverImg':
+            'http://127.0.0.1/a/assets/demo/ebooks/eb-cast-head-cover.jpg',
         'pageCount': 10,
       },
     });
     expect(item?.bookId, 'eb-cast-head');
     expect(item?.subtitle, '素描教程 · 王海波');
     expect(item?.pageCount, 10);
-    expect(item?.routeArgs, {'bookId': 'eb-cast-head', 'fromMyCollection': true});
-    expect(EbookCollection.itemOf(<String, dynamic>{'type': 11, 'targetId': 'g-1'}), isNull);
+    expect(item?.routeArgs, {
+      'bookId': 'eb-cast-head',
+      'fromMyCollection': true,
+    });
+    expect(
+      EbookCollection.itemOf(<String, dynamic>{'type': 11, 'targetId': 'g-1'}),
+      isNull,
+    );
   });
 
-  test('fixture matches the generated manifest and page images on disk', () async {
-    final manifest =
-        jsonDecode(File('tool/ebooks/manifest.json').readAsStringSync())
-            as Map<String, dynamic>;
-    expect(manifest.keys, hasLength(10));
-    var totalBytes = 0;
-    for (final entry in manifest.entries) {
-      final info = entry.value as Map<String, dynamic>;
-      final book = EbookDetail.fromJson(
-        await handle('/app/ebooks/${entry.key}') as Map,
-      );
-      expect(book.book.pageCount, info['pageCount'], reason: entry.key);
-      expect(
-        [for (final t in book.toc) '${t.page} ${t.title}'],
-        [for (final t in (info['toc'] as List).cast<Map>()) '${t['page']} ${t['title']}'],
-        reason: entry.key,
-      );
-      final pages = EbookPage.listFrom(
-        await handle('/app/ebooks/${entry.key}/pages'),
-      );
-      expect(pages, hasLength(info['pageCount'] as int));
-      final files = [
-        'assets/demo/ebooks/${entry.key}-cover.jpg',
-        for (final page in pages)
-          'assets/demo/ebooks/${entry.key}-p${page.page.toString().padLeft(2, '0')}.jpg',
-      ];
-      for (final path in files) {
-        final file = File(path);
-        expect(file.existsSync(), isTrue, reason: path);
-        expect(file.lengthSync(), lessThanOrEqualTo(90 * 1024), reason: path);
-        totalBytes += file.lengthSync();
+  test(
+    'fixture matches the generated manifest and page images on disk',
+    () async {
+      final manifest =
+          jsonDecode(File('tool/ebooks/manifest.json').readAsStringSync())
+              as Map<String, dynamic>;
+      expect(manifest.keys, hasLength(10));
+      var totalBytes = 0;
+      for (final entry in manifest.entries) {
+        final info = entry.value as Map<String, dynamic>;
+        final book = EbookDetail.fromJson(
+          await handle('/app/ebooks/${entry.key}') as Map,
+        );
+        expect(book.book.pageCount, info['pageCount'], reason: entry.key);
+        expect(
+          [for (final t in book.toc) '${t.page} ${t.title}'],
+          [
+            for (final t in (info['toc'] as List).cast<Map>())
+              '${t['page']} ${t['title']}',
+          ],
+          reason: entry.key,
+        );
+        final pages = EbookPage.listFrom(
+          await handle('/app/ebooks/${entry.key}/pages'),
+        );
+        expect(pages, hasLength(info['pageCount'] as int));
+        final files = [
+          'assets/demo/ebooks/${entry.key}-cover.jpg',
+          for (final page in pages)
+            'assets/demo/ebooks/${entry.key}-p${page.page.toString().padLeft(2, '0')}.jpg',
+        ];
+        for (final path in files) {
+          final file = File(path);
+          expect(file.existsSync(), isTrue, reason: path);
+          expect(file.lengthSync(), lessThanOrEqualTo(90 * 1024), reason: path);
+          totalBytes += file.lengthSync();
+        }
+        expect(
+          pages.last.imageUrl,
+          endsWith(
+            '${entry.key}-p${pages.length.toString().padLeft(2, '0')}.jpg',
+          ),
+        );
       }
-      expect(pages.last.imageUrl, endsWith('${entry.key}-p${pages.length.toString().padLeft(2, '0')}.jpg'));
-    }
-    expect(totalBytes, lessThanOrEqualTo(6 * 1024 * 1024));
-  });
+      expect(totalBytes, lessThanOrEqualTo(6 * 1024 * 1024));
+    },
+  );
 }

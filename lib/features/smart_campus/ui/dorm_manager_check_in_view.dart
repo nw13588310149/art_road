@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/app_providers.dart';
 // =============================================================================
 // 宿管端「到岗打卡」
 //
@@ -100,16 +102,46 @@ class _PunchRecord {
 // 顶级视图
 // =============================================================================
 
-class DormManagerCheckInView extends StatefulWidget {
+class DormManagerCheckInView extends ConsumerWidget {
   const DormManagerCheckInView({super.key, required this.onBack});
+  final VoidCallback onBack;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(demoSessionProvider)) {
+      return _DemoDormManagerCheckInView(onBack: onBack);
+    }
+    return Column(
+      children: [
+        SmartCampusPageBanner(
+          title: '到岗打卡',
+          subtitle: '到岗打卡暂未开通',
+          onBack: onBack,
+        ),
+        const Expanded(
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('到岗打卡暂未开通，当前不会记录打卡或定位。', textAlign: TextAlign.center),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DemoDormManagerCheckInView extends StatefulWidget {
+  const _DemoDormManagerCheckInView({required this.onBack});
 
   final VoidCallback onBack;
 
   @override
-  State<DormManagerCheckInView> createState() => _DormManagerCheckInViewState();
+  State<_DemoDormManagerCheckInView> createState() =>
+      __DemoDormManagerCheckInViewState();
 }
 
-class _DormManagerCheckInViewState extends State<DormManagerCheckInView> {
+class __DemoDormManagerCheckInViewState
+    extends State<_DemoDormManagerCheckInView> {
   Timer? _ticker;
   late DateTime _now;
   late List<_PunchRecord> _records;

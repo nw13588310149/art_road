@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/toolbox_identity.dart';
+
 import '../data/exam_checklist.dart';
 
 final examChecklistRepositoryProvider = Provider<ExamChecklistRepository>(
-  (ref) => ExamChecklistRepository(),
+  (ref) => ExamChecklistRepository(ownerKey: ref.watch(toolboxOwnerProvider)),
 );
 
 final examChecklistControllerProvider =

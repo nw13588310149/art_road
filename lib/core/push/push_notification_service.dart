@@ -23,6 +23,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/app_providers.dart';
+import '../storage/app_storage.dart';
 import 'push_notification_service_stub.dart'
     if (dart.library.io) 'push_notification_service_io.dart';
 
@@ -52,6 +53,9 @@ class PushNotificationMessage {
 
 /// 公共接口；具体实现按平台条件加载。
 abstract class PushNotificationService {
+  static PushNotificationService forStorage(AppStorage storage) =>
+      createPushNotificationService(storage: storage);
+
   /// 拉起底层 SDK（注册 deviceToken、申请通知权限、设置事件回调）。
   /// 同步幂等：重复调用直接返回。
   Future<void> initialize();
@@ -73,7 +77,7 @@ final pushNotificationServiceProvider = Provider<PushNotificationService>((
   ref,
 ) {
   final storage = ref.watch(appStorageProvider);
-  final service = createPushNotificationService(storage: storage);
+  final service = PushNotificationService.forStorage(storage);
   ref.onDispose(() => unawaited(service.dispose()));
   return service;
 });

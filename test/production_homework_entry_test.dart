@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:the_road_of_art_flutter/core/demo/demo_config.dart';
 import 'package:the_road_of_art_flutter/core/network/api_client.dart';
 import 'package:the_road_of_art_flutter/core/network/api_response.dart';
 import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
@@ -130,5 +129,5 @@ void main() {
     expect(find.text('发送'), findsNothing);
     expect(find.byType(TextField), findsNothing);
     expect(client.calls.any((p) => p.contains('Send')), isFalse);
-  }, skip: kDemoMode);
+  });
 }

@@ -34,9 +34,16 @@ class _StudyCenterPageState extends ConsumerState<StudyCenterPage> {
     final args = _args ?? const StudyCenterArgs();
     final role = ref.watch(shellControllerProvider.select((s) => s.user.role));
     // myInfo 回包前角色为空，先按登录 token 还原的身份渲染，避免闪一下学生视图。
+    final storage = ref.read(appStorageProvider);
     final resolvedRole = role.trim().isNotEmpty
         ? role
-        : DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
+        : storage.isDemoSession ? DemoAccounts.fromToken(storage.token).roleKey : '';
+    if (resolvedRole.isEmpty) {
+      return Center(child: TextButton(
+        onPressed: ref.read(shellControllerProvider.notifier).refreshUserAndSchool,
+        child: const Text('正在确认账号身份，点击可重试'),
+      ));
+    }
     // 校长的全校学情从教学指标、趋势与报表入口开始；带考试 id 时直接看那场考试。
     if (resolvedRole == 'principal' && args.examId.isEmpty) {
       return PrincipalOverview(

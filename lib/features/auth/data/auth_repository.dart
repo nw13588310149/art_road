@@ -90,19 +90,21 @@ class AuthRepository {
   }
 
   Future<void> persistToken(String token) async {
+    ApiUnauthorizedHandler.instance.reset();
     await _storage.saveToken(token);
-    await _storage.saveSchoolId(0);
-    await client.updateToken(token);
+
     // 新 token 写入后立即作废仍在飞行中的旧 401 清会话 / 跳登录逻辑。
     ApiUnauthorizedHandler.instance.reset();
   }
 
   /// 登录 / 注册成功后保存当前账号手机号。
-  Future<void> persistMobile(String mobile) async {
+  Future<void> persistMobile(String mobile, {String? expectedToken}) async {
+    if (expectedToken != null && _storage.token != expectedToken) return;
     await _storage.saveMobile(mobile);
   }
 
-  Future<void> saveCheckStatus(dynamic value) async {
+  Future<void> saveCheckStatus(dynamic value, {String? expectedToken}) async {
+    if (expectedToken != null && _storage.token != expectedToken) return;
     await _storage.saveCheckStatus(value);
   }
 

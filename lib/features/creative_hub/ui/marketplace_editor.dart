@@ -178,7 +178,16 @@ class _MarketplaceEditorState extends ConsumerState<MarketplaceEditor> {
   @override
   Widget build(BuildContext context) {
     ref.watch(creativeUploadProvider);
-    final resources = ref.watch(readingResourcesProvider);
+    final samples = ref.watch(marketSamplesProvider);
+    final resources = _kind == MarketKind.digital
+        ? ref.watch(readingResourcesProvider).asData?.value
+        : null;
+    final availableDelivery = <String, ReadingResource>{
+      for (final resource in resources ?? const <ReadingResource>[])
+        resource.id: resource,
+      for (final sample in samples.asData?.value ?? const <ReadingResource>[])
+        sample.id: sample,
+    };
     final own = ref.watch(marketMyArtworksProvider);
     final busy = ref.watch(commerceProvider.select((s) => s.busy));
     return PopScope(
@@ -313,20 +322,18 @@ class _MarketplaceEditorState extends ConsumerState<MarketplaceEditor> {
                         AppCard(
                           title: '演示素材',
                           subtitle: '体验发布流程',
-                          child: resources.when(
+                          child: samples.when(
                             loading: () => const AppLoadingIndicator(),
                             error: (_, _) => AppButton(
                               label: '重新加载素材',
                               onTap: () =>
-                                  ref.invalidate(readingResourcesProvider),
+                                  ref.invalidate(marketSamplesProvider),
                             ),
                             data: (items) => Wrap(
                               spacing: 8,
                               runSpacing: 8,
                               children: [
-                                for (final r in items.where(
-                                  (r) => r.id.startsWith('sample-'),
-                                ))
+                                for (final r in items)
                                   AppPressable(
                                     semanticLabel: '选择${r.title}',
                                     selected: _imageId == r.id,
@@ -465,14 +472,12 @@ class _MarketplaceEditorState extends ConsumerState<MarketplaceEditor> {
                                       const Expanded(child: Text('交付所选作品的原图')),
                                     ],
                                   ),
-                                for (final r
-                                    in resources.asData?.value.where(
-                                          (r) =>
-                                              r.id.startsWith('sample-') ||
-                                              r.id.startsWith('resource-') ||
-                                              _deliveryIds.contains(r.id),
-                                        ) ??
-                                        <ReadingResource>[])
+                                for (final r in availableDelivery.values.where(
+                                  (r) =>
+                                      r.id.startsWith('sample-') ||
+                                      r.id.startsWith('resource-') ||
+                                      _deliveryIds.contains(r.id),
+                                ))
                                   Row(
                                     children: [
                                       AppCheckbox(

@@ -71,7 +71,7 @@ class _StudyCompositeEstimateCardState
       previous,
       next,
     ) {
-      if ((previous?.loading ?? true) && !next.loading) {
+      if (previous == null || previous.loading != next.loading) {
         _fill(next.form);
       }
     });
@@ -95,13 +95,24 @@ class _StudyCompositeEstimateCardState
           Text('月考出分后，会用最近一次的专业总分估算综合分；也可以在完整计算器里手动输入。', style: AppText.body13)
         else
           _EstimateBody(
-            loading: formState.loading,
+            loading: formState.loading || formState.loadError != null,
             form: formState.form,
             exam: exam,
             culture: _culture,
             target: _target,
             formatters: _scoreFormatters,
             onChanged: ref.read(compositeEstimateFormProvider.notifier).update,
+          ),
+        if ((formState.loadError ?? formState.saveError)
+            case final String error)
+          Row(
+            children: [
+              Expanded(child: Text(error, style: AppText.caption12)),
+              AppPlainButton(
+                label: '重试',
+                onTap: ref.read(compositeEstimateFormProvider.notifier).retry,
+              ),
+            ],
           ),
         const SizedBox(height: AppSpace.s8),
         Text(StudyCompositeEstimateCard.disclaimer, style: AppText.caption12),

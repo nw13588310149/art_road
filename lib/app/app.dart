@@ -62,8 +62,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     //   工作可以在 Engine 真正渲染管线启动前就铺开，不与 UI 抢资源。
     // ────────────────────────────────────────────────────────────────────
 
-    // 已登录用户冷启动：异步刷新文件服务器配置；游客 token（"youke"）也走
-    // 同一路径，确保拿到最新的 fileBaseUrl。
+    // 已登录用户冷启动时刷新本账号的文件服务器配置。
     final storage = ref.read(appStorageProvider);
     if (storage.token.isNotEmpty) {
       try {
@@ -74,7 +73,6 @@ class _MyAppState extends ConsumerState<MyApp> {
       }
       try {
         // 全局 WebSocket 长连接：承担 AI 助手 + 系统事件 + 群聊推送。
-        // 游客 token 也尝试连接，由后端按需放行/拒绝。
         ref.read(chatSocketServiceProvider).connect();
       } catch (e, st) {
         debugPrint('chatSocketService.connect failed: $e\n$st');
@@ -124,6 +122,8 @@ class _MyAppState extends ConsumerState<MyApp> {
     final initialRoute = storage.token.isEmpty
         ? RoutePaths.login
         : RoutePaths.home;
+    Route<dynamic> sessionRoute(RouteSettings settings) =>
+        AppRouter.forSession(settings, signedIn: storage.token.isNotEmpty);
 
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
@@ -131,7 +131,8 @@ class _MyAppState extends ConsumerState<MyApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       initialRoute: initialRoute,
-      onGenerateRoute: AppRouter.onGenerateRoute,
+      onGenerateInitialRoutes: (name) => [sessionRoute(RouteSettings(name: name))],
+      onGenerateRoute: sessionRoute,
       navigatorObservers: [_shellPollingRouteObserver, _toolboxRouteObserver],
       // 本地化：强制 zh-CN，并注入 Material / Cupertino / Widgets 三套
       // LocalizationsDelegates。修复 iPadOS 输入框长按 / Live Text 弹出的

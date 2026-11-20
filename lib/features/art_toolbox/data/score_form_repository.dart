@@ -1,3 +1,4 @@
+import 'toolbox_identity.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -81,11 +82,19 @@ class ScoreFormData {
 
     const defaults = CustomScoreRule();
     return ScoreFormData(
-      province: pick(ScoreProvince.values, json['province'], ScoreProvince.gansu),
+      province: pick(
+        ScoreProvince.values,
+        json['province'],
+        ScoreProvince.gansu,
+      ),
       culture: json['culture']?.toString() ?? '',
       professional: json['professional']?.toString() ?? '',
       bonus: json['bonus']?.toString() ?? '',
-      yunnanMode: pick(YunnanMode.values, json['yunnanMode'], YunnanMode.balanced),
+      yunnanMode: pick(
+        YunnanMode.values,
+        json['yunnanMode'],
+        YunnanMode.balanced,
+      ),
       custom: CustomScoreRule(
         culturePercent: number(
           json['customCulturePercent'],
@@ -106,11 +115,17 @@ class ScoreFormData {
 }
 
 class ScoreFormRepository {
+  // Default preserves standalone demo tools; application providers always bind an owner.
+  ScoreFormRepository({this.ownerKey = 'legacy-demo'});
+  final String? ownerKey;
+
   static const storageKey = 'art_toolbox_score_form_v1';
 
   Future<ScoreFormData> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(storageKey);
+    final raw = ownerKey == null
+        ? null
+        : prefs.getString(toolboxStorageKey(storageKey, ownerKey));
     if (raw == null) {
       return const ScoreFormData();
     }
@@ -123,6 +138,10 @@ class ScoreFormRepository {
 
   Future<void> save(ScoreFormData data) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(storageKey, jsonEncode(data.toJson()));
+    if (ownerKey == null) return;
+    await prefs.setString(
+      toolboxStorageKey(storageKey, ownerKey),
+      jsonEncode(data.toJson()),
+    );
   }
 }

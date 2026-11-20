@@ -26,6 +26,21 @@ class TopicDetail extends ConsumerWidget {
   /// 打开侧栏里的另一份课件。
   final ValueChanged<LearningTopic> onOpen;
 
+  Future<void> _remove(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showAppConfirm(
+      context: context,
+      title: '撤下这份课件？',
+      message: '撤下后，其他人将无法打开这份课件。',
+      confirmLabel: '撤下',
+      danger: true,
+    );
+    if (!confirmed || !context.mounted) return;
+    final error = await ref
+        .read(learningTopicsProvider.notifier)
+        .remove(topic.id);
+    if (context.mounted && error != null) AppToast.showError(context, error);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final student =
@@ -52,6 +67,20 @@ class TopicDetail extends ConsumerWidget {
               title: topic.title,
               onBack: onBack,
               actions: [
+                if (topic.mine) ...[
+                  AppPlainButton(
+                    label: '撤下课件',
+                    icon: Icons.remove_circle_outline,
+                    color: AppColors.textSecondary,
+                    onTap:
+                        ref.watch(
+                          learningTopicsProvider.select((state) => state.busy),
+                        )
+                        ? null
+                        : () => _remove(context, ref),
+                  ),
+                  const SizedBox(width: AppSpace.s8),
+                ],
                 AppPlainButton(
                   label: topic.favorite ? '已收藏' : '收藏',
                   icon: topic.favorite

@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/demo/demo_accounts.dart';
-import '../../../core/demo/demo_config.dart';
 import '../../../core/network/api_response.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../shell/state/shell_controller.dart';
@@ -16,13 +15,13 @@ import '../data/today_repository.dart';
 String resolveTodayRole(
   String role, {
   required String token,
-  bool demoMode = kDemoMode,
+  bool demoMode = true,
 }) {
   final value = role.trim();
   if (value.isNotEmpty) {
     return value;
   }
-  if (!demoMode || token.trim().isEmpty) {
+  if (!demoMode || !DemoAccounts.isDemoToken(token)) {
     return '';
   }
   return DemoAccounts.fromToken(token).roleKey;

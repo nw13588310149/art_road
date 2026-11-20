@@ -38,6 +38,9 @@ class MyNotesRepository {
     );
   }
 
+  Future<ApiResponse> getNote(int id) =>
+      client.post('/app/user/noteDetail', data: {'id': id});
+
   Future<ApiResponse> addCategory(String name) {
     return client.post(
       '/app/user/noteCategorySave',

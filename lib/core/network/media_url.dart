@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../constants/app_constants.dart';
 
 /// 全局文件 URL 解析器。
@@ -17,6 +19,9 @@ class MediaUrl {
   MediaUrl._();
 
   static String _fileBaseUrl = '';
+  static const _previewMediaOrigin = String.fromEnvironment(
+    'ART_ROAD_PREVIEW_MEDIA_ORIGIN',
+  );
 
   /// 当前生效的文件服务器域名；为空时回退到 [AppConstants.apiBaseUrl]。
   static String get fileBaseUrl =>
@@ -42,12 +47,39 @@ class MediaUrl {
         value.startsWith('https://') ||
         value.startsWith('blob:') ||
         value.startsWith('data:')) {
-      return value;
+      return _previewFileUrl(value);
     }
     if (value.startsWith('//')) {
       return 'https:$value';
     }
     final normalized = value.startsWith('/') ? value : '/$value';
-    return '${fileBaseUrl.replaceFirst(RegExp(r'/$'), '')}$normalized';
+    return _previewFileUrl(
+      '${fileBaseUrl.replaceFirst(RegExp(r'/$'), '')}$normalized',
+    );
+  }
+
+  /// 仅网页联调中将指定新后端的 /files 交给同源代理。
+  static String _previewFileUrl(String value) {
+    if (!kIsWeb || _previewMediaOrigin.isEmpty) return value;
+    final allowed = Uri.tryParse(_previewMediaOrigin);
+    final target = Uri.tryParse(value);
+    if (allowed == null ||
+        target == null ||
+        !target.path.startsWith('/files/') ||
+        target.scheme != allowed.scheme ||
+        target.host != allowed.host ||
+        target.port != allowed.port ||
+        target.userInfo.isNotEmpty) {
+      return value;
+    }
+    final page = Uri.base;
+    return Uri(
+      scheme: page.scheme,
+      host: page.host,
+      port: page.hasPort ? page.port : null,
+      path: target.path,
+      query: target.hasQuery ? target.query : null,
+      fragment: target.hasFragment ? target.fragment : null,
+    ).toString();
   }
 }

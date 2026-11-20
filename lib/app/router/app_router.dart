@@ -43,6 +43,14 @@ import '../../features/video_tutorial/ui/video_tutorial_page.dart';
 import 'route_paths.dart';
 
 class AppRouter {
+  static Route<dynamic> forSession(RouteSettings settings, {required bool signedIn}) {
+    final path = Uri.tryParse(settings.name ?? '')?.path ?? '';
+    if (!signedIn && !_isPublicRoute(path)) {
+      return onGenerateRoute(const RouteSettings(name: RoutePaths.login));
+    }
+    return onGenerateRoute(settings);
+  }
+
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     final incoming = Uri.tryParse(settings.name ?? '');
     if (incoming?.path == RoutePaths.marketplace && incoming!.hasQuery) {

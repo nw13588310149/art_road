@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../constants/app_constants.dart';
-import '../demo/demo_config.dart';
+import '../demo/demo_accounts.dart';
 import '../demo/demo_socket_bridge.dart';
 import '../providers/app_providers.dart';
 import '../storage/app_storage.dart';
@@ -92,10 +92,16 @@ typedef AiChatSocketEvent = ChatSocketEvent;
 class ChatSocketService {
   ChatSocketService({
     required AppStorage storage,
+    String? baseUrl,
     WebSocketChannel Function(Uri) openChannel = connectChatWebSocket,
-  }) : _storage = storage, _openChannel = openChannel;
+  }) : _storage = storage,
+       _baseUrl = AppConstants.secureApiBase(
+         baseUrl ?? AppConstants.apiBaseUrl,
+       ),
+       _openChannel = openChannel;
 
   final AppStorage _storage;
+  final String _baseUrl;
   final WebSocketChannel Function(Uri) _openChannel;
   final StreamController<ChatSocketEvent> _events =
       StreamController<ChatSocketEvent>.broadcast();
@@ -108,6 +114,7 @@ class ChatSocketService {
   bool _intentionallyClosed = false;
   bool _connecting = false;
   bool _demoOnline = false;
+  String? _connectedToken;
   bool _authenticated = false;
 
   /// 全部下行事件流。订阅方按 [ChatSocketEvent.type] 过滤即可。
@@ -118,7 +125,7 @@ class ChatSocketService {
 
   /// 演示模式：把模拟下行帧注入与线上相同的解析链路。
   void injectDemoFrame(Map<String, dynamic> frame) {
-    if (!_demoOnline) {
+    if (!_demoOnline || _connectedToken != _storage.token) {
       return;
     }
     _handleRawMessage(jsonEncode(frame));
@@ -130,7 +137,10 @@ class ChatSocketService {
       return;
     }
     final token = _storage.token;
-    if (token.isEmpty) {
+    if (_connectedToken != null && _connectedToken != token) disconnect();
+    if (token.isEmpty ||
+        isGuestSessionToken(token) ||
+        DemoAccounts.isObsoleteDemoToken(token)) {
       return;
     }
     if (_connecting) {
@@ -139,14 +149,17 @@ class ChatSocketService {
     if (_channel != null || _demoOnline) {
       return;
     }
-    if (kDemoMode) {
+    if (DemoAccounts.isDemoToken(token)) {
       _intentionallyClosed = false;
+      _connectedToken = token;
       _demoOnline = true;
       DemoSocketBridge.instance.attach(this);
       _emit(ChatSocketEventType.connected, const {});
       return;
     }
 
+    if (_baseUrl.isEmpty) return;
+    _connectedToken = token;
     _intentionallyClosed = false;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
@@ -161,12 +174,15 @@ class ChatSocketService {
       _channel = channel;
       void closed() {
         if (!identical(_channel, channel)) return;
-        if (channel.closeCode == 4009 || channel.closeCode == 4010 || channel.closeCode == 4401) {
+        if (channel.closeCode == 4009 ||
+            channel.closeCode == 4010 ||
+            channel.closeCode == 4401) {
           disconnect();
         } else {
           _handleClosed();
         }
       }
+
       _subscription = channel.stream.listen(
         (raw) {
           if (identical(_channel, channel) && _storage.token == token) {
@@ -196,7 +212,9 @@ class ChatSocketService {
   /// 主动断开并不再自动重连。退出登录、切换账号时调用。
   void disconnect() {
     _intentionallyClosed = true;
+    if (_demoOnline) DemoSocketBridge.instance.detach(this);
     _demoOnline = false;
+    _connectedToken = null;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _heartbeatTimer?.cancel();
@@ -218,18 +236,11 @@ class ChatSocketService {
   }
 
   Uri _wsUri() {
-    final base = AppConstants.apiBaseUrl.trim();
-    if (base.startsWith('https://')) {
-      return Uri.parse(
-        'wss://${base.substring('https://'.length).replaceFirst(RegExp(r'/$'), '')}/websocket',
-      );
-    }
-    if (base.startsWith('http://')) {
-      return Uri.parse(
-        'ws://${base.substring('http://'.length).replaceFirst(RegExp(r'/$'), '')}/websocket',
-      );
-    }
-    return Uri.parse('$base/websocket');
+    final base = Uri.parse(_baseUrl);
+    return base.replace(
+      scheme: base.scheme == 'https' ? 'wss' : 'ws',
+      path: '${base.path.replaceFirst(RegExp(r'/$'), '')}/websocket',
+    );
   }
 
   void _startHeartbeat() {
@@ -405,7 +416,8 @@ class ChatSocketService {
 
   /// 群聊帧语义判定：带 classId 且具备消息字段。
   bool _looksLikeChatPayload(Map<String, dynamic> json, int? type) {
-    final classId = readSnowflakeId(json['classId']) ?? readSnowflakeId(json['cId']);
+    final classId =
+        readSnowflakeId(json['classId']) ?? readSnowflakeId(json['cId']);
     if (classId == null) return false;
 
     if (_isChatPushType(type, 2001) ||
@@ -455,10 +467,7 @@ class ChatSocketService {
     return eventField.contains('delete') || eventField.contains('recall');
   }
 
-  bool _looksLikeChatAnnouncementChanged(
-    Map<String, dynamic> json,
-    int? type,
-  ) {
+  bool _looksLikeChatAnnouncementChanged(Map<String, dynamic> json, int? type) {
     if (type != null && type < 2000) {
       return false;
     }

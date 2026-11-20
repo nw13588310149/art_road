@@ -1,3 +1,6 @@
+import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
+import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
+import 'package:the_road_of_art_flutter/core/demo/demo_accounts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,8 +27,12 @@ Future<GlobalKey<NavigatorState>> _pumpHost(
   addTearDown(observer.dispose);
   addTearDown(() => tester.pumpWidget(const SizedBox()));
   final navigator = GlobalKey<NavigatorState>();
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('token', DemoAccounts.student.token);
+  final storage = AppStorage(prefs);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: [appStorageProvider.overrideWithValue(storage)],
       child: MaterialApp(
         navigatorKey: navigator,
         navigatorObservers: [observer],

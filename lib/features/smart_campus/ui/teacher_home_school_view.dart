@@ -39,7 +39,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../../../core/demo/demo_config.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
@@ -196,7 +195,7 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
       bodyScrollable: false,
       header: SmartCampusPageBanner(
         title: '家校沟通',
-        subtitle: kDemoMode
+        subtitle: ref.watch(demoSessionProvider)
             ? '与本班家长就请假、成绩、心理等进行文字沟通'
             : '家长消息尚未开通，目前仅可查看沟通记录',
         onBack: widget.onBack,
@@ -985,7 +984,7 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
   }
 
   Future<void> _onSend() async {
-    if (!kDemoMode) return;
+    if (!ref.read(demoSessionProvider)) return;
     final text = _inputController.text.trim();
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
@@ -1092,7 +1091,7 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
                 ),
                 Padding(
                   padding: EdgeInsets.fromLTRB(ui(24), ui(12), ui(24), ui(20)),
-                  child: kDemoMode
+                  child: ref.watch(demoSessionProvider)
                       ? _InputBar(
                           controller: _inputController,
                           onSend: _onSend,
@@ -1461,19 +1460,12 @@ class _HomeSchoolImageBubble extends ConsumerWidget {
 
   static const _heroTagPrefix = 'home_school_chat_img';
 
-  Map<String, String> _imageHeaders(WidgetRef ref) {
-    final token = ref.read(appStorageProvider).token.trim();
-    if (token.isEmpty) return const {};
-    return {'app-token': token};
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ui = DashboardScaleScope.of(context).ui;
     final size = ui(180);
     final radius = BorderRadius.circular(ui(8));
-    final url = imageUrl?.trim() ?? '';
-    final headers = _imageHeaders(ref);
+    final url = MediaUrl.resolve(imageUrl ?? '');
 
     Widget placeholder({Widget? child}) {
       return SizedBox(
@@ -1508,16 +1500,14 @@ class _HomeSchoolImageBubble extends ConsumerWidget {
             images: [url],
             initialIndex: 0,
             heroTagPrefix: _heroTagPrefix,
-            headers: headers,
           );
           return;
         }
         showImageGallery(
           context,
-          images: galleryImages,
+          images: galleryImages.map(MediaUrl.resolve).toList(),
           initialIndex: heroIndex,
           heroTagPrefix: _heroTagPrefix,
-          headers: headers,
         );
       },
       child: Hero(
@@ -1532,7 +1522,6 @@ class _HomeSchoolImageBubble extends ConsumerWidget {
               width: size,
               height: size,
               fit: BoxFit.cover,
-              headers: headers,
               gaplessPlayback: true,
               filterQuality: FilterQuality.medium,
               loadingBuilder: (context, child, progress) {

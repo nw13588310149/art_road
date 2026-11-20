@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/toolbox_identity.dart';
+
 import '../data/score_form_repository.dart';
 
 final scoreFormRepositoryProvider = Provider<ScoreFormRepository>(
-  (ref) => ScoreFormRepository(),
+  (ref) => ScoreFormRepository(ownerKey: ref.watch(toolboxOwnerProvider)),
 );
 
 final scoreFormControllerProvider =
@@ -14,7 +16,10 @@ final scoreFormControllerProvider =
     );
 
 class ScoreFormState {
-  const ScoreFormState({this.loading = true, this.data = const ScoreFormData()});
+  const ScoreFormState({
+    this.loading = true,
+    this.data = const ScoreFormData(),
+  });
 
   final bool loading;
   final ScoreFormData data;

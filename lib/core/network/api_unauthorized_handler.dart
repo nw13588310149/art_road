@@ -23,6 +23,8 @@ class ApiUnauthorizedHandler {
   /// 每次建立新会话时递增；[handle] 捕获启动时的代次，代次变化则中止处理。
   int _sessionGeneration = 0;
 
+  int get sessionGeneration => _sessionGeneration;
+
   void bindSessionCleared(VoidCallback? callback) {
     _onSessionCleared = callback;
   }
@@ -36,41 +38,42 @@ class ApiUnauthorizedHandler {
   Future<void> handle({
     required AppStorage storage,
     String? message,
+    required String requestToken,
+    required int requestGeneration,
   }) async {
-    if (_handling) {
+    if (_handling ||
+        requestGeneration != _sessionGeneration ||
+        requestToken.isEmpty ||
+        storage.token != requestToken) {
       return;
     }
     _handling = true;
-    final capturedGeneration = _sessionGeneration;
-
-    bool isStale() => capturedGeneration != _sessionGeneration;
+    bool isStale() => requestGeneration != _sessionGeneration;
 
     try {
-      if (isStale()) {
-        return;
-      }
-
-      await storage.clearToken();
-      if (isStale()) {
-        return;
-      }
-      await storage.clearSchoolId();
-      await storage.clearMobile();
-      if (isStale()) {
-        return;
-      }
+      final cleared = await storage.clearTokenIfCurrent(
+        requestToken,
+        () => !isStale(),
+      );
+      if (!cleared || isStale() || storage.token.isNotEmpty) return;
       _onSessionCleared?.call();
       if (isStale()) {
         return;
       }
 
       final context = rootNavigatorKey.currentContext;
+      final toastText = (message == null || message.trim().isEmpty)
+          ? defaultMessage
+          : message.trim();
       if (context == null || !context.mounted) {
+        // 切换账号时根导航会在下一帧重新挂载，登录页由新的应用状态打开。
+        _showToastOnLoginPage(toastText, requestGeneration);
         return;
       }
 
       final routeName = ModalRoute.of(context)?.settings.name;
-      final onAuthPage = routeName == RoutePaths.login ||
+      final onAuthPage =
+          routeName == RoutePaths.login ||
           routeName == RoutePaths.register ||
           routeName == RoutePaths.forget;
 
@@ -78,26 +81,23 @@ class ApiUnauthorizedHandler {
         if (isStale()) {
           return;
         }
-        final toastText = (message == null || message.trim().isEmpty)
-            ? defaultMessage
-            : message.trim();
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          RoutePaths.login,
-          (route) => false,
-        );
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil(RoutePaths.login, (route) => false);
         // Toast 必须在跳转后显示：跳转前插入的 Overlay 会随旧路由销毁。
-        _showToastOnLoginPage(toastText);
+        _showToastOnLoginPage(toastText, requestGeneration);
       }
     } finally {
       // 吞掉同一轮并发 401；登录成功后会 [reset]。
       Future<void>.delayed(const Duration(seconds: 2), () {
-        _handling = false;
+        if (!isStale()) _handling = false;
       });
     }
   }
 
-  void _showToastOnLoginPage(String message) {
+  void _showToastOnLoginPage(String message, int generation) {
     void tryShow([int attempt = 0]) {
+      if (_sessionGeneration != generation) return;
       final context = rootNavigatorKey.currentContext;
       if (context == null || !context.mounted) {
         if (attempt < 5) {

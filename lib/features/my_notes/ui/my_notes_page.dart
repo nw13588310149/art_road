@@ -157,15 +157,16 @@ class _MyNotesPageState extends ConsumerState<MyNotesPage> {
     ref.read(myNotesControllerProvider.notifier).backToList();
   }
 
-  void _openExistingNote(NoteEntry note) {
+  Future<void> _openExistingNote(NoteEntry note) async {
     setState(() {
       _iosCanUndo = false;
       _iosCanRedo = false;
       _backgroundZoom = 1;
     });
-    unawaited(
-      ref.read(myNotesControllerProvider.notifier).openExistingNote(note),
-    );
+    final error = await ref
+        .read(myNotesControllerProvider.notifier)
+        .openExistingNote(note.id);
+    if (mounted && error != null) _showMessage(error);
   }
 
   Future<void> _editDraftTitle() async {

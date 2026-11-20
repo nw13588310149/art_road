@@ -1,7 +1,16 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
+import '../demo/demo_accounts.dart';
 
 class AppStorage {
-  AppStorage(this._prefs);
+  AppStorage(this._prefs)
+    : _sessionToken = ValueNotifier(_prefs.getString(_tokenKey) ?? '');
+
+  final ValueNotifier<String> _sessionToken;
+  int _identityRevision = 0;
+  ValueListenable<String> get sessionToken => _sessionToken;
+  bool get isDemoSession => DemoAccounts.isDemoToken(token);
+  bool get isGuestSession => isGuestSessionToken(token);
 
   static const _tokenKey = 'token';
   static const _pushIdKey = 'pushId';
@@ -78,11 +87,58 @@ class AppStorage {
   bool get showMemberContent => !isAppUnderReview;
 
   Future<void> saveToken(String token) async {
+    final revision = ++_identityRevision;
+    if (this.token != token) {
+      await clearIdentityCache(expectedRevision: revision);
+    }
+    if (revision != _identityRevision) return;
     await _prefs.setString(_tokenKey, token);
+    if (revision == _identityRevision) _sessionToken.value = token;
   }
 
   Future<void> clearToken() async {
+    await clearTokenIfCurrent(token, () => true);
+  }
+
+  Future<bool> clearTokenIfCurrent(
+    String expectedToken,
+    bool Function() isCurrent,
+  ) async {
+    if (token != expectedToken || !isCurrent()) return false;
+    final revision = ++_identityRevision;
+    bool current() => revision == _identityRevision && isCurrent();
     await _prefs.remove(_tokenKey);
+    for (final key in [
+      _schoolIdKey,
+      _mobileKey,
+      _avatarUrlKey,
+      _nicknameKey,
+      _fileBaseUrlKey,
+      _checkStatusKey,
+    ]) {
+      if (!current()) return false;
+      await _prefs.remove(key);
+    }
+    if (!current()) return false;
+    _sessionToken.value = '';
+    return true;
+  }
+
+  /// Clear account-owned cached presentation before publishing a new identity.
+  Future<void> clearIdentityCache({int? expectedRevision}) async {
+    for (final key in [
+      _schoolIdKey,
+      _mobileKey,
+      _avatarUrlKey,
+      _nicknameKey,
+      _fileBaseUrlKey,
+      _checkStatusKey,
+    ]) {
+      if (expectedRevision != null && expectedRevision != _identityRevision) {
+        return;
+      }
+      await _prefs.remove(key);
+    }
   }
 
   Future<void> saveSchoolId(dynamic schoolId) async {

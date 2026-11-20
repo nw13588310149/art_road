@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_loading_indicator.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import '../../network/media_url.dart';
+
 /// PDF 预览区背景（与 Web iframe、pdfrx backgroundColor 一致）。
 const Color kAppPdfBackgroundColor = Color(0xFFFAFAFB);
 
@@ -25,16 +27,12 @@ class AppPdfView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final headers = <String, String>{
-      if (authToken.isNotEmpty) 'app-token': authToken,
-    };
     const backgroundColor = kAppPdfBackgroundColor;
     return ColoredBox(
       color: backgroundColor,
       child: PdfViewer.uri(
-        Uri.parse(url),
-        headers: headers.isEmpty ? null : headers,
-        withCredentials: true,
+        Uri.parse(MediaUrl.resolve(url)),
+        withCredentials: false,
         params: PdfViewerParams(
           backgroundColor: backgroundColor,
           margin: fullscreen ? 0 : 12,
@@ -51,76 +49,76 @@ class AppPdfView extends StatelessWidget {
           // 让 PDF 干净地贴在卡片背景上。
           pageDropShadow: null,
           loadingBannerBuilder: (context, bytesDownloaded, totalBytes) {
-          final progress = (totalBytes != null && totalBytes > 0)
-              ? bytesDownloaded / totalBytes
-              : null;
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                AppLoadingIndicator(value: progress),
-                const SizedBox(height: 12),
-                Text(
-                  progress == null
-                      ? 'PDF 加载中…'
-                      : 'PDF 加载中…${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(
-                    color: Color(0xFF6D6B75),
-                    fontSize: 12,
-                    fontFamily: 'PingFang SC',
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        errorBannerBuilder: (context, error, stackTrace, documentRef) {
-          return Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+            final progress = (totalBytes != null && totalBytes > 0)
+                ? bytesDownloaded / totalBytes
+                : null;
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  const Icon(
-                    Icons.picture_as_pdf_outlined,
-                    color: Color(0xFFC9C6D8),
-                    size: 48,
-                  ),
+                  AppLoadingIndicator(value: progress),
                   const SizedBox(height: 12),
-                  const Text(
-                    'PDF 加载失败，请稍后重试',
-                    style: TextStyle(
+                  Text(
+                    progress == null
+                        ? 'PDF 加载中…'
+                        : 'PDF 加载中…${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                    style: const TextStyle(
                       color: Color(0xFF6D6B75),
-                      fontSize: 13,
+                      fontSize: 12,
                       fontFamily: 'PingFang SC',
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    url,
-                    style: const TextStyle(
-                      color: Color(0xFF715EFE),
-                      fontSize: 11,
-                      fontFamily: 'Manrope',
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    error.toString(),
-                    style: const TextStyle(
-                      color: Color(0xFFB6B5BB),
-                      fontSize: 11,
-                      fontFamily: 'Manrope',
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
                 ],
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+          errorBannerBuilder: (context, error, stackTrace, documentRef) {
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Icon(
+                      Icons.picture_as_pdf_outlined,
+                      color: Color(0xFFC9C6D8),
+                      size: 48,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'PDF 加载失败，请稍后重试',
+                      style: TextStyle(
+                        color: Color(0xFF6D6B75),
+                        fontSize: 13,
+                        fontFamily: 'PingFang SC',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      url,
+                      style: const TextStyle(
+                        color: Color(0xFF715EFE),
+                        fontSize: 11,
+                        fontFamily: 'Manrope',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      error.toString(),
+                      style: const TextStyle(
+                        color: Color(0xFFB6B5BB),
+                        fontSize: 11,
+                        fontFamily: 'Manrope',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

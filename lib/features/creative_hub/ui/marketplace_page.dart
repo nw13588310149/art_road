@@ -1,3 +1,4 @@
+import '../../../core/providers/app_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,13 +18,28 @@ final _listingProvider = FutureProvider.autoDispose
       (ref, id) => ref.watch(marketRepositoryProvider).listing(id),
     );
 
-class MarketplacePage extends ConsumerStatefulWidget {
+class MarketplacePage extends ConsumerWidget {
   const MarketplacePage({super.key});
   @override
-  ConsumerState<MarketplacePage> createState() => _MarketplacePageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(demoSessionProvider)) return const _DemoMarketplacePage();
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Text('作品集市暂未开通，发布与交易功能暂不可用。', textAlign: TextAlign.center),
+      ),
+    );
+  }
 }
 
-class _MarketplacePageState extends ConsumerState<MarketplacePage> {
+class _DemoMarketplacePage extends ConsumerStatefulWidget {
+  const _DemoMarketplacePage();
+  @override
+  ConsumerState<_DemoMarketplacePage> createState() =>
+      __DemoMarketplacePageState();
+}
+
+class __DemoMarketplacePageState extends ConsumerState<_DemoMarketplacePage> {
   String _view = 'discover', _sellerTab = 'listings', _returnView = 'discover';
   String? _selected, _order;
   MarketListing? _editing;

@@ -2,16 +2,22 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/toolbox_identity.dart';
+
 import '../data/value_order_records.dart';
 import '../logic/value_order_game.dart';
 
 final valueOrderRecordRepositoryProvider = Provider<ValueOrderRecordRepository>(
-  (ref) => ValueOrderRecordRepository(),
+  (ref) =>
+      ValueOrderRecordRepository(ownerKey: ref.watch(toolboxOwnerProvider)),
 );
 
 /// 明度排序训练的最佳用时表：键为 `色块数-难度`，值为毫秒。
 final valueOrderRecordsProvider =
-    StateNotifierProvider.autoDispose<ValueOrderRecordsController, Map<String, int>>(
+    StateNotifierProvider.autoDispose<
+      ValueOrderRecordsController,
+      Map<String, int>
+    >(
       (ref) => ValueOrderRecordsController(
         ref.watch(valueOrderRecordRepositoryProvider),
       ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:the_road_of_art_flutter/app/router/app_router.dart';
+import 'package:the_road_of_art_flutter/app/router/route_paths.dart';
 import 'package:the_road_of_art_flutter/core/config/app_config_repository.dart';
 import 'package:the_road_of_art_flutter/core/network/api_response.dart';
 import 'package:the_road_of_art_flutter/core/network/chat_socket_service.dart';
@@ -69,6 +71,24 @@ Future<void> _settleToast(WidgetTester tester) =>
     tester.pump(const Duration(seconds: 3));
 
 void main() {
+  test('退出后从收藏链接或浏览器历史打开业务页会进入登录页', () {
+    const target = RouteSettings(name: RoutePaths.studyCenter);
+    expect(
+      AppRouter.forSession(target, signedIn: false).settings.name,
+      RoutePaths.login,
+    );
+    expect(
+      AppRouter.forSession(target, signedIn: true).settings.name,
+      RoutePaths.studyCenter,
+    );
+    expect(
+      AppRouter.forSession(
+        const RouteSettings(name: RoutePaths.register),
+        signedIn: false,
+      ).settings.name,
+      RoutePaths.register,
+    );
+  });
   group('LoginPage', () {
     testWidgets('consent starts unchecked and is asked for before login', (
       tester,
@@ -104,14 +124,14 @@ void main() {
 
     testWidgets('shows format errors under the field', (tester) async {
       await _pumpPage(tester, const LoginPage());
-      await tester.enterText(find.byType(EditableText).at(0), '1380931');
+      await tester.enterText(find.byType(EditableText).at(0), '');
       await tester.tap(find.text('立即登录'));
       await tester.pump();
-      expect(find.text('手机号应为 11 位数字'), findsOneWidget);
+      expect(find.text('请输入 1–64 位手机号或教职账号'), findsOneWidget);
 
       await tester.enterText(find.byType(EditableText).at(0), '13809310001');
       await tester.pump();
-      expect(find.text('手机号应为 11 位数字'), findsNothing);
+      expect(find.text('请输入 1–64 位手机号或教职账号'), findsNothing);
     });
 
     testWidgets('password field toggles visibility', (tester) async {
@@ -143,7 +163,7 @@ void main() {
     await _pumpPage(tester, const RegisterPage());
     expect(find.text('忘记密码？'), findsNothing);
     expect(find.text('请再次输入密码'), findsOneWidget);
-    expect(find.text('密码为 6–20 位，建议同时包含字母和数字'), findsOneWidget);
+    expect(find.text('密码为 8–64 位，建议同时包含字母和数字'), findsOneWidget);
     expect(find.text('获取验证码'), findsOneWidget);
     expect(find.text('已有账号？'), findsOneWidget);
     expect(find.text('立即登录'), findsOneWidget);

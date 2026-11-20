@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:the_road_of_art_flutter/core/demo/demo_config.dart';
+import 'package:the_road_of_art_flutter/core/demo/demo_accounts.dart';
+import 'package:the_road_of_art_flutter/core/demo/demo_socket_bridge.dart';
 import 'package:the_road_of_art_flutter/core/network/api_response.dart';
 import 'package:the_road_of_art_flutter/core/network/chat_socket_service.dart';
 import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
@@ -14,7 +15,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 class _Storage extends Fake implements AppStorage {
   @override
-  String get token => 'test-session';
+  String token = 'test-session';
 }
 
 class _Sink extends Fake implements WebSocketSink {
@@ -101,6 +102,7 @@ void main() {
     final wires = <_Wire>[];
     final service = ChatSocketService(
       storage: _Storage(),
+      baseUrl: 'http://127.0.0.1:8787/',
       openChannel: (_) {
         final wire = _Wire();
         wires.add(wire);
@@ -144,7 +146,44 @@ void main() {
       unawaited(wire.inbound.close());
     }
     await tester.pump();
-  }, skip: kDemoMode);
+  });
+
+  testWidgets('切换体验身份后忽略延迟的演示消息，正式账号只向指定服务握手', (tester) async {
+    final storage = _Storage()..token = DemoAccounts.teacher.token;
+    final wire = _Wire();
+    final addresses = <Uri>[];
+    final events = <ChatSocketEventType>[];
+    final service = ChatSocketService(
+      storage: storage,
+      baseUrl: 'https://example.test/',
+      openChannel: (uri) {
+        addresses.add(uri);
+        return wire;
+      },
+    );
+    final sub = service.events.listen((event) => events.add(event.type));
+    service.connect();
+    DemoSocketBridge.instance.pushChatMessage({'classId': '1', 'msgId': '5'});
+    storage.token = DemoAccounts.student.token;
+    service.connect();
+    await tester.pump(const Duration(seconds: 3));
+    expect(events, isNot(contains(ChatSocketEventType.chatNewMessage)));
+    expect(addresses, isEmpty);
+    for (final token in ['youke', 'demo.student.13900001111', '']) {
+      storage.token = token;
+      service.connect();
+      expect(service.isConnected, isFalse);
+      expect(addresses, isEmpty);
+    }
+    storage.token = 'formal-test-session';
+    service.connect();
+    expect(addresses.single.toString(), 'wss://example.test/websocket');
+    expect(wire.sink.sent.single, {'type': 1000, 'token': storage.token});
+    service.dispose();
+    unawaited(sub.cancel());
+    unawaited(wire.inbound.close());
+    await tester.pump();
+  });
 
   testWidgets('跨群同步从活跃群快照开始，在线撤回就地生效，断线期间才轮询', (tester) async {
     tester.view.physicalSize = const Size(1180, 820);

@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/router/route_paths.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/demo/demo_accounts.dart';
-import '../../../core/demo/demo_config.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_font.dart';
 import '../../../core/ui/ui.dart';
@@ -23,10 +22,10 @@ const _textSecondary = Color(0xFF8E8D95);
 const _softBorder = Color(0xFFF3F2F3);
 
 class HelpGuidePage extends ConsumerStatefulWidget {
-  const HelpGuidePage({super.key, this.demoMode = kDemoMode});
+  const HelpGuidePage({super.key, this.demoMode});
 
   /// 演示版在页头下方提供「跳过 / 恢复新手引导」（演示与截图走查用）。
-  final bool demoMode;
+  final bool? demoMode;
 
   @override
   ConsumerState<HelpGuidePage> createState() => _HelpGuidePageState();
@@ -44,7 +43,7 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
   @override
   void initState() {
     super.initState();
-    if (widget.demoMode) {
+    if (widget.demoMode ?? ref.read(demoSessionProvider)) {
       _guideStore.allSeen().then((value) {
         if (mounted) setState(() => _guidesSkipped = value);
       });
@@ -61,7 +60,8 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
   String _currentRole() {
     final role = ref.read(shellControllerProvider).user.role.trim();
     if (role.isNotEmpty) return role;
-    return DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
+    final storage = ref.read(appStorageProvider);
+    return storage.isDemoSession ? DemoAccounts.fromToken(storage.token).roleKey : '';
   }
 
   Future<void> _toggleGuides() async {
@@ -127,7 +127,7 @@ class _HelpGuidePageState extends ConsumerState<HelpGuidePage> {
           selectedCategoryId: state.selectedCategoryId,
           onSelected: controller.selectCategory,
         ),
-        if (widget.demoMode) ...[
+        if (widget.demoMode ?? ref.watch(demoSessionProvider)) ...[
           SizedBox(height: ui(10)),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: ui(2)),

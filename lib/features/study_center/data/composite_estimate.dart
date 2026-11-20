@@ -161,7 +161,13 @@ class CompositeEstimateForm {
   }
 }
 
-/// 预估输入保存在本机，按账号（手机号）分开存。
+class CompositeEstimateRequestFailure implements Exception {
+  const CompositeEstimateRequestFailure(this.message);
+
+  final String message;
+}
+
+/// App 从当前会话读取和保存预估输入。本地存储供独立工具使用。
 class CompositeEstimateStore {
   const CompositeEstimateStore({this.account = '', this.client});
 
@@ -176,8 +182,13 @@ class CompositeEstimateStore {
   Future<CompositeEstimateForm> load() async {
     if (client case final api?) {
       final response = await api.get('/app/study/goal');
-      final data = response.data;
-      return CompositeEstimateForm.fromJson(data);
+      if (!response.isSuccess) {
+        throw CompositeEstimateRequestFailure(response.displayMsg);
+      }
+      if (response.data is! Map) {
+        throw const CompositeEstimateRequestFailure('综合分预估数据格式错误');
+      }
+      return CompositeEstimateForm.fromJson(response.data);
     }
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(storageKey);
@@ -193,7 +204,10 @@ class CompositeEstimateStore {
 
   Future<void> save(CompositeEstimateForm form) async {
     if (client case final api?) {
-      await api.post('/app/study/goal', data: form.toJson());
+      final response = await api.post('/app/study/goal', data: form.toJson());
+      if (!response.isSuccess) {
+        throw CompositeEstimateRequestFailure(response.displayMsg);
+      }
       return;
     }
     final prefs = await SharedPreferences.getInstance();

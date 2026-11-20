@@ -1,3 +1,4 @@
+import 'toolbox_identity.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -59,6 +60,10 @@ String _two(int value) => value.toString().padLeft(2, '0');
 
 /// 考试倒计时本地存储（SharedPreferences JSON 列表）。
 class CountdownRepository {
+  // Default preserves standalone demo tools; application providers always bind an owner.
+  CountdownRepository({this.ownerKey = 'legacy-demo'});
+  final String? ownerKey;
+
   static const storageKey = 'art_toolbox_countdowns_v1';
 
   /// 仅首次使用（尚无存储）时写入的示例日期。
@@ -77,9 +82,13 @@ class CountdownRepository {
 
   Future<List<ExamCountdown>> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(storageKey);
+    final raw = ownerKey == null
+        ? null
+        : prefs.getString(toolboxStorageKey(storageKey, ownerKey));
     if (raw == null) {
-      final seeded = defaults();
+      final seeded = toolboxDemoOwner(ownerKey)
+          ? defaults()
+          : <ExamCountdown>[];
       await save(seeded);
       return seeded;
     }
@@ -96,8 +105,9 @@ class CountdownRepository {
 
   Future<void> save(List<ExamCountdown> items) async {
     final prefs = await SharedPreferences.getInstance();
+    if (ownerKey == null) return;
     await prefs.setString(
-      storageKey,
+      toolboxStorageKey(storageKey, ownerKey),
       jsonEncode([for (final item in items) item.toJson()]),
     );
   }

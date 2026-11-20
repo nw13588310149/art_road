@@ -79,6 +79,7 @@ void main() {
     await settle(tester);
     expect(find.text('阅读资料'), findsOneWidget);
     expect(find.text('开始阅读'), findsOneWidget);
+    expect(find.text('撤下课件'), findsNothing);
     await tester.tap(find.text('收藏'));
     await settle(tester);
     expect(find.text('已收藏'), findsOneWidget);
@@ -123,6 +124,14 @@ void main() {
     await settle(tester);
     expect(find.text('明暗关系阅读练习'), findsOneWidget);
     expect(find.text('课件内容'), findsNothing);
+    await tester.tap(find.text('明暗关系阅读练习'));
+    await settle(tester);
+    await tester.tap(find.text('撤下课件'));
+    await settle(tester);
+    expect(find.text('撤下这份课件？'), findsOneWidget);
+    await tester.tap(find.text('撤下'));
+    await settle(tester);
+    expect(find.text('明暗关系阅读练习'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

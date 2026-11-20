@@ -3,6 +3,8 @@ import 'dart:ui_web' as ui_web;
 import 'package:flutter/widgets.dart';
 import 'package:web/web.dart' as web;
 
+import '../../network/media_url.dart';
+
 /// 当前在 DOM 中"活跃"（最近一次 factory 创建出来）的 iframe。
 /// 用作 [tryFullscreenWebPdf] 的目标——仅维护一份"最近一次"，
 /// 多个 [AppPdfView] 同时存活时也优先全屏最近一个。
@@ -63,7 +65,7 @@ class _AppPdfViewState extends State<AppPdfView> {
         'theory-pdf-iframe-${DateTime.now().millisecondsSinceEpoch}-${_seq++}';
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
       final iframe = web.HTMLIFrameElement()
-        ..src = widget.url
+        ..src = MediaUrl.resolve(widget.url)
         ..allowFullscreen = true
         ..style.border = 'none'
         ..style.width = '100%'

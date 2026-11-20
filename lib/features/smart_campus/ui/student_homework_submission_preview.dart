@@ -9,7 +9,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import '../../../core/providers/app_providers.dart';
+import '../../../core/network/media_url.dart';
+
 import '../../../core/widgets/image_gallery_viewer.dart';
 import '../../courseware/ui/courseware_inline_preview.dart';
 import '../../courseware/ui/courseware_url_opener.dart';
@@ -88,7 +89,7 @@ Future<void> showStudentHomeworkSubmissionPreview(
   String mediumLabel = '',
   String attachmentName = '',
 }) async {
-  final u = fileUrl.trim();
+  final u = MediaUrl.resolve(fileUrl);
   if (u.isEmpty) return;
 
   final kind = inferStudentSubmissionPreviewKind(
@@ -106,7 +107,6 @@ Future<void> showStudentHomeworkSubmissionPreview(
     return;
   }
 
-  final token = ref.read(appStorageProvider).token;
   if (!context.mounted) return;
 
   // `showDialog` 的 builder 拿到的 context 在根 Navigator 的 overlay 上，
@@ -126,7 +126,6 @@ Future<void> showStudentHomeworkSubmissionPreview(
       return _SubmissionPreviewShell(
         ui: ui,
         title: title,
-        token: token,
         fileUrl: u,
         typeTag: typeTag,
         mediumLabel: mediumLabel,
@@ -141,7 +140,6 @@ class _SubmissionPreviewShell extends StatelessWidget {
   const _SubmissionPreviewShell({
     required this.ui,
     required this.title,
-    required this.token,
     required this.fileUrl,
     required this.typeTag,
     required this.mediumLabel,
@@ -151,7 +149,6 @@ class _SubmissionPreviewShell extends StatelessWidget {
 
   final double Function(double) ui;
   final String title;
-  final String token;
   final String fileUrl;
   final String typeTag;
   final String mediumLabel;
@@ -183,11 +180,10 @@ class _SubmissionPreviewShell extends StatelessWidget {
               ),
               Expanded(
                 child: useWebInline
-                    ? CoursewareInlinePreview(url: fileUrl, authToken: token)
+                    ? CoursewareInlinePreview(url: fileUrl)
                     : _NativeSubmissionBody(
                         ui: ui,
                         fileUrl: fileUrl,
-                        authToken: token,
                         typeTag: typeTag,
                         mediumLabel: mediumLabel,
                         attachmentName: attachmentName,
@@ -251,7 +247,6 @@ class _NativeSubmissionBody extends StatelessWidget {
   const _NativeSubmissionBody({
     required this.ui,
     required this.fileUrl,
-    required this.authToken,
     required this.typeTag,
     required this.mediumLabel,
     required this.attachmentName,
@@ -259,7 +254,6 @@ class _NativeSubmissionBody extends StatelessWidget {
 
   final double Function(double) ui;
   final String fileUrl;
-  final String authToken;
   final String typeTag;
   final String mediumLabel;
   final String attachmentName;
@@ -274,10 +268,7 @@ class _NativeSubmissionBody extends StatelessWidget {
     );
     return switch (kind) {
       StudentSubmissionPreviewKind.image => _NativeImagePreview(url: fileUrl),
-      StudentSubmissionPreviewKind.pdf => _NativePdfPreview(
-        url: fileUrl,
-        authToken: authToken,
-      ),
+      StudentSubmissionPreviewKind.pdf => _NativePdfPreview(url: fileUrl),
       StudentSubmissionPreviewKind.audio => _HomeworkMediaKitPlayer(
         url: fileUrl,
         isVideo: false,
@@ -323,20 +314,15 @@ class _NativeImagePreview extends StatelessWidget {
 }
 
 class _NativePdfPreview extends StatelessWidget {
-  const _NativePdfPreview({required this.url, required this.authToken});
+  const _NativePdfPreview({required this.url});
 
   final String url;
-  final String authToken;
 
   @override
   Widget build(BuildContext context) {
-    final headers = <String, String>{
-      if (authToken.isNotEmpty) 'app-token': authToken,
-    };
     return PdfViewer.uri(
-      Uri.parse(url),
-      headers: headers.isEmpty ? null : headers,
-      withCredentials: true,
+      Uri.parse(MediaUrl.resolve(url)),
+      withCredentials: false,
       params: PdfViewerParams(
         backgroundColor: const Color(0xFFFAFAFB),
         margin: 12,

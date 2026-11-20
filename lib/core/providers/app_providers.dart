@@ -15,16 +15,26 @@ final appStorageProvider = Provider<AppStorage>((ref) {
   throw UnimplementedError('AppStorage provider must be overridden in main().');
 });
 
+final demoSessionProvider = Provider<bool>((ref) {
+  final storage = ref.watch(appStorageProvider);
+  final session = storage.sessionToken;
+  session.addListener(ref.invalidateSelf);
+  ref.onDispose(() => session.removeListener(ref.invalidateSelf));
+  return storage.isDemoSession;
+});
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   final storage = ref.watch(appStorageProvider);
-  return ApiClient(storage: storage, demoRouter: DemoBackend.platform);
+  final client = ApiClient(storage: storage, demoRouter: DemoBackend.platform);
+  ref.onDispose(client.dispose);
+  return client;
 });
 
 /// 艺考网阅卷系统客户端：学生接口认 `app-token`，教职接口认 `school-token`。
 /// 平台账号与阅卷账号打通前，两者均携带当前登录 token。
 final markingApiClientProvider = Provider<ApiClient>((ref) {
   final storage = ref.watch(appStorageProvider);
-  return ApiClient(
+  final client = ApiClient(
     storage: storage,
     baseUrl: AppConstants.markingApiBaseUrl,
     demoRouter: DemoBackend.marking,
@@ -33,6 +43,8 @@ final markingApiClientProvider = Provider<ApiClient>((ref) {
       'school-token': s.token,
     },
   );
+  ref.onDispose(client.dispose);
+  return client;
 });
 
 /// 在 [MyApp] 挂载后绑定一次，避免 [apiClientProvider] 与 shell 模块循环依赖。

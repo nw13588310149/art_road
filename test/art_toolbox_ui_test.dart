@@ -1,3 +1,6 @@
+import 'package:the_road_of_art_flutter/core/providers/app_providers.dart';
+import 'package:the_road_of_art_flutter/core/storage/app_storage.dart';
+import 'package:the_road_of_art_flutter/core/demo/demo_accounts.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -51,9 +54,13 @@ Future<void> _pumpToolbox(
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('token', DemoAccounts.student.token);
+  final storage = AppStorage(prefs);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        appStorageProvider.overrideWithValue(storage),
         if (image != null)
           toolboxImageControllerProvider.overrideWith(
             (ref) => _PreloadedImageController(image),
@@ -270,7 +277,9 @@ void main() {
     expect(find.textContaining('各省以当年省教育考试院公布为准'), findsOneWidget);
     final prefs = await SharedPreferences.getInstance();
     expect(
-      prefs.getString('art_toolbox_score_form_v1'),
+      prefs.getString(
+        'art_toolbox_score_form_v1:demo:${DemoAccounts.student.userId}',
+      ),
       contains('"culture":"500"'),
     );
   });
@@ -283,7 +292,9 @@ void main() {
     expect(find.text('1'), findsWidgets);
     final prefs = await SharedPreferences.getInstance();
     expect(
-      prefs.getString('art_toolbox_exam_checklist_v1'),
+      prefs.getString(
+        'art_toolbox_exam_checklist_v1:demo:${DemoAccounts.student.userId}',
+      ),
       contains('doc-admission'),
     );
   });

@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/toolbox_identity.dart';
+
 import '../data/countdown_repository.dart';
 
 final countdownRepositoryProvider = Provider<CountdownRepository>(
-  (ref) => CountdownRepository(),
+  (ref) => CountdownRepository(ownerKey: ref.watch(toolboxOwnerProvider)),
 );
 
 final countdownControllerProvider =

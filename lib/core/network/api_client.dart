@@ -5,53 +5,76 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../constants/app_constants.dart';
+import '../demo/demo_accounts.dart';
 import '../demo/demo_api_interceptor.dart';
 import '../demo/demo_backend.dart';
-import '../demo/demo_config.dart';
 import '../storage/app_storage.dart';
 import 'api_response.dart';
 import 'api_unauthorized_handler.dart';
 import 'big_int_safe_transformer.dart';
 import 'media_url.dart';
+import 'secure_redirect_adapter.dart';
 
 class ApiClient {
   static const String extraLightweightJson = 'lightweightJson';
 
-  static const Set<String> _unauthorizedIgnoredPaths = <String>{
+  static final _demoCredential = RegExp(
+    r'^(?:Bearer\s+)?demo\.',
+    caseSensitive: false,
+  );
+
+  static const _accountEndpoints = <String>{
     '/app/user/mobileLogin',
     '/app/user/register',
     '/app/user/resetPassword',
     '/app/user/sendSmsCode',
-    '/app/user/logout',
+  };
+
+  static const _credentialHeaders = {
+    'app-token',
+    'school-token',
+    'token',
+    'authorization',
   };
 
   ApiClient({
     required AppStorage storage,
-    String baseUrl = AppConstants.apiBaseUrl,
+    String? baseUrl,
     DemoRouter? demoRouter,
+    bool dispatchDemoBySession = true,
     Map<String, dynamic> Function(AppStorage storage)? authHeaders,
   }) : _storage = storage,
        _authHeaders = authHeaders ?? _platformAuthHeaders,
-       _dio = Dio(
-         BaseOptions(
-           baseUrl: baseUrl,
-           connectTimeout: const Duration(seconds: 20),
-           receiveTimeout: const Duration(seconds: 60),
-           contentType: Headers.jsonContentType,
-         ),
-       )..transformer = const BigIntSafeTransformer() {
-    if (kDemoMode && demoRouter != null) {
-      _dio.interceptors.add(
-        DemoApiInterceptor(
-          router: demoRouter,
-          apiHost: Uri.parse(baseUrl).host,
-        ),
-      );
+       _hasDemoRouter = demoRouter != null,
+       _dispatchDemoBySession = dispatchDemoBySession {
+    final configured = AppConstants.secureApiBase(
+      baseUrl ?? AppConstants.apiBaseUrl,
+    );
+    _hasRealBase = configured.isNotEmpty;
+    _baseUri = Uri.parse(
+      _hasRealBase ? configured : 'https://local-demo.invalid/',
+    );
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: _baseUri.toString(),
+        connectTimeout: const Duration(seconds: 20),
+        receiveTimeout: const Duration(seconds: 60),
+        contentType: Headers.jsonContentType,
+      ),
+    )..transformer = const BigIntSafeTransformer();
+    _dio.httpClientAdapter = protectRedirects(_dio.httpClientAdapter);
+    if (demoRouter != null) {
+      _dio.interceptors.add(DemoApiInterceptor(router: demoRouter));
     }
   }
 
   final AppStorage _storage;
-  final Dio _dio;
+  late final Dio _dio;
+  late final Uri _baseUri;
+  late final bool _hasRealBase;
+  bool _disposed = false;
+  final bool _hasDemoRouter;
+  final bool _dispatchDemoBySession;
   final Map<String, dynamic> Function(AppStorage storage) _authHeaders;
 
   static Map<String, dynamic> _platformAuthHeaders(AppStorage storage) =>
@@ -65,23 +88,13 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
     Duration? timeout,
-  }) async {
-    try {
-      final response = await _dio.get<dynamic>(
-        path,
-        queryParameters: queryParameters,
-        options: _buildOptions(headers: headers, timeout: timeout),
-      );
-      return _finalizeResponse(
-        path,
-        _normalizeForPath(path, _toApiResponse(response.data)),
-      );
-    } on DioException catch (error) {
-      return _finalizeResponse(path, _fromDioException(path, error));
-    } catch (_) {
-      return ApiResponse.failure('网络异常，请稍后重试');
-    }
-  }
+  }) => _requestJson(
+    'GET',
+    path,
+    queryParameters: queryParameters,
+    headers: headers,
+    timeout: timeout,
+  );
 
   Future<ApiResponse> post(
     String path, {
@@ -89,27 +102,14 @@ class ApiClient {
     Map<String, dynamic>? headers,
     Duration? timeout,
     bool lightweightJson = false,
-  }) async {
-    try {
-      final response = await _dio.post<dynamic>(
-        path,
-        data: data,
-        options: _buildOptions(
-          headers: headers,
-          timeout: timeout,
-          lightweightJson: lightweightJson,
-        ),
-      );
-      return _finalizeResponse(
-        path,
-        _normalizeForPath(path, _toApiResponse(response.data)),
-      );
-    } on DioException catch (error) {
-      return _finalizeResponse(path, _fromDioException(path, error));
-    } catch (_) {
-      return ApiResponse.failure('网络异常，请稍后重试');
-    }
-  }
+  }) => _requestJson(
+    'POST',
+    path,
+    data: data,
+    headers: headers,
+    timeout: timeout,
+    lightweightJson: lightweightJson,
+  );
 
   Future<ApiResponse> postFormData(
     String path, {
@@ -117,28 +117,59 @@ class ApiClient {
     void Function(int sent, int total)? onSendProgress,
     Map<String, dynamic>? headers,
     Duration? timeout,
+  }) => _requestJson(
+    'POST',
+    path,
+    data: data,
+    headers: headers,
+    timeout: timeout,
+    onSendProgress: onSendProgress,
+  );
+
+  Future<ApiResponse> _requestJson(
+    String method,
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? headers,
+    Duration? timeout,
+    bool lightweightJson = false,
+    void Function(int sent, int total)? onSendProgress,
   }) async {
+    final session = _captureSession();
     try {
-      // 对齐 1.0（axios + FormData）：不手动设置 Content-Type，
-      // 让 Dio/浏览器自动生成带 boundary 的 multipart/form-data。
-      final mergedHeaders =
-          <String, dynamic>{..._authHeaders(_storage), ...?headers}
-            ..removeWhere(
-            (key, _) => key.toLowerCase() == Headers.contentTypeHeader,
-          );
-      final response = await _dio.post<dynamic>(
+      final options = _buildOptions(
+        method,
         path,
+        session,
         data: data,
+        headers: headers,
+        timeout: timeout,
+        lightweightJson: lightweightJson,
+      );
+      final response = await _dio.request<dynamic>(
+        _baseUri.resolve(path).toString(),
+        data: data,
+        queryParameters: queryParameters,
         onSendProgress: onSendProgress,
-        options: Options(
-          headers: mergedHeaders,
-          sendTimeout: timeout,
-          receiveTimeout: timeout,
+        options: options,
+      );
+      return _finalizeResponse(
+        response.requestOptions,
+        session,
+        _normalizeForPath(
+          response.requestOptions.uri.path,
+          _toApiResponse(response.data),
         ),
       );
-      return _finalizeResponse(path, _toApiResponse(response.data));
     } on DioException catch (error) {
-      return _finalizeResponse(path, _fromDioException(path, error));
+      return _finalizeResponse(
+        error.requestOptions,
+        session,
+        _fromDioException(error),
+      );
+    } on _ApiUnavailable catch (error) {
+      return ApiResponse.failure(error.message);
     } catch (_) {
       return ApiResponse.failure('网络异常，请稍后重试');
     }
@@ -151,48 +182,137 @@ class ApiClient {
     Duration? timeout,
     bool allowEmpty = false,
   }) async {
-    final response = await _dio.get<List<int>>(
-      url,
-      queryParameters: queryParameters,
-      options: _buildOptions(
-        headers: headers,
-        timeout: timeout,
-      ).copyWith(responseType: ResponseType.bytes),
-    );
-    final bytes = response.data;
-    if (bytes == null || (!allowEmpty && bytes.isEmpty)) {
-      throw StateError('Empty response bytes');
+    final session = _captureSession();
+    try {
+      final response = await _dio.get<List<int>>(
+        _baseUri.resolve(url).toString(),
+        queryParameters: queryParameters,
+        options: _buildOptions(
+          'GET',
+          url,
+          session,
+          headers: headers,
+          timeout: timeout,
+        ).copyWith(responseType: ResponseType.bytes),
+      );
+      final bytes = response.data;
+      if (bytes == null || (!allowEmpty && bytes.isEmpty)) {
+        throw StateError('Empty response bytes');
+      }
+      return Uint8List.fromList(bytes);
+    } on DioException catch (error) {
+      _finalizeResponse(
+        error.requestOptions,
+        session,
+        _fromDioException(error),
+      );
+      rethrow;
     }
-    return Uint8List.fromList(bytes);
+  }
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _dio.close(force: true);
   }
 
   Future<void> updateToken(String token) async {
+    if (_disposed) return;
     await _storage.saveToken(token);
   }
 
-  Options _buildOptions({
+  ({String token, int generation}) _captureSession() => (
+    token: _storage.token,
+    generation: ApiUnauthorizedHandler.instance.sessionGeneration,
+  );
+
+  Options _buildOptions(
+    String method,
+    String path,
+    ({String token, int generation}) session, {
+    Object? data,
     Map<String, dynamic>? headers,
     Duration? timeout,
     bool lightweightJson = false,
   }) {
+    if (_disposed) throw const _ApiUnavailable('请求已取消，请重试');
+    final sessionToken = session.token;
+    final uri = _baseUri.resolve(path);
+    final firstParty =
+        uri.scheme == _baseUri.scheme &&
+        uri.host == _baseUri.host &&
+        uri.port == _baseUri.port;
+    final accountRequest =
+        firstParty && method == 'POST' && _accountEndpoints.contains(uri.path);
+    final forcedDemo = !_dispatchDemoBySession && _hasDemoRouter;
+    final demoAccount =
+        accountRequest &&
+        data is Map &&
+        DemoAccounts.lookupMobile(data['mobile']?.toString().trim() ?? '') !=
+            null;
+    final useDemo =
+        firstParty &&
+        (forcedDemo || (accountRequest ? demoAccount : _storage.isDemoSession));
+    if (useDemo && !_hasDemoRouter) {
+      throw const _ApiUnavailable('演示服务暂不可用');
+    }
+    if (firstParty &&
+        !accountRequest &&
+        !useDemo &&
+        DemoAccounts.isObsoleteDemoToken(sessionToken)) {
+      throw const _ApiUnavailable('演示账号已失效，请重新登录');
+    }
+    if (firstParty && !useDemo && !_hasRealBase) {
+      throw const _ApiUnavailable('请先配置正式服务地址');
+    }
+
     final mergedHeaders = <String, dynamic>{
       ..._authHeaders(_storage),
       ...?headers,
     };
-    final hasContentType = mergedHeaders.keys.any(
-      (key) => key.toLowerCase() == Headers.contentTypeHeader,
-    );
-    if (!hasContentType) {
+    mergedHeaders.removeWhere((key, value) {
+      final name = key.toLowerCase();
+      if (name == Headers.contentTypeHeader && data is FormData) return true;
+      if (name == 'schoolid' && (!firstParty || accountRequest)) return true;
+      if (!_credentialHeaders.contains(name)) return false;
+      if (!firstParty || accountRequest) return true;
+      final credential = value.toString().trim();
+      return !useDemo &&
+          (isGuestSessionToken(credential) ||
+              _demoCredential.hasMatch(credential));
+    });
+    if (data is! FormData &&
+        !mergedHeaders.keys.any(
+          (key) => key.toLowerCase() == Headers.contentTypeHeader,
+        )) {
       mergedHeaders[Headers.contentTypeHeader] = Headers.jsonContentType;
     }
 
+    final bindsSession =
+        firstParty &&
+        !accountRequest &&
+        sessionToken.isNotEmpty &&
+        mergedHeaders.entries.any(
+          (entry) =>
+              _credentialHeaders.contains(entry.key.toLowerCase()) &&
+              entry.value == sessionToken,
+        );
     return Options(
+      method: method,
       headers: mergedHeaders,
+      followRedirects: !firstParty,
       sendTimeout: timeout,
       receiveTimeout: timeout,
-      extra: lightweightJson
-          ? <String, dynamic>{extraLightweightJson: true}
-          : null,
+      extra: {
+        if (lightweightJson) extraLightweightJson: true,
+        if (useDemo)
+          DemoApiInterceptor.canDispatch: () =>
+              !_disposed &&
+              session.token == _storage.token &&
+              session.generation ==
+                  ApiUnauthorizedHandler.instance.sessionGeneration,
+        if (bindsSession) 'bindsSession': true,
+      },
     );
   }
 
@@ -218,8 +338,8 @@ class ApiClient {
               decoded.map((key, value) => MapEntry(key.toString(), value)),
             );
           }
-        } catch (error) {
-          debugPrint('[api] _toApiResponse: not JSON string -> $error');
+        } catch (_) {
+          debugPrint('[api] _toApiResponse: not JSON string');
         }
       }
     }
@@ -273,12 +393,14 @@ class ApiClient {
     map[key] = MediaUrl.resolve(trimmed);
   }
 
-  bool _shouldHandleUnauthorized(String path) {
-    return !_unauthorizedIgnoredPaths.contains(path);
-  }
-
-  ApiResponse _finalizeResponse(String path, ApiResponse response) {
-    if (response.code != 401 || !_shouldHandleUnauthorized(path)) {
+  ApiResponse _finalizeResponse(
+    RequestOptions request,
+    ({String token, int generation}) session,
+    ApiResponse response,
+  ) {
+    if (response.code != 401 ||
+        request.extra['bindsSession'] != true ||
+        request.uri.path == '/app/user/logout') {
       return response;
     }
     final toastMsg = response.msg.trim().isEmpty
@@ -288,25 +410,22 @@ class ApiClient {
       ApiUnauthorizedHandler.instance.handle(
         storage: _storage,
         message: toastMsg,
+        requestToken: session.token,
+        requestGeneration: session.generation,
       ),
     );
     return ApiResponse.failure(toastMsg, code: 401);
   }
 
-  ApiResponse _fromDioException(String path, DioException error) {
+  ApiResponse _fromDioException(DioException error) {
     final statusCode = error.response?.statusCode;
     final data = error.response?.data;
     if (data is Map<String, dynamic>) {
       final parsed = ApiResponse.fromJson(data);
-      if (parsed.code == 401 || statusCode == 401) {
-        return _finalizeResponse(path, parsed);
-      }
+      if (parsed.code == 401) return parsed;
     }
     if (statusCode == 401) {
-      return _finalizeResponse(
-        path,
-        ApiResponse.failure(_extractDioMessage(error), code: 401),
-      );
+      return ApiResponse.failure(_extractDioMessage(error), code: 401);
     }
     return ApiResponse.failure(_extractDioMessage(error));
   }
@@ -324,4 +443,13 @@ class ApiClient {
     }
     return '';
   }
+}
+
+class _ApiUnavailable implements Exception {
+  const _ApiUnavailable(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

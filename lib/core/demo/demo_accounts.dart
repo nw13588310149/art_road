@@ -79,7 +79,22 @@ class DemoAccount {
   );
 }
 
+/// Guest is an anonymous identity, never a local demo account.
+bool isGuestSessionToken(String token) => token == 'youke';
+
 abstract final class DemoAccounts {
+  /// Only the packaged identities may use local fixtures.
+  static DemoAccount? lookupMobile(String mobile) {
+    for (final account in all) {
+      if (account.mobile == mobile.trim()) return account;
+    }
+    return null;
+  }
+
+  static bool isDemoToken(String token) => all.any((a) => a.token == token);
+  static bool isObsoleteDemoToken(String token) =>
+      token.startsWith('demo.') && !isDemoToken(token);
+
   static const student = DemoAccount(
     role: DemoRole.student,
     mobile: '13809310001',

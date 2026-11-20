@@ -51,9 +51,16 @@ class _ArtworksPageState extends ConsumerState<ArtworksPage> {
       );
     }
     final role = ref.watch(shellControllerProvider.select((s) => s.user.role));
+    final storage = ref.read(appStorageProvider);
     final resolvedRole = role.trim().isNotEmpty
         ? role
-        : DemoAccounts.fromToken(ref.read(appStorageProvider).token).roleKey;
+        : storage.isDemoSession ? DemoAccounts.fromToken(storage.token).roleKey : '';
+    if (resolvedRole.isEmpty) {
+      return Center(child: TextButton(
+        onPressed: ref.read(shellControllerProvider.notifier).refreshUserAndSchool,
+        child: const Text('正在确认账号身份，点击可重试'),
+      ));
+    }
     return isStaffRole(resolvedRole)
         ? TeacherArtworksView(
             key: const ValueKey('artworks-teacher'),

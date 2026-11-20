@@ -1,3 +1,4 @@
+import '../../../core/demo/demo_accounts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,7 +121,9 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
   List<Widget> _smsStep(AuthState state) {
     return [
       Text(
-        '点击「获取验证码」，验证码将以短信发送到 ${_maskMobile(state.mobile)}。',
+        DemoAccounts.lookupMobile(state.mobile) != null
+            ? '${_maskMobile(state.mobile)} 为预置演示账号，使用本机验证码，不会发送真实短信。'
+            : '点击「获取验证码」，验证码将以短信发送到 ${_maskMobile(state.mobile)}。',
         style: authLineText.copyWith(
           color: AppColors.textPlaceholder,
           height: 20 / 14,
@@ -156,7 +159,7 @@ class _ForgetPasswordPageState extends ConsumerState<ForgetPasswordPage> {
       if (passwordError == null) ...[
         const SizedBox(height: 11),
         Text(
-          '密码为 6–20 位，建议同时包含字母和数字',
+          '密码为 8–64 位，建议同时包含字母和数字',
           style: AppText.caption12.copyWith(height: 1),
         ),
       ],

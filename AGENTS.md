@@ -2,7 +2,7 @@
 
 ## Product
 - 美育集: a landscape iPad app for art-exam (美术艺考) students, studio teachers and studio staff, built around the marking system (阅卷系统).
-- 3.1 is a demo build: every request is answered by the local demo backend using the app's API paths. The app name is 「美育集」. The logo is the ArtEd.Hub / 美育集 lockup in `assets/images/brand/meiyuji_logo.png`; the square app icon uses the 「美育集」 wordmark.
+- The iPad build supports both real school accounts and seven local demo identities. The app name is 「美育集」. The logo is the ArtEd.Hub / 美育集 lockup in `assets/images/brand/meiyuji_logo.png`; the square app icon uses the 「美育集」 wordmark.
 - Product plan and implementation: `docs/美育集3.1产品与交互方案.md`, `docs/美育集3.0产品方案.md`, `docs/美育集3.0实施规格.md`. Design rules and component library: `docs/设计规范.md`. Backend gaps before going live: `docs/后端缺口清单.md`. Run instructions and demo accounts: `README.md`. Audit findings and fix records: `docs/走查问题清单.md`, `docs/走查/`.
 
 ## Current Rules
@@ -86,7 +86,7 @@
 - Generic modules kept from the original platform and art-ified: `ai_chat`, `courseware` (incl. cloud drive), `video_tutorial`, `my_notes`, `my_collection`, `quiz_practice`, `circle`, `school`, `smart_campus`, `personal_center`, `help_guide`, `feedback`, `consultation`.
 
 ## Demo Mode
-- `kDemoMode` comes from `--dart-define=DEMO_MODE` (default `true`). `main.dart` initializes `DemoStore`, `DemoMedia` and the fixtures before `runApp`.
+- Select the data source per account. Login, SMS and password recovery recognize the seven exact demo mobiles. Authenticated feature requests and socket connections use the current session. Keep real accounts on the configured backend even when the server is unavailable. `main.dart` initializes the demo fixtures before `runApp`.
 - Each `ApiClient` gets a `DemoApiInterceptor` that answers through a `DemoRouter` (`DemoBackend.platform` / `DemoBackend.marking`):
   - handlers return the `data` payload; the interceptor wraps `{code: 0, msg: 'ok', data}`;
   - throw `DemoApiException` for business errors;

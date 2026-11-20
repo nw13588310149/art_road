@@ -39,7 +39,11 @@ void main() {
         overrides: [
           appStorageProvider.overrideWithValue(storage),
           apiClientProvider.overrideWithValue(
-            ApiClient(storage: storage, demoRouter: router),
+            ApiClient(
+              storage: storage,
+              demoRouter: router,
+              dispatchDemoBySession: false,
+            ),
           ),
         ],
         child: MaterialApp(
@@ -80,7 +84,11 @@ void main() {
         overrides: [
           appStorageProvider.overrideWithValue(storage),
           apiClientProvider.overrideWithValue(
-            ApiClient(storage: storage, demoRouter: router),
+            ApiClient(
+              storage: storage,
+              demoRouter: router,
+              dispatchDemoBySession: false,
+            ),
           ),
         ],
         child: MaterialApp(

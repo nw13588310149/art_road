@@ -46,10 +46,12 @@ class AppConfigRepository {
   ///
   /// 返回拿到的域名（成功）或空字符串（失败/无法解析）。
   Future<String> refreshFileBaseUrl() async {
+    final session = _storage.token;
     final response = await client.post(
       '/app/common/v2/configList',
       data: const <String, dynamic>{},
     );
+    if (_storage.token != session) return '';
     if (!response.isSuccess) {
       if (kDebugMode) {
         debugPrint('[AppConfig] configList failed: ${response.msg}');
@@ -69,6 +71,7 @@ class AppConfigRepository {
     }
 
     await _storage.saveFileBaseUrl(base);
+    if (_storage.token != session) return '';
     MediaUrl.setFileBaseUrl(base);
     if (kDebugMode) {
       debugPrint('[AppConfig] file base url => $base');
