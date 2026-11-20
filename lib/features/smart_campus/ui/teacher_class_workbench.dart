@@ -2407,7 +2407,7 @@ class _LeaveListCardState extends ConsumerState<_LeaveListCard> {
         .headTeacherStudentLeaveList(
           current: 1,
           size: 10,
-          statusList: const [1],
+          statusList: StudentLeaveStatus.teacherPendingCodes,
         );
     if (!mounted) return;
     if (!resp.isSuccess) {

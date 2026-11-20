@@ -23,6 +23,7 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
 
   final TeacherRepository _repository;
   bool _initialized = false;
+  int _listGeneration = 0;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -57,13 +58,19 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
   }
 
   Future<void> loadExamList({String? classId, bool silent = false}) async {
+    final generation = ++_listGeneration;
     if (!silent) {
       state = state.copyWith(loading: true, error: '');
     }
-    final response = await _repository.examList(classId: classId);
+    final response = await _repository.examList(
+      classId: classId,
+      includeStat: true,
+    );
+    if (!mounted || generation != _listGeneration) return;
     if (!response.isSuccess) {
       state = state.copyWith(
         loading: false,
+        loadingDetail: false,
         error: response.displayMsg,
         exams: const [],
         overviewStats: const TeacherExamOverviewStats(),
@@ -71,18 +78,16 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
       return;
     }
 
-    final exams = <TeacherExamItem>[];
-    for (final row in parseTeacherExamListRows(response.data)) {
-      exams.addAll(buildTeacherExamItemsFromListRow(row));
-    }
-
-    final stats = <TeacherExamOverviewStats>[];
-    await Future.wait([for (final exam in exams) _loadStatOnly(exam, stats)]);
+    final rows = parseTeacherExamListRows(response.data);
+    final exams = rows.map(buildTeacherExamItemFromListRow).toList();
+    final overviewStats = await _overviewStats(rows, classId);
+    if (!mounted || generation != _listGeneration) return;
 
     state = state.copyWith(
       loading: false,
       exams: exams,
-      overviewStats: TeacherExamOverviewStats.merge(stats),
+      loadingDetail: false,
+      overviewStats: overviewStats,
       activeIdx: 0,
       error: '',
     );
@@ -98,15 +103,37 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
     }
   }
 
+  Future<TeacherExamOverviewStats> _overviewStats(
+    List<Map<String, dynamic>> rows,
+    String? classId,
+  ) async {
+    final stats = <TeacherExamOverviewStats>[];
+    final missingStats = <TeacherExamItem>[];
+    for (final row in rows) {
+      final stat = row['stat'];
+      if (stat is Map) {
+        stats.add(TeacherExamOverviewStats.fromApi(stat));
+      } else {
+        missingStats.add(buildTeacherExamItemFromListRow(row));
+      }
+    }
+    // 旧服务器未返回列表统计时，继续读取原有统计接口。
+    await Future.wait([
+      for (final exam in missingStats) _loadStatOnly(exam, classId, stats),
+    ]);
+    return TeacherExamOverviewStats.merge(stats);
+  }
+
   Future<void> _loadStatOnly(
     TeacherExamItem exam,
+    String? classId,
     List<TeacherExamOverviewStats> sink,
   ) async {
     if (exam.id.isEmpty || exam.subjectId == 0) return;
     final response = await _repository.examStudentStat(
       examId: exam.id,
       subjectId: exam.subjectId,
-      classId: _activeClassId,
+      classId: classId,
     );
     if (response.isSuccess) {
       sink.add(TeacherExamOverviewStats.fromApi(response.data));
@@ -151,16 +178,20 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
     if (!silent) {
       state = state.copyWith(loadingDetail: true);
     }
+    final classId = _activeClassId;
+    final generation = _listGeneration;
     final listResponse = await _repository.examStudentList(
       examId: examId,
       subjectId: subjectId,
-      classId: _activeClassId,
+      classId: classId,
     );
+    if (!mounted || generation != _listGeneration) return;
     final statResponse = await _repository.examStudentStat(
       examId: examId,
       subjectId: subjectId,
-      classId: _activeClassId,
+      classId: classId,
     );
+    if (!mounted || generation != _listGeneration) return;
     final subjectName = state.exams
         .firstWhere(
           (item) => item.id == examId && item.subjectId == subjectId,
@@ -255,17 +286,29 @@ class TeacherExamController extends StateNotifier<TeacherExamState> {
       comment: comment,
       path: path,
     );
+    if (!mounted) return response;
     if (response.isSuccess) {
-      await loadExamDetail(examId, subjectId);
-      final stats = <TeacherExamOverviewStats>[];
-      await Future.wait([
-        for (final exam in state.exams) _loadStatOnly(exam, stats),
-      ]);
-      state = state.copyWith(
-        overviewStats: TeacherExamOverviewStats.merge(stats),
-      );
+      final classId = _activeClassId;
+      final generation = _listGeneration;
+      await loadExamDetail(examId, subjectId, force: true);
+      if (!mounted) return response;
+      if (generation == _listGeneration) {
+        final list = await _repository.examList(
+          classId: classId,
+          includeStat: true,
+        );
+        if (list.isSuccess && mounted && generation == _listGeneration) {
+          final stats = await _overviewStats(
+            parseTeacherExamListRows(list.data),
+            classId,
+          );
+          if (mounted && generation == _listGeneration) {
+            state = state.copyWith(overviewStats: stats);
+          }
+        }
+      }
     }
-    state = state.copyWith(submittingScore: false);
+    if (mounted) state = state.copyWith(submittingScore: false);
     return response;
   }
 

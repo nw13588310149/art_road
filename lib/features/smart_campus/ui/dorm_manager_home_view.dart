@@ -57,6 +57,7 @@ class DormManagerHomeView extends ConsumerStatefulWidget {
     this.onOpenCheckInManagement,
     this.onOpenDormManagerLeave,
     this.onOpenDormDynamic,
+    this.onOpenDormMakeupAudit,
   });
 
   final String shellDisplayName;
@@ -86,6 +87,7 @@ class DormManagerHomeView extends ConsumerStatefulWidget {
   final VoidCallback? onOpenCheckInManagement;
   final VoidCallback? onOpenDormManagerLeave;
   final VoidCallback? onOpenDormDynamic;
+  final VoidCallback? onOpenDormMakeupAudit;
 
   @override
   ConsumerState<DormManagerHomeView> createState() =>
@@ -171,6 +173,7 @@ class _DormManagerHomeViewState extends ConsumerState<DormManagerHomeView> {
           onOpenCheckInManagement: widget.onOpenCheckInManagement,
           onOpenDormManagerLeave: widget.onOpenDormManagerLeave,
           onOpenDormDynamic: widget.onOpenDormDynamic,
+          onOpenDormMakeupAudit: widget.onOpenDormMakeupAudit,
         );
 
         final sidePanel = _DormManagerSidePanel(
@@ -236,6 +239,7 @@ class _DormMainColumn extends StatelessWidget {
     this.onOpenCheckInManagement,
     this.onOpenDormManagerLeave,
     this.onOpenDormDynamic,
+    this.onOpenDormMakeupAudit,
   });
 
   final DormitoryIndexOverview index;
@@ -249,6 +253,7 @@ class _DormMainColumn extends StatelessWidget {
   final VoidCallback? onOpenCheckInManagement;
   final VoidCallback? onOpenDormManagerLeave;
   final VoidCallback? onOpenDormDynamic;
+  final VoidCallback? onOpenDormMakeupAudit;
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +270,10 @@ class _DormMainColumn extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.max,
         children: [
-          _DormStatsRow(index: index),
+          _DormStatsRow(
+            index: index,
+            onOpenDormMakeupAudit: onOpenDormMakeupAudit,
+          ),
           SizedBox(height: ui(16)),
           _DormQuickActionsCard(
             pendingMakeupCount: index.pendingMakeupCount,
@@ -289,7 +297,10 @@ class _DormMainColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _DormStatsRow(index: index),
+        _DormStatsRow(
+          index: index,
+          onOpenDormMakeupAudit: onOpenDormMakeupAudit,
+        ),
         SizedBox(height: ui(16)),
         _DormQuickActionsCard(
           pendingMakeupCount: index.pendingMakeupCount,
@@ -480,7 +491,9 @@ class _SectionTitle extends StatelessWidget {
 // ============================================================================
 
 class _DormStatsRow extends StatelessWidget {
-  const _DormStatsRow({required this.index});
+  const _DormStatsRow({required this.index, this.onOpenDormMakeupAudit});
+
+  final VoidCallback? onOpenDormMakeupAudit;
 
   final DormitoryIndexOverview index;
 
@@ -516,6 +529,7 @@ class _DormStatsRow extends StatelessWidget {
             child: _PendingCard(
               value: '${index.pendingMakeupCount}',
               label: '待审补卡',
+              onTap: onOpenDormMakeupAudit,
             ),
           ),
         ],
@@ -582,9 +596,10 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-/// 「待审补卡」紫高亮卡：仅展示统计，不可点击跳转。
 class _PendingCard extends StatelessWidget {
-  const _PendingCard({required this.value, required this.label});
+  const _PendingCard({required this.value, required this.label, this.onTap});
+
+  final VoidCallback? onTap;
 
   final String value;
   final String label;
@@ -592,37 +607,41 @@ class _PendingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = DashboardScaleScope.of(context).ui;
-    return SmartCampusHomeCard(
-      padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(8)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Center(
-              child: Text(
-                value,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: smartCampusStatValueTextStyle(
-                  ui,
-                  color: AppColors.brand,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SmartCampusHomeCard(
+        padding: EdgeInsets.symmetric(horizontal: ui(8), vertical: ui(8)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Center(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: smartCampusStatValueTextStyle(
+                    ui,
+                    color: AppColors.brand,
+                  ),
                 ),
               ),
             ),
-          ),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: ui(12),
-              height: 1.0,
-              color: AppColors.textSecondary,
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: ui(12),
+                height: 1.0,
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import '../../../utils/school_semester.dart';
 import '../../data/demo_artwork_store.dart';
 import '../../data/demo_marking_data.dart';
 import '../../demo_accounts.dart';
@@ -235,10 +236,7 @@ abstract final class CampusAStudy {
     }
     final latest = DateTime.parse(scored.last.exam.examDate);
     bool sameTerm(DateTime d) {
-      int term(DateTime x) => x.month >= 8
-          ? x.year * 2 + 1
-          : (x.month == 1 ? (x.year - 1) * 2 + 1 : x.year * 2);
-      return term(d) == term(latest);
+      return schoolSemesterIndex(d) == schoolSemesterIndex(latest);
     }
 
     final scores = [

@@ -55,7 +55,6 @@ import 'package:flutter/material.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/router/route_paths.dart';
-import '../../../core/demo/demo_config.dart';
 import '../../gallery/data/gallery_models.dart';
 import '../../gallery/data/gallery_repository.dart';
 
@@ -2150,14 +2149,10 @@ class _PublishDrawer extends ConsumerStatefulWidget {
 }
 
 class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
-  static const _mediumOptions = ['图片', '视频', '文档'];
-  static const _mediumExtMap = {'图片': 'image', '视频': 'video', '文档': 'doc'};
-
   /// 来自 `/app/school/v2/user/subjectList`（按当前勾选班级之一拉取）。
   List<({int id, String name})> _subjects = [];
   int? _selectedSubjectId;
   bool _loadingSubjects = false;
-  String _medium = '图片';
   GalleryWork? _reference;
   DateTime? _deadlineDate;
   final Set<int> _selectedClassIndices = {};
@@ -2269,7 +2264,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
           description: _descCtrl.text.trim(),
           endTime: _formatYmdHms(_deadlineDate!),
           subjectId: sid,
-          expectedExt: kDemoMode ? 'image' : _mediumExtMap[_medium] ?? '',
+          expectedExt: 'image',
           referenceWorkId: _reference?.id ?? '',
         );
     if (!mounted) return;
@@ -2416,15 +2411,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
                     children: [
                       _FieldLabel('期望提交格式'),
                       SizedBox(height: ui(12)),
-                      if (kDemoMode)
-                        AppTag(label: '图片')
-                      else
-                        PopupSelectorField<String>(
-                          value: _medium,
-                          items: _mediumOptions,
-                          itemLabel: (v) => v,
-                          onChanged: (v) => setState(() => _medium = v),
-                        ),
+                      AppTag(label: '图片'),
                     ],
                   ),
                 ),
@@ -2496,7 +2483,7 @@ class _PublishDrawerState extends ConsumerState<_PublishDrawer> {
               height: ui(80),
               controller: _descCtrl,
             ),
-            if (kDemoMode) ...[
+            ...[
               SizedBox(height: ui(20)),
               _FieldLabel('参考范画（选填）'),
               SizedBox(height: ui(12)),

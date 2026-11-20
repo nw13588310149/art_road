@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_response.dart';
-import '../data/admin_repository.dart';
+import '../data/dormitory_paging.dart';
 import '../data/dormitory_repository.dart';
 import '../data/head_teacher_index_data.dart';
 import '../data/student_dormitory_data.dart' show DormitoryDetailField;
@@ -16,7 +16,6 @@ final dormClassDormitoryControllerProvider =
     >((ref) {
       return DormClassDormitoryController(
         repository: ref.watch(dormitoryRepositoryProvider),
-        adminRepository: ref.watch(adminRepositoryProvider),
         teacherRepository: ref.watch(teacherRepositoryProvider),
       );
     });
@@ -25,10 +24,8 @@ class DormClassDormitoryController
     extends StateNotifier<TeacherDormitoryState> {
   DormClassDormitoryController({
     required DormitoryRepository repository,
-    required AdminRepository adminRepository,
     required TeacherRepository teacherRepository,
   }) : _repository = repository,
-       _adminRepository = adminRepository,
        _teacherRepository = teacherRepository,
        super(
          TeacherDormitoryState(
@@ -37,9 +34,9 @@ class DormClassDormitoryController
        );
 
   final DormitoryRepository _repository;
-  final AdminRepository _adminRepository;
   final TeacherRepository _teacherRepository;
   bool _initialized = false;
+  int _historySerial = 0;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -62,12 +59,9 @@ class DormClassDormitoryController
   }
 
   Future<List<HeadTeacherClassItem>> _loadClasses() async {
-    final adminResponse = await _adminRepository.classList();
-    if (adminResponse.isSuccess) {
-      final classes = parseClassListItems(adminResponse.data);
-      if (classes.isNotEmpty) return classes;
-    }
-    final teacherResponse = await _teacherRepository.classList();
+    final teacherResponse = await _teacherRepository.classList(
+      isDormManager: true,
+    );
     if (teacherResponse.isSuccess) {
       return parseClassListItems(teacherResponse.data);
     }
@@ -83,22 +77,37 @@ class DormClassDormitoryController
   Future<void> refresh() async {
     final classId = state.selectedClassId;
     if (classId.isEmpty) return;
-    state = state.copyWith(loading: true, error: '');
+    final serial = ++_historySerial;
+    state = state.copyWith(loading: true, loadingHistory: false, error: '');
     final date = state.selectedDate;
     final responses = await Future.wait([
-      _repository.classDormitoryDynamicList(classId: classId),
-      _repository.classDormitoryMakeupList(classId: classId),
+      loadDormitoryPages(
+        (current) => _repository.classDormitoryDynamicList(
+          classId: classId,
+          current: current,
+        ),
+      ),
+      loadDormitoryPages(
+        (current) => _repository.classDormitoryMakeupList(
+          classId: classId,
+          current: current,
+        ),
+      ),
       _repository.classDormitoryCheckStat(
         classId: classId,
         beginDate: date,
         endDate: date,
       ),
-      _repository.classDormitoryCheckHistory(
-        classId: classId,
-        beginDate: date,
-        endDate: date,
+      loadDormitoryPages(
+        (current) => _repository.classDormitoryCheckHistory(
+          classId: classId,
+          beginDate: date,
+          endDate: date,
+          current: current,
+        ),
       ),
     ]);
+    if (!mounted || serial != _historySerial) return;
     final errors = responses
         .where((response) => !response.isSuccess)
         .map((response) => response.displayMsg)
@@ -138,24 +147,31 @@ class DormClassDormitoryController
 
   Future<void> selectHistoryDate(DateTime date) async {
     final value = teacherDormitoryIsoDate(date);
-    if (value == state.selectedDate || state.selectedClassId.isEmpty) return;
+    final classId = state.selectedClassId;
+    if (value == state.selectedDate || classId.isEmpty) return;
+    final serial = ++_historySerial;
     state = state.copyWith(
       selectedDate: value,
+      loading: false,
       loadingHistory: true,
       error: '',
     );
     final responses = await Future.wait([
       _repository.classDormitoryCheckStat(
-        classId: state.selectedClassId,
+        classId: classId,
         beginDate: value,
         endDate: value,
       ),
-      _repository.classDormitoryCheckHistory(
-        classId: state.selectedClassId,
-        beginDate: value,
-        endDate: value,
+      loadDormitoryPages(
+        (current) => _repository.classDormitoryCheckHistory(
+          classId: classId,
+          beginDate: value,
+          endDate: value,
+          current: current,
+        ),
       ),
     ]);
+    if (!mounted || serial != _historySerial) return;
     state = state.copyWith(
       loadingHistory: false,
       stat: responses[0].isSuccess
@@ -212,10 +228,15 @@ class DormClassDormitoryController
   Future<void> _reloadMakeups() async {
     final classId = state.selectedClassId;
     if (classId.isEmpty) return;
-    final response = await _repository.classDormitoryMakeupList(
-      classId: classId,
+    final response = await loadDormitoryPages(
+      (current) => _repository.classDormitoryMakeupList(
+        classId: classId,
+        current: current,
+      ),
     );
-    if (!response.isSuccess) return;
+    if (!mounted || classId != state.selectedClassId || !response.isSuccess) {
+      return;
+    }
     final makeupItems = parseTeacherDormitoryMakeupList(response.data);
     final pendingMakeupCount = makeupItems
         .where((item) => item.status == 0)

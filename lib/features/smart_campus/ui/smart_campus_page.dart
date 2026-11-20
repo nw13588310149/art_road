@@ -541,6 +541,7 @@ class _SmartCampusPageBody extends ConsumerWidget {
           onOpenCheckInManagement: controller.openDormCheckInManagement,
           onOpenDormManagerLeave: controller.openMyTeacherLeave,
           onOpenDormDynamic: controller.openDormDynamic,
+          onOpenDormMakeupAudit: controller.openDormMakeupAudit,
         );
       }
     }

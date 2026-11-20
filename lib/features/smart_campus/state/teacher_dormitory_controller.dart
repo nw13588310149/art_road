@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_response.dart';
+import '../data/dormitory_paging.dart';
 import '../data/teacher_dormitory_data.dart';
 import '../data/student_dormitory_data.dart' show DormitoryDetailField;
 import '../data/teacher_repository.dart';
@@ -33,6 +34,7 @@ class TeacherDormitoryController extends StateNotifier<TeacherDormitoryState> {
 
   final TeacherRepository _repository;
   bool _initialized = false;
+  int _historySerial = 0;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -68,7 +70,8 @@ class TeacherDormitoryController extends StateNotifier<TeacherDormitoryState> {
   Future<void> refresh() async {
     final classId = state.selectedClassId;
     if (classId.isEmpty) return;
-    state = state.copyWith(loading: true, error: '');
+    final serial = ++_historySerial;
+    state = state.copyWith(loading: true, loadingHistory: false, error: '');
     final date = state.selectedDate;
     final responses = await Future.wait([
       _repository.classDormitoryCheckStat(
@@ -76,12 +79,16 @@ class TeacherDormitoryController extends StateNotifier<TeacherDormitoryState> {
         beginDate: date,
         endDate: date,
       ),
-      _repository.classDormitoryCheckHistory(
-        classId: classId,
-        beginDate: date,
-        endDate: date,
+      loadDormitoryPages(
+        (current) => _repository.classDormitoryCheckHistory(
+          classId: classId,
+          beginDate: date,
+          endDate: date,
+          current: current,
+        ),
       ),
     ]);
+    if (!mounted || serial != _historySerial) return;
     final errors = responses
         .where((response) => !response.isSuccess)
         .map((response) => response.displayMsg)
@@ -102,24 +109,31 @@ class TeacherDormitoryController extends StateNotifier<TeacherDormitoryState> {
 
   Future<void> selectHistoryDate(DateTime date) async {
     final value = teacherDormitoryIsoDate(date);
-    if (value == state.selectedDate || state.selectedClassId.isEmpty) return;
+    final classId = state.selectedClassId;
+    if (value == state.selectedDate || classId.isEmpty) return;
+    final serial = ++_historySerial;
     state = state.copyWith(
       selectedDate: value,
+      loading: false,
       loadingHistory: true,
       error: '',
     );
     final responses = await Future.wait([
       _repository.classDormitoryCheckStat(
-        classId: state.selectedClassId,
+        classId: classId,
         beginDate: value,
         endDate: value,
       ),
-      _repository.classDormitoryCheckHistory(
-        classId: state.selectedClassId,
-        beginDate: value,
-        endDate: value,
+      loadDormitoryPages(
+        (current) => _repository.classDormitoryCheckHistory(
+          classId: classId,
+          beginDate: value,
+          endDate: value,
+          current: current,
+        ),
       ),
     ]);
+    if (!mounted || serial != _historySerial) return;
     state = state.copyWith(
       loadingHistory: false,
       stat: responses[0].isSuccess

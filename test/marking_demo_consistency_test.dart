@@ -83,15 +83,23 @@ void main() {
   });
 
   test('作品点评对老师显示学号，与学生名册同一规则', () async {
+    final person = DemoMarkingData.instance.person(30);
     final page = ArtworkPage.fromJson(
       await get(
         '/school/teacher/artworks',
         account: DemoAccounts.teacher,
-        query: <String, dynamic>{'status': 'ALL', 'size': 50},
+        // 演示作品按日期排序且数量超过一页，直接限定目标学生，
+        // 避免月份变化把该学生的作品排到首屏之外。
+        query: <String, dynamic>{
+          'status': 'ALL',
+          'size': 50,
+          'archiveId': person.archiveId,
+        },
       ),
     );
-    final person = DemoMarkingData.instance.person(30);
-    final row = page.records.firstWhere((r) => r.studentName == person.name);
+    expect(page.records, isNotEmpty, reason: '目标学生必须有老师可见的作品');
+    expect(page.records.every((r) => r.studentName == person.name), isTrue);
+    final row = page.records.first;
     expect(row.studentNo, '2027030');
   });
 

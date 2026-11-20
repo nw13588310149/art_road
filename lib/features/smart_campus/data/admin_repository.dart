@@ -363,6 +363,23 @@ class AdminRepository {
     return client.post('$_base/courseBatchSave', data: rows);
   }
 
+  /// 移动一节课，原课次和新课次在同一批次内替换。
+  Future<ApiResponse> moveCourse({
+    required String courseId,
+    required String classId,
+    required String date,
+    required int lineNum,
+  }) {
+    return courseBatchSave([
+      {
+        'replaceCourseId': courseId,
+        'classId': classId,
+        'date': date,
+        'lineNum': lineNum,
+      },
+    ]);
+  }
+
   /// 课表批量删除。后端入参：`{ "id": [2065017767469707300, ...] }`（int64 数组）。
   Future<ApiResponse> courseDelete(List<String> ids) {
     final body = encodeNumericIdArrayRequestBody(ids);

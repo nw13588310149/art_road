@@ -87,6 +87,13 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _toolbar(data),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                '作品提交、点评超时、点评及时率及批改率仅统计已同步作品；复核池按实际复核记录统计。',
+                style: AppText.body13,
+              ),
+            ),
             const SizedBox(height: 16),
             Expanded(
               child: overview.when(
@@ -407,9 +414,7 @@ class _PrincipalOverviewState extends ConsumerState<PrincipalOverview> {
                         decoration: i < rows.length - 1
                             ? const BoxDecoration(
                                 border: Border(
-                                  bottom: BorderSide(
-                                    color: AppColors.lineSoft,
-                                  ),
+                                  bottom: BorderSide(color: AppColors.lineSoft),
                                 ),
                               )
                             : null,

@@ -39,6 +39,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:the_road_of_art_flutter/core/widgets/app_text_field.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/demo/demo_config.dart';
 import '../../../core/network/media_url.dart';
 import '../../../core/widgets/app_asset_graphic.dart';
 import '../../../core/widgets/app_refresh_indicator.dart';
@@ -195,7 +196,9 @@ class _TeacherHomeSchoolViewState extends ConsumerState<TeacherHomeSchoolView> {
       bodyScrollable: false,
       header: SmartCampusPageBanner(
         title: '家校沟通',
-        subtitle: '与本班家长就请假、成绩、心理等进行文字沟通',
+        subtitle: kDemoMode
+            ? '与本班家长就请假、成绩、心理等进行文字沟通'
+            : '家长消息尚未开通，目前仅可查看沟通记录',
         onBack: widget.onBack,
       ),
       body: AppRefreshIndicator(
@@ -982,6 +985,7 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
   }
 
   Future<void> _onSend() async {
+    if (!kDemoMode) return;
     final text = _inputController.text.trim();
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
@@ -1088,11 +1092,13 @@ class _ChatDetailDialogState extends ConsumerState<_ChatDetailDialog> {
                 ),
                 Padding(
                   padding: EdgeInsets.fromLTRB(ui(24), ui(12), ui(24), ui(20)),
-                  child: _InputBar(
-                    controller: _inputController,
-                    onSend: _onSend,
-                    sending: _sending,
-                  ),
+                  child: kDemoMode
+                      ? _InputBar(
+                          controller: _inputController,
+                          onSend: _onSend,
+                          sending: _sending,
+                        )
+                      : Text('家长消息尚未开通，暂时无法发送。', style: AppText.body13),
                 ),
               ],
             ),

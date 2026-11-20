@@ -112,6 +112,14 @@ class _TeachingReportPageState extends ConsumerState<TeachingReportPage> {
               ),
               data: (raw) => ListView(
                 children: [
+                  if (base.report != TeachingReport.attendance)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        '作品数量、点评超时、点评及时率及批改率仅统计已同步作品；复核超时按复核池记录统计，签到按课堂记录统计。',
+                        style: AppText.body13,
+                      ),
+                    ),
                   switch (base.report) {
                     TeachingReport.attendance => _attendance(
                       teachingRow(raw),

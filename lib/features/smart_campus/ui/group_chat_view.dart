@@ -181,9 +181,11 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
 
   /// 防止 sync 与初次 classList / app resume 并发触发自身。
   bool _syncing = false;
+  final _recalledDuringLoad = <String>{};
 
   /// sync 进行中又收到 WS 推送时，结束后补跑一轮。
   bool _syncPending = false;
+  bool _refreshSnapshot = false;
 
   /// iOS / Android：WS 易被系统挂起，群聊页可见时轻量 syncMsg 兜底（Web 已验证 WS 足够）。
   Timer? _nativeSyncPollTimer;
@@ -259,11 +261,10 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
     // 订阅全局 WS：服务端推群聊新消息 / 撤回 / 公告变更时实时刷新。
     final socket = ref.read(chatSocketServiceProvider);
     _wsSubscription = socket.events.listen(_handleSocketEvent);
-    // 先进群聊再 reconnect，避免 App 冷启动时 connected/推送在订阅前被漏掉。
-    socket.reconnect();
+    socket.connect();
     if (!kIsWeb) {
       _nativeSyncPollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-        if (mounted) unawaited(_syncMessages());
+        if (mounted && !socket.isConnected) unawaited(_syncMessages());
       });
     }
     // 进入页面后立即拉群聊列表；接着会触发一次 syncMsg 把离线消息补齐。
@@ -310,19 +311,10 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
         unawaited(_syncMessages());
         break;
       case ChatSocketEventType.chatMessageDeleted:
-        unawaited(_syncMessages());
+        _applyRecall(_readClassIdFromRaw(event.payload), _readMsgIdFromRaw(event.payload));
         break;
       case ChatSocketEventType.connected:
-        unawaited(_syncMessages());
-        break;
-      case ChatSocketEventType.message:
-        // 兜底：若 WS 帧未被上层分类为 chatNewMessage，但语义上是群聊推送，
-        // 仍触发一次就地合并 + syncMsg。
-        final normalized = ChatSyncPayload.normalizePush(event.payload);
-        if (ChatSyncPayload.hasChatIdentity(normalized)) {
-          _applyRealtimeChatPayload(normalized);
-          unawaited(_syncMessages());
-        }
+        unawaited(_syncMessages(refreshSnapshot: true));
         break;
       case ChatSocketEventType.chatAnnouncementUpdated:
         // 公告变更：若刚好是当前会话，重新拉一次群详情；其它会话等用户
@@ -347,11 +339,9 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    // 切回前台时按 swagger 描述："登录 / 重连 / 切回前台时调用一次同步"，
-    // 不做轮询。
     if (state == AppLifecycleState.resumed) {
-      ref.read(chatSocketServiceProvider).reconnect();
-      unawaited(_syncMessages());
+      ref.read(chatSocketServiceProvider).connect();
+      unawaited(_syncMessages(refreshSnapshot: true));
     }
   }
 
@@ -366,20 +356,24 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
     final res = await _repo.classList();
     if (!mounted) return;
     if (res.code != 0) {
-      setState(() => _conversations = const []);
+      setState(() => _conversations ??= const []);
       AppToast.show(context, res.displayMsg);
       return;
     }
     final list = _sortConversations(_parseConversations(res.data));
+    final selected = list.where((c) => c.id == _selectedConvId).firstOrNull ?? list.firstOrNull;
     setState(() {
       _conversations = list;
-      if (list.isNotEmpty) {
-        _selectedConvId = list.first.id;
+      _selectedConvId = selected?.id;
+      for (final conversation in list) {
+        if (_compareSnowflakeIds(conversation.latestId, _syncOffsetMsgId) > 0) {
+          _syncOffsetMsgId = conversation.latestId;
+        }
       }
     });
-    if (list.isNotEmpty) {
-      unawaited(_loadGroupDetail(list.first));
-      unawaited(_loadMessages(list.first.id));
+    if (selected != null) {
+      unawaited(_loadGroupDetail(selected));
+      unawaited(_loadMessages(selected.id));
     }
   }
 
@@ -437,6 +431,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
     final seq = ++_msgLoadSeq;
     setState(() {
       _loadingMessages = true;
+      _recalledDuringLoad.clear();
       _messages = const [];
       _hasMoreOlder = false;
       _loadingOlder = false;
@@ -456,13 +451,22 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
     final parsed = _parseMessages(res.data);
     final pageCount = _countRawMessages(res.data);
     setState(() {
-      _messages = parsed;
+      _conversations = _conversations
+          ?.map((c) => c.id == classId ? c.copyWith(unread: 0) : c)
+          .toList();
+      final combined = {for (final m in parsed) m.id: m, for (final m in _messages) m.id: m};
+      _messages = [
+        for (final m in combined.values)
+          if (_recalledDuringLoad.contains(m.id))
+            _RecallChatMessage(id: m.id, sentAt: m.sentAt, recallerName: '')
+          else
+            m,
+      ]..sort((a, b) => a.sentAt.compareTo(b.sentAt));
       _loadingMessages = false;
       _oldestMsgId = parsed.isNotEmpty ? parsed.first.id : null;
       // 后端按降序返回一页（默认 20）。返回数 < 页面大小说明已无更早消息。
       _hasMoreOlder = pageCount >= _kChatPageSize;
     });
-    _bumpSyncOffsetFromMessages(parsed);
     _scheduleScrollToBottom();
   }
 
@@ -498,7 +502,13 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
     }
     // 去重：同一 msgId 不再插入。older 是按时间升序的（_parseMessages 已排序）。
     final existing = {for (final m in _messages) m.id};
-    final dedup = older.where((m) => !existing.contains(m.id)).toList();
+    final dedup = [
+      for (final m in older)
+        if (!existing.contains(m.id))
+          _recalledDuringLoad.contains(m.id)
+              ? _RecallChatMessage(id: m.id, sentAt: m.sentAt, recallerName: '')
+              : m,
+    ];
     setState(() {
       _messages = [...dedup, ..._messages];
       _oldestMsgId = _messages.isNotEmpty ? _messages.first.id : _oldestMsgId;
@@ -550,13 +560,21 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
   ///   - 命中当前激活会话 → 直接 append 到 `_messages`（去重，按时间升序）
   ///     并自动滚到底部；
   ///   - 其它会话 → 更新会话列表的 `lastMessage` / `lastTime` / `unread`。
-  Future<void> _syncMessages() async {
+  Future<void> _syncMessages({bool refreshSnapshot = false}) async {
+    if (_conversations == null) return;
+    _refreshSnapshot |= refreshSnapshot;
     if (_syncing) {
       _syncPending = true;
       return;
     }
     _syncing = true;
     try {
+      if (_refreshSnapshot || _syncOffsetMsgId == '0') {
+        // 离线时的撤回和公告更新沿用旧消息 id，增量查询无法发现。
+        _refreshSnapshot = false;
+        await _loadConversations();
+        if (!mounted || _syncOffsetMsgId == '0') return;
+      }
       final res = await _repo.syncMsg(offsetMsgId: _syncOffsetMsgId, size: 100);
       if (!mounted || res.code != 0) return;
       final raw = res.data;
@@ -575,6 +593,9 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
         if (id.isNotEmpty && _compareSnowflakeIds(id, maxMsgId) > 0) {
           maxMsgId = id;
         }
+      }
+      if (list.length == 100 && _compareSnowflakeIds(maxMsgId, _syncOffsetMsgId) > 0) {
+        _syncPending = true;
       }
       _syncOffsetMsgId = maxMsgId;
 
@@ -599,7 +620,8 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
             didMergeIntoActive = true;
           }
         }
-        // 激活会话不算未读，徽章清零。
+        // msgList 首页会登记已读位置；同一批推送只回执一次。
+        unawaited(_repo.msgList(classId: activeId, size: 1));
         _bumpConversation(activeId, bucket[activeId]!, addUnread: false);
       }
 
@@ -614,7 +636,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       }
     } finally {
       _syncing = false;
-      if (_syncPending) {
+      if (mounted && _syncPending) {
         _syncPending = false;
         unawaited(_syncMessages());
       }
@@ -624,32 +646,23 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
   /// WS 推送携带完整消息体时，先就地合并到当前会话 / 会话列表，避免等
   /// syncMsg 往返才看到新消息。
   void _applyRealtimeChatPayload(Map<String, dynamic> payload) {
-    final normalized = ChatSyncPayload.normalizePush(payload);
-    final classId = _readClassIdFromRaw(normalized);
-    if (classId.isEmpty) return;
-
-    final msgId = _readMsgIdFromRaw(normalized);
-    if (msgId.isNotEmpty && _compareSnowflakeIds(msgId, _syncOffsetMsgId) > 0) {
-      _syncOffsetMsgId = msgId;
+    final raw = ChatSyncPayload.normalizePush(payload);
+    final classId = _readClassIdFromRaw(raw);
+    // 推送可能先于其他群的早期消息抵达。只有同步响应可以推进跨群游标。
+    if (classId != _selectedConvId ||
+        _readMsgIdFromRaw(raw).isEmpty ||
+        raw['content'] == null) {
+      return;
     }
-
-    final raw = normalized.map((k, v) => MapEntry(k.toString(), v));
     final parser = GroupChatMessageParser(userMap: _memberUserMap());
     final parsed = parser.parseRaw(raw);
-    if (parsed is! _ChatMessage) return;
-
-    final activeId = _selectedConvId;
-    if (classId == activeId) {
-      if (_messages.any((m) => m.id == parsed.id)) return;
-      setState(() {
-        _messages = [..._messages, parsed]
-          ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
-      });
-      _bumpConversation(classId, [raw], addUnread: false);
-      _scheduleScrollToBottom(animated: true);
-    } else {
-      _bumpConversation(classId, [raw], addUnread: true);
-    }
+    if (parsed is! _ChatMessage || _messages.any((m) => m.id == parsed.id)) return;
+    setState(() {
+      _messages = [..._messages, parsed]
+        ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
+    });
+    _bumpConversation(classId, [raw], addUnread: false);
+    _scheduleScrollToBottom(animated: true);
   }
 
   Map<String, _MemberInfo> _memberUserMap() {
@@ -676,12 +689,24 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
     return a.compareTo(b);
   }
 
-  void _bumpSyncOffsetFromMessages(Iterable<_ChatMessage> messages) {
-    for (final message in messages) {
-      if (_compareSnowflakeIds(message.id, _syncOffsetMsgId) > 0) {
-        _syncOffsetMsgId = message.id;
-      }
+  void _applyRecall(String classId, String msgId, {String name = ''}) {
+    if (classId.isEmpty || msgId.isEmpty) return;
+    if (classId == _selectedConvId && (_loadingMessages || _loadingOlder)) {
+      _recalledDuringLoad.add(msgId);
     }
+    setState(() {
+      if (classId == _selectedConvId) {
+        _messages = [
+          for (final m in _messages)
+            if (m.id == msgId && m is! _RecallChatMessage)
+              _RecallChatMessage(id: m.id, sentAt: m.sentAt, recallerName: name)
+            else
+              m,
+        ];
+      }
+      _conversations = _conversations?.map((c) => c.id == classId && c.latestId == msgId
+          ? c.copyWith(lastMessage: '撤回了一条消息') : c).toList();
+    });
   }
 
   String _readClassIdFromRaw(Map<String, dynamic> raw) {
@@ -713,18 +738,20 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
         m['createTime'] ?? m['sentAt'] ?? m['time'] ?? m['msgTime'],
       );
       if (at == null) continue;
-      if (latestAt == null || at.isAfter(latestAt)) {
+      if (latest == null || _compareSnowflakeIds(_readMsgIdFromRaw(m), _readMsgIdFromRaw(latest)) > 0) {
         latestAt = at;
         latest = m;
       }
     }
     if (latest == null) return;
-    final summary = _summaryFor(latest);
+    final latestId = _readMsgIdFromRaw(latest);
+    final updatesSummary = _compareSnowflakeIds(latestId, convs[idx].latestId) > 0;
     final addedUnread = addUnread ? rawMessages.length : 0;
     final next = [...convs];
     next[idx] = next[idx].copyWith(
-      lastMessage: summary,
-      lastTime: _formatLastTime(latestAt),
+      latestId: updatesSummary ? latestId : null,
+      lastMessage: updatesSummary ? _summaryFor(latest) : null,
+      lastTime: updatesSummary ? _formatLastTime(latestAt) : null,
       unread: convs[idx].unread + addedUnread,
     );
     setState(() => _conversations = next);
@@ -893,13 +920,10 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
     final res = await _repo.sendMsg(classId: classId, type: 1, content: text);
     if (!mounted) return;
     if (res.code == 0) {
-      final newId = _extractMsgId(res.data);
+      final newId = _recordSentMessage(classId, res.data, type: 1, content: text);
       setState(() {
         _sending = false;
         if (newId != null) {
-          if (_compareSnowflakeIds(newId, _syncOffsetMsgId) > 0) {
-            _syncOffsetMsgId = newId;
-          }
           _messages = _messages
               .map(
                 (m) => m.id == tempId
@@ -922,6 +946,8 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
   /// 撤回（删除）消息：仅自己发的或群管理可发起。后端会再做权限校验。
   Future<void> _recallMessage(_UserChatMessage message) async {
     if (message.fromUserId != widget.currentUserId) return;
+    final classId = _selectedConvId;
+    if (classId == null) return;
     final msgId = message.id;
     if (msgId.startsWith('local-')) {
       AppToast.show(context, '消息未同步，请稍后再试');
@@ -939,10 +965,8 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
     final res = await _repo.deleteMsg(msgId: msgId);
     if (!mounted) return;
     if (res.code == 0) {
-      setState(() {
-        _messages = _messages.where((m) => m.id != msgId).toList();
-        _recalling.remove(msgId);
-      });
+      _applyRecall(classId, msgId, name: widget.currentUserName);
+      setState(() => _recalling.remove(msgId));
       AppToast.show(context, '已撤回');
     } else {
       setState(() => _recalling.remove(msgId));
@@ -1100,7 +1124,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       );
       if (!mounted) return;
       if (sendRes.isSuccess) {
-        final newId = _extractMsgId(sendRes.data) ?? tempId;
+        final newId = _recordSentMessage(classId, sendRes.data, type: 2, content: url) ?? tempId;
         setState(() {
           _sending = false;
           _messages = _messages.map((m) {
@@ -1737,7 +1761,7 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
       );
       if (!mounted) return;
       if (sendRes.isSuccess) {
-        final newId = _extractMsgId(sendRes.data) ?? tempId;
+        final newId = _recordSentMessage(classId, sendRes.data, type: 3, content: content, param1: 'voice') ?? tempId;
         setState(() {
           _messages = _messages.map((m) {
             if (m.id != tempId || m is! _UserChatMessage) return m;
@@ -1781,14 +1805,16 @@ class _GroupChatViewState extends ConsumerState<GroupChatView>
     return resolved.isEmpty ? null : resolved;
   }
 
-  String? _extractMsgId(Object? data) {
-    if (data == null) return null;
-    if (data is String && data.isNotEmpty) return data;
-    if (data is int) return data.toString();
-    if (data is Map) {
-      return (data['msgId'] ?? data['id'])?.toString();
-    }
-    return null;
+  String? _recordSentMessage(String classId, Object? data, {
+    required int type, required String content, String? param1,
+  }) {
+    final id = readSnowflakeId(data is Map ? data['msgId'] ?? data['id'] : data);
+    if (id == null) return null;
+    _bumpConversation(classId, [{
+      'id': id, 'type': type, 'content': content, 'param1': param1,
+      'createTime': (data is Map ? data['createTime'] : null) ?? DateTime.now().toIso8601String(),
+    }], addUnread: false);
+    return id;
   }
 
   /// 把任意长度的波形重采样为 [target] 个柱：取桶平均。
@@ -4179,7 +4205,7 @@ class _RecallMessageRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(ui(10)),
           ),
           child: Text(
-            '${message.recallerName} 撤回了一条消息',
+            message.recallerName.isEmpty ? '一条消息已撤回' : '${message.recallerName} 撤回了一条消息',
             style: TextStyle(
               fontSize: ui(12),
               color: _kTextSecondary,
@@ -5646,6 +5672,7 @@ class _Conversation {
     required this.name,
     required this.lastMessage,
     required this.lastTime,
+    this.latestId = '0',
     required this.unread,
     required this.muted,
     required this.pinned,
@@ -5658,6 +5685,7 @@ class _Conversation {
   final String name;
   final String lastMessage;
   final String lastTime;
+  final String latestId;
   final int unread;
   final bool muted;
   final bool pinned;
@@ -5670,6 +5698,7 @@ class _Conversation {
     String? name,
     String? lastMessage,
     String? lastTime,
+    String? latestId,
     int? unread,
     bool? muted,
     bool? pinned,
@@ -5681,6 +5710,7 @@ class _Conversation {
       name: name ?? this.name,
       lastMessage: lastMessage ?? this.lastMessage,
       lastTime: lastTime ?? this.lastTime,
+      latestId: latestId ?? this.latestId,
       unread: unread ?? this.unread,
       muted: muted ?? this.muted,
       pinned: pinned ?? this.pinned,
@@ -6284,10 +6314,12 @@ List<_Conversation> _parseConversations(Object? raw) {
     final latestMsgRaw =
         m['latestMsg'] ?? m['lastMsg'] ?? m['lastMessage'] ?? m['lastContent'];
     var lastMessage = '';
+    var latestId = '0';
     DateTime? latestMsgTime;
     if (latestMsgRaw is Map) {
       final latestMap = latestMsgRaw.map((k, v) => MapEntry(k.toString(), v));
       lastMessage = _previewTextForRawMessage(latestMap);
+      latestId = readSnowflakeId(latestMap['id'] ?? latestMap['msgId'] ?? latestMap['messageId']) ?? '0';
       latestMsgTime = _parseDateTime(
         latestMap['createTime'] ??
             latestMap['sendTime'] ??
@@ -6317,6 +6349,7 @@ List<_Conversation> _parseConversations(Object? raw) {
         id: id,
         name: name.isEmpty ? '群聊' : name,
         lastMessage: lastMessage,
+        latestId: latestId,
         lastTime: _formatLastTime(_parseDateTime(lastTimeMs)),
         unread: _asInt(unreadRaw) ?? 0,
         muted: muted,

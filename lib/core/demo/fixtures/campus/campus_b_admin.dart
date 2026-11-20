@@ -589,27 +589,87 @@ Object? _courseBatchSave(DemoRequest req) {
   if (rows.isEmpty) {
     throw const DemoApiException('没有需要保存的课程');
   }
-  final extras = cbExtraCourses();
+  final additions = <Map<String, dynamic>>[];
+  final replacedIds = <String>{};
   for (final row in rows) {
     final cls = _classOf(row['classId']);
     final day = cbParseDay(row['date']);
     if (day == null) {
       throw const DemoApiException('上课日期格式不正确');
     }
-    final subjectId = cbInt(row['subjectId'], 38);
+    final replacementId = cbStr(row['replaceCourseId']);
+    final original = cbCourseById(replacementId);
+    if (replacementId.isNotEmpty) {
+      if (original == null) {
+        throw const DemoApiException('原课次不存在或已被删除');
+      }
+      if (!replacedIds.add(replacementId)) {
+        throw const DemoApiException('同一节课在一批里只能移动一次');
+      }
+      if (cbSignStatus(original) != 0) {
+        throw const DemoApiException('已签课的课次不能移动');
+      }
+    }
+    final subjectId = cbInt(row['subjectId'], original?.subjectId ?? 38);
     final subjectName = cbSubjectNameOf(subjectId) ?? '素描';
-    extras.add(<String, dynamic>{
-      'id': DemoStore.nextId(),
+    additions.add(<String, dynamic>{
       'date': cbDate(day),
       'classId': cbStr(cls['id']),
-      'classroomId': cbInt(row['classroomId'], cbInt(cls['classroomId'], 11)),
-      'color': cbStr(row['color'], cbCourseColor(subjectName)),
+      'classroomId': cbInt(
+        row['classroomId'],
+        original?.classroomId ?? cbInt(cls['classroomId'], 11),
+      ),
+      'color': cbStr(
+        row['color'],
+        original?.color ?? cbCourseColor(subjectName),
+      ),
       'lineNum': cbInt(row['lineNum'], 1),
       'subjectId': subjectId,
       'subjectName': subjectName,
-      'teacherId': cbStaff(row['teacherId'])?.userId ?? cbStr(row['teacherId']),
+      'teacherId':
+          cbStaff(row['teacherId'])?.userId ??
+          cbStr(row['teacherId'], original?.teacherUserId ?? ''),
     });
   }
+  if (replacedIds.isNotEmpty) {
+    final pending = <Map<String, dynamic>>[];
+    for (final row in additions) {
+      final day = cbParseDay(row['date'])!;
+      final sameDateAndSlot = cbCoursesOn(day).where(
+        (course) =>
+            !replacedIds.contains(course.id) &&
+            course.lineNum == row['lineNum'],
+      );
+      bool conflicts(Object? classId, Object? teacherId, Object? roomId) =>
+          classId == row['classId'] ||
+          (row['teacherId'] != '' && teacherId == row['teacherId']) ||
+          (row['classroomId'] != 0 && roomId == row['classroomId']);
+      if (sameDateAndSlot.any(
+            (course) => conflicts(
+              course.classId,
+              course.teacherUserId,
+              course.classroomId,
+            ),
+          ) ||
+          pending.any(
+            (other) =>
+                other['date'] == row['date'] &&
+                other['lineNum'] == row['lineNum'] &&
+                conflicts(
+                  other['classId'],
+                  other['teacherId'],
+                  other['classroomId'],
+                ),
+          )) {
+        throw const DemoApiException('目标节次已有课');
+      }
+      pending.add(row);
+    }
+    cbDeleteCourses(replacedIds);
+  }
+  cbExtraCourses().addAll([
+    for (final row in additions) {'id': DemoStore.nextId(), ...row},
+  ]);
   DemoStore.save(cbExtraCoursesKey);
   return true;
 }

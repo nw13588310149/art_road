@@ -74,16 +74,16 @@ Debug 包需从 Xcode 或 `flutter run` 启动。装包验证时断开调试器�
 
 ### 接入真实接口
 
+默认启动演示模式。使用专用测试账号在联调环境运行时，关闭演示并指定新后端的 HTTPS 根地址：
+
 ```powershell
-flutter run -d chrome --dart-define=DEMO_MODE=false
+flutter run -d chrome --dart-define=DEMO_MODE=false --dart-define=ART_ROAD_API_BASE_URL=https://ipad-test.example.com/
+flutter build ipa --release --dart-define=DEMO_MODE=false --dart-define=ART_ROAD_API_BASE_URL=https://ipad-test.example.com/
 ```
 
-关闭后体验身份入口隐藏，App 请求两套真实接口：
+把示例地址换成测试负责人提供的地址。传入 `ART_ROAD_API_BASE_URL` 后，平台、阅卷、云盘与群聊 WebSocket 统一接入该服务。省略地址参数且关闭演示时，继续使用原平台和阅卷地址。真机还需验证登录与默认学校、文件预览和下载、WSS 收发与重连。
 
-- 平台接口 `https://api-v2.yyzl0931.com/`：账号、资讯、课件、视频、智慧校园等通用模块。
-- 阅卷接口 `https://exam-api.yyzl0931.com/`：学情、作品档案与点评、范画库（学生 `app-token`，老师 `school-token`）。
-
-班级学情（任课老师）、范画库、学生端评分标准、老师批注、我的高频问题还需要后端补接口，平台账号与阅卷账号也需要打通，详见 [docs/后端缺口清单.md](docs/后端缺口清单.md)。
+正式包中，学生可从「我的作品」提交带作业 ID 的图片，随后在教师待批列表、点评结果和重交状态中核对同一份作品。班主任家校沟通保留入口和历史，暂不开放发送。学年从 8 月起算，教师和校长页面标明哪些数字仅统计已同步作品。作品集市暂缓，老系统作品读全与增量读取待确认。完整的真机场景与证据记录方式见同级后端仓库 `art_road_api/docs/integration/`。
 
 ## 目录
 

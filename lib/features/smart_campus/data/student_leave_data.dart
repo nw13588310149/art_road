@@ -26,9 +26,9 @@ enum StudentLeaveStatus {
   final int code;
   final String label;
 
-  bool get canTeacherAudit =>
-      this == StudentLeaveStatus.waitingTeacher ||
-      this == StudentLeaveStatus.waitingParent;
+  static const teacherPendingCodes = [0, 1];
+
+  bool get canTeacherAudit => teacherPendingCodes.contains(code);
 
   static StudentLeaveStatus? fromApi(dynamic raw) {
     final code = int.tryParse(raw?.toString() ?? '');

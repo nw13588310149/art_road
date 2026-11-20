@@ -90,9 +90,13 @@ class ChatSocketEvent {
 typedef AiChatSocketEvent = ChatSocketEvent;
 
 class ChatSocketService {
-  ChatSocketService({required AppStorage storage}) : _storage = storage;
+  ChatSocketService({
+    required AppStorage storage,
+    WebSocketChannel Function(Uri) openChannel = connectChatWebSocket,
+  }) : _storage = storage, _openChannel = openChannel;
 
   final AppStorage _storage;
+  final WebSocketChannel Function(Uri) _openChannel;
   final StreamController<ChatSocketEvent> _events =
       StreamController<ChatSocketEvent>.broadcast();
 
@@ -104,12 +108,13 @@ class ChatSocketService {
   bool _intentionallyClosed = false;
   bool _connecting = false;
   bool _demoOnline = false;
+  bool _authenticated = false;
 
   /// 全部下行事件流。订阅方按 [ChatSocketEvent.type] 过滤即可。
   Stream<ChatSocketEvent> get events => _events.stream;
 
-  /// 当前底层 socket 是否已就绪（不是 100% 等价于"在线"，仅做粗略可视化）。
-  bool get isConnected => _channel != null || _demoOnline;
+  /// 服务端已确认握手，可依赖推送；握手中仍需要 HTTP 兜底。
+  bool get isConnected => _authenticated || _demoOnline;
 
   /// 演示模式：把模拟下行帧注入与线上相同的解析链路。
   void injectDemoFrame(Map<String, dynamic> frame) {
@@ -119,11 +124,7 @@ class ChatSocketService {
     _handleRawMessage(jsonEncode(frame));
   }
 
-  /// 触发一次连接。若已有底层 socket 在跑，会先关掉再重连，确保用最新
-  /// token 走 `{type:1000}` 握手。可在以下时机调用：
-  /// * App 启动且本地存在 token；
-  /// * 登录 / 重新登录成功；
-  /// * 切换学校等需要换 token 的场景。
+  /// 需要时建立连接。切换账号后用 [reconnect] 重新握手。
   void connect() {
     if (_disposed) {
       return;
@@ -135,7 +136,7 @@ class ChatSocketService {
     if (_connecting) {
       return;
     }
-    if (_channel != null) {
+    if (_channel != null || _demoOnline) {
       return;
     }
     if (kDemoMode) {
@@ -156,12 +157,24 @@ class ChatSocketService {
       // _wsUri() 含 Uri.parse —— apiBaseUrl 异常 / 网络栈异常都不能让启动
       // 期同步抛出，全部捕获后走重连兜底。
       final uri = _wsUri();
-      final channel = connectChatWebSocket(uri);
+      final channel = _openChannel(uri);
       _channel = channel;
+      void closed() {
+        if (!identical(_channel, channel)) return;
+        if (channel.closeCode == 4009 || channel.closeCode == 4010 || channel.closeCode == 4401) {
+          disconnect();
+        } else {
+          _handleClosed();
+        }
+      }
       _subscription = channel.stream.listen(
-        _handleRawMessage,
-        onError: (_) => _handleClosed(),
-        onDone: _handleClosed,
+        (raw) {
+          if (identical(_channel, channel) && _storage.token == token) {
+            _handleRawMessage(raw);
+          }
+        },
+        onError: (_) => closed(),
+        onDone: closed,
         cancelOnError: true,
       );
       try {
@@ -173,8 +186,6 @@ class ChatSocketService {
         // onError 关闭，不影响后续重连。
       }
       _startHeartbeat();
-      // 握手帧发出后通知业务侧 syncMsg；群聊页若尚未挂载，会在进页时 reconnect。
-      _emit(ChatSocketEventType.connected, const {});
     } catch (_) {
       _scheduleReconnect();
     } finally {
@@ -252,12 +263,19 @@ class ChatSocketService {
       final rootType = _normalizeWsType(map);
 
       // 系统事件。
+      if (rootType == 1001 && !_authenticated) {
+        _authenticated = true;
+        _emit(ChatSocketEventType.connected, map);
+        return;
+      }
       if (rootType == 10003 || normalizedType == 10003) {
         _emit(ChatSocketEventType.kicked, map);
+        disconnect();
         return;
       }
       if (rootType == 10000 || normalizedType == 10000) {
         _emit(ChatSocketEventType.tokenError, map);
+        disconnect();
         return;
       }
       if (rootType == 10002 || normalizedType == 10002) {
@@ -476,6 +494,7 @@ class ChatSocketService {
   }
 
   void _closeChannel() {
+    _authenticated = false;
     unawaited(_subscription?.cancel());
     _subscription = null;
     try {

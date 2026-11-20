@@ -85,6 +85,7 @@ class _AdminScheduleManagementViewState
   // 请求中的教学周可能早于画面提交。首屏资料加载完成后继续使用最后一次选择。
   ({DateTime start, int number})? _requestedWeek;
   int _scheduleLoadGeneration = 0;
+  bool _movingCourse = false;
 
   /// 课表左侧节次时间表（来自 `schoolTimeConfigList`），按 `lineNum` 升序。
   /// API 未返回时退回 [_kDefaultTimeConfigs] 的 5 节兜底。
@@ -344,106 +345,55 @@ class _AdminScheduleManagementViewState
     return ids;
   }
 
-  /// 编辑模式下，把某节课从 `(sourceDay, sourceSlot)` 拖到
-  /// `(targetDay, targetSlot)`：
-  ///   1. 同格直接 no-op；
-  ///   2. 乐观更新本地 `_serverCells`；
-  ///   3. 调 `courseDelete(oldId)` 删旧课、`courseBatchSave(newRow)` 写一条新课
-  ///      （只覆盖当前周这一节，其它周不动）；
-  ///   4. 任一步失败回滚本地状态并提示；成功后 `_loadSchedule()` 拿新 id 同步。
+  /// 移动当前课次后重新读取课表，取得替换后的课次 id。
   Future<void> _onDropCard(
     _DragPayload payload,
     int targetDay,
     int targetSlot,
   ) async {
-    if (payload.sourceDay == targetDay && payload.sourceSlot == targetSlot) {
+    if (_movingCourse ||
+        (payload.sourceDay == targetDay && payload.sourceSlot == targetSlot)) {
       return;
     }
     final raw = payload.card.raw;
     if (raw == null) return;
-    if (_selectedClassId == null || _selectedClassId!.isEmpty) return;
+    final oldId = _pickString(raw, ['id'], '');
+    final classId = _selectedClassId;
+    if (oldId.isEmpty ||
+        classId == null ||
+        classId.isEmpty ||
+        _pickString(raw, ['classId'], classId) != classId) {
+      return;
+    }
 
     final configs = _activeTimeConfigs;
     if (targetSlot < 0 || targetSlot >= configs.length) return;
-    final cellsNow = _serverCells;
-    final newLineNum = configs[targetSlot].lineNum;
-    final newDate = _isoDate(_weekStart.add(Duration(days: targetDay)));
-
-    final backup = _cloneCells(cellsNow);
-
-    setState(() {
-      final src = cellsNow[payload.sourceDay][payload.sourceSlot];
-      // 优先按 indexInSlot 移除，避免同卡多次拖动时找错；越界再回退到 identical 匹配。
-      if (payload.indexInSlot < src.length &&
-          identical(src[payload.indexInSlot], payload.card)) {
-        src.removeAt(payload.indexInSlot);
-      } else {
-        src.removeWhere((c) => identical(c, payload.card));
-      }
-      cellsNow[targetDay][targetSlot].add(payload.card);
-    });
-
-    final repo = ref.read(adminRepositoryProvider);
-    final oldId = _pickString(raw, ['id'], '');
-    var ok = true;
-    String? errMsg;
-
-    if (oldId.isNotEmpty) {
-      final del = await repo.courseDelete([oldId]);
-      if (!del.isSuccess) {
-        ok = false;
-        errMsg = del.msg;
-      }
-    }
-    if (ok) {
-      final classId = _pickString(raw, ['classId'], _selectedClassId ?? '');
-      final teacherId = _pickString(raw, ['teacherId'], '');
-      final newRow = <String, dynamic>{
-        if (classId.isNotEmpty) 'classId': classId,
-        if (teacherId.isNotEmpty) 'teacherId': teacherId,
-        if (raw['classroomId'] != null) 'classroomId': raw['classroomId'],
-        if (raw['subjectId'] != null) 'subjectId': raw['subjectId'],
-        if ((raw['color'] ?? '').toString().isNotEmpty) 'color': raw['color'],
-        // 日期用 yyyy-MM-dd，和 _onAddCourse 写入的一致。
-        'date': newDate,
-        'lineNum': newLineNum,
-      };
-      final save = await repo.courseBatchSave([newRow]);
-      if (!save.isSuccess) {
-        ok = false;
-        errMsg = save.msg;
-      }
-    }
-
-    if (!mounted) return;
-    if (!ok) {
-      setState(() => _serverCells = backup);
-      AppToast.show(
-        context,
-        (errMsg == null || errMsg.isEmpty) ? '移动失败，请重试' : errMsg,
-      );
+    if (!_serverCells[payload.sourceDay][payload.sourceSlot].contains(
+      payload.card,
+    )) {
       return;
     }
-    // 不再立刻 _loadSchedule()：后端 courseDelete 偶有落库延迟，
-    // 重新拉回的列表里可能仍带着刚移走的那条记录，导致源格"鬼影"复现。
-    // 这里只把本地 raw 同步到新位置，乐观更新已经把卡片从源格搬走，
-    // UI 与意图保持一致；下次切周 / 切班时会自然 reload 拿到权威状态。
-    raw['date'] = newDate;
-    raw['lineNum'] = newLineNum;
-    AppToast.show(context, '已移动');
-  }
 
-  /// `_serverCells` 三维结构的浅克隆（外两层新建 List，最内层 `_ScheduleCardData`
-  /// 是不可变值，直接共享即可），用于拖动失败回滚。
-  List<List<List<_ScheduleCardData>>> _cloneCells(
-    List<List<List<_ScheduleCardData>>> cells,
-  ) {
-    return [
-      for (final day in cells)
-        [
-          for (final slot in day) [...slot],
-        ],
-    ];
+    _movingCourse = true;
+    try {
+      final resp = await ref
+          .read(adminRepositoryProvider)
+          .moveCourse(
+            courseId: oldId,
+            classId: classId,
+            date: _isoDate(_weekStart.add(Duration(days: targetDay))),
+            lineNum: configs[targetSlot].lineNum,
+          );
+      if (!mounted) return;
+      if (!resp.isSuccess) {
+        AppToast.show(context, resp.msg.isEmpty ? '移动失败，请重试' : resp.msg);
+        return;
+      }
+      await _loadSchedule();
+      if (mounted) AppToast.show(context, '已移动');
+    } finally {
+      _movingCourse = false;
+    }
   }
 
   @override
@@ -1226,7 +1176,6 @@ class _CellContent extends StatelessWidget {
                   isPast: isPast,
                   sourceDay: dayIdx,
                   sourceSlot: slotIdx,
-                  indexInSlot: i,
                   onDelete: isEditing ? () => onDeleteCourse(cards[i]) : null,
                 ),
               ],
@@ -1247,7 +1196,6 @@ class _DraggableScheduleCard extends StatelessWidget {
     required this.isPast,
     required this.sourceDay,
     required this.sourceSlot,
-    required this.indexInSlot,
     this.onDelete,
   });
 
@@ -1256,7 +1204,6 @@ class _DraggableScheduleCard extends StatelessWidget {
   final bool isPast;
   final int sourceDay;
   final int sourceSlot;
-  final int indexInSlot;
   final VoidCallback? onDelete;
 
   bool get _draggable => isEditing && card.raw != null;
@@ -1284,7 +1231,6 @@ class _DraggableScheduleCard extends StatelessWidget {
     final payload = _DragPayload(
       sourceDay: sourceDay,
       sourceSlot: sourceSlot,
-      indexInSlot: indexInSlot,
       card: card,
     );
     // LongPressDraggable.feedback 会被渲染到全局 Overlay，脱离当前 widget 树，
@@ -1355,19 +1301,16 @@ class _ScheduleCardData {
   String get subline => display.subline;
 }
 
-/// 课表拖拽时随手携带的数据。`sourceDay/sourceSlot/indexInSlot` 用于在
-/// 乐观更新里精确把卡片从旧格子里挪走。
+/// 拖动时记录课卡与源格。
 class _DragPayload {
   const _DragPayload({
     required this.sourceDay,
     required this.sourceSlot,
-    required this.indexInSlot,
     required this.card,
   });
 
   final int sourceDay;
   final int sourceSlot;
-  final int indexInSlot;
   final _ScheduleCardData card;
 }
 

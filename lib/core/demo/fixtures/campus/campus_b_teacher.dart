@@ -7,6 +7,8 @@ import '../../data/demo_marking_data.dart';
 import '../../demo_accounts.dart';
 import '../../demo_backend.dart';
 import '../../demo_store.dart';
+import 'campus_a_common.dart';
+import 'campus_a_dormitory.dart';
 import 'campus_b_common.dart';
 import 'campus_b_courses.dart';
 import 'campus_b_homework.dart';
@@ -89,6 +91,19 @@ Object? _teacherRole(DemoRequest req) {
 
 Object? _classList(DemoRequest req) {
   final scope = cbScope(req);
+  if (req.intOf('isDormManager') == 1 && !scope.all) {
+    if (req.account.role != DemoRole.dormManager &&
+        !(scope.staff?.roles.contains('dormManager') ?? false)) {
+      throw const DemoApiException('只有宿管老师可以使用宿管工作台', code: 403);
+    }
+    return [
+      for (final c in cbClasses())
+        if (CampusA.studentsOf(
+          cbStr(c['id']),
+        ).any((student) => CampusADorm.bedOf(student.index) != null))
+          cbClassJson(c),
+    ];
+  }
   final ids = req.intOf('isHeadTeacher') == 1
       ? scope.headClassIds
       : scope.teachingClassIds;
@@ -518,6 +533,8 @@ Object? _examList(DemoRequest req) {
             <String, dynamic>{'id': cid, 'name': cbClassName(cid)},
         ],
         'remark': _examRemark(exam),
+        if (req.value('includeStat') == true)
+          'stat': _examStatFor(_examRows(scope, exam, def, classId: filter)),
       });
     }
   }
@@ -640,7 +657,10 @@ Object? _examStudentStat(DemoRequest req) {
   final scope = cbScope(req);
   final exam = _examOf(req, 'examId');
   final def = _subjectOf(exam, req);
-  final rows = _examRows(scope, exam, def, classId: req.str('classId'));
+  return _examStatFor(_examRows(scope, exam, def, classId: req.str('classId')));
+}
+
+Map<String, dynamic> _examStatFor(List<_ExamRow> rows) {
   final scores = [
     for (final r in rows)
       if (r.score != null) r.score!,

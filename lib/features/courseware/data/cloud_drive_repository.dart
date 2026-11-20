@@ -7,9 +7,6 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
 import '../../../core/providers/app_providers.dart';
 
-// 校园课件测试接口地址（后续改为生产地址时修改此常量即可）
-const _kCoursewareBase = 'https://api-v2.yyzl0931.com';
-
 final cloudDriveRepositoryProvider = Provider<CloudDriveRepository>((ref) {
   final client = ref.watch(apiClientProvider);
   return CloudDriveRepository(client: client);
@@ -22,7 +19,7 @@ class CloudDriveRepository {
 
   // ── Upload ────────────────────────────────────────────────────────────────
 
-  // 候选上传端点（按优先级排列，首个成功即返回）
+  // 只有后端明确返回「接口不存在」时才尝试兼容端点。
   static const _kUploadCandidates = <String>[
     '/app/common/v2/fileUpload',
     '/app/user/fileUpload',
@@ -77,7 +74,7 @@ class CloudDriveRepository {
         onSendProgress: i == 0 ? onSendProgress : null,
       );
       last = resp;
-      if (resp.isSuccess) {
+      if (resp.code != 404 || resp.displayMsg != '接口不存在') {
         return resp;
       }
     }
@@ -87,9 +84,7 @@ class CloudDriveRepository {
   // ── Category ──────────────────────────────────────────────────────────────
 
   Future<ApiResponse> getCategoryList() {
-    return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareCategoryList',
-    );
+    return client.post('/app/courseware/v2/coursewareCategoryList');
   }
 
   /// 云盘用量（已用 / 总量等，具体字段由后端约定，解析见 controller）。
@@ -99,21 +94,21 @@ class CloudDriveRepository {
 
   Future<ApiResponse> addCategory(String name) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareCategorySave',
+      '/app/courseware/v2/coursewareCategorySave',
       data: <String, dynamic>{'id': 0, 'name': name},
     );
   }
 
   Future<ApiResponse> renameCategory(int id, String name) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareCategorySave',
+      '/app/courseware/v2/coursewareCategorySave',
       data: <String, dynamic>{'id': id, 'name': name},
     );
   }
 
   Future<ApiResponse> deleteCategory(int id) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareCategoryDelete',
+      '/app/courseware/v2/coursewareCategoryDelete',
       data: <String, dynamic>{'id': id},
     );
   }
@@ -126,7 +121,7 @@ class CloudDriveRepository {
     int size = 100,
   }) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareFolderList',
+      '/app/courseware/v2/coursewareFolderList',
       data: <String, dynamic>{
         'categoryId': categoryId,
         'current': current,
@@ -140,7 +135,7 @@ class CloudDriveRepository {
     required String name,
   }) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareFolderSave',
+      '/app/courseware/v2/coursewareFolderSave',
       data: <String, dynamic>{'categoryId': categoryId, 'id': 0, 'name': name},
     );
   }
@@ -151,14 +146,14 @@ class CloudDriveRepository {
     required String name,
   }) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareFolderSave',
+      '/app/courseware/v2/coursewareFolderSave',
       data: <String, dynamic>{'categoryId': categoryId, 'id': id, 'name': name},
     );
   }
 
   Future<ApiResponse> deleteFolder(int id) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareFolderDelete',
+      '/app/courseware/v2/coursewareFolderDelete',
       data: <String, dynamic>{'id': id},
     );
   }
@@ -173,7 +168,7 @@ class CloudDriveRepository {
     int size = 1000,
   }) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareList',
+      '/app/courseware/v2/coursewareList',
       data: <String, dynamic>{
         'categoryId': categoryId,
         'folderId': folderId,
@@ -196,7 +191,7 @@ class CloudDriveRepository {
     String param5 = '',
   }) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareSave',
+      '/app/courseware/v2/coursewareSave',
       data: <String, dynamic>{
         'categoryId': categoryId,
         'folderId': folderId,
@@ -213,14 +208,14 @@ class CloudDriveRepository {
 
   Future<ApiResponse> updateCoursewareTitle(int id, String title) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareUpdateTitle',
+      '/app/courseware/v2/coursewareUpdateTitle',
       data: <String, dynamic>{'id': id, 'title': title},
     );
   }
 
   Future<ApiResponse> deleteCourseware(int id) {
     return client.post(
-      '$_kCoursewareBase/app/courseware/v2/coursewareDelete',
+      '/app/courseware/v2/coursewareDelete',
       data: <String, dynamic>{'id': id},
     );
   }

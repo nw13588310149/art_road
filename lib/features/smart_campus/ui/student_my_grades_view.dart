@@ -1,3 +1,4 @@
+import '../../../core/utils/school_semester.dart';
 // =============================================================================
 // 学生端「我的考试」独立页面
 //
@@ -168,7 +169,7 @@ class _StudentMyGradesViewState extends ConsumerState<StudentMyGradesView> {
     final indices = _records
         .map((r) => _semesterIndexOfDate(r.date))
         .where((i) => i >= 0);
-    if (indices.isEmpty) return _semesterIndex(DateTime.now());
+    if (indices.isEmpty) return schoolSemesterIndex(DateTime.now());
     return indices.reduce(math.max);
   }
 
@@ -243,16 +244,9 @@ class _StudentMyGradesViewState extends ConsumerState<StudentMyGradesView> {
 }
 
 /// 学期序号（连续整数，用于「本学期 / 上学期」对比）：
-/// 春季学期(2-8 月) = year*2；秋季学期(9-12 月及次年 1 月) = year*2+1。
-int _semesterIndex(DateTime d) {
-  if (d.month >= 9) return d.year * 2 + 1;
-  if (d.month <= 1) return (d.year - 1) * 2 + 1;
-  return d.year * 2;
-}
-
 int _semesterIndexOfDate(String date) {
   final d = DateTime.tryParse(date.trim());
-  return d == null ? -1 : _semesterIndex(d);
+  return d == null ? -1 : schoolSemesterIndex(d);
 }
 
 // =============================================================================

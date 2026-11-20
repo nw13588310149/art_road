@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_response.dart';
+import '../data/dormitory_paging.dart';
 import '../data/dormitory_check_data.dart';
 import '../data/dormitory_repository.dart';
 import '../data/student_dormitory_data.dart' show DormitoryDetailField;
@@ -33,6 +34,7 @@ class DormitoryManagerController extends StateNotifier<DormitoryManagerState> {
   final TeacherRepository _teacherRepository;
   int _roomLoadSerial = 0;
   int _historyLoadSerial = 0;
+  int _makeupLoadSerial = 0;
 
   Future<void> loadManagedBuildings() async {
     state = state.copyWith(loadingBuildings: true);
@@ -251,13 +253,16 @@ class DormitoryManagerController extends StateNotifier<DormitoryManagerState> {
   }) async {
     final serial = ++_historyLoadSerial;
     state = state.copyWith(loadingHistory: true, error: '');
-    final response = await _repository.dormitoryCheckHistory(
-      buildingId: buildingId,
-      floorId: floorId,
-      beginDate: date,
-      endDate: date,
+    final response = await loadDormitoryPages(
+      (current) => _repository.dormitoryCheckHistory(
+        buildingId: buildingId,
+        floorId: floorId,
+        beginDate: date,
+        endDate: date,
+        current: current,
+      ),
     );
-    if (serial != _historyLoadSerial) return;
+    if (!mounted || serial != _historyLoadSerial) return;
     final items = response.isSuccess
         ? parseDormitoryCheckHistoryList(response.data)
         : const <DormitoryCheckHistoryItem>[];
@@ -346,11 +351,23 @@ class DormitoryManagerController extends StateNotifier<DormitoryManagerState> {
   }
 
   Future<void> loadMakeups({String? buildingId, int? status = 0}) async {
-    state = state.copyWith(loadingMakeup: true, error: '');
-    final response = await _repository.dormitoryMakeupList(
-      buildingId: buildingId,
-      status: status,
+    final serial = ++_makeupLoadSerial;
+    state = state.copyWith(
+      loadingMakeup: true,
+      makeupBuildingId: buildingId,
+      clearMakeupBuildingId: buildingId == null,
+      makeupStatus: status,
+      clearMakeupStatus: status == null,
+      error: '',
     );
+    final response = await loadDormitoryPages(
+      (current) => _repository.dormitoryMakeupList(
+        buildingId: buildingId,
+        status: status,
+        current: current,
+      ),
+    );
+    if (!mounted || serial != _makeupLoadSerial) return;
     state = state.copyWith(
       loadingMakeup: false,
       makeupItems: response.isSuccess

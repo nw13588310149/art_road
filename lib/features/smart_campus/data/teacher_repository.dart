@@ -270,10 +270,15 @@ class TeacherRepository {
   ///   作品批改 / 考评管理等）调用统一传 `1`，让后端按"我任教的班级"过滤。
   /// - `isHeadTeacher`: 是不是班主任。班主任端调用本接口时传 `1`，让后端按
   ///   "我担任班主任的班级"过滤；不传 = 不按该字段过滤。
-  Future<ApiResponse> classList({int? isClassTeacher, int? isHeadTeacher}) {
+  Future<ApiResponse> classList({
+    int? isClassTeacher,
+    int? isHeadTeacher,
+    bool isDormManager = false,
+  }) {
     final body = <String, dynamic>{};
     if (isClassTeacher != null) body['isClassTeacher'] = isClassTeacher;
     if (isHeadTeacher != null) body['isHeadTeacher'] = isHeadTeacher;
+    if (isDormManager) body['isDormManager'] = 1;
     return client.post('$_base/classList', data: body);
   }
 
@@ -623,12 +628,18 @@ class TeacherRepository {
   // ============== 考评管理 ==============
 
   /// 当前老师有权批改的考试列表。`classId` 不传时查询全部有权批改的考试。
-  Future<ApiResponse> examList({String? classId}) {
+  Future<ApiResponse> examList({String? classId, bool includeStat = false}) {
     if (classId == null || classId.trim().isEmpty) {
-      return client.post('$_base/examList');
+      return client.post(
+        '$_base/examList',
+        data: includeStat ? {'includeStat': true} : null,
+      );
     }
     final body = encodeNumericIdRequestBody(
-      <String, dynamic>{'classId': classId},
+      <String, dynamic>{
+        'classId': classId,
+        if (includeStat) 'includeStat': true,
+      },
       numericIdKeys: const {'classId'},
     );
     if (body == null) return Future.value(ApiResponse.failure('班级 id 格式错误'));

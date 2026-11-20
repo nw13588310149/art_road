@@ -66,8 +66,11 @@ enum _StatusTab {
   const _StatusTab(this.label);
   final String label;
 
-  int? get apiStatus => switch (this) {
-    _StatusTab.approved => 3,
+  List<int>? get apiStatuses => switch (this) {
+    _StatusTab.mine => StudentLeaveStatus.teacherPendingCodes,
+    _StatusTab.reviewing => const [0],
+    _StatusTab.approved => const [3],
+    _StatusTab.rejected => const [2, 4],
     _ => null,
   };
 }
@@ -148,25 +151,30 @@ class _TeacherLeaveApprovalViewState
   Future<void> _loadStats() async {
     final repo = ref.read(teacherRepositoryProvider);
     final results = await Future.wait([
-      repo.headTeacherStudentLeaveList(current: 1, size: 1, status: 1),
-      repo.headTeacherStudentLeaveList(current: 1, size: 1, status: 0),
-      repo.headTeacherStudentLeaveList(current: 1, size: 1, status: 3),
-      repo.headTeacherStudentLeaveList(current: 1, size: 1, status: 2),
-      repo.headTeacherStudentLeaveList(current: 1, size: 1, status: 4),
+      for (final tab in [
+        _StatusTab.mine,
+        _StatusTab.reviewing,
+        _StatusTab.approved,
+        _StatusTab.rejected,
+      ])
+        repo.headTeacherStudentLeaveList(
+          current: 1,
+          size: 1,
+          statusList: tab.apiStatuses,
+        ),
     ]);
     if (!mounted) return;
 
-    int total(ApiResponse resp) =>
-        parseStudentLeaveTotal(resp.data) ??
-        (resp.isSuccess ? parseStudentLeaveList(resp.data).length : 0);
+    int total(ApiResponse resp) => resp.isSuccess
+        ? parseStudentLeaveTotal(resp.data) ??
+              parseStudentLeaveList(resp.data).length
+        : 0;
 
     setState(() {
-      _pendingCount = results[0].isSuccess ? total(results[0]) : 0;
-      _reviewingCount = results[1].isSuccess ? total(results[1]) : 0;
-      _approvedCount = results[2].isSuccess ? total(results[2]) : 0;
-      _rejectedCount =
-          (results[3].isSuccess ? total(results[3]) : 0) +
-          (results[4].isSuccess ? total(results[4]) : 0);
+      _pendingCount = total(results[0]);
+      _reviewingCount = total(results[1]);
+      _approvedCount = total(results[2]);
+      _rejectedCount = total(results[3]);
     });
   }
 
@@ -180,7 +188,7 @@ class _TeacherLeaveApprovalViewState
     final resp = await repo.headTeacherStudentLeaveList(
       current: 1,
       size: 200,
-      status: _tab.apiStatus,
+      statusList: _tab.apiStatuses,
     );
     if (!mounted || token != _listToken) return;
 
@@ -227,11 +235,7 @@ class _TeacherLeaveApprovalViewState
       _StatusTab.mine => source.where((r) => r.status.canTeacherAudit).toList(),
       _StatusTab.reviewing =>
         source
-            .where(
-              (r) =>
-                  r.status == StudentLeaveStatus.waitingParent ||
-                  r.status == StudentLeaveStatus.waitingTeacher,
-            )
+            .where((r) => r.status == StudentLeaveStatus.waitingParent)
             .toList(),
       _StatusTab.approved =>
         source.where((r) => r.status == StudentLeaveStatus.approved).toList(),

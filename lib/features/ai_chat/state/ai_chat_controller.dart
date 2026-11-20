@@ -35,6 +35,7 @@ class AiChatController extends StateNotifier<AiChatState> {
   final AiChatSocketDispatcher _dispatcher;
   final AiChatRepository _repository;
   Timer? _streamFallbackTimer;
+  int _localMessageSequence = 0;
   String? _streamingMessageId;
   String? _streamTargetSessionId;
   String? _streamCorrelationReplyId;
@@ -287,7 +288,8 @@ class AiChatController extends StateNotifier<AiChatState> {
       attachments,
     );
 
-    final pendingId = 'pending-${DateTime.now().microsecondsSinceEpoch}';
+    final pendingId =
+        'pending-${DateTime.now().microsecondsSinceEpoch}-${_localMessageSequence++}';
     final pendingMessage = AiChatMessage(
       id: pendingId,
       type: AiChatMessageType.user,
@@ -436,7 +438,8 @@ class AiChatController extends StateNotifier<AiChatState> {
     required bool useReasoningUi,
   }) {
     _cancelAiStream(removeStreamingMessage: true);
-    final streamId = 'ai-stream-${DateTime.now().microsecondsSinceEpoch}';
+    final streamId =
+        'ai-stream-${DateTime.now().microsecondsSinceEpoch}-${_localMessageSequence++}';
     _streamingMessageId = streamId;
     _streamTargetSessionId = sessionId;
     _streamCorrelationReplyId = null;
@@ -540,7 +543,13 @@ class AiChatController extends StateNotifier<AiChatState> {
       _streamCorrelationReplyId = replyId;
     }
 
-    var delta = _extractStreamDelta(json);
+    final plainDelta =
+        _wsNumericType(json) == 10004 &&
+        json['replyId'] != null &&
+        json['content'] is String;
+    var delta = plainDelta
+        ? json['content'] as String
+        : _extractStreamDelta(json);
     var reasoningDelta = _extractReasoningStreamDelta(json);
     final type = _wsNumericType(json);
     if (_streamUsesReasoningUi &&
@@ -553,7 +562,7 @@ class AiChatController extends StateNotifier<AiChatState> {
     if (delta.isEmpty && reasoningDelta.isEmpty) {
       return;
     }
-    _applyStreamChunk(delta, reasoningDelta);
+    _applyStreamChunk(delta, reasoningDelta, plainText: plainDelta);
     _resetStreamFallbackTimer();
   }
 
@@ -568,11 +577,18 @@ class AiChatController extends StateNotifier<AiChatState> {
       return;
     }
 
-    final envelope = _parseAssistantEnvelopeFromWs(json);
-    final fullReply = envelope?.text.trim().isNotEmpty == true
+    // New backend frames carry literal text, even when that text is JSON.
+    final plainText =
+        type == 10005 && json['replyId'] != null && json['content'] is String;
+    final envelope = plainText ? null : _parseAssistantEnvelopeFromWs(json);
+    final fullReply = plainText
+        ? json['content'] as String
+        : envelope?.text.trim().isNotEmpty == true
         ? envelope!.text.trim()
         : _extractFullReply(json);
-    final fullReasoning = envelope?.reasoning.trim().isNotEmpty == true
+    final fullReasoning = plainText
+        ? ''
+        : envelope?.reasoning.trim().isNotEmpty == true
         ? envelope!.reasoning.trim()
         : _extractFullReasoning(json);
 
@@ -605,13 +621,17 @@ class AiChatController extends StateNotifier<AiChatState> {
     _finishAiStream();
   }
 
-  void _applyStreamChunk(String piece, String reasoningPiece) {
+  void _applyStreamChunk(
+    String piece,
+    String reasoningPiece, {
+    bool plainText = false,
+  }) {
     final streamId = _streamingMessageId;
     if (streamId == null) {
       return;
     }
     final rawText = _normalizeAssistantDisplayText(
-      _unwrapJsonStringContent(piece),
+      plainText ? piece : _unwrapJsonStringContent(piece),
     );
     final rawReasoning = _normalizeAssistantDisplayText(reasoningPiece);
     _updateMessageById(streamId, (current) {
@@ -1455,6 +1475,7 @@ class AiChatController extends StateNotifier<AiChatState> {
     }
 
     final text = _readString(value);
+    if (raw['role'] == 'assistant' || raw['role'] == 'user') return text.trim();
     return _unwrapJsonStringContent(text).trim();
   }
 

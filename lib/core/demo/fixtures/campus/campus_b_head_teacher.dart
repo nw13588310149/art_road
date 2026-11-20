@@ -88,7 +88,7 @@ Object? _index(DemoRequest req) {
     for (final m in cbStudentLeaves())
       if (classSet.contains(cbStr(m['classId']))) m,
   ]..sort((a, b) => cbStr(b['createTime']).compareTo(cbStr(a['createTime'])));
-  final pendingLeaves = leaves.where((m) => cbInt(m['status']) == 1).toList();
+  final pendingLeaves = leaves.where(_isPendingLeave).toList();
   final makeups = [
     for (final m in cbDormMakeups())
       if (classSet.contains(cbDormMakeupClassId(m)) && cbInt(m['status']) == 0)
@@ -208,7 +208,7 @@ Object? _classOverview(DemoRequest req) {
     'femaleCount': persons.where((p) => p.gender == '女').length,
     'residentCount': persons.where((p) => cbBedInfo(p).isNotEmpty).length,
     'pendingLeaveCount': cbStudentLeaves()
-        .where((m) => cbStr(m['classId']) == classId && cbInt(m['status']) == 1)
+        .where((m) => cbStr(m['classId']) == classId && _isPendingLeave(m))
         .length,
     'focusCount': cbFocus().where((m) => cbStr(m['classId']) == classId).length,
     'todayAbnormalDormCount': issues.length,
@@ -783,6 +783,11 @@ Object? _studentUpdate(DemoRequest req) {
     'tags': cbCsv(req.value('tags')).join(','),
   });
   return true;
+}
+
+bool _isPendingLeave(Map<String, dynamic> row) {
+  final status = cbInt(row['status']);
+  return status == 0 || status == 1;
 }
 
 Object? _leaveList(DemoRequest req) {
