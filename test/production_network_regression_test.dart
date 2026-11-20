@@ -16,7 +16,7 @@ import 'package:the_road_of_art_flutter/features/courseware/data/cloud_drive_rep
 
 const _upload = '/app/common/v2/fileUpload';
 const _legacyUpload = '/app/user/fileUpload';
-const _testOrigin = 'https://art-road.example.test';
+const _configuredBase = String.fromEnvironment('ART_ROAD_API_BASE_URL');
 const _token = 'offline-test-token';
 
 void main() {
@@ -52,11 +52,12 @@ void main() {
         }
       }, createHttpClient: (_) => client);
 
+      final origin = Uri.parse(_configuredBase).origin;
       expect(client.requests.map((r) => '${r.method} ${r.uri}'), [
-        'GET $_testOrigin/app/user/myInfo',
-        'GET $_testOrigin/app/artworks',
-        'POST $_testOrigin/app/courseware/v2/usage',
-        'POST $_testOrigin$_upload',
+        'GET $origin/app/user/myInfo',
+        'GET $origin/app/artworks',
+        'POST $origin/app/courseware/v2/usage',
+        'POST $origin$_upload',
       ]);
       expect(
         client.requests.map((r) => r.headers.values['app-token']),
@@ -79,7 +80,7 @@ void main() {
         startsWith('multipart/form-data;'),
       );
     },
-    skip: kDemoMode
+    skip: kDemoMode || _configuredBase.isEmpty
         ? '用 DEMO_MODE=false 和 ART_ROAD_API_BASE_URL=https://art-road.example.test/ 运行正式模式测试'
         : false,
   );
